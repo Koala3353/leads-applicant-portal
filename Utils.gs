@@ -114,9 +114,32 @@ function sheet_(name) {
 }
 
 /** Reads the Settings tab (Key | Value) once per run. */
+/* ---------- small config tabs (Settings, Lists, Admins) are cached across executions ----------
+ * Every page load used to re-read these tabs, which made each call slower and pushed the portal toward Apps Script's
+ * limit on simultaneous executions during a rush. They change rarely, so they're kept in CacheService for 2 minutes
+ * and cleared by onEdit (AdminMenu.gs) the moment someone edits one of them. Dates come back as ISO text, which
+ * parseDate_() reads fine. */
+const CONFIG_TTL_ = 120;
+function cachedTab_(name) {
+  cachedTab_.memo = cachedTab_.memo || {};
+  if (cachedTab_.memo[name]) return cachedTab_.memo[name];
+  const cache = CacheService.getScriptCache(), key = 'tab:' + name;
+  let rows = null;
+  try { const hit = cache.get(key); if (hit) rows = JSON.parse(hit); } catch (e) { rows = null; }
+  if (!rows) {
+    rows = sheet_(name).getDataRange().getValues();
+    try { const json = JSON.stringify(rows); if (json.length < 90000) cache.put(key, json, CONFIG_TTL_); } catch (e) { /* too big or cache down: just don't cache */ }
+  }
+  cachedTab_.memo[name] = rows;
+  return rows;
+}
+function clearConfigCache_() {
+  try { CacheService.getScriptCache().removeAll(['tab:' + SHEET.SETTINGS, 'tab:' + SHEET.LISTS, 'tab:' + SHEET.ADMINS]); } catch (e) { /* fine */ }
+}
+
 function getSettings_() {
   if (getSettings_.cache) return getSettings_.cache;
-  const rows = sheet_(SHEET.SETTINGS).getDataRange().getValues().slice(1);
+  const rows = cachedTab_(SHEET.SETTINGS).slice(1);
   const out = {};
   rows.forEach(r => { if (r[0] !== '') out[String(r[0]).trim()] = r[1]; });
   getSettings_.cache = out;
@@ -146,7 +169,7 @@ function parseDate_(v) {
 
 /** Reads a column from the Lists tab by header name, skipping blanks. */
 function getList_(name) {
-  const data = sheet_(SHEET.LISTS).getDataRange().getValues();
+  const data = cachedTab_(SHEET.LISTS);
   const col = data[0].indexOf(name);
   if (col < 0) throw new Error('Lists tab has no column called ' + name);
   return data.slice(1).map(r => String(r[col]).trim()).filter(String);
@@ -180,8 +203,10 @@ function isAllowedDomain_(email) {
 
 function isAdmin_(email) {
   if (!email) return false;
-  const rows = sheet_(SHEET.ADMINS).getDataRange().getValues().slice(1);
-  return rows.some(r => String(r[0]).trim().toLowerCase() === email);
+  isAdmin_.memo = isAdmin_.memo || {};
+  if (email in isAdmin_.memo) return isAdmin_.memo[email];
+  const rows = cachedTab_(SHEET.ADMINS).slice(1);
+  return (isAdmin_.memo[email] = rows.some(r => String(r[0]).trim().toLowerCase() === email));
 }
 
 /**
@@ -217,14 +242,15 @@ function requireApplicant_() {
 function getApplicantByEmail_(email) {
   email = String(email || '').trim().toLowerCase();
   if (!email) return null;
-  const values = sheet_(SHEET.APPLICANTS).getDataRange().getValues();
-  const emailCol = COLS.indexOf('Email');
-  for (let i = 1; i < values.length; i++) {
-    if (String(values[i][emailCol]).trim().toLowerCase() === email) {
-      return { row: i + 1, data: toObject_(values[i]) };
-    }
-  }
-  return null;
+  // Search just the Email column (Sheets does it server-side), then read only that row. Much cheaper than reading
+  // the whole tab on every page load. Emails are written by the portal from the login, so exact matches work;
+  // apply_submit_ still does a full trimmed scan inside its lock before filing anything.
+  const sh = sheet_(SHEET.APPLICANTS), last = sh.getLastRow();
+  if (last < 2) return null;
+  const hit = sh.getRange(2, COLS.indexOf('Email') + 1, last - 1, 1).createTextFinder(email).matchEntireCell(true).matchCase(false).findNext();
+  if (!hit) return null;
+  const row = hit.getRow();
+  return { row: row, data: toObject_(sh.getRange(row, 1, 1, COLS.length).getValues()[0]) };
 }
 
 function getApplicantById_(applicantId) {
@@ -511,8 +537,20 @@ function activitySheet_() {
  * activity_('apply_submit', 'APP-0012 submitted', { level: 'INFO', page: 'apply', ms: 840 })
  * level: 'INFO' (default) | 'WARN' | 'ERROR'. details can be a string or any object (stored as JSON).
  */
+/** True once 40 routine (INFO) rows have been written this minute: during a rush they're skipped to keep calls fast.
+ *  WARN and ERROR rows are always written. */
+function activityBusy_() {
+  try {
+    const c = CacheService.getScriptCache(), k = 'act:' + Math.floor(Date.now() / 60000);
+    const n = Number(c.get(k) || 0) + 1;
+    c.put(k, String(n), 120);
+    return n > 40;
+  } catch (e) { return false; }
+}
+
 function activity_(event, details, opts) {
   opts = opts || {};
+  if ((opts.level || 'INFO') === 'INFO' && activityBusy_()) return;
   try {
     let who = '';
     try { who = currentEmail_() || 'guest'; } catch (e) { who = 'unknown'; }

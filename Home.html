@@ -1330,7 +1330,7 @@
     warn.textContent = BRAND.messages.loadError + (err && err.message ? err.message : err) + '. Try reloading.';
   }
 
-  google.script.run.withSuccessHandler(render).withFailureHandler(fail).home_getContext();
+  window.runServer('home_getContext').then(render, fail);   // retries when Google is busy (a rush of visitors)
 </script>
 </body>
 </html>

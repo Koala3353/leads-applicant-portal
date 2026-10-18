@@ -419,7 +419,8 @@
   /* ---------- Case File template: the form is a paper intake sheet in a manila folder ---------- */
   .intake{position:relative;margin:40px 0 10px;padding:26px clamp(14px,4vw,34px) 30px;color:#1b1b1b;
     background:linear-gradient(175deg,#ece7d8,#ddd5bf);box-shadow:0 0 0 10px var(--manila),0 0 0 11px var(--manila-dk),10px 12px 0 11px rgba(0,0,0,.55)}
-  .intake::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;mix-blend-mode:multiply;background-image:var(--grunge)}
+  .intake::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.22;mix-blend-mode:multiply;background-image:var(--grunge)}
+  .intake > form,.intake > .intake-head{position:relative;z-index:1}   /* paper grain stays behind the fields */
   .intake-tab{position:absolute;left:24px;top:-38px;padding:5px 16px 4px;background:var(--manila);color:#3b3220;font:400 .95rem var(--type);letter-spacing:.12em;
     clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 100%,0 100%)}
   .intake-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:6px;padding-bottom:16px;border-bottom:2px solid #1b1b1b}
@@ -441,6 +442,7 @@
   .idp-lbl{margin:6px 0 0;font:400 .72rem/1.2 var(--type);letter-spacing:.06em;color:#3b3220;text-align:center}
   .idp-lbl b{color:#a00000;font-weight:400}
   @media (min-width:560px){.idphoto{margin:0}}
+  @media (max-width:559px){.intake-head{flex-wrap:nowrap;gap:12px}.intake-fields{flex:1 1 auto;min-width:0}.intake-fields div{grid-template-columns:1fr;gap:0}.idphoto{width:96px;margin:0}}
   /* fields on paper: white sunken 90s boxes, dark ink */
   .intake .field label,.intake .consent-title{color:#1b1b1b}
   .intake .field label span[style],.intake .consent-title span[style]{color:#6b5a35!important}
@@ -858,16 +860,8 @@
   const BASE = <?!= JSON.stringify(String(baseUrl)) ?>;
   const $ = id => document.getElementById(id);
 
-  function call(fn, ...args) {
-    return new Promise((resolve, reject) => {
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(err => {
-          document.dispatchEvent(new CustomEvent('portal:error', { detail: err }));
-          reject(err);
-        })[fn](...args);
-    });
-  }
+  // Server calls go through runServer (Styles.html): retries when Google is busy, fires portal:error on final failure
+  function call(fn, ...args) { return window.runServer(fn, ...args); }
 
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'

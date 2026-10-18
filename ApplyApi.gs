@@ -292,11 +292,26 @@ function apply_discardDraft() {
 
 /* ---------------- MemData: autofill from member list ---------------- */
 
+/** MemData header + the rows where this email appears (found by a server-side search, not by reading every member). */
+function apply_memRows_(sh, email) {
+  const lastCol = sh.getLastColumn(), lastRow = sh.getLastRow();
+  const head = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+  const target = String(email || '').toLowerCase().trim();
+  if (!target || lastRow < 2) return [head];
+  const hits = sh.getRange(2, 1, lastRow - 1, lastCol).createTextFinder(target).matchEntireCell(true).matchCase(false).findAll();
+  const out = [head], seen = {};
+  hits.map(c => c.getRow()).sort((x, y) => x - y).forEach(r => {
+    if (seen[r]) return; seen[r] = 1;
+    out.push(sh.getRange(r, 1, 1, lastCol).getDisplayValues()[0]);
+  });
+  return out;
+}
+
 function apply_memberFor_(email, idNumber, lists) {
   try {
     const sh = ss_().getSheetByName('MemData');
     if (!sh || sh.getLastRow() < 2) return null;
-    const rows = sh.getDataRange().getDisplayValues();
+    const rows = apply_memRows_(sh, email);   // header + only the rows that mention this email
     const norm = h => String(h).toLowerCase().replace(/[^a-z0-9]/g, '');
     const head = rows[0].map(norm);
     

@@ -56,20 +56,60 @@
     background:repeating-linear-gradient(90deg,var(--title-b,#1084d0) 0 9px,transparent 9px 12px);animation:ldBlocks 1.6s cubic-bezier(.45,0,.55,1) infinite}
   @keyframes ldBlocks{from{transform:translateX(-105%)}to{transform:translateX(230%)}}
 
+  /* ---- screen variants ---- */
+  .ld-crt .v{position:absolute;inset:0;display:none;place-items:center}
+  .ld[data-v="eye"] .v-eye,.ld[data-v="ebs"] .v-ebs,.ld[data-v="file"] .v-file,.ld[data-v="grid"] .v-grid,.ld[data-v="term"] .v-term{display:grid}
+  .ld:not([data-v="eye"]) .ld-crt .ld-rec{display:none}
+  /* broadcast: blue field, colour bars, the eye icon, PLEASE STAND BY */
+  .v-ebs{background:#1d2bd0;align-content:center;gap:2cqw}
+  .v-ebs .ebs-bars{position:absolute;left:0;right:0;top:0;height:9%;background:linear-gradient(90deg,#c0c0c0 0 14.3%,#c0c000 0 28.6%,#00c0c0 0 42.9%,#00c000 0 57.2%,#c000c0 0 71.5%,#c00000 0 85.8%,#0000c0 0)}
+  .v-ebs svg{width:15cqw;height:15cqw;margin-top:4cqw}
+  .v-ebs b{font:400 9cqw/1 var(--display);text-transform:uppercase;letter-spacing:.04em;color:#fff;animation:ldPulse 2.4s steps(1) infinite}
+  /* file retrieval: a folder, the file sliding out and back */
+  .v-file{background:radial-gradient(ellipse at 50% 40%,#3a332a,#120f0c 75%)}
+  .v-file .f-back,.v-file .f-front{position:absolute;left:24%;width:52%;background:#c9b07a}
+  .v-file .f-back{top:22%;height:60%;clip-path:polygon(0 8%,30% 8%,36% 0,100% 0,100% 100%,0 100%)}
+  .v-file .f-front{top:46%;height:38%;background:#d8c08a;box-shadow:0 -2px 0 rgba(0,0,0,.25)}
+  .v-file .f-paper{position:absolute;left:29%;width:42%;top:24%;height:52%;padding:3cqw;display:grid;align-content:start;gap:1.6cqw;background:#efebe0;
+    animation:ldFile 2.6s cubic-bezier(.65,0,.35,1) infinite}
+  .v-file .f-paper b{font:400 3.6cqw/1 var(--type);color:#8a0000;letter-spacing:.06em}
+  .v-file .f-paper i{display:block;height:1.2cqw;width:80%;background:#9a9283}
+  .v-file .f-paper i:nth-of-type(2){width:60%}.v-file .f-paper i:nth-of-type(3){width:70%}
+  .v-file .f-photo{position:absolute;right:3cqw;top:3cqw;width:9cqw;height:11cqw;background:#3a3a3a}
+  @keyframes ldFile{0%,15%{transform:translateY(0)}45%,70%{transform:translateY(-34%)}100%{transform:translateY(0)}}
+  /* camera rotation: a 2x2 wall, a detection box hopping between cells, a figure in one */
+  .v-grid{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;padding:3px;background:#000;place-items:stretch}
+  .v-grid i{position:relative;outline:1px solid #2c3431;font:400 3.6cqw/1 var(--os);font-style:normal;color:#ddd;padding:2cqw;background:radial-gradient(ellipse at 50% 30%,#3b4542,#0e1110 80%)}
+  .v-grid i.ns{display:grid;place-items:center;color:#aaa;background:repeating-linear-gradient(0deg,#1a1a1a 0 2px,#262626 2px 4px)}
+  .v-grid em{position:absolute;left:58%;bottom:0;width:10%;height:62%;background:radial-gradient(circle at 50% 14%,#000 0 30%,transparent 32%),linear-gradient(#000,#000) 50% 100%/80% 74% no-repeat;animation:ldPulse 3.2s steps(1) infinite}
+  .v-grid .g-box{position:absolute;width:20%;height:24%;border:2px solid var(--danger);animation:ldHop 2.8s steps(1) infinite}
+  @keyframes ldHop{0%{left:14%;top:14%}25%{left:64%;top:16%}50%{left:62%;top:62%}75%{left:16%;top:60%}}
+  /* the rare one: a terminal that talks back */
+  .v-term{background:#020402;align-content:center;justify-items:start;padding:0 9cqw;gap:3cqw}
+  .v-term b{font:400 6.4cqw/1.1 var(--os);color:#7dff8a;text-shadow:0 0 8px rgba(125,255,138,.45);white-space:nowrap;overflow:hidden;width:0;animation:ldType 1.2s steps(22) forwards}
+  .v-term b:nth-child(2){animation-delay:1.4s}
+  @keyframes ldType{to{width:100%}}
+
   html.calm .ld::after,html.calm .ld.on .ld-win{animation:none}
   @media (prefers-reduced-motion:reduce){
     .ld-win,.ld.on .ld-win{transform:rotate(-1.2deg);transition:opacity .15s ease;animation:none}
-    .ld-crt .reye-ball i,.ld-prog span,.ld::after,.ld-rec::before{animation:none!important}
+    .ld-crt .reye-ball i,.ld-prog span,.ld::after,.ld-rec::before,.ld-crt .v *{animation:none!important}
+    .v-term b{width:100%}
     .ld-prog span{width:100%;transform:none}
   }
 </style>
 
 <div class="ld on" id="ld" role="status" aria-live="polite" aria-busy="true">
   <div class="ld-win">
-    <div class="ld-bar" aria-hidden="true"><span>CONNECTING.EXE</span><i><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+    <div class="ld-bar" aria-hidden="true"><span id="ldTitle">CONNECTING.EXE</span><i><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
     <div class="ld-body">
       <div class="ld-crt" aria-hidden="true">
-        <span class="reye"><span class="reye-ball"><i></i></span></span>
+        <!-- one of these screens is picked each time the loader opens -->
+        <span class="v v-eye"><span class="reye"><span class="reye-ball"><i></i></span></span></span>
+        <span class="v v-ebs"><span class="ebs-bars"></span><svg viewBox="0 0 100 100"><path d="M50 8L94 88H6z" fill="none" stroke="#fff" stroke-width="7"/><path d="M24 64q26-26 52 0q-26 22-52 0z" fill="#fff"/><circle cx="50" cy="63" r="8" fill="#1d2bd0"/></svg><b>Please stand by</b></span>
+        <span class="v v-file"><span class="f-back"></span><span class="f-paper"><b>SUBJECT FILE</b><i></i><i></i><i></i><span class="f-photo"></span></span><span class="f-front"></span></span>
+        <span class="v v-grid"><i>CAM 01</i><i>CAM 02<em></em></i><i>CAM 03</i><i class="ns">NO SIGNAL</i><span class="g-box"></span></span>
+        <span class="v v-term"><b>&gt; WE CAN SEE YOU.</b><b>&gt; DO YOU SEE YOURSELF?</b></span>
         <span class="ld-rec">REC</span><span class="ld-clock" id="ldClock">00:00</span>
       </div>
       <p class="ld-msg" id="ldMsg">Establishing connection…</p>
@@ -91,8 +131,26 @@
       const draw = () => { const s = Math.floor((Date.now() - started) / 1000); if (clock) clock.textContent = pad(Math.floor(s / 60)) + ':' + pad(s % 60); };
       draw(); clockTimer = setInterval(draw, 1000);
     }
-    const LINES = ['Establishing connection…', 'Pulling your file…', 'Adjusting the camera…',
-      'Stay where you are…', 'Almost there. Act natural…'];
+    // Each time the loader opens it runs a different "program" (never the same one twice in a row).
+    const VARIANTS = {
+      eye:  { w: 4, title: 'CONNECTING.EXE', lines: ['Establishing connection…', 'Adjusting the camera…', 'Stay where you are…', 'Almost there. Act natural…'] },
+      ebs:  { w: 3, title: 'EBS_FEED.EXE', lines: ['This is a test. Please remain seated…', 'Signal acquired. Stand by…', 'Do not adjust your screen…'] },
+      file: { w: 3, title: 'FILE_RETRIEVAL.EXE', lines: ['Pulling your file…', 'Cross-referencing your answers…', 'Your file is thicker than expected…'] },
+      grid: { w: 3, title: 'CAM_ROTATION.EXE', lines: ['Rotating cameras…', 'Locating subject…', 'CAM 02 has a better angle…'] },
+      term: { w: 1, title: 'WHO_IS_WATCHING.EXE', lines: ['Who is watching who…', 'Look closer…'] }
+    };
+    let LINES = VARIANTS.eye.lines;
+    function pickVariant() {
+      let last = ''; try { last = sessionStorage.getItem('leads-ld-v') || ''; } catch (e) { /* fine */ }
+      const pool = []; Object.keys(VARIANTS).forEach(k => { if (k !== last) for (let i = 0; i < VARIANTS[k].w; i++) pool.push(k); });
+      const v = pool[Math.floor(Math.random() * pool.length)];
+      try { sessionStorage.setItem('leads-ld-v', v); } catch (e) { /* fine */ }
+      el.dataset.v = v;
+      const t = document.getElementById('ldTitle'); if (t) t.textContent = VARIANTS[v].title;
+      LINES = VARIANTS[v].lines;
+      // restart the terminal typing for a fresh run
+      el.querySelectorAll('.v-term b').forEach(b => { b.style.animation = 'none'; void b.offsetWidth; b.style.animation = ''; });
+    }
     let timer = null, safety = null, fixed = false;
 
     function cycle() {
@@ -106,6 +164,7 @@
       }, 1800);
     }
     function show(text) {
+      if (!el.classList.contains('on')) pickVariant();
       fixed = !!text;
       if (text) msg.textContent = text; else cycle();
       el.classList.add('on'); el.setAttribute('aria-busy', 'true');
@@ -120,6 +179,7 @@
     }
 
     // first load: covered until the page is ready
+    pickVariant();
     cycle();
     runClock();
     safety = setTimeout(hide, 20000);

@@ -108,6 +108,8 @@ function selectedIds_(sh) {
 /** Simple trigger: runs on every hand edit. Must never throw. */
 function onEdit(e) {
   try { guardTrackEdit_(e); } catch (err) { console.error('onEdit: ' + (err && err.message)); }
+  // config tabs are cached for 2 minutes (Utils.gs cachedTab_): an edit clears the cache right away
+  try { const n = e && e.range && e.range.getSheet().getName(); if ([SHEET.SETTINGS, SHEET.LISTS, SHEET.ADMINS].indexOf(n) >= 0) clearConfigCache_(); } catch (err) { /* fine */ }
 }
 
 function guardTrackEdit_(e) {

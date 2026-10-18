@@ -65,6 +65,11 @@ function game_submitFinal(answers) {
       throw new Error('Sign in with your Ateneo account first.');
     }
 
+    // Safe to retry: if this account already has a file (e.g. the first attempt went through but the answer was lost
+    // on a bad connection, and the browser retried), report success with the existing ID instead of an error.
+    const existing = getApplicantByEmail_(email);
+    if (existing) { apply_deleteDraft_(email); return { ok: true, id: existing.data.ApplicantID, already: true }; }
+
     const draft = apply_getDraft_(email);
     if (!draft || !draft.data) {
       throw new Error('No saved application found. Fill in the application form first.');
@@ -78,6 +83,15 @@ function game_submitFinal(answers) {
     const fullForm = Object.assign({}, draft.data, {
       GameAnswers: JSON.stringify({ v: 2, answers: clean })
     });
-    return apply_submit_(fullForm);
+    try {
+      return apply_submit_(fullForm);
+    } catch (err) {
+      // two tabs / a retry racing each other: the other one filed it first
+      if (/already applied/i.test(String(err && err.message))) {
+        const again = getApplicantByEmail_(email);
+        if (again) return { ok: true, id: again.data.ApplicantID, already: true };
+      }
+      throw err;
+    }
   }, r => r.ok ? r.id + ' submitted' : 'needs fixing: ' + Object.keys(r.errors || {}).join(', '));
 }

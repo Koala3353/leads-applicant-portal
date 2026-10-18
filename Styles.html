@@ -410,6 +410,34 @@
     return tape;
   };
 
+  /* runServer('fn', ...args): google.script.run as a Promise, with automatic retries when Google is busy.
+     When many people open the portal at once, Apps Script can briefly refuse calls ("too many simultaneous
+     invocations", timeouts, lock timeouts). Those are retried 3 times with growing, randomised waits so a crowd spreads
+     out instead of everyone failing. Real errors (closed, already applied, validation) are not retried.
+     portal:error (I.R.I.S. reacting, the report prompt) fires only on the final failure. */
+  window.runServer = function (fn) {
+    const args = Array.prototype.slice.call(arguments, 1);
+    const TRANSIENT = /too many|simultaneous|service invoked|timed out|timeout|try again|unavailable|internal error|server error|network|failed to fetch|lock/i;
+    const waits = [900, 2200, 4800];
+    return new Promise(function (resolve, reject) {
+      let attempt = 0;
+      (function go() {
+        google.script.run.withSuccessHandler(resolve).withFailureHandler(function (err) {
+          const msg = String((err && err.message) || err || '');
+          if (attempt < waits.length && TRANSIENT.test(msg)) {
+            const wait = waits[attempt++] * (0.7 + Math.random() * 0.6);
+            const ld = document.getElementById('ld'), m = document.getElementById('ldMsg');
+            if (ld && m && ld.classList.contains('on')) m.textContent = 'Line busy. Trying again…';
+            setTimeout(go, wait);
+            return;
+          }
+          document.dispatchEvent(new CustomEvent('portal:error', { detail: err }));
+          reject(err);
+        })[fn].apply(null, args);
+      })();
+    });
+  };
+
   /* Broadcast.show({ top, big, sub, btn }): a full-screen Broadcast Card with one button (Esc / button closes). */
   window.Broadcast = (function () {
     const ICON = '<svg class="b-ico" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 8L94 88H6z" fill="none" stroke="#fff" stroke-width="7"/><path d="M24 64q26-26 52 0q-26 22-52 0z" fill="#fff"/><circle cx="50" cy="63" r="8" fill="#1d2bd0"/></svg>';
