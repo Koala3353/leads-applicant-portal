@@ -221,12 +221,12 @@ const BRAND = {
     show: true,
     name: 'I.R.I.S.',
     fullName: 'Inspection, Reconnaissance & Identification System',
-    // I.R.I.S. is a wall-mounted CCTV camera (Mascot.html). Voice = the brand book: deadpan, clinical, observant, intimate.
+    // I.R.I.S. is a pocket CRT television with an eye on its screen (Mascot.html). Voice = the brand book: deadpan, clinical, observant, intimate.
     // Second person, short declarative sentences, study vocabulary (file, subject, recorded, noted, observe).
     // Quiet and specific; every line ends on an invitation, never a threat. No exclamation marks, no emoji.
     // Errors and instructions stay plain: what happened, what to do.
     // Every line is [face, text]. Faces: 'nervous' 'happy' 'excited' 'sad' 'scared' 'wink' 'love' 'thinking'.
-    colors: {                              // the status LED for each face (the LCD word comes from Mascot.html)
+    colors: {                              // the status LED for each face (the on-screen word comes from Mascot.html)
       nervous:  '#FF2A2A',                 // REC: the default, steady watching
       scared:   '#FF2A2A',                 // ALERT (blinks fast)
       happy:    '#3DFF6E',                 // NOTED
