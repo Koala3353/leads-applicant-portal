@@ -29,8 +29,8 @@ const BRAND = {
     eyebrow: 'MEA leadership camp',       // shown as "<event> · <eyebrow> · applications open"
     kicker: 'Case file 26/27',            // yellow tape label above the headline
     headline: 'LEADS: Oversight',
-    tagline: 'People will be watching. Apply anyway.',
-    hint: 'Takes about 10 minutes. One application per person.',   // under the main button, before applying
+    tagline: 'Someone is already watching. Apply anyway.',
+    hint: 'About 10 minutes. One application per person. We will know if you try twice.',   // under the main button, before applying
     redact: [],                            // words in the lede shown as black bars until hovered or tapped (empty = off)
     lede: 'LEADS is MEA\'s off-site leadership camp. For a few days, people watch you make calls, ' +
           'and sometimes they watch you get them wrong. That\'s how the training works. ' +
@@ -48,8 +48,8 @@ const BRAND = {
     switchAccount: 'Switch account'
   },
   countdown: {
-    title: 'Time remaining',
-    soon: 'Less than two days left',            // under 2 days left
+    title: 'Time left to decide',
+    soon: 'Less than two days left. We noticed you waiting.',            // under 2 days left
     closed: 'Applications are closed',
     tba: 'Deadline to be announced.',
     campTitle: 'Camp starts in',         // once the applicant is CONFIRMED, the clock counts down to camp instead
@@ -62,7 +62,7 @@ const BRAND = {
   faq: {
     eyebrow: 'FAQ',
     title: 'Classified files',
-    note: 'Open a file to declassify it.',
+    note: 'Open a file. We already read it.',
     items: [
       { q: 'How much does camp cost?', a: 'The camp fee is ₱{fee}. Once you are accepted, you pay first through the payment form on this page. The requirements form opens after your payment is verified.', needs: 'fee', fallback: "The fee hasn't been announced yet. It'll show up here first." },
       { q: 'When and where is it?', a: '{dates}, at {venue}.', needs: 'dates', fallback: 'Dates and venue are still being finalized.' },
@@ -78,7 +78,7 @@ const BRAND = {
   // Replace these with real ones (with the camper's permission) and delete `sample`.
   testimonials: {
     eyebrow: 'Intercepted transcripts',
-    title: 'From past campers',
+    title: 'They applied too',
     items: [   // placeholders written for this portal, not real quotes yet: swap in real ones, then delete `sample`
       { quote: "I volunteered to lead our group's presentation mostly so I'd stop dreading it. My voice shook the whole time. Nobody cared. I'd do it again.", who: 'Camper', meta: 'LEADS 2025', fear: 'Public speaking', sample: true },
       { quote: "I spent the first night trying to say the right thing. By day two I gave up on that, and that's when people actually started talking to me.", who: 'Camper', meta: 'LEADS 2025', fear: 'Being judged', sample: true },
@@ -93,13 +93,17 @@ const BRAND = {
     ['GLOSSOPHOBIA', 'fear of public speaking'],
     ['OVERSIGHT', '1. watchful supervision 2. an honest mistake'],
     ['DECIDOPHOBIA', 'fear of making the call'],
-    ['I.R.I.S. IS WATCHING', 'say hi']
+    ['I.R.I.S. IS WATCHING', 'say hi'],
+    ['YOU BLINKED', "we didn't"],
+    ['THE THIRD CAMERA', 'is not empty'],
+    ['LAST SEEN', 'just now'],
+    ['DO NOT TURN AROUND', 'it is fine. probably.']
   ],
 
   /* ---------- the hub: one card per step, in order ---------- */
   hub: {
-    eyebrow: 'Your file',
-    title: 'Your file so far.',
+    eyebrow: 'Your file // live',
+    title: 'What we have on you.',
     guestNote: 'Sign in with your Ateneo account to see your file.'
   },
   modules: {
@@ -350,15 +354,41 @@ const BRAND = {
       'OBSERVATION ONGOING.',
       'CAM 02 HAS A BETTER ANGLE.',
       'WE KNOW YOU\'RE NERVOUS, {name}.',
-      'YOU CAN LOOK AWAY. WE WON\'T.'
+      'YOU CAN LOOK AWAY. WE WON\'T.',
+      'WHY DID YOU STOP SCROLLING?',
+      'THE LIGHTS ARE ON IN CAM 03.',
+      'TURN AROUND, {name}. SLOWLY.'
     ],
     whispers: [           // the red tagline swaps to one of these for about 3 seconds
       'Everyone hesitates the first time.',
       'The deadline is watching too.',
       "Go on. Nobody's grading this part.",
       'You read that line twice.',
-      "You're not the only one reading this."
-    ]
+      "You're not the only one reading this.",
+      "Don't scroll too fast. It follows.",
+      "You've been on this page longer than you think.",
+      'Something moved on CAM 02.'
+    ],
+    // random creepy moments on Home (every 10-22s, one at a time, off in CRT-off mode). {name} = first name; lines with it
+    // are skipped for guests. All decorative: nothing here is real tracking, and nothing is gory.
+    creep: {
+      every: [10, 22],
+      popups: [                // a little 90s alert window in a corner (never the bottom-right, that's I.R.I.S.)
+        'CAM 02 has a better angle of you.',
+        'Someone else just opened this page.',
+        'Your file was opened 3 seconds ago.',
+        'Do you hear that too?',
+        'We saved your spot, {name}.',
+        'Movement detected near your door.',
+        'Please stay where you are.',
+        'You looked away. We noticed.'
+      ],
+      tabTitles: ['come back.', 'we can still see you', '(1) new message: turn around', 'where did you go, {name}?'],
+      back: ['You were gone {s} seconds. We waited.', 'Welcome back. Nothing happened while you were gone. Probably.'],
+      poster: ['WE SEE YOU', 'DO NOT LOOK BEHIND YOU', 'HELLO, {name}', 'STAY STILL'],
+      hub: ['We have your file.', 'We kept a copy.', 'Your file has been opened.'],
+      screens: ['I SEE YOU', 'BEHIND YOU', 'WAKE UP', 'CH 00', 'HELLO']   // static TVs briefly show one of these
+    }
   }
 };
 

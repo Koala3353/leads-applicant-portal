@@ -112,7 +112,53 @@
   .cut small{display:block;margin-top:10px;font-family:var(--mono);font-size:13px;letter-spacing:.1em;color:var(--muted)}
   .subject{display:grid;gap:20px;grid-template-columns:1fr;align-items:center}
   @media (min-width:860px){.subject{grid-template-columns:minmax(0,320px) 1fr}}
-  .subject img{display:block;width:100%;max-width:320px;height:auto;aspect-ratio:1;margin:0 auto;border:2px solid var(--danger)}
+  /* the face (stand-in until real photos): a dark gaunt head with the photo-like eyes, pupils pinned small */
+  .mface{position:relative;display:block;width:100%;aspect-ratio:1;overflow:hidden;container-type:inline-size;
+    background:radial-gradient(ellipse 34% 44% at 50% 44%,#3b3431 0%,#1d1917 45%,#080707 74%,#000 100%)}
+  .mface::before{content:"";position:absolute;inset:0;z-index:1;
+    background:radial-gradient(ellipse 12% 16% at 32% 63%,rgba(0,0,0,.6),transparent 70%),radial-gradient(ellipse 12% 16% at 68% 63%,rgba(0,0,0,.6),transparent 70%),
+      linear-gradient(180deg,transparent 29%,rgba(0,0,0,.7) 35%,transparent 43%)}
+  .mface::after{content:"";position:absolute;inset:-20px;z-index:3;pointer-events:none;opacity:.5;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.4) 0 1px,transparent 1px 3px),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .8 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  .mface .reye{position:absolute;top:33%;z-index:2;--s:30cqw;--pupil:8%;
+    background:radial-gradient(ellipse 70% 80% at 50% 58%,#5a4740 0%,#2a221f 55%,#141110 100%);
+    -webkit-mask:radial-gradient(ellipse 50% 50% at 50% 50%,#000 58%,transparent 100%);mask:radial-gradient(ellipse 50% 50% at 50% 50%,#000 58%,transparent 100%)}
+  .mface .reye.l{left:15%}.mface .reye.r{right:15%}
+  .mface .reye-ball::after{animation:none}
+  .mface-mouth{position:absolute;z-index:2;left:31%;right:31%;top:71%;height:2.6cqw;background:#000;border-radius:50%;box-shadow:0 0 2.4cqw 1.4cqw rgba(0,0,0,.85)}
+  .mface-tag{position:absolute;z-index:4;left:0;right:0;bottom:5%;text-align:center;font:400 6.5cqw/1 var(--os);letter-spacing:.2em;color:var(--mc);text-shadow:0 0 8px #000}
+  .mface[data-m="kerish"]{--mc:#ff3a3a}.mface[data-m="kerish"] .reye{filter:grayscale(1) contrast(1.4) sepia(1) hue-rotate(-45deg) saturate(4) brightness(.8)}
+  .mface[data-m="chums"]{--mc:#5cff5c}.mface[data-m="chums"] .reye{filter:grayscale(1) contrast(1.4) sepia(1) hue-rotate(55deg) saturate(3) brightness(.8)}
+  .mface[data-m="aly"]{--mc:#ffff3a}.mface[data-m="aly"] .reye{filter:grayscale(1) contrast(1.4) sepia(1) hue-rotate(5deg) saturate(3.5) brightness(.95)}
+  .subject-photo{position:relative;width:100%;max-width:320px;margin:0 auto;padding:8px 8px 28px;background:#efece3;box-shadow:5px 6px 0 #000;transform:rotate(-2deg)}
+  .subject-photo .stamp-ink{position:absolute;right:-10px;bottom:6px;--r:-9deg;background:rgba(239,236,227,.6)}
+
+  /* ---- the jump scare: false calm, a beat of black, then the face punches in, shakes, one flash, "FOUND YOU" ---- */
+  .jump{position:fixed;inset:0;z-index:9700;display:none;place-items:center;overflow:hidden;background:#000}
+  .jump.on{display:grid}
+  .jump.out{opacity:0;transition:opacity .35s ease}
+  .jump::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 45%,transparent 35%,rgba(120,0,0,.55) 75%,rgba(0,0,0,.95) 100%),repeating-linear-gradient(0deg,rgba(0,0,0,.45) 0 2px,transparent 2px 4px)}
+  .jump::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;background:#fff;opacity:0}
+  .jump.on::after{animation:jFlash .28s ease-out 1}
+  .jump-face{width:min(118vmin,980px);transform-origin:50% 42%}
+  .jump.on .jump-face{animation:jPunch .18s cubic-bezier(.2,1.5,.4,1) both}
+  .jump.on .mface{animation:jShake .08s steps(2) .18s 10}
+  .jump .mface .reye{--pupil:6%}
+  /* full-screen: the grain lives on the whole overlay, so the face has no visible square edge on tall phones */
+  .jump .mface::after,.jump .mface-tag{display:none}
+  .jump .mface{background:radial-gradient(ellipse 34% 44% at 50% 44%,#3b3431 0%,#1d1917 45%,#080707 70%,transparent 92%)}
+  .jump-noise{position:absolute;inset:-30px;z-index:1;pointer-events:none;opacity:.35;animation:grain .3s steps(3) infinite;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='2'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  .jump-txt{position:absolute;z-index:4;left:0;right:0;bottom:7%;margin:0;text-align:center;font-family:var(--display);font-size:clamp(3rem,15vw,9rem);line-height:.85;
+    text-transform:uppercase;color:var(--danger);text-shadow:-6px 0 rgba(0,16,224,.85),6px 0 rgba(255,255,255,.25)}
+  .jump.on .jump-txt{animation:jShake .09s steps(2) .1s 12}
+  @keyframes jPunch{from{transform:scale(1.9)}to{transform:scale(1.04)}}
+  @keyframes jShake{0%{translate:-7px 5px}50%{translate:8px -6px}100%{translate:-3px -2px}}
+  @keyframes jFlash{0%{opacity:.8}100%{opacity:0}}
+  .cut.calmfeed p{color:var(--glow)}
+  .cut.dead > div{visibility:hidden}
   .subject h2{margin:4px 0 6px;font-family:var(--display);font-size:clamp(2rem,6vw,3rem);letter-spacing:.04em;text-transform:uppercase}
   .threat{display:inline-block;font-family:var(--mono);font-size:12px;letter-spacing:.1em;padding:4px 8px;border:1.5px solid var(--danger);color:var(--danger)}
   .threat.rare{border-color:var(--glow);color:var(--glow)}
@@ -126,6 +172,7 @@
 <?!= include('Loader') ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 <div class="vignette" id="vignette" aria-hidden="true"></div>
+<div class="jump" id="jump" aria-hidden="true"><span class="jump-noise"></span><div class="jump-face"><div class="mface" id="jumpFace"></div></div><p class="jump-txt">Found you</p></div>
 <div class="wrap">
   <?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
 
@@ -189,14 +236,14 @@
   </div>
 
   <div class="state" id="state-cut">
-    <div class="cut" role="status"><div><p>Signal interrupted</p><small>SOMEONE IS ACCESSING THIS TERMINAL</small></div></div>
+    <div class="cut" id="cutBox" role="status"><div><p id="cutTitle">All feeds clear</p><small id="cutSub">NO THREAT DETECTED. YOU CAN RELAX.</small></div></div>
   </div>
 
   <div class="card state" id="state-reveal">
     <div class="winbar red"><span>SUBJECT_ID.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
     <p class="eyebrow">SUBJECT IDENTIFIED</p>
     <div class="subject reveal-in" id="subject">
-      <img id="monsterImage" alt="">
+      <div class="subject-photo"><div class="mface" id="monsterFace" role="img"></div><span class="stamp-ink">Identified</span></div>
       <div>
         <p class="mono" style="margin:0;color:var(--muted)">THE ONE WATCHING YOU WAS…</p>
         <h2 id="monsterName"></h2>
@@ -301,22 +348,41 @@
        '<path class="lurk" d="M128 84c0-16 2-27 6-30a4 4 0 1 1 4 0c4 3 6 14 6 30z" fill="#030303"/>'
   };
 
-  // Monster stand-ins until real photos are added (put them in Drive / the repo and swap here).
-  function monsterArt(bg, eye, label) {
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">' +
-      '<rect width="400" height="400" fill="' + bg + '"/>' +
-      '<path d="M120 400 Q110 210 200 150 Q290 210 280 400Z" fill="#050505"/>' +
-      '<circle cx="200" cy="140" r="70" fill="#050505"/>' +
-      '<circle cx="175" cy="135" r="9" fill="' + eye + '"/><circle cx="225" cy="135" r="9" fill="' + eye + '"/>' +
-      '<text x="200" y="370" fill="' + eye + '" font-family="monospace" font-size="26" text-anchor="middle" letter-spacing="3">' + label + '</text></svg>';
-    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  // Monster faces: CSS stand-ins built from the photo-like eye (.reye) until real photos are added.
+  function faceHTML(m) {
+    const eye = side => '<span class="reye ' + side + '"><span class="reye-ball"><i></i></span></span>';
+    return eye('l') + eye('r') + '<span class="mface-mouth"></span><span class="mface-tag">' + m.name.toUpperCase() + '</span>';
   }
+  function paintFace(el, m) { el.dataset.m = m.key; el.innerHTML = faceHTML(m); }
+
+  // A short synthesized scare: a thud, a falling screech and a burst of static. Web Audio only, no files.
+  // Browsers only allow sound right after a click, so the context is opened inside the click that clears the last room.
+  let audio = null;
+  function openAudio() {
+    try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch (e) { audio = null; }
+  }
+  function scareSound(delaySec) {
+    if (!audio || audio.state !== 'running') return;
+    const t = audio.currentTime + delaySec, out = audio.createGain();
+    out.gain.value = .5; out.connect(audio.destination);
+    const env = (node, peak, len) => { const g = audio.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + len); node.connect(g); g.connect(out); };
+    const thud = audio.createOscillator(); thud.type = 'sine'; thud.frequency.setValueAtTime(90, t); thud.frequency.exponentialRampToValueAtTime(38, t + .35);
+    env(thud, .9, .4); thud.start(t); thud.stop(t + .45);
+    const scr = audio.createOscillator(); scr.type = 'sawtooth'; scr.frequency.setValueAtTime(1400, t); scr.frequency.exponentialRampToValueAtTime(140, t + .8);
+    env(scr, .22, .85); scr.start(t); scr.stop(t + .9);
+    const len = Math.floor(audio.sampleRate * .9), buf = audio.createBuffer(1, len, audio.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const noise = audio.createBufferSource(); noise.buffer = buf;
+    const bp = audio.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.setValueAtTime(3000, t); bp.frequency.exponentialRampToValueAtTime(500, t + .8);
+    noise.connect(bp); env(bp, .55, .9); noise.start(t); noise.stop(t + .9);
+  }
+
   const MONSTERS = [   // Sir Kerish 60%, Sir Chums 30%, Sir Aly 10%
-    { upTo: 0.6, name: 'Sir Kerish', threat: 'COMMON SIGHTING', rare: false, img: monsterArt('#1a0000', '#ff2a2a', 'SIR KERISH'),
+    { upTo: 0.6, key: 'kerish', name: 'Sir Kerish', threat: 'COMMON SIGHTING', rare: false,
       line: 'He has been in the corner of every feed this whole time. You only noticed now.' },
-    { upTo: 0.9, name: 'Sir Chums', threat: 'MEDIUM THREAT', rare: false, img: monsterArt('#001a05', '#4af626', 'SIR CHUMS'),
+    { upTo: 0.9, key: 'chums', name: 'Sir Chums', threat: 'MEDIUM THREAT', rare: false,
       line: 'He waved at the camera. Twice. He knows you saw.' },
-    { upTo: 1, name: 'Sir Aly', threat: '★ RARE SIGHTING ★', rare: true, img: monsterArt('#00001a', '#ffff00', 'SIR ALY'),
+    { upTo: 1, key: 'aly', name: 'Sir Aly', threat: '\u2605 RARE SIGHTING \u2605', rare: true,
       line: 'Almost nobody sees him. Consider yourself selected.' }
   ];
 
@@ -459,6 +525,7 @@
     if (!picked) { say('Pick an answer first.', 'bad'); return; }
     say('');
     answers[room.qs[qIndex].id] = { a: picked.value, ms: Date.now() - qStart };
+    if (!calm() && Object.keys(answers).length === TOTAL) openAudio();   // the last answer: allow the reveal's sound
     saved = false;
     updateTape();
     if (qIndex < room.qs.length - 1) { qIndex++; renderQuestion(); }
@@ -527,8 +594,8 @@
   function reveal() {
     const roll = Math.random();
     const m = MONSTERS.find(x => roll < x.upTo) || MONSTERS[0];
-    $('monsterImage').src = m.img;
-    $('monsterImage').alt = m.name + ', staring into the camera';
+    paintFace($('monsterFace'), m);
+    $('monsterFace').setAttribute('aria-label', m.name + ', staring into the camera');
     $('monsterName').textContent = m.name;
     $('monsterThreat').textContent = m.threat;
     $('monsterThreat').classList.toggle('rare', m.rare);
@@ -539,8 +606,19 @@
       $('submitBtn').focus();
     };
     if (calm()) { showSubject(); return; }
+    // 1. false calm   2. a beat of black   3. the face, the sound, "FOUND YOU"   4. it fades into the file
+    const cut = $('cutBox'), jump = $('jump');
+    cut.className = 'cut calmfeed';
     show('cut');
-    setTimeout(showSubject, 1600);
+    paintFace($('jumpFace'), m);
+    scareSound(2.05);
+    setTimeout(() => { cut.classList.add('dead'); }, 1700);
+    setTimeout(() => {
+      jump.classList.remove('out'); jump.classList.add('on');
+      if (navigator.vibrate) { try { navigator.vibrate([90, 40, 160]); } catch (e) { /* optional */ } }
+    }, 2050);
+    setTimeout(() => { jump.classList.add('out'); showSubject(); }, 3700);
+    setTimeout(() => { jump.classList.remove('on', 'out'); cut.className = 'cut'; }, 4100);
   }
 
   async function submit() {

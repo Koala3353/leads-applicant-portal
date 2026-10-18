@@ -20,6 +20,28 @@
   body.still .reye{--pupil:34%}
   body.still .watcher{opacity:calc(var(--o,.7) + .15)}
 
+  /* ---------- random creepy moments (see the creep engine in the script) ---------- */
+  .creep-pop{position:fixed;z-index:9400;width:min(290px,calc(100vw - 32px));padding:3px;background:var(--win);color:#000;
+    box-shadow:var(--bevel-out),6px 6px 0 #000;rotate:var(--r,-1deg);opacity:0;translate:0 8px;pointer-events:none;
+    transition:opacity .18s ease-out,translate .26s cubic-bezier(.23,1,.32,1)}
+  .creep-pop.on{opacity:1;translate:0 0;pointer-events:auto}
+  .creep-pop .cp-bar{display:flex;justify-content:space-between;align-items:center;padding:2px 2px 2px 7px;background:linear-gradient(90deg,var(--title-a),var(--title-b));
+    color:#fff;font:400 1.05rem/1.2 var(--os);letter-spacing:.04em}
+  .creep-pop .cp-x{display:grid;place-items:center;width:22px;height:20px;padding:0;border:0;background:var(--win);color:#000;box-shadow:var(--bevel-out);font:700 12px/1 monospace;cursor:pointer}
+  .creep-pop .cp-x:active{box-shadow:var(--bevel-in)}
+  .creep-pop .cp-body{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;padding:14px 12px 10px}
+  .creep-pop .cp-ico{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#c00000;color:#fff;font:700 20px/1 var(--display);box-shadow:inset -2px -2px 0 rgba(0,0,0,.35)}
+  .creep-pop .cp-msg{margin:0;font:400 1.2rem/1.2 var(--os);letter-spacing:.02em}
+  .creep-pop .cp-ok{justify-self:center;grid-column:1/-1;min-width:84px;min-height:32px;margin-top:4px;border:0;background:var(--win);color:#000;box-shadow:var(--bevel-out);
+    font:400 1.1rem/1 var(--os);cursor:pointer}
+  .creep-pop .cp-ok:focus-visible,.creep-pop .cp-x:focus-visible{outline:2px dotted #000;outline-offset:-5px}
+  .creep-pop .cp-ok:active{box-shadow:var(--bevel-in)}
+  /* a TV eye that suddenly stops following you and just stares */
+  .reye.stare{--pupil:38%}
+  .reye.stare .reye-ball i{transform:none!important;transition:transform .5s cubic-bezier(.77,0,.175,1)}
+  .p-h.creeping,.hub-head h2.creeping{color:#a00000;animation:rgbJitter .7s steps(1) infinite}
+  .hub-head h2.creeping{color:var(--danger)}
+
   /* ---------- the wall: stacked CRT TVs, each with an eye, plus a propaganda poster (decorative) ---------- */
   .wall{position:relative;display:grid;grid-template-columns:1fr;gap:26px;margin:18px 0 34px;align-items:center}
   @media (min-width:860px){.wall{grid-template-columns:1.25fr .85fr;gap:0}}
@@ -38,7 +60,7 @@
   .tv-scr{container-type:inline-size}
   .tv-scr .reye{--s:108cqw}
   .tv-scr.static{background:#222}
-  .tv-scr.static::before{content:"NO SIGNAL";position:absolute;inset:-20px;display:grid;place-items:center;font:400 13cqw/1 var(--os);letter-spacing:.2em;color:#ddd;
+  .tv-scr.static::before{content:attr(data-msg);position:absolute;inset:-20px;display:grid;place-items:center;font:400 13cqw/1 var(--os);letter-spacing:.2em;color:#ddd;
     animation:grain .3s steps(3) infinite;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.3'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
   .tv.big{grid-column:span 2;grid-row:span 2}
   /* the stack piles up and leans */
@@ -446,11 +468,11 @@
   <section class="wall" aria-hidden="true">
     <div class="tvs">
       <div class="tv"><span class="tv-scr"><span class="reye" data-watch style="--d:-1.2s"><span class="reye-ball"><i></i></span></span></span><b>CH 03</b></div>
-      <div class="tv"><span class="tv-scr static"></span><b>CH 04</b></div>
+      <div class="tv"><span class="tv-scr static" data-msg="NO SIGNAL"></span><b>CH 04</b></div>
       <div class="tv"><span class="tv-scr"><span class="reye red" data-watch style="--d:-4s"><span class="reye-ball"><i></i></span></span></span><b>CH 07</b></div>
       <div class="tv"><span class="tv-scr"><span class="reye" data-watch style="--d:-2.6s"><span class="reye-ball"><i></i></span></span></span><b>CH 11</b></div>
       <div class="tv"><span class="tv-scr"><span class="reye" data-watch style="--d:-5.5s"><span class="reye-ball"><i></i></span></span></span><b>CH 02</b></div>
-      <div class="tv"><span class="tv-scr static"></span><b>CH 09</b></div>
+      <div class="tv"><span class="tv-scr static" data-msg="NO SIGNAL"></span><b>CH 09</b></div>
     </div>
     <div class="poster">
       <span class="tape-strip"></span>
@@ -642,6 +664,95 @@
         loop();
       }, wait());
     })();
+  })();
+
+  /* ---------- random creepy moments: a 90s alert pops up in a corner, a TV loses signal or shows a word, an eye stops
+     following and stares, the poster and the hub heading change for a moment, and the tab title calls you back when you
+     leave. One at a time, every 10-22s; off in CRT-off mode, while the tab is hidden, the loader is up or a pop-up is open.
+     Copy: BRAND.horror.creep. Decorative only (aria-hidden), so screen readers aren't spammed. ---------- */
+  (function () {
+    const C = BRAND.horror && BRAND.horror.creep;
+    if (!C) return;
+    const pick = a => a[Math.floor(Math.random() * a.length)];
+    const nm = () => (window.__creep && window.__creep.name) || '';
+    const usable = list => (list || []).filter(l => l.indexOf('{name}') < 0 || nm());
+    const fill = l => l.replace('{name}', nm()).replace('{name}'.toUpperCase(), nm().toUpperCase());
+    const calmOn = () => document.documentElement.classList.contains('calm');
+    const busy = () => calmOn() || document.hidden || document.getElementById('ld').classList.contains('on') ||
+      !!document.querySelector('dialog[open]') || $('interrupt').classList.contains('on') || !!document.querySelector('.creep-pop.on');
+
+    /* the alert window */
+    let pop = null, popTimer = null;
+    function popup(text) {
+      if (!pop) {
+        pop = document.createElement('div'); pop.className = 'creep-pop'; pop.setAttribute('aria-hidden', 'true');
+        pop.innerHTML = '<div class="cp-bar"><span>MESSAGE.EXE</span><button type="button" class="cp-x" tabindex="-1">&#215;</button></div>' +
+          '<div class="cp-body"><span class="cp-ico">!</span><p class="cp-msg"></p><button type="button" class="cp-ok" tabindex="-1">OK</button></div>';
+        document.body.appendChild(pop);
+        pop.addEventListener('click', e => { if (e.target.closest('button')) closePop(); });
+      }
+      const spots = [{ top: '92px', left: '16px' }, { top: '38%', left: '16px' }, { top: '120px', right: '16px' }, { top: '24%', right: '22%' }];
+      const at = pick(innerWidth < 700 ? spots.slice(0, 2) : spots);   // phones: left side only, never off-screen
+      ['top', 'left', 'right'].forEach(k => { pop.style[k] = at[k] || ''; });
+      pop.style.setProperty('--r', (Math.random() * 4 - 2).toFixed(1) + 'deg');
+      pop.querySelector('.cp-msg').textContent = text;
+      pop.classList.add('on');
+      clearTimeout(popTimer); popTimer = setTimeout(closePop, 6000);
+    }
+    function closePop() { if (pop) pop.classList.remove('on'); clearTimeout(popTimer); }
+
+    /* a TV loses its eye to static, or a static TV shows a word */
+    function screen() {
+      const statics = [...document.querySelectorAll('.tv-scr.static')];
+      const live = [...document.querySelectorAll('.tv-scr:not(.static)')];
+      if (Math.random() < .5 && statics.length) {
+        const t = pick(statics); t.dataset.msg = pick(C.screens || ['I SEE YOU']);
+        setTimeout(() => { t.dataset.msg = 'NO SIGNAL'; }, 1400);
+      } else if (live.length) {
+        const t = pick(live); t.classList.add('static'); t.dataset.msg = 'NO SIGNAL';
+        setTimeout(() => t.classList.remove('static'), 1300);
+      }
+    }
+    /* one eye stops following and stares straight out */
+    function stare() {
+      const eyes = [...document.querySelectorAll('[data-watch]')];
+      if (!eyes.length) return;
+      const e = pick(eyes); e.classList.add('stare');
+      setTimeout(() => e.classList.remove('stare'), 3500);
+    }
+    /* swap a line of text for a moment */
+    function swap(el, lines) {
+      const l = usable(lines);
+      if (!el || !l.length || el.classList.contains('creeping')) return;
+      const was = el.innerHTML;
+      el.textContent = fill(pick(l)); el.classList.add('creeping');
+      setTimeout(() => { el.innerHTML = was; el.classList.remove('creeping'); }, 2600);
+    }
+    const events = [
+      () => { const l = usable(C.popups); if (l.length) popup(fill(pick(l))); },
+      screen, stare,
+      () => swap(document.querySelector('.poster .p-h'), C.poster),
+      () => swap($('hubTitle'), C.hub)
+    ];
+    const gap = () => 1000 * ((C.every || [10, 22])[0] + Math.random() * ((C.every || [10, 22])[1] - (C.every || [10, 22])[0]));
+    (function loop() {
+      setTimeout(() => { if (!busy()) pick(events)(); loop(); }, gap());
+    })();
+
+    /* leaving the tab: the title calls you back; coming back after a while gets a note */
+    const title = document.title;
+    let leftAt = 0;
+    document.addEventListener('visibilitychange', () => {
+      if (calmOn()) { document.title = title; return; }
+      if (document.hidden) {
+        leftAt = Date.now();
+        const l = usable(C.tabTitles); if (l.length) document.title = fill(pick(l));
+      } else {
+        document.title = title;
+        const secs = Math.round((Date.now() - leftAt) / 1000);
+        if (leftAt && secs >= 5 && (C.back || []).length) setTimeout(() => { if (!busy()) popup(pick(C.back).replace('{s}', secs)); }, 900);
+      }
+    });
   })();
 
   /* ---------- redacted words in the lede: black bars until hovered, focused or tapped ---------- */
