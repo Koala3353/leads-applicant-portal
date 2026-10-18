@@ -1099,6 +1099,26 @@
     return { ok: Object.keys(errors).length === 0, errors };
   }
 
+  // Leave the Apps Script frame. Google only allows this straight after a click, so after a server call
+  // window.open may be blocked: we then show a themed card with a real target="_top" link to click.
+  function go(url, label, msg) {
+    try { window.open(url, '_top'); } catch (e) { /* blocked */ }
+    setTimeout(() => {
+      if (window.Loader) Loader.hide();
+      let c = document.getElementById('goCard');
+      if (!c) {
+        c = document.createElement('div'); c.id = 'goCard'; c.setAttribute('role', 'dialog');
+        c.style.cssText = 'position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(5,5,5,.86);padding:16px';
+        c.innerHTML = '<div class="card" style="max-width:440px;text-align:center"><p class="mono" id="goMsg" style="margin:0 0 16px"></p>' +
+          '<a class="btn" id="goLink" target="_top"></a></div>';
+        document.body.appendChild(c);
+      }
+      document.getElementById('goMsg').textContent = msg || 'Ready.';
+      const a = document.getElementById('goLink'); a.href = url; a.textContent = label || 'Continue';
+      a.focus();
+    }, 700);
+  }
+
   async function onSubmit(e) {
     e.preventDefault();
     const btn = $('submitBtn');
@@ -1125,11 +1145,11 @@
     // 2. Save Draft to Account & Redirect to Game Page
     try {
       const res = await call('apply_saveDraft', data);
-      if (res && res.applied) { window.open(BASE, '_top'); return; }   // already applied: back to the hub
+      if (res && res.applied) { go(BASE, 'Go to the hub', 'You already applied. Your file is on record.'); return; }
       if (!res || res.ok === false) throw new Error('save failed');    // #7: don't send them on without a saved draft
 
       // Leave the Apps Script frame properly (location.href inside it just shows a blank page)
-      window.open(BASE + '?page=game', '_top');
+      go(BASE + '?page=game', 'Start the threat assessment', 'Answers saved. Next: the threat assessment.');
     } catch (err) {
       if (typeof judge !== 'undefined' && judge.force) judge.force(['scared', "I couldn't save your answers just now. Check your connection and press the button again."]);
       btn.disabled = false;

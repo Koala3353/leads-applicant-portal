@@ -307,8 +307,25 @@
     aly: monsterArt('#00001a', '#ffff00', 'SIR ALY (RARE)')
   };
 
-  // Leave the Apps Script frame properly (location.href inside the frame just shows a blank page).
-  function go(url) { window.open(url, '_top'); }
+  // Leave the Apps Script frame. Google only allows this straight after a click, so after a server call
+  // window.open may be blocked: we then show a themed card with a real target="_top" link to click.
+  function go(url, label, msg) {
+    try { window.open(url, '_top'); } catch (e) { /* blocked */ }
+    setTimeout(() => {
+      if (window.Loader) Loader.hide();
+      let c = document.getElementById('goCard');
+      if (!c) {
+        c = document.createElement('div'); c.id = 'goCard'; c.setAttribute('role', 'dialog');
+        c.style.cssText = 'position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(5,5,5,.86);padding:16px';
+        c.innerHTML = '<div class="card" style="max-width:440px;text-align:center"><p class="mono" id="goMsg" style="margin:0 0 16px"></p>' +
+          '<a class="btn" id="goLink" target="_top"></a></div>';
+        document.body.appendChild(c);
+      }
+      document.getElementById('goMsg').textContent = msg || 'Ready.';
+      const a = document.getElementById('goLink'); a.href = url; a.textContent = label || 'Continue';
+      a.focus();
+    }, 700);
+  }
 
   // Themed in-page notice instead of alert()
   function notice(msg, tone) {
@@ -411,7 +428,7 @@
     if (clearedRooms.includes(roomNum)) return;
     currentRoom = roomNum;
     showState('room');
-    $('roomTitle').textContent = `CAM 0${roomNum} // SECTOR INTERROGATION`;
+    $('roomTitle').textContent = 'CAM 0' + roomNum + ' \u002F\u002F SECTOR INTERROGATION';   // no '//' inside backticks: Apps Script's comment stripper cuts it
 
     const container = $('questionsContainer');
     container.innerHTML = '';
@@ -544,14 +561,14 @@
       if (res && res.ok) {
         try { sessionStorage.removeItem('leads-game'); } catch (e) { /* ignore */ }
         $('monsterSub').textContent = 'Dossier filed. Applicant ID: ' + res.id;
-        if (btn) { btn.disabled = false; btn.textContent = 'Back to the hub'; btn.onclick = () => go(BASE); }
+        if (btn) { btn.disabled = false; btn.textContent = 'Back to the hub'; btn.onclick = () => go(BASE, 'Back to the hub', 'Application submitted.'); }
         notice('Application submitted. Your ID is ' + res.id);
         return;
       } else if (res && res.errors) {
         // #9: hand the exact field errors back to Apply so it can mark them
         try { sessionStorage.setItem('leads-apply-errors', JSON.stringify(res.errors)); } catch (e) { /* ignore */ }
         notice('Some answers need fixing. Taking you back to the form...', 'bad');
-        setTimeout(() => go(BASE + '?page=apply'), 1800);
+        setTimeout(() => go(BASE + '?page=apply', 'Back to the form', 'Some answers need fixing. They are marked in red on the form.'), 1800);
         return;
       }
       throw new Error('No response from the server.');
@@ -568,9 +585,10 @@
     showState('loading');
     try {
       const data = await call('game_getInit');
-      if (data.alreadyApplied) { go(BASE); return; }
+      if (data.alreadyApplied) { go(BASE, 'Go to the hub', 'You already applied. Your file is on record.'); return; }
       if (!data.signedIn || !data.allowedDomain || !data.draft) {   // nothing to submit yet: do Section 1 first
-        go(BASE + '?page=apply');
+        go(BASE + '?page=apply', 'Open the application form', !data.signedIn || !data.allowedDomain
+          ? 'Sign in with your Ateneo account first.' : 'Fill in the application form first. The assessment comes after it.');
         return;
       }
       showState('hub');
