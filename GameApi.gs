@@ -29,8 +29,8 @@ function game_saveProgress(answers) {
     
     // Save choices to server draft under GameAnswers key
     const existing = apply_getDraft_(email) || { data: {} };
-    existing.data.GameAnswers = answers;
-    return apply_saveDraft_(existing.data);
+    existing.data.GameAnswers = JSON.stringify(answers || {});
+    return apply_saveDraft(existing.data);   // public saver (checks the account itself); there is no apply_saveDraft_
   });
 }
 

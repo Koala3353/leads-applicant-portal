@@ -287,14 +287,44 @@
 <script>
   const BRAND = <?!= brand_json() ?>;
   const BASE = <?!= JSON.stringify(String(baseUrl)) ?>;
-  const \$ = id => document.getElementById(id);
+  const $ = id => document.getElementById(id);
 
   // Fallback image URLs defined directly in client script (No Settings dependency)
+  // #8: via.placeholder.com is gone. Self-contained SVG stand-ins until real photos are added
+  // (put them in Drive / the repo and swap the URLs in here).
+  function monsterArt(bg, eye, label) {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">' +
+      '<rect width="400" height="400" fill="' + bg + '"/>' +
+      '<path d="M120 400 Q110 210 200 150 Q290 210 280 400Z" fill="#050505"/>' +
+      '<circle cx="200" cy="140" r="70" fill="#050505"/>' +
+      '<circle cx="175" cy="135" r="9" fill="' + eye + '"/><circle cx="225" cy="135" r="9" fill="' + eye + '"/>' +
+      '<text x="200" y="370" fill="' + eye + '" font-family="monospace" font-size="26" text-anchor="middle" letter-spacing="3">' + label + '</text></svg>';
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
   const MONSTER_IMAGES = {
-    kerish: 'https://via.placeholder.com/400x400/100000/ff0000?text=SIR+KERISH',
-    chums: 'https://via.placeholder.com/400x400/001000/00ff00?text=SIR+CHUMS',
-    aly: 'https://via.placeholder.com/400x400/000010/ffff00?text=SIR+ALY+(RARE)'
+    kerish: monsterArt('#1a0000', '#ff2a2a', 'SIR KERISH'),
+    chums: monsterArt('#001a05', '#4af626', 'SIR CHUMS'),
+    aly: monsterArt('#00001a', '#ffff00', 'SIR ALY (RARE)')
   };
+
+  // Leave the Apps Script frame properly (location.href inside the frame just shows a blank page).
+  function go(url) { window.open(url, '_top'); }
+
+  // Themed in-page notice instead of alert()
+  function notice(msg, tone) {
+    let n = $('gameNotice');
+    if (!n) {
+      n = document.createElement('div'); n.id = 'gameNotice'; n.setAttribute('role', 'status');
+      n.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;max-width:min(92vw,520px);' +
+        'padding:12px 16px;background:#0a0a0a;border:1px solid var(--accent);color:var(--text);font:600 13px/1.4 var(--mono,monospace);' +
+        'letter-spacing:.04em;text-transform:uppercase;box-shadow:0 0 0 3px rgba(0,0,0,.6)';
+      document.body.appendChild(n);
+    }
+    n.style.borderColor = tone === 'bad' ? 'var(--danger)' : 'var(--accent)';
+    n.textContent = msg; n.hidden = false;
+    clearTimeout(n._t); n._t = setTimeout(() => { n.hidden = true; }, 4000);
+    try { if (window.Iris) window.Iris.say([tone === 'bad' ? 'scared' : 'thinking', msg]); } catch (e) { /* optional */ }
+  }
 
   const QUESTIONS = {
     1: [
@@ -371,7 +401,7 @@
 
   function showState(name) {
     ['loading', 'hub', 'room', 'cleared', 'reveal'].forEach(s => {
-      const el = \$('state-' + s);
+      const el = $('state-' + s);
       if (el) el.classList.toggle('show', s === name);
     });
     if (name !== 'loading') Loader.hide();
@@ -381,9 +411,9 @@
     if (clearedRooms.includes(roomNum)) return;
     currentRoom = roomNum;
     showState('room');
-    \$('roomTitle').textContent = `CAM 0${roomNum} // SECTOR INTERROGATION`;
+    $('roomTitle').textContent = `CAM 0${roomNum} // SECTOR INTERROGATION`;
 
-    const container = \$('questionsContainer');
+    const container = $('questionsContainer');
     container.innerHTML = '';
     const qList = QUESTIONS[roomNum];
 
@@ -413,7 +443,7 @@
   function startTimer(seconds) {
     clearInterval(timerInterval);
     timeLeft = seconds;
-    const vignette = \$('vignette');
+    const vignette = $('vignette');
     
     function updateBar() {
       const pct = (timeLeft / seconds) * 100;
@@ -423,9 +453,9 @@
       vignette.style.opacity = Math.min(dimOpacity * 0.85, 0.85);
 
       if (timeLeft <= 10) {
-        \$('timerFill').style.backgroundColor = 'var(--danger)';
+        $('timerFill').style.backgroundColor = 'var(--danger)';
       } else {
-        \$('timerFill').style.backgroundColor = 'var(--glow)';
+        $('timerFill').style.backgroundColor = 'var(--glow)';
       }
     }
 
@@ -441,7 +471,7 @@
 
       if (timeLeft <= 0) {
         clearInterval(timerInterval);
-        alert("TIME EXPIRED // SURVEILLANCE PENALTY APPLIED");
+        notice('Time expired // surveillance penalty applied', 'bad');
       }
     }, 1000);
   }
@@ -451,17 +481,17 @@
     const allAnswered = qList.every(q => roomAnswers[q.id]);
     
     if (!allAnswered) {
-      alert("Answer all questions in this room before clearing the feed.");
+      notice('Answer every question in this room before clearing the feed.', 'bad');
       return;
     }
 
     clearInterval(timerInterval);
-    \$('vignette').style.opacity = 0;
+    $('vignette').style.opacity = 0;
     clearedRooms.push(currentRoom);
 
-    const mon = \$('mon-' + currentRoom);
+    const mon = $('mon-' + currentRoom);
     if (mon) mon.classList.add('cleared');
-    const st = \$('st-' + currentRoom);
+    const st = $('st-' + currentRoom);
     if (st) {
       st.textContent = 'CLEARED';
       st.style.color = 'var(--glow)';
@@ -499,7 +529,7 @@
     }
 
     $('monsterImage').src = MONSTER_IMAGES[selectedMonster];$('monsterName').textContent = name;
-    \$('monsterSub').textContent = sub;
+    $('monsterSub').textContent = sub;
   }
 
   async function finishGame() {
@@ -512,14 +542,21 @@
     try {
       const res = await call('game_submitFinal', roomAnswers);
       if (res && res.ok) {
-        alert(`APPLICATION SUBMITTED SUCCESSFULLY! Your Applicant ID is ${res.id}`);
-        window.location.href = BASE;
+        try { sessionStorage.removeItem('leads-game'); } catch (e) { /* ignore */ }
+        $('monsterSub').textContent = 'Dossier filed. Applicant ID: ' + res.id;
+        if (btn) { btn.disabled = false; btn.textContent = 'Back to the hub'; btn.onclick = () => go(BASE); }
+        notice('Application submitted. Your ID is ' + res.id);
+        return;
       } else if (res && res.errors) {
-        alert('There was an issue with your draft data. Redirecting back to application form.');
-        window.location.href = BASE + '?page=apply';
+        // #9: hand the exact field errors back to Apply so it can mark them
+        try { sessionStorage.setItem('leads-apply-errors', JSON.stringify(res.errors)); } catch (e) { /* ignore */ }
+        notice('Some answers need fixing. Taking you back to the form...', 'bad');
+        setTimeout(() => go(BASE + '?page=apply'), 1800);
+        return;
       }
+      throw new Error('No response from the server.');
     } catch (e) {
-      alert('Submission failed: ' + (e.message || e));
+      notice('Submission failed: ' + (e.message || e), 'bad');
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Submit Application Dossier';
@@ -531,8 +568,9 @@
     showState('loading');
     try {
       const data = await call('game_getInit');
-      if (!data.signedIn || !data.allowedDomain) {
-        window.location.href = BASE + '?page=apply';
+      if (data.alreadyApplied) { go(BASE); return; }
+      if (!data.signedIn || !data.allowedDomain || !data.draft) {   // nothing to submit yet: do Section 1 first
+        go(BASE + '?page=apply');
         return;
       }
       showState('hub');

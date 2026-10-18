@@ -15,7 +15,8 @@
  */
 const PAGES = {
   home:  'Home',
-  apply: 'Apply'
+  apply: 'Apply',
+  game:  'Game'     // Section 2 mini-game; submits the application at the end
 };
 
 function doGet(e) {

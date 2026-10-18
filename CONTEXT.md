@@ -20,6 +20,7 @@
 |---|---|---|---|
 | **Home (the hub)** | plain link `.../exec` | `Home.html`, `HomeApi.gs` | Keene (done) |
 | **Application form** | `.../exec?page=apply` | `Apply.html`, `ApplyApi.gs` | **Member A** |
+| **Threat assessment game** (step 2 of applying) | `.../exec?page=game` | `Game.html`, `GameApi.gs` | **Nathan** |
 | **Applicant dashboard** | **inside Home**, under the top section (no `?page=`) | `Dashboard.html`, `DashboardApi.gs` (starter exists) | **Member B** |
 | Requirements + proof of payment | two **Google Forms** (not code); links shown on Home and the Dashboard | Forms, links in Settings | officers |
 | Officer side | **the Sheet itself**, with a **LEADS** menu | `AdminMenu.gs` | Keene (done) |
@@ -92,7 +93,7 @@ Navy headers: **never rename or reorder** (code finds columns by name). Yellow c
 | `Course` / `MEAInvolvement` | from Lists | Apply |
 | `YearLevel` | integer 1–5 | Apply |
 | `Mobile` | `09` + 9 digits, **text** (leading zero!) | Apply. `+63 917…`, `0917-…`, `917…` are cleaned to `09…` by `normalizeMobile_()` (server) / `normalizePhone()` (page) |
-| `WhyLEADS` / `FearEssay` | 50–1000 chars, multiline | Apply. Essay 2 = "a fear you want to face". |
+| `WhyLEADS` / `FearEssay` | (retired) | Replaced by the 5 essays below. Kept in `COLS` so older columns don't shift; left blank for new rows. |
 | `Status` / `Requirements` / `Payment` | §2.4 | Apply creates `SUBMITTED`/`NONE`/`NONE`; then core team only |
 | `ReviewedBy`, `LastUpdated` | email, Date | automatic |
 | `Notes` | text | **core team only, never shown to applicants** |
@@ -101,6 +102,8 @@ Navy headers: **never rename or reorder** (code finds columns by name). Yellow c
 | `PastOrgs` | ≤500 chars, multiline, optional | Apply |
 | `FirstOvernight` / `OffsiteAvailability` | `Yes` / `No` | Apply. Availability question shows Settings › `EventDates` |
 | `DataConsent` | `Y` (must be Y to submit) | Apply (RA 10173) |
+| `WhyParticipant` / `FirstImpression` / `Rumors` / `TakesLeadership` / `FearLeadership` | 50–1000 chars each, multiline, required | Apply (the 5 essays) |
+| `GameAnswers` | JSON text (≤5000 chars) | Game page: the choices made in the 3 CCTV rooms |
 
 The last six columns were added Oct 2026 at the **end** of `COLS` so older rows still line up. `ensureApplicantHeaders_()` writes any missing header cells on the next submit.
 
@@ -505,7 +508,7 @@ PageTop always has **Sign out**. "Not signed in" state → **Sign in** button (`
 - **Autofill from MemData** (ApplyApi.gs `apply_memberFor_`): the `MemData` tab (MEA member sign-ups) fills empty Apply fields. Matched ONLY by the signed-in email (Student Email / Email Address), never by ID alone, so nobody can pull someone else's details by guessing IDs. The ID Number is question 1; changing it re-runs the lookup among rows tied to the same email and refills anything autofilled that wasn't edited. Prefilled fields get a yellow edge until edited. Assume every applicant is in MemData, but never block someone who isn't. Autofilled: ID, name, nickname, course, year level, mobile, Block and MBTI (header "MBTI", else column AB; cleaned to the 4 letters). Only the email columns are compared, never other cells.
 - **Wrong-account pop-up** (`SignInHelp` in Styles.html, copy in `BRAND.signInHelp`): opens once per session on Home/Apply when the visitor isn't signed in or is on a non-Ateneo account; a "Trouble signing in?" link reopens it. It gives the school-pinned portal link (`baseUrl`) plus private-window and sign-out steps.
 - **I.R.I.S. judges your answers on Apply** (`judge` in Apply.html, lines in `BRAND.mascot.judge`): it comments after a pause or when you leave a field, at most once every 7s, and calls out invalid IDs/mobiles, short or very long essays, "leadership" clichés, big deletions and long idles. Validation errors use `judge.force()`. Comments are extra; the page's own error messages stay the source of truth.
-  - **Every question has a reaction.** `judge` entries come in three shapes: a list of `[face, text]` lines (random pick, `{v}` = their answer), e.g. `FullName`, `Block`, `PastOrgs`; an object keyed by answer, e.g. `YearLevel {1,4,other}`, `FirstOvernight {Yes,No}`, `OffsiteAvailability {Yes,No}`, `DataConsent {Y,N}`; and `MBTI {I,E,other}`, keyed by the type's first letter. Each field/answer is commented on once.
+  - **Every question has a reaction.** `judge` entries come in three shapes: a list of `[face, text]` lines (random pick, `{v}` = their answer), e.g. `FullName`, `Block`, `PastOrgs`; an object keyed by answer, e.g. `YearLevel {1,4,other}`, `FirstOvernight {Yes,No}`, `OffsiteAvailability {Yes,No}`, `DataConsent {Y,N}`; and `MBTI {I,E,other}`, keyed by the type's first letter. Each field/answer is commented on once. Each of the 5 essays has its own line, said once the answer reaches 50–700 characters (otherwise the shared `essayShort` / `essayLong`).
   - **Progress check** every 40s: `slow` ("So Bea, you've put in only your name so far…"), `halfway`, `allDone`. Field names in those lines come from `LABEL` in Apply.html, so **a new question needs a `LABEL` entry and a `judge` line** in Brand.gs.
   - The ID/mobile call-outs use `fieldError()`, so I.R.I.S. never disagrees with the form (and never says the ID range out loud).
 - **Page transitions** (Loader.html) look like an old CRT: leaving a page, the screen shuts from a bright centre line; when the next page is ready it collapses back to a line and blinks off. Reduced motion gets a plain fade.
@@ -621,17 +624,18 @@ apply_submit(form) → { ok:false, errors } | { ok:true, id }
 5. Return `{ ok:true, id }`.
 
 **Page must**
-- **15 questions in two sections** (`FIELDS` in Apply.html, progress tape shows `NN / 15`):
-  - *Section 1, Primary Subject Identification:* Q.01 IDNumber, FullName, Nickname, Course (select), YearLevel (select 1–5), Block, Mobile, MBTI (select of 16), MEAInvolvement (select).
-  - *Section 2, Interrogation & Psychological Dossier:* PastOrgs, FirstOvernight (Yes/No), OffsiteAvailability (Yes/No, shows `eventDates`), WhyLEADS, FearEssay, DataConsent (Y/N; must be Y).
+- **18 questions** (`FIELDS` in Apply.html, progress tape shows `NN / 18`): DataConsent (Y/N; must be Y), IDNumber, FullName, Nickname, Course (select), YearLevel (select 1–5), Block, Mobile, MBTI (select of 16), MEAInvolvement (select), PastOrgs, FirstOvernight (Yes/No), OffsiteAvailability (Yes/No, shows `eventDates`), then **5 essays**: WhyParticipant, FirstImpression, Rumors, TakesLeadership, FearLeadership (50–1000 chars each).
+- **Applying is two steps.** Apply's button ("Proceed to Threat Assessment") does **not** submit: it checks the form, saves it as the account's draft (`apply_saveDraft`) and only if that save returns `ok` opens `?page=game`. The Game page (`Game.html` / `GameApi.gs`, 3 timed CCTV rooms of choices, then a random "monster" reveal: Sir Kerish 60%, Sir Chums 30%, Sir Aly 10%) submits at the end with `game_submitFinal(answers)` = saved draft + `GameAnswers` → `apply_submit_()`. The game sends people back to Apply if they have no draft, and to the hub if they already applied. If the final submit returns field errors, they're handed to Apply via `sessionStorage['leads-apply-errors']` and shown on the form.
+- **Leaving a page from script:** use `window.open(url, '_top')` (or a link with `target="_top"`). `location.href = …` inside the Apps Script frame just shows a blank page. No `alert()`; use the themed notice / I.R.I.S.
+- Monster pictures are SVG stand-ins (`monsterArt()` in Game.html) until real photos are added (Drive or the repo); never hot-link placeholder sites.
   - **No email field**: show "Applying as juan@…". Examples use `.ex-tag` (one line) / `.ex-box` (multi-line).
 - **How an answer gets saved, end to end:**
-  1. While typing: the draft (all 15 fields) saves to the hidden `Drafts` tab via `apply_saveDraft` (falls back to localStorage), so it follows the account.
+  1. While typing: the draft (all 18 fields, plus `GameAnswers` from the Game page) saves to the hidden `Drafts` tab via `apply_saveDraft` (falls back to localStorage), so it follows the account.
   2. On submit: the page runs `validateClientForm()` → `fieldError()` per field (same `RULES` as the server). Mobile is normalized to `09…` on blur.
-  3. Server: `apply_submit` → `validateApplication_()` → row built from `v.clean` in `COLS` order → `ensureApplicantHeaders_()` → `appendRow` → `logChange_` → draft deleted.
+  3. Server (called by `game_submitFinal`): `apply_submit_` → `validateApplication_()` → row built from `v.clean` in `COLS` order → `ensureApplicantHeaders_()` → `appendRow` → `logChange_` → draft deleted.
   4. **Adding a question** = add it to `RULES` (Utils.gs), `COLS` (append at the **end**), `FIELDS` + the HTML field (Apply.html), the draft field list in `apply_saveDraft`, and a `judge` line + `LABEL`. Miss `COLS` and the answer is silently dropped.
 - Selects from `lists` (never hard-coded). Deadline in Manila time. Client checks use the same `rules` and `rule.msg`; live essay counters.
-- Success: replace the form with "You're in the queue" + ApplicantID + a button back to the hub.
+- Success (on the Game page, after the reveal): show the ApplicantID + a button back to the hub.
 - I.R.I.S.: `excited` on success (with the ID), `thinking` on validation errors, `sad` when closed, `happy` when already applied (each also shown on the page).
 - Not signed in → **Sign in** button; non-Ateneo account → **Switch account** button.
 

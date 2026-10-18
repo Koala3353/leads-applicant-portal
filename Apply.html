@@ -1125,16 +1125,13 @@
     // 2. Save Draft to Account & Redirect to Game Page
     try {
       const res = await call('apply_saveDraft', data);
-      if (res && res.applied) {
-        alert("You have already submitted an application.");
-        window.location.href = BASE;
-        return;
-      }
+      if (res && res.applied) { window.open(BASE, '_top'); return; }   // already applied: back to the hub
+      if (!res || res.ok === false) throw new Error('save failed');    // #7: don't send them on without a saved draft
 
-      // Redirect to Game Page
-      window.location.href = BASE + '?page=game';
+      // Leave the Apps Script frame properly (location.href inside it just shows a blank page)
+      window.open(BASE + '?page=game', '_top');
     } catch (err) {
-      alert("Failed to save draft. Please try again.");
+      if (typeof judge !== 'undefined' && judge.force) judge.force(['scared', "I couldn't save your answers just now. Check your connection and press the button again."]);
       btn.disabled = false;
       btn.textContent = originalText;
     }
@@ -1224,6 +1221,11 @@
     updateCounters();
     updateProgress();
     showState('form');
+    // Errors handed back from the Game page's final submit (#9)
+    try {
+      const back = JSON.parse(sessionStorage.getItem('leads-apply-errors') || 'null');
+      if (back) { sessionStorage.removeItem('leads-apply-errors'); showErrors(back); }
+    } catch (e) { /* ignore */ }
     initIrisWakeSequence();
   }
 
@@ -1251,6 +1253,7 @@
         if (said[k]) return;
         if (/\bleader(ship)?\b/i.test(v) && !said[f + ':c'] && f === 'WhyParticipant') { said[f + ':c'] = 1; return say(J.cliche); }
         said[k] = 1;
+        if (n >= 50 && n <= 700 && J[f]) return say(J[f]);   // each essay has its own reaction once it's long enough
         return say(n < 50 ? J.essayShort : n > 700 ? J.essayLong : J.essayOk);
       }
       if (f === 'IDNumber' && fieldError(f, v, formValues())) return say(J.IDNumberBad);

@@ -143,6 +143,7 @@ function apply_submit_(form) {
       Rumors: v.clean.Rumors,
       TakesLeadership: v.clean.TakesLeadership,
       FearLeadership: v.clean.FearLeadership,
+      GameAnswers: String(input.GameAnswers || '').slice(0, 5000),   // JSON of the Game page choices
       Status: 'SUBMITTED',
       Requirements: 'NONE',
       Payment: 'NONE',
@@ -224,11 +225,11 @@ function apply_saveDraft(data) {
   const fields = [
     'DataConsent', 'IDNumber', 'FullName', 'Nickname', 'Course', 'YearLevel', 'Mobile',
     'MEAInvolvement', 'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability',
-    'WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership'
+    'WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership', 'GameAnswers'
   ];
   fields.forEach(f => {
     if (data[f] !== undefined && data[f] !== null) {
-      clean[f] = String(data[f]).slice(0, 1500);
+      clean[f] = String(data[f]).slice(0, f === 'GameAnswers' ? 5000 : 1500);
     }
   });
 

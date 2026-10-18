@@ -32,8 +32,10 @@ const COLS = [
   'Status', 'Requirements', 'Payment',                                    // the three tracks
   'ReviewedBy', 'LastUpdated', 'Notes',                                   // core team
   'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability', 'DataConsent',   // added Oct 2026 (kept last so old rows line up)
-  'WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership'      // added 5-essay prompt update
+  'WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership',     // added 5-essay prompt update
+  'GameAnswers'                                                                            // Game page choices (JSON)
 ];
+// WhyLEADS / FearEssay are retired (replaced by the 5 essays) but stay in COLS so older rows and columns don't shift.
 // The three columns officers change (LEADS menu or by hand). Everything else is written by the portal.
 const TRACK_COLS = ['Status', 'Requirements', 'Payment'];
 
@@ -66,8 +68,6 @@ const RULES = {
   Mobile:           { stage: 'apply', required: true, phone: true, pattern: '^09\\d{9}$', msg: '11 digits starting with 09, e.g. 09171234567.' },
   MBTI:             { stage: 'apply', pattern: '^[EI][NS][TF][JP]$', msg: 'Pick one of the 16 types (or leave it blank).' },
   MEAInvolvement:   { stage: 'apply', required: true, list: 'MEAInvolvement', msg: 'Pick how you are involved in MEA.' },
-  WhyLEADS:         { stage: 'apply', minLen: 50, maxLen: 1000, multiline: true, msg: 'Write 50 to 1000 characters.' },
-  FearEssay:        { stage: 'apply', minLen: 50, maxLen: 1000, multiline: true, msg: 'Write 50 to 1000 characters.' },
   PastOrgs:         { stage: 'apply', maxLen: 500, multiline: true, msg: 'Keep it under 500 characters.' },
   FirstOvernight:   { stage: 'apply', required: true, options: ['Yes', 'No'], msg: 'Pick Yes or No.' },
   OffsiteAvailability: { stage: 'apply', required: true, options: ['Yes', 'No'], msg: 'Pick Yes or No.' },
