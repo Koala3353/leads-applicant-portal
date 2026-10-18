@@ -553,7 +553,7 @@
   /* ---------- fear ticker ---------- */
   (function () {
     const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const html = BRAND.ticker.map(f => `<span><b>${esc(f[0])}</b> // ${esc(f[1])}</span>`).join('');
+    const html = BRAND.ticker.map(f => '<span><b>' + esc(f[0]) + '</b> // ' + esc(f[1]) + '</span>').join('');
     $('tick').innerHTML = html + html; // doubled for a seamless loop
   })();
 

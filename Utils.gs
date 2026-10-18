@@ -568,9 +568,11 @@ function report_issue_(r) {
   const to = String(getSetting_('IssueEmail') || R.to || '').trim();
   const email = currentEmail_();
   const contact = String(r.contact || '').trim().slice(0, 120) || email;
-  const cache = CacheService.getScriptCache(), key = 'rep:' + (email || contact || 'anon');
+  // Signed-out reporters share one bucket: keying on the page-supplied contact let anyone dodge the limit
+  // by changing it each call. 10 leaves room for real sign-in trouble without flooding the inbox.
+  const cache = CacheService.getScriptCache(), key = email ? 'rep:' + email : 'rep:anon';
   const count = Number(cache.get(key) || 0);
-  if (count >= 3) return { ok: false, reason: 'rate', to: to };
+  if (count >= (email ? 3 : 10)) return { ok: false, reason: 'rate', to: to };
   if (!String(r.what || '').trim()) return { ok: false, reason: 'empty', to: to };
 
   const id = 'R-' + Utilities.formatDate(new Date(), 'Asia/Manila', 'MMdd-HHmm') + '-' + Math.floor(Math.random() * 900 + 100);

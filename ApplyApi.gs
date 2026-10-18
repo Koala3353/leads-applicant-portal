@@ -56,16 +56,12 @@ function apply_getForm_() {
 }
 
 /**
- * Submits an initial application.
+ * Submits an application. Private on purpose: the only way in is game_submitFinal (GameApi.gs),
+ * so nobody can skip the Threat Assessment by calling it from the browser console.
  *
- * @param {Object} form Raw form input from the client.
+ * @param {Object} form Raw form input (the saved draft + GameAnswers).
  * @return {Object} { ok: true, id: string } or { ok: false, errors: Object }
  */
-function apply_submit(form) {
-  return traced_('apply_submit', 'apply', () => apply_submit_(form), r =>
-    r.ok ? r.id + ' submitted' : 'needs fixing: ' + Object.keys(r.errors || {}).join(', '));
-}
-
 function apply_submit_(form) {
   // 1. Verify sign-in status
   const email = currentEmail_();
@@ -110,7 +106,7 @@ function apply_submit_(form) {
         return {
           ok: false,
           errors: {
-            IDNumber: 'That ID number already has an application. Message an officer if this is wrong.'
+            IDNumber: 'That ID number already has an application. Message the core team if this is wrong.'
           }
         };
       }
@@ -240,7 +236,12 @@ function apply_saveDraft(data) {
     const sh = apply_draftSheet_();
     const now = new Date();
     const row = apply_findDraftRow_(sh, email);
-    const values = [[email, now, JSON.stringify(clean)]];
+    // Merge onto the stored draft (re-read inside the lock): Apply sends only its 18 fields and the
+    // Game only GameAnswers, so replacing outright would wipe the other page's answers.
+    let stored = {};
+    if (row) { try { stored = JSON.parse(sh.getRange(row, 3).getValue() || '{}') || {}; } catch (e) { stored = {}; } }
+    const merged = Object.assign({}, stored, clean);
+    const values = [[email, now, JSON.stringify(merged)]];
     if (row) sh.getRange(row, 1, 1, 3).setValues(values);
     else sh.appendRow(values[0]);
     return { ok: true, savedAt: now.toISOString() };
@@ -255,7 +256,12 @@ function apply_saveDraft(data) {
 /** Deletes the signed-in applicant's draft ("Discard draft"). */
 function apply_discardDraft() {
   const email = currentEmail_();
-  if (email) apply_deleteDraft_(email);
+  if (email) {
+    // deleteRow shifts rows: hold the lock so a concurrent apply_saveDraft can't write to a stale row number
+    const lock = LockService.getScriptLock();
+    lock.waitLock(10000);
+    try { apply_deleteDraft_(email); } finally { lock.releaseLock(); }
+  }
   activity_('draft_discard', '', { page: 'apply' });
   return true;
 }

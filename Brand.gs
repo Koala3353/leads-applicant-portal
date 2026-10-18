@@ -231,11 +231,13 @@ const BRAND = {
     },
     pageFace: {                            // I.R.I.S.'s resting face on each page (key = ?page= value)
       home: 'nervous',
-      apply: 'thinking'
+      apply: 'thinking',
+      game: 'nervous'
     },
     hello: {                               // first line on each page
       home:  ['nervous', "Hi, I'm I.R.I.S. I keep an eye on things around here. Don't mind me."],
-      apply: ['thinking', "Take your time. I'll be right here."]
+      apply: ['thinking', "Take your time. I'll be right here."],
+      game:  ['nervous', "Three feeds. One of them has something in it. Pick a camera."]
     },
     guest: ['thinking', "I can't see who you are. Sign in with your Ateneo account so I can find your file."],
     admin: ['wink', "Core team on duty. The Sheet button's at the top."],

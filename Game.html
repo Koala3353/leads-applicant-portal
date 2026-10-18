@@ -7,276 +7,178 @@
 <?!= include('Styles') ?>
 <?!= brand_css() ?>
 <style>
-  .state { display: none; }
-  .state.show { display: block; }
+  .state{display:none}
+  .state.show{display:block}
 
-  /* CCTV Surveillance Layout */
-  .cctv-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 16px;
-    margin: 20px 0;
-  }
-  .cctv-monitor {
-    background: #000;
-    border: 2px solid var(--line);
-    padding: 12px;
-    position: relative;
-    cursor: pointer;
-    transition: transform 0.2s ease, border-color 0.2s ease;
-  }
-  .cctv-monitor:hover:not(.cleared) {
-    border-color: var(--glow);
-    transform: translateY(-2px);
-  }
-  .cctv-monitor.cleared {
-    opacity: 0.5;
-    cursor: not-allowed;
-    border-color: var(--muted);
-  }
-  .cctv-screen {
-    width: 100%;
-    height: 160px;
-    background: #050b14;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    position: relative;
-    overflow: hidden;
-  }
-  .cctv-label {
-    position: absolute;
-    top: 6px;
-    left: 8px;
-    font-family: var(--mono);
-    font-size: 0.7rem;
-    color: var(--glow);
-    background: rgba(0,0,0,0.7);
-    padding: 2px 6px;
-  }
-  .cctv-status {
-    position: absolute;
-    bottom: 6px;
-    right: 8px;
-    font-family: var(--mono);
-    font-size: 0.68rem;
-    color: var(--danger);
-  }
+  /* status line (replaces pop-up notices; nothing fixed on screen) */
+  .g-msg{min-height:1.4em;margin:0 0 14px;font-family:var(--mono);font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);overflow-wrap:anywhere}
+  .g-msg.bad{color:var(--danger)}
+  .g-msg.good{color:var(--glow)}
 
-  /* Room Interrogation & Vignette Dimmer */
-  .interrogation-box {
-    position: relative;
-    background: var(--card);
-    border: 1.5px solid var(--line);
-    padding: 24px;
-    margin-top: 16px;
-  }
-  .vignette-overlay {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 40;
-    background: radial-gradient(circle, transparent 40%, rgba(0,0,0, 0.95) 100%);
-    opacity: 0;
-    transition: opacity 0.5s ease;
-  }
+  /* ---- CCTV wall ---- */
+  .feeds{display:grid;gap:14px;margin:18px 0 6px;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
+  .feed{display:block;width:100%;min-width:0;padding:0;margin:0;text-align:left;cursor:pointer;color:var(--text);
+    background:#000;border:1.5px solid var(--line);font:inherit;transition:border-color .2s ease}
+  .feed:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+  .feed[aria-disabled="true"]{cursor:default}
+  .feed-screen{position:relative;aspect-ratio:4/3;overflow:hidden;background:#050505}
+  .feed-screen svg{display:block;width:100%;height:100%}
+  .feed-tag,.feed-rec,.feed-time{position:absolute;font-family:var(--mono);font-size:12px;letter-spacing:.06em;background:rgba(0,0,0,.7);padding:2px 6px}
+  .feed-tag{top:6px;left:6px;color:var(--glow)}
+  .feed-rec{top:6px;right:6px;color:var(--danger)}
+  .feed-rec::before{content:"";display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%;background:var(--danger);animation:g-blink 1.2s steps(2) infinite}
+  .feed-time{bottom:6px;left:6px;color:var(--text)}
+  .feed-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;padding:10px 12px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+  .feed-foot b{color:var(--glow);font-weight:700}
+  .feed-state{color:var(--danger)}
+  /* a cleared feed drops to static + NO SIGNAL */
+  .feed.cleared .feed-scene{opacity:.12}
+  .feed.cleared .feed-rec{display:none}
+  .feed.cleared .feed-state{color:var(--muted)}
+  .feed-nosig{display:none;position:absolute;inset:0;place-items:center;font-family:var(--mono);font-size:14px;letter-spacing:.2em;color:var(--muted);
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 2px,transparent 2px 4px)}
+  .feed.cleared .feed-nosig{display:grid}
+  @keyframes g-blink{50%{opacity:0}}
+  @keyframes g-flicker{0%,100%{opacity:1}47%{opacity:1}48%{opacity:.35}50%{opacity:1}}
+  .flicker{animation:g-flicker 4s infinite}
+  @media (hover:hover){.feed:not([aria-disabled="true"]):hover{border-color:var(--glow)}}
 
-  /* Question Styling */
-  .game-q {
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px dashed var(--line);
-  }
-  .game-q p {
-    font-family: var(--mono);
-    font-size: 0.9rem;
-    color: var(--text);
-    margin-bottom: 12px;
-  }
-  .opt-btn {
-    display: block;
-    width: 100%;
-    text-align: left;
-    background: rgba(7, 18, 43, 0.8);
-    border: 1px solid var(--line);
-    color: var(--text);
-    padding: 10px 14px;
-    margin: 6px 0;
-    font-family: var(--body);
-    font-size: 0.88rem;
-    cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
-  }
-  .opt-btn:hover {
-    border-color: var(--glow);
-    background: rgba(255, 255, 0, 0.08);
-  }
-  .opt-btn.selected {
-    border-color: var(--glow);
-    background: rgba(255, 255, 0, 0.15);
-    color: var(--glow);
-  }
+  /* ---- room ---- */
+  .room{background:var(--night-2);border:1.5px solid var(--line);padding:clamp(16px,4vw,26px)}
+  .room-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px;margin-bottom:10px;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase}
+  .room-head .t{color:var(--glow);font-weight:700;min-width:0}
+  .room-head .clock{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+  .room-head .clock.low{color:var(--danger)}
+  .timer{height:8px;background:rgba(255,255,255,.1);margin:0 0 20px}
+  .timer span{display:block;height:100%;width:100%;background:var(--glow);transition:width 1s linear}
+  .timer.low span{background:var(--danger)}
+  .q-num{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+  .q fieldset{border:0;margin:0;padding:0;min-width:0}
+  .q legend{padding:0;margin:0 0 14px;font-size:clamp(1.05rem,2.6vw,1.25rem);font-weight:700;line-height:1.4;max-width:40em}
+  .opt{display:flex;gap:12px;align-items:flex-start;min-height:44px;margin:0 0 10px;padding:12px 14px;cursor:pointer;
+    border:1.5px solid var(--line);background:rgba(0,0,0,.35);line-height:1.45;transition:border-color .15s ease,background .15s ease}
+  .opt input{position:absolute;opacity:0;width:1px;height:1px}
+  .opt .k{flex:0 0 auto;font-family:var(--mono);font-weight:700;color:var(--muted);min-width:1.4em}
+  .opt span:last-child{min-width:0;overflow-wrap:anywhere}
+  .opt:has(input:checked){border-color:var(--glow);background:rgba(255,255,0,.08)}
+  .opt:has(input:checked) .k{color:var(--glow)}
+  .opt:has(input:focus-visible){outline:3px solid var(--sky);outline-offset:2px}
+  @media (hover:hover){.opt:hover{border-color:var(--muted)}}
 
-  /* Timer & Countdown */
-  .timer-bar-wrap {
-    width: 100%;
-    height: 8px;
-    background: rgba(255,255,255,0.1);
-    margin-bottom: 16px;
-    overflow: hidden;
-  }
-  .timer-bar-fill {
-    height: 100%;
-    width: 100%;
-    background: var(--glow);
-    transition: width 1s linear, background-color 0.3s;
-  }
+  .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
+  .actions .btn{width:100%;justify-content:center;min-height:44px}
+  @media (min-width:560px){.actions .btn{width:auto}}
 
-  /* Final Reveal / Jumpscare Modal */
-  .jumpscare-stage {
-    text-align: center;
-    padding: 20px;
-  }
-  .monster-img {
-    width: 260px;
-    height: 260px;
-    object-fit: cover;
-    border: 4px solid var(--danger);
-    margin: 16px auto;
-    box-shadow: 0 0 35px var(--danger);
-  }
-  
-  /* Shaky Jumpscare Animation */
-  @keyframes intense-shake {
-    0% { transform: translate(2px, 2px) rotate(0deg) scale(1.05); }
-    10% { transform: translate(-4px, -3px) rotate(-3deg) scale(1.12); }
-    20% { transform: translate(-5px, 0px) rotate(3deg) scale(1.08); }
-    30% { transform: translate(5px, 4px) rotate(0deg) scale(1.15); }
-    40% { transform: translate(3px, -2px) rotate(4deg) scale(1.1); }
-    50% { transform: translate(-3px, 4px) rotate(-2deg) scale(1.2); }
-    60% { transform: translate(-5px, 2px) rotate(0deg) scale(1.15); }
-    70% { transform: translate(4px, 2px) rotate(-3deg) scale(1.1); }
-    80% { transform: translate(-3px, -3px) rotate(4deg) scale(1.18); }
-    90% { transform: translate(3px, 3px) rotate(0deg) scale(1.12); }
-    100% { transform: translate(2px, -3px) rotate(-2deg) scale(1.05); }
-  }
-  .monster-img.shaking {
-    animation: intense-shake 0.12s infinite;
-  }
+  /* the room darkens as the clock runs down (off in calm mode / reduced motion) */
+  .vignette{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:0;transition:opacity 1s linear;
+    background:radial-gradient(circle,transparent 45%,rgba(0,0,0,.92) 100%)}
+  html.calm .vignette{display:none}
 
-  .knock-text {
-    font-family: var(--display);
-    font-size: clamp(2.5rem, 8vw, 4.5rem);
-    color: var(--danger);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    animation: intense-shake 0.2s infinite;
-  }
+  /* ---- reveal ---- */
+  .cut{display:grid;place-items:center;min-height:min(60vh,420px);text-align:center;padding:24px;border:1.5px solid var(--line);
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0 2px,transparent 2px 4px),#000}
+  .cut p{margin:0;font-family:var(--display);font-size:clamp(1.8rem,7vw,3.4rem);letter-spacing:.06em;text-transform:uppercase;color:var(--danger)}
+  .cut small{display:block;margin-top:10px;font-family:var(--mono);font-size:13px;letter-spacing:.1em;color:var(--muted)}
+  .subject{display:grid;gap:20px;grid-template-columns:1fr;align-items:center}
+  @media (min-width:860px){.subject{grid-template-columns:minmax(0,320px) 1fr}}
+  .subject img{display:block;width:100%;max-width:320px;height:auto;aspect-ratio:1;margin:0 auto;border:2px solid var(--danger)}
+  .subject h2{margin:4px 0 6px;font-family:var(--display);font-size:clamp(2rem,6vw,3rem);letter-spacing:.04em;text-transform:uppercase}
+  .threat{display:inline-block;font-family:var(--mono);font-size:12px;letter-spacing:.1em;padding:4px 8px;border:1.5px solid var(--danger);color:var(--danger)}
+  .threat.rare{border-color:var(--glow);color:var(--glow)}
+  .reveal-in{animation:g-in .6s ease-out}
+  @keyframes g-in{0%{opacity:0;filter:contrast(3) brightness(2)}30%{opacity:1}100%{filter:none}}
+  html.calm .reveal-in,html.calm .flicker,html.calm .feed-rec::before{animation:none}
+  .case-id{font-family:var(--mono);font-size:clamp(1.4rem,5vw,2rem);color:var(--glow);overflow-wrap:anywhere}
 </style>
 </head>
 <body data-loader-wait>
-<div class="vignette-overlay" id="vignette"></div>
 <?!= include('Loader') ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
-
+<div class="vignette" id="vignette" aria-hidden="true"></div>
 <div class="wrap">
   <?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
 
   <section class="page-head">
-    <p class="eyebrow">FILE 02 // SURVEILLANCE GAME</p>
+    <p class="eyebrow">FILE 02 // THREAT ASSESSMENT</p>
     <h1 class="rgb">Threat Assessment</h1>
-    <p>An anomaly has breached the premises. Locate the threat across the CCTV feeds.</p>
+    <p>Something got past the front desk. Check each camera, answer what it asks, and find out who is watching back.</p>
   </section>
 
-  <!-- State 1: Loading -->
-  <div class="card state show" id="state-loading">
-    <p class="mono">[REC] Initializing CCTV feeds...</p>
+  <div class="tape-progress" id="tape" data-label="00 / 05"><span style="--p:0%"></span></div>
+  <p class="g-msg" id="msg" role="status" aria-live="polite"></p>
+
+  <div class="card state show" id="state-loading" role="status">
+    <p class="mono">[REC] Connecting to the camera feeds…</p>
   </div>
 
-  <!-- State 2: CCTV Monitor Hub -->
+  <div class="card state" id="state-error" role="alert">
+    <p id="errorMsg"></p>
+    <div class="actions"><button class="btn ghost" type="button" id="retry">Try again</button></div>
+  </div>
+
   <div class="state" id="state-hub">
     <div class="card">
-      <p class="eyebrow">SURVEILLANCE MANDATE</p>
-      <h2>Select CCTV Feed</h2>
-      <p>An entity is lurking within the facility. Check each CCTV feed room by room. Clear all interrogations before time runs out.</p>
-      
-      <div class="cctv-grid">
-        <!-- Room 1 -->
-        <div class="cctv-monitor" id="mon-1" onclick="enterRoom(1)">
-          <div class="cctv-screen">
-            <span class="cctv-label">CAM 01 // SECTOR A</span>
-            <p class="mono" style="color:var(--muted)">[ ISOLATION CELL ]</p>
-            <span class="cctv-status" id="st-1">FEED LIVE</span>
-          </div>
-        </div>
-        <!-- Room 2 -->
-        <div class="cctv-monitor" id="mon-2" onclick="enterRoom(2)">
-          <div class="cctv-screen">
-            <span class="cctv-label">CAM 02 // SECTOR B</span>
-            <p class="mono" style="color:var(--muted)">[ CORRIDOR LOCK ]</p>
-            <span class="cctv-status" id="st-2">FEED LIVE</span>
-          </div>
-        </div>
-        <!-- Room 3 -->
-        <div class="cctv-monitor" id="mon-3" onclick="enterRoom(3)">
-          <div class="cctv-screen">
-            <span class="cctv-label">CAM 03 // SECTOR C</span>
-            <p class="mono" style="color:var(--muted)">[ CONTROL ROOM ]</p>
-            <span class="cctv-status" id="st-3">FEED LIVE</span>
-          </div>
-        </div>
-      </div>
+      <p class="eyebrow">STEP 2 OF 2 // SURVEILLANCE</p>
+      <h2>Pick a camera</h2>
+      <p>Three feeds, five questions. Each room has its own timer, and it pauses if you switch tabs. When time runs out, unanswered questions are filed as "no answer". There are no right answers, only honest ones.</p>
+      <div class="feeds" id="feeds"></div>
     </div>
   </div>
 
-  <!-- State 3: Active CCTV Interrogation Room -->
   <div class="state" id="state-room">
-    <div class="interrogation-box">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <span class="mono" id="roomTitle" style="color:var(--glow); font-weight:700;">CAM 01 // INTERROGATION</span>
-        <span class="mono" id="timerDisplay" style="color:var(--danger); font-weight:700;">TIME: 30s</span>
+    <div class="room">
+      <div class="room-head">
+        <span class="t" id="roomTitle"></span>
+        <span class="clock" id="clock" aria-hidden="true"></span>
       </div>
-
-      <div class="timer-bar-wrap">
-        <div class="timer-bar-fill" id="timerFill"></div>
-      </div>
-
-      <div id="questionsContainer"></div>
-
-      <div class="actions">
-        <button class="btn" type="button" id="nextRoomBtn" onclick="submitRoom()">Clear Room & Proceed</button>
-      </div>
+      <div class="timer" id="timer" aria-hidden="true"><span id="timerFill"></span></div>
+      <p class="sr-only" id="timeAnnounce" aria-live="assertive" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></p>
+      <form class="q" id="qForm" novalidate>
+        <span class="q-num" id="qNum"></span>
+        <fieldset>
+          <legend id="qText"></legend>
+          <div id="qOpts"></div>
+        </fieldset>
+        <div class="actions">
+          <button class="btn" type="submit" id="lockBtn">Lock in answer</button>
+        </div>
+      </form>
     </div>
   </div>
 
-  <!-- State 4: Room Cleared Message -->
   <div class="card state" id="state-cleared">
-    <p class="eyebrow" style="color:var(--glow)">SECTOR CLEAR</p>
-    <h2>Monster Not Found in This Room</h2>
-    <p>Target entity was not detected in this sector. Select the remaining CCTV feeds to continue tracking.</p>
-    <div class="actions">
-      <button class="btn" type="button" onclick="showHub()">Return to CCTV Monitors</button>
+    <p class="eyebrow" id="clearedEyebrow">FEED CLEARED</p>
+    <h2 id="clearedTitle">Nothing in this room</h2>
+    <p id="clearedText">Whatever got in isn't here. Your answers are saved. Check the remaining feeds.</p>
+    <div class="actions"><button class="btn" type="button" id="backToHub">Back to the cameras</button></div>
+  </div>
+
+  <div class="state" id="state-cut">
+    <div class="cut" role="status"><div><p>Signal interrupted</p><small>SOMEONE IS ACCESSING THIS TERMINAL</small></div></div>
+  </div>
+
+  <div class="card state" id="state-reveal">
+    <p class="eyebrow">SUBJECT IDENTIFIED</p>
+    <div class="subject reveal-in" id="subject">
+      <img id="monsterImage" alt="">
+      <div>
+        <p class="mono" style="margin:0;color:var(--muted)">THE ONE WATCHING YOU WAS…</p>
+        <h2 id="monsterName"></h2>
+        <span class="threat" id="monsterThreat"></span>
+        <p id="monsterLine" style="margin-top:14px"></p>
+        <p class="mono" style="color:var(--muted)">Your answers are in. Filing your application sends both steps to the core team.</p>
+        <div class="actions"><button class="btn" type="button" id="submitBtn">File my application</button></div>
+      </div>
     </div>
   </div>
 
-  <!-- State 5: Final Room Jumpscare & Monster Reveal -->
-  <div class="card state" id="state-reveal">
-    <div class="jumpscare-stage">
-      <div class="knock-text">KNOCK KNOCK...</div>
-      <p class="mono" style="color:var(--danger); margin-top:8px;">HE'S KNOCKING AT YOUR DOOR.</p>
-      
-      <p style="margin-top:14px;">You turn around and look behind you...</p>
-      
-      <img id="monsterImage" class="monster-img shaking" src="" alt="Monster Reveal">
-      <h2 id="monsterName" style="color:var(--text); text-transform:uppercase;"></h2>
-      <p class="mono" id="monsterSub" style="color:var(--muted)"></p>
-
-      <div class="actions" style="justify-content:center; margin-top:24px;">
-        <button class="btn" type="button" onclick="finishGame()">Submit Application Dossier</button>
-      </div>
-    </div>
+  <div class="card state" id="state-done">
+    <p class="eyebrow">FILE RECEIVED</p>
+    <h2>You are now on record.</h2>
+    <p>Your applicant ID:</p>
+    <p class="case-id" id="doneId"></p>
+    <p>Keep it. You'll need it for the requirements and payment forms. Check the hub for your status.</p>
+    <div class="actions"><a class="btn" id="hubLink" target="_top">Back to the hub</a></div>
   </div>
 
   <footer class="page-foot">
@@ -289,9 +191,61 @@
   const BASE = <?!= JSON.stringify(String(baseUrl)) ?>;
   const $ = id => document.getElementById(id);
 
-  // Fallback image URLs defined directly in client script (No Settings dependency)
-  // #8: via.placeholder.com is gone. Self-contained SVG stand-ins until real photos are added
-  // (put them in Drive / the repo and swap the URLs in here).
+  /** google.script.run as a Promise. A failure also makes I.R.I.S. react. */
+  function call(fn, ...args) {
+    return new Promise((resolve, reject) =>
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(err => {
+        document.dispatchEvent(new CustomEvent('portal:error', { detail: err }));
+        reject(err);
+      })[fn](...args));
+  }
+  const kuya = (face, text) => { try { if (window.Iris) window.Iris.say([face, text]); } catch (e) { /* never break the page */ } };
+  const calm = () => document.documentElement.classList.contains('calm') ||
+    (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  // Questions: ids must match GAME_QUESTION_IDS in GameApi.gs. Themes: being watched, boxed in, failing. No gore.
+  const ROOMS = [
+    { n: 1, name: 'Isolation cell', secs: 45, qs: [
+      { id: 'Q1', text: 'You wake up alone in a locked room. Which would unsettle you most?', opts: {
+        A: 'A speaker in the ceiling whispers your name, once.',
+        B: 'A camera in the corner turns every time you move.',
+        C: "A note on the door, in your handwriting, that you don't remember writing." } },
+      { id: 'Q2', text: 'You have 60 seconds to get out. Which discovery makes you panic?', opts: {
+        A: 'The door was never locked. Someone was watching to see if you would try it.',
+        B: 'A monitor is replaying everything you did in the last hour.',
+        C: 'A recording of your own voice, asking for help.' } }
+    ] },
+    { n: 2, name: 'Corridor', secs: 45, qs: [
+      { id: 'Q3', text: 'Footsteps stop right outside your door. What scares you most?', opts: {
+        A: 'The silence that comes after.',
+        B: 'The doorknob slowly starting to turn.',
+        C: 'A sheet of paper sliding under the door with your name on it.' } },
+      { id: 'Q4', text: "You're stuck in a room with three strangers. Which unsettles you most?", opts: {
+        A: 'One of them keeps staring at you without blinking.',
+        B: 'Everyone goes quiet whenever you speak.',
+        C: 'One of them leaves, and nobody else seems to notice.' } }
+    ] },
+    { n: 3, name: 'Control room', secs: 30, qs: [
+      { id: 'Q5', text: 'Three doors lead out of the control room. Which would you least dare to open?', opts: {
+        A: 'The one with scratching on the other side.',
+        B: 'The one where every screen behind it shows your face.',
+        C: 'The one with a sign: "Whatever you do, don\'t look behind you."' } }
+    ] }
+  ];
+  const TOTAL = ROOMS.reduce((n, r) => n + r.qs.length, 0);
+
+  // Small CCTV scenes, one per room (inline SVG, no images to load).
+  const SCENES = {
+    1: '<rect width="160" height="120" fill="#0b0b0b"/><path d="M0 92h160" stroke="#1d1d1d"/><rect x="58" y="26" width="44" height="66" fill="#121212" stroke="#262626"/>' +
+       '<rect x="74" y="44" width="12" height="12" fill="#1d1d1d"/><path d="M20 92l14-30h10l-6 30z" fill="#151515"/><circle cx="128" cy="40" r="3" fill="#2a2a2a" class="flicker"/>',
+    2: '<rect width="160" height="120" fill="#0b0b0b"/><path d="M0 120L60 50h40l60 70z" fill="#101010"/><path d="M60 50v-38h40v38" fill="none" stroke="#222"/>' +
+       '<rect x="72" y="18" width="16" height="4" fill="#3a3a2a" class="flicker"/><path d="M78 50v-14a2 2 0 0 1 4 0v14z" fill="#050505"/><circle cx="80" cy="33" r="3" fill="#050505"/>',
+    3: '<rect width="160" height="120" fill="#0b0b0b"/><g fill="#0f1420" stroke="#1d2433"><rect x="14" y="20" width="38" height="28"/><rect x="61" y="20" width="38" height="28"/>' +
+       '<rect x="108" y="20" width="38" height="28"/><rect x="14" y="54" width="38" height="28"/><rect x="61" y="54" width="38" height="28"/><rect x="108" y="54" width="38" height="28"/></g>' +
+       '<rect x="10" y="90" width="140" height="10" fill="#141414"/><circle cx="80" cy="68" r="5" fill="#ff2a2a" opacity=".55" class="flicker"/>'
+  };
+
+  // Monster stand-ins until real photos are added (put them in Drive / the repo and swap here).
   function monsterArt(bg, eye, label) {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">' +
       '<rect width="400" height="400" fill="' + bg + '"/>' +
@@ -301,303 +255,288 @@
       '<text x="200" y="370" fill="' + eye + '" font-family="monospace" font-size="26" text-anchor="middle" letter-spacing="3">' + label + '</text></svg>';
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
-  const MONSTER_IMAGES = {
-    kerish: monsterArt('#1a0000', '#ff2a2a', 'SIR KERISH'),
-    chums: monsterArt('#001a05', '#4af626', 'SIR CHUMS'),
-    aly: monsterArt('#00001a', '#ffff00', 'SIR ALY (RARE)')
-  };
+  const MONSTERS = [   // Sir Kerish 60%, Sir Chums 30%, Sir Aly 10%
+    { upTo: 0.6, name: 'Sir Kerish', threat: 'COMMON SIGHTING', rare: false, img: monsterArt('#1a0000', '#ff2a2a', 'SIR KERISH'),
+      line: 'He has been in the corner of every feed this whole time. You only noticed now.' },
+    { upTo: 0.9, name: 'Sir Chums', threat: 'MEDIUM THREAT', rare: false, img: monsterArt('#001a05', '#4af626', 'SIR CHUMS'),
+      line: 'He waved at the camera. Twice. He knows you saw.' },
+    { upTo: 1, name: 'Sir Aly', threat: '★ RARE SIGHTING ★', rare: true, img: monsterArt('#00001a', '#ffff00', 'SIR ALY'),
+      line: 'Almost nobody sees him. Consider yourself selected.' }
+  ];
 
-  // Leave the Apps Script frame. Google only allows this straight after a click, so after a server call
-  // window.open may be blocked: we then show a themed card with a real target="_top" link to click.
+  // Leave the Apps Script frame. Only allowed straight after a click, so after a server call we also show a
+  // themed card with a real target="_top" link.
   function go(url, label, msg) {
     try { window.open(url, '_top'); } catch (e) { /* blocked */ }
     setTimeout(() => {
       if (window.Loader) Loader.hide();
-      let c = document.getElementById('goCard');
+      let c = $('goCard');
       if (!c) {
-        c = document.createElement('div'); c.id = 'goCard'; c.setAttribute('role', 'dialog');
-        c.style.cssText = 'position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(5,5,5,.86);padding:16px';
+        c = document.createElement('div'); c.id = 'goCard'; c.setAttribute('role', 'dialog'); c.setAttribute('aria-modal', 'true');
+        c.style.cssText = 'position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(5,5,5,.9);padding:16px;overflow:auto';
         c.innerHTML = '<div class="card" style="max-width:440px;text-align:center"><p class="mono" id="goMsg" style="margin:0 0 16px"></p>' +
           '<a class="btn" id="goLink" target="_top"></a></div>';
         document.body.appendChild(c);
       }
-      document.getElementById('goMsg').textContent = msg || 'Ready.';
-      const a = document.getElementById('goLink'); a.href = url; a.textContent = label || 'Continue';
+      $('goMsg').textContent = msg || 'Ready.';
+      const a = $('goLink'); a.href = url; a.textContent = label || 'Continue';
       a.focus();
     }, 700);
   }
 
-  // Themed in-page notice instead of alert()
-  function notice(msg, tone) {
-    let n = $('gameNotice');
-    if (!n) {
-      n = document.createElement('div'); n.id = 'gameNotice'; n.setAttribute('role', 'status');
-      n.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;max-width:min(92vw,520px);' +
-        'padding:12px 16px;background:#0a0a0a;border:1px solid var(--accent);color:var(--text);font:600 13px/1.4 var(--mono,monospace);' +
-        'letter-spacing:.04em;text-transform:uppercase;box-shadow:0 0 0 3px rgba(0,0,0,.6)';
-      document.body.appendChild(n);
-    }
-    n.style.borderColor = tone === 'bad' ? 'var(--danger)' : 'var(--accent)';
-    n.textContent = msg; n.hidden = false;
-    clearTimeout(n._t); n._t = setTimeout(() => { n.hidden = true; }, 4000);
-    try { if (window.Iris) window.Iris.say([tone === 'bad' ? 'scared' : 'thinking', msg]); } catch (e) { /* optional */ }
+  function say(text, tone) {
+    const m = $('msg');
+    m.textContent = text || '';
+    m.className = 'g-msg' + (tone ? ' ' + tone : '');
   }
 
-  const QUESTIONS = {
-    1: [
-      {
-        id: 'Fear_Q1',
-        text: '1. You wake up alone in a dark room. What would terrify you the most?',
-        options: [
-          'A. Hearing someone whisper your name behind you',
-          'B. Seeing a shadow standing motionless in the corner',
-          'C. Realizing there is someone breathing underneath your bed'
-        ]
-      },
-      {
-        id: 'Fear_Q2',
-        text: '2. You have 60 seconds to escape a room. Which discovery would make you panic?',
-        options: [
-          'A. A message written in blood on the wall',
-          'B. A mirror reflecting someone who isn\'t there',
-          'C. A recording of your own voice begging for help'
-        ]
-      }
-    ],
-    2: [
-      {
-        id: 'Fear_Q3',
-        text: '3. You hear footsteps approaching from the other side of the door. What do you fear most?',
-        options: [
-          'A. The footsteps suddenly stop outside your door',
-          'B. The doorknob slowly begins to turn',
-          'C. The footsteps continue even after you hear the person enter'
-        ]
-      },
-      {
-        id: 'Fear_Q4',
-        text: '4. You\'re trapped in a room with three strangers. Which situation unsettles you the most?',
-        options: [
-          'A. One stranger keeps staring at you without blinking',
-          'B. Everyone suddenly goes silent whenever you speak',
-          'C. You realize one of the strangers has disappeared, but nobody acknowledges it'
-        ]
-      }
-    ],
-    3: [
-      {
-        id: 'Fear_Q5',
-        text: '5. You find three doors leading out of the room. Which would you least dare to open? 👁️',
-        options: [
-          'A. A door with scratching sounds coming from the other side',
-          'B. A door with a child\'s laughter echoing behind it',
-          'C. A door with a sign that reads, “Whatever you do, don\'t look behind you.”'
-        ]
-      }
-    ]
-  };
+  function show(name) {
+    ['loading', 'error', 'hub', 'room', 'cleared', 'cut', 'reveal', 'done'].forEach(s => $('state-' + s).classList.toggle('show', s === name));
+    if (name !== 'loading' && window.Loader) Loader.hide();
+    $('tape').hidden = name === 'loading' || name === 'error' || name === 'done';
+  }
 
-  let clearedRooms = [];
-  let currentRoom = 0;
-  let roomAnswers = {};
-  let timerInterval = null;
-  let timeLeft = 30;
-  let isTabActive = true;
+  /* ---------------- state ---------------- */
+  let answers = {};          // { Q1: { a: 'B', ms: 4200 } }
+  let room = null, qIndex = 0, qStart = 0;
+  let timeLeft = 0, timer = null, saved = true;
 
-  document.addEventListener('visibilitychange', () => {
-    isTabActive = !document.hidden;
-  });
+  const roomDone = r => r.qs.every(q => answers[q.id]);
+  const answeredCount = () => Object.keys(answers).length;
 
-  function call(fn, ...args) {
-    return new Promise((resolve, reject) => {
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(reject)[fn](...args);
+  function updateTape() {
+    const n = answeredCount();
+    const t = $('tape');
+    t.dataset.label = String(n).padStart(2, '0') + ' / ' + String(TOTAL).padStart(2, '0');
+    t.firstElementChild.style.setProperty('--p', Math.round(n / TOTAL * 100) + '%');
+  }
+
+  /* ---------------- hub ---------------- */
+  function renderFeeds() {
+    const wrap = $('feeds');
+    wrap.innerHTML = '';
+    ROOMS.forEach(r => {
+      const done = roomDone(r);
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'feed' + (done ? ' cleared' : '');
+      if (done) b.setAttribute('aria-disabled', 'true');
+      b.setAttribute('aria-label', 'Camera 0' + r.n + ', ' + r.name + (done ? ', cleared' : ', ' + r.qs.length + (r.qs.length === 1 ? ' question' : ' questions')));
+      b.innerHTML =
+        '<div class="feed-screen">' +
+          '<svg class="feed-scene" viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' + SCENES[r.n] + '</svg>' +
+          '<span class="feed-tag">CAM 0' + r.n + '</span><span class="feed-rec">REC</span>' +
+          '<span class="feed-time" data-clock></span><span class="feed-nosig">NO SIGNAL</span>' +
+        '</div>' +
+        '<div class="feed-foot"><b>' + r.name + '</b><span class="feed-state">' + (done ? 'Cleared' : r.qs.length + ' Q · ' + r.secs + 's') + '</span></div>';
+      b.addEventListener('click', () => { if (!roomDone(r)) enterRoom(r); });
+      wrap.appendChild(b);
     });
+    tickClocks();
   }
 
-  function showState(name) {
-    ['loading', 'hub', 'room', 'cleared', 'reveal'].forEach(s => {
-      const el = $('state-' + s);
-      if (el) el.classList.toggle('show', s === name);
-    });
-    if (name !== 'loading') Loader.hide();
+  function tickClocks() {
+    const now = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Manila', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.querySelectorAll('[data-clock]').forEach(el => { el.textContent = now; });
   }
-
-  function enterRoom(roomNum) {
-    if (clearedRooms.includes(roomNum)) return;
-    currentRoom = roomNum;
-    showState('room');
-    $('roomTitle').textContent = 'CAM 0' + roomNum + ' \u002F\u002F SECTOR INTERROGATION';   // no '//' inside backticks: Apps Script's comment stripper cuts it
-
-    const container = $('questionsContainer');
-    container.innerHTML = '';
-    const qList = QUESTIONS[roomNum];
-
-    qList.forEach(q => {
-      const qDiv = document.createElement('div');
-      qDiv.className = 'game-q';
-      qDiv.innerHTML = `<p>${q.text}</p>`;
-
-      q.options.forEach(opt => {
-        const btn = document.createElement('button');
-        btn.className = 'opt-btn';
-        if (roomAnswers[q.id] === opt) btn.classList.add('selected');
-        btn.textContent = opt;
-        btn.onclick = () => {
-          qDiv.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
-          btn.classList.add('selected');
-          roomAnswers[q.id] = opt;
-        };
-        qDiv.appendChild(btn);
-      });
-      container.appendChild(qDiv);
-    });
-
-    startTimer(30);
-  }
-
-  function startTimer(seconds) {
-    clearInterval(timerInterval);
-    timeLeft = seconds;
-    const vignette = $('vignette');
-    
-    function updateBar() {
-      const pct = (timeLeft / seconds) * 100;
-      $('timerFill').style.width = pct + '\%';$('timerDisplay').textContent = isTabActive ? `TIME: ${timeLeft}s` : `TIME: ${timeLeft}s (PAUSED)`;
-
-      const dimOpacity = 1 - (timeLeft / seconds);
-      vignette.style.opacity = Math.min(dimOpacity * 0.85, 0.85);
-
-      if (timeLeft <= 10) {
-        $('timerFill').style.backgroundColor = 'var(--danger)';
-      } else {
-        $('timerFill').style.backgroundColor = 'var(--glow)';
-      }
-    }
-
-    updateBar();
-    timerInterval = setInterval(() => {
-      if (!isTabActive) {
-        updateBar();
-        return;
-      }
-
-      timeLeft--;
-      updateBar();
-
-      if (timeLeft <= 0) {
-        clearInterval(timerInterval);
-        notice('Time expired // surveillance penalty applied', 'bad');
-      }
-    }, 1000);
-  }
-
-  function submitRoom() {
-    const qList = QUESTIONS[currentRoom];
-    const allAnswered = qList.every(q => roomAnswers[q.id]);
-    
-    if (!allAnswered) {
-      notice('Answer every question in this room before clearing the feed.', 'bad');
-      return;
-    }
-
-    clearInterval(timerInterval);
-    $('vignette').style.opacity = 0;
-    clearedRooms.push(currentRoom);
-
-    const mon = $('mon-' + currentRoom);
-    if (mon) mon.classList.add('cleared');
-    const st = $('st-' + currentRoom);
-    if (st) {
-      st.textContent = 'CLEARED';
-      st.style.color = 'var(--glow)';
-    }
-
-    if (clearedRooms.length < 3) {
-      showState('cleared');
-    } else {
-      triggerFinalReveal();
-    }
-  }
+  setInterval(tickClocks, 1000);
 
   function showHub() {
-    showState('hub');
+    show('hub');
+    renderFeeds();
+    updateTape();
+    const next = $('feeds').querySelector('.feed:not(.cleared)');
+    if (next) next.focus();
   }
 
-  function triggerFinalReveal() {
-    showState('reveal');
-
-    // RNG for Monster Face Reveal
-    // Kerish (60%), Chums (30%), Aly (10%)
-    const rand = Math.random();
-    let selectedMonster = 'kerish';
-    let name = 'Sir Kerish';
-    let sub = 'MOST COMMON ANOMALY DETECTED';
-
-    if (rand > 0.90) {
-      selectedMonster = 'aly';
-      name = 'Sir Aly';
-      sub = '★ ULTRA RARE MONSTER ENCOUNTER ★';
-    } else if (rand > 0.60) {
-      selectedMonster = 'chums';
-      name = 'Sir Chums';
-      sub = 'MEDIUM THREAT LEVEL DETECTED';
-    }
-
-    $('monsterImage').src = MONSTER_IMAGES[selectedMonster];$('monsterName').textContent = name;
-    $('monsterSub').textContent = sub;
+  /* ---------------- room ---------------- */
+  function enterRoom(r) {
+    room = r;
+    qIndex = r.qs.findIndex(q => !answers[q.id]);
+    if (qIndex < 0) qIndex = 0;
+    $('roomTitle').textContent = 'CAM 0' + r.n + ' · ' + r.name;
+    show('room');
+    say('');
+    renderQuestion();
+    startTimer(r.secs);
+    kuya('nervous', 'Camera ' + r.n + '. ' + r.qs.length + (r.qs.length === 1 ? ' question' : ' questions') + '. The clock is running.');
+    $('state-room').scrollIntoView({ block: 'start' });
   }
 
-  async function finishGame() {
-    const btn = document.querySelector('#state-reveal .btn');
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'Submitting Application...';
-    }
+  function renderQuestion() {
+    const q = room.qs[qIndex];
+    const pos = ROOMS.reduce((n, r) => n + (r.n < room.n ? r.qs.length : 0), 0) + qIndex + 1;
+    $('qNum').textContent = 'Q.' + String(pos).padStart(2, '0') + ' / ' + String(TOTAL).padStart(2, '0');
+    $('qText').textContent = q.text;
+    const box = $('qOpts');
+    box.innerHTML = '';
+    Object.keys(q.opts).forEach(k => {
+      const label = document.createElement('label');
+      label.className = 'opt';
+      const input = document.createElement('input');
+      input.type = 'radio'; input.name = 'opt'; input.value = k;
+      const key = document.createElement('span'); key.className = 'k'; key.textContent = k + '.';
+      const txt = document.createElement('span'); txt.textContent = q.opts[k];
+      label.append(input, key, txt);
+      box.appendChild(label);
+    });
+    $('lockBtn').textContent = qIndex < room.qs.length - 1 ? 'Lock in answer' : 'Lock in and clear room';
+    qStart = Date.now();
+    const first = box.querySelector('input');
+    if (first) first.focus({ preventScroll: true });
+  }
 
+  function lockIn(e) {
+    e.preventDefault();
+    const picked = $('qForm').querySelector('input[name="opt"]:checked');
+    if (!picked) { say('Pick an answer first.', 'bad'); return; }
+    say('');
+    answers[room.qs[qIndex].id] = { a: picked.value, ms: Date.now() - qStart };
+    saved = false;
+    updateTape();
+    if (qIndex < room.qs.length - 1) { qIndex++; renderQuestion(); }
+    else finishRoom(false);
+  }
+
+  function finishRoom(timedOut) {
+    stopTimer();
+    if (timedOut) room.qs.forEach(q => { if (!answers[q.id]) answers[q.id] = { a: 'NONE', ms: room.secs * 1000 }; });
+    updateTape();
+    saveProgress();
+    if (ROOMS.every(roomDone)) { reveal(); return; }
+    $('clearedEyebrow').textContent = timedOut ? 'FEED LOST' : 'FEED CLEARED';
+    $('clearedTitle').textContent = timedOut ? 'Time ran out' : 'Nothing in this room';
+    $('clearedText').textContent = timedOut
+      ? 'The feed cut out. Anything you did not answer was filed as "no answer". Check the remaining feeds.'
+      : "Whatever got in isn't here. Your answers are saved. Check the remaining feeds.";
+    show('cleared');
+    if (timedOut) kuya('scared', 'Feed lost. I filed the blanks as "no answer". Keep moving.');
+    $('backToHub').focus();
+  }
+
+  /* ---------------- timer (pauses while the tab is hidden) ---------------- */
+  function startTimer(secs) {
+    stopTimer();
+    timeLeft = secs;
+    paint(secs);
+    timer = setInterval(() => {
+      if (document.hidden) return;
+      timeLeft--;
+      paint(secs);
+      if (timeLeft === 10) $('timeAnnounce').textContent = '10 seconds left.';
+      if (timeLeft <= 0) finishRoom(true);
+    }, 1000);
+  }
+  function stopTimer() {
+    clearInterval(timer); timer = null;
+    $('vignette').style.opacity = 0;
+    $('timeAnnounce').textContent = '';
+  }
+  function paint(secs) {
+    const low = timeLeft <= 10;
+    $('clock').textContent = 'TIME ' + Math.max(timeLeft, 0) + 's';
+    $('clock').classList.toggle('low', low);
+    $('timer').classList.toggle('low', low);
+    $('timerFill').style.width = (Math.max(timeLeft, 0) / secs * 100) + '%';
+    if (!calm()) $('vignette').style.opacity = Math.min((1 - timeLeft / secs) * 0.8, 0.8);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (timer && document.hidden) $('clock').textContent = 'TIME ' + timeLeft + 's (PAUSED)';
+  });
+
+  /* ---------------- saving ---------------- */
+  async function saveProgress() {
     try {
-      const res = await call('game_submitFinal', roomAnswers);
-      if (res && res.ok) {
-        try { sessionStorage.removeItem('leads-game'); } catch (e) { /* ignore */ }
-        $('monsterSub').textContent = 'Dossier filed. Applicant ID: ' + res.id;
-        if (btn) { btn.disabled = false; btn.textContent = 'Back to the hub'; btn.onclick = () => go(BASE, 'Back to the hub', 'Application submitted.'); }
-        notice('Application submitted. Your ID is ' + res.id);
-        return;
-      } else if (res && res.errors) {
-        // #9: hand the exact field errors back to Apply so it can mark them
-        try { sessionStorage.setItem('leads-apply-errors', JSON.stringify(res.errors)); } catch (e) { /* ignore */ }
-        notice('Some answers need fixing. Taking you back to the form...', 'bad');
-        setTimeout(() => go(BASE + '?page=apply', 'Back to the form', 'Some answers need fixing. They are marked in red on the form.'), 1800);
-        return;
-      }
-      throw new Error('No response from the server.');
+      const r = await call('game_saveProgress', answers);
+      saved = !!(r && r.ok);
     } catch (e) {
-      notice('Submission failed: ' + (e.message || e), 'bad');
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = 'Submit Application Dossier';
+      // Not fatal: the final submit sends the answers again. Just tell them.
+      say('Could not save your progress just now. Your answers are kept on this page.', 'bad');
+    }
+  }
+  window.addEventListener('beforeunload', e => { if (!saved) { e.preventDefault(); e.returnValue = ''; } });
+
+  /* ---------------- reveal + submit ---------------- */
+  function reveal() {
+    const roll = Math.random();
+    const m = MONSTERS.find(x => roll < x.upTo) || MONSTERS[0];
+    $('monsterImage').src = m.img;
+    $('monsterImage').alt = m.name + ', staring into the camera';
+    $('monsterName').textContent = m.name;
+    $('monsterThreat').textContent = m.threat;
+    $('monsterThreat').classList.toggle('rare', m.rare);
+    $('monsterLine').textContent = m.line;
+    const showSubject = () => {
+      show('reveal');
+      kuya(m.rare ? 'excited' : 'scared', m.name + '. ' + m.line);
+      $('submitBtn').focus();
+    };
+    if (calm()) { showSubject(); return; }
+    show('cut');
+    setTimeout(showSubject, 1600);
+  }
+
+  async function submit() {
+    const btn = $('submitBtn');
+    if (btn.disabled) return;
+    btn.disabled = true; btn.textContent = 'Filing…';
+    say('');
+    if (window.Loader) Loader.show('Filing your application…');
+    try {
+      const res = await call('game_submitFinal', answers);
+      if (res && res.ok) {
+        saved = true;
+        $('doneId').textContent = res.id;
+        $('hubLink').href = BASE;
+        show('done');
+        kuya('excited', 'File received. You are now on record as ' + res.id + '.');
+        $('hubLink').focus();
+        return;
       }
+      if (res && res.errors) {
+        // Hand the field errors back to Apply so it can mark them
+        saved = true;
+        try { sessionStorage.setItem('leads-apply-errors', JSON.stringify(res.errors)); } catch (e) { /* ignore */ }
+        kuya('thinking', 'A few answers on the form need fixing. Your assessment is saved.');
+        go(BASE + '?page=apply', 'Back to the form', 'Some answers on the form need fixing. They are marked in red. Your assessment is saved.');
+        return;
+      }
+      throw new Error('No response from the server. Try again.');
+    } catch (e) {
+      say('Not filed: ' + ((e && e.message) || e) + ' Your answers are still here.', 'bad');
+      btn.disabled = false; btn.textContent = 'Try filing again';
+    } finally {
+      if (window.Loader) Loader.hide();
     }
   }
 
-  async function init() {
-    showState('loading');
+  /* ---------------- load ---------------- */
+  async function load() {
+    show('loading');
     try {
       const data = await call('game_getInit');
-      if (data.alreadyApplied) { go(BASE, 'Go to the hub', 'You already applied. Your file is on record.'); return; }
-      if (!data.signedIn || !data.allowedDomain || !data.draft) {   // nothing to submit yet: do Section 1 first
-        go(BASE + '?page=apply', 'Open the application form', !data.signedIn || !data.allowedDomain
-          ? 'Sign in with your Ateneo account first.' : 'Fill in the application form first. The assessment comes after it.');
-        return;
+      if (data.alreadyApplied) { show('hub'); go(BASE, 'Go to the hub', 'You already applied. Your file is on record.'); return; }
+      if (!data.signedIn || !data.allowedDomain) {
+        show('hub'); go(BASE + '?page=apply', 'Open the application form', 'Sign in with your Ateneo account first.'); return;
       }
-      showState('hub');
+      if (!data.hasDraft) {
+        show('hub'); go(BASE + '?page=apply', 'Open the application form', 'Fill in the application form first. The assessment comes after it.'); return;
+      }
+      answers = data.saved || {};
+      if (ROOMS.every(roomDone)) { updateTape(); reveal(); return; }
+      showHub();
+      if (answeredCount()) say('Picked up where you left off.', 'good');
     } catch (e) {
-      showState('hub');
+      $('errorMsg').textContent = 'Could not load the assessment: ' + ((e && e.message) || e);
+      show('error');
     }
   }
 
-  init();
+  $('qForm').addEventListener('submit', lockIn);
+  $('backToHub').addEventListener('click', showHub);
+  $('submitBtn').addEventListener('click', submit);
+  $('retry').addEventListener('click', load);
+  load();
 </script>
 </body>
 </html>
