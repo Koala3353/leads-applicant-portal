@@ -20,6 +20,52 @@
   body.still .reye{--pupil:34%}
   body.still .watcher{opacity:calc(var(--o,.7) + .15)}
 
+  /* ---------- observation protocol: the log, shy eyes, the idle broadcast, "subject reacquired" ---------- */
+  .obslog{margin-top:20px;--py:12px;--px:14px;padding:12px 14px 14px;transform:rotate(-1deg)}
+  .obslog ol{list-style:none;margin:0;padding:0;display:grid;gap:4px;min-height:6.2em}
+  .obslog li{font:400 1.02rem/1.25 var(--os);letter-spacing:.03em;color:#a9f0a9;overflow-wrap:anywhere}
+  .obslog li time{color:var(--muted);margin-right:8px}
+  .obslog li.inv{color:var(--glow)}
+  .obslog li.typing::after{content:"\2588";margin-left:2px;animation:rec .6s steps(1) infinite}
+  .obslog li:not(:last-child){opacity:.6}
+  /* eyes close when you point at them, then reopen and stare */
+  .reye.shy .reye-ball::after{animation:none;transform:scaleY(1.05);transition:transform .14s cubic-bezier(.23,1,.32,1)}
+  /* idle: the room dims slowly into a broadcast card, then snaps back the moment you move */
+  .idle-veil{position:fixed;inset:0;z-index:9300;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.78);opacity:0;visibility:hidden;transition:opacity 0s,visibility 0s}
+  body.idle .idle-veil{opacity:1;visibility:visible;transition:opacity 2.6s ease-in,visibility 0s}
+  .bcast{width:min(560px,100%);padding:26px 22px 28px;text-align:center;color:#fff;background:#1d2bd0;font-family:var(--display);text-transform:uppercase;
+    box-shadow:0 0 0 4px #000,0 0 0 7px #1d2bd0,0 0 60px rgba(29,43,208,.55);rotate:-1deg}
+  .bcast p{margin:0}
+  .bcast .b-ico{width:64px;height:64px;margin:0 auto 10px;display:block}
+  .bcast .b-top{font-size:clamp(1.1rem,4vw,1.5rem);letter-spacing:.08em}
+  .bcast .b-big{font-size:clamp(2.6rem,11vw,4.4rem);line-height:.9;margin:.1em 0 .15em}
+  .bcast .b-sub{font:400 1.3rem/1.2 var(--os);letter-spacing:.08em;text-transform:none}
+  .tvs.jolt{animation:jolt .45s steps(3) 1}
+  @keyframes jolt{0%{translate:-6px 3px}33%{translate:7px -4px}66%{translate:-3px 2px}100%{translate:0 0}}
+  /* subject reacquired: a VHS rewind over the real page, then a reticle locks on to you */
+  .reacq{position:fixed;inset:0;z-index:9450;pointer-events:none;display:none}
+  .reacq.on{display:block}
+  .reacq.rew{background:repeating-linear-gradient(0deg,rgba(255,255,255,.1) 0 2px,transparent 2px 11px),rgba(0,0,0,.3);animation:rewBands .25s linear infinite}
+  @keyframes rewBands{to{background-position:0 -44px,0 0}}
+  body.rewinding .wrap,body.rewinding .ticker{animation:vhsRew .11s steps(2) infinite}
+  @keyframes vhsRew{0%{transform:translateX(-9px) skewX(-3deg);filter:contrast(1.5) brightness(1.15)}100%{transform:translateX(7px) skewX(2deg);filter:contrast(1.2)}}
+  .rq-osd,.rq-tc{position:absolute;top:max(18px,env(safe-area-inset-top));font:400 clamp(1.6rem,5vw,2.4rem)/1 var(--os);letter-spacing:.06em;color:#fff;text-shadow:2px 2px 0 #000,0 0 10px rgba(0,0,0,.8);background:rgba(0,0,0,.55);padding:4px 10px}
+  .rq-osd{left:20px}.rq-tc{right:20px;font-variant-numeric:tabular-nums}
+  .rq-box{position:absolute;width:120px;height:90px;margin:-45px 0 0 -60px;opacity:0;scale:2.6;transition:scale .38s cubic-bezier(.2,1,.3,1),opacity .2s ease;
+    background:linear-gradient(var(--danger),var(--danger)) 0 0/18px 2px,linear-gradient(var(--danger),var(--danger)) 0 0/2px 18px,
+      linear-gradient(var(--danger),var(--danger)) 100% 0/18px 2px,linear-gradient(var(--danger),var(--danger)) 100% 0/2px 18px,
+      linear-gradient(var(--danger),var(--danger)) 0 100%/18px 2px,linear-gradient(var(--danger),var(--danger)) 0 100%/2px 18px,
+      linear-gradient(var(--danger),var(--danger)) 100% 100%/18px 2px,linear-gradient(var(--danger),var(--danger)) 100% 100%/2px 18px;background-repeat:no-repeat}
+  .rq-box.lock{opacity:1;scale:1}
+  .rq-box b{position:absolute;left:50%;top:calc(100% + 6px);translate:-50% 0;width:max-content;max-width:min(80vw,420px);text-align:center;background:rgba(0,0,0,.6);padding:3px 6px;font:400 1rem/1 var(--os);letter-spacing:.08em;color:var(--danger);text-shadow:1px 1px 0 #000}
+  .rq-face{position:absolute;inset:0;display:none;place-items:center;align-content:center;grid-auto-flow:column;gap:4vmin;background:#000}
+  .reacq.face .rq-face{display:grid}
+  .rq-face .reye{--s:min(38vmin,320px);--pupil:6%;-webkit-mask:radial-gradient(ellipse 50% 50%,#000 58%,transparent 100%);mask:radial-gradient(ellipse 50% 50%,#000 58%,transparent 100%)}
+  .rq-face .reye-ball::after{animation:none}
+  .reacq.face .rq-face{animation:jShakeH .08s steps(2) infinite}
+  @keyframes jShakeH{0%{translate:-6px 4px}100%{translate:6px -4px}}
+  #camYou b.replay{color:var(--danger)}
+
   /* ---------- random creepy moments (see the creep engine in the script) ---------- */
   .creep-pop{position:fixed;z-index:9400;width:min(290px,calc(100vw - 32px));padding:3px;background:var(--win);color:#000;
     box-shadow:var(--bevel-out),6px 6px 0 #000;rotate:var(--r,-1deg);opacity:0;translate:0 8px;pointer-events:none;
@@ -405,6 +451,21 @@
 <div class="watcher hide-sm" style="--s0:56px;top:44%;right:48%;--d:-.5s;--o:.3" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
 <? } ?>
 
+<!-- idle protocol: a broadcast card when you stop moving -->
+<div class="idle-veil" id="idleVeil" aria-hidden="true">
+  <div class="bcast">
+    <svg class="b-ico" viewBox="0 0 100 100"><path d="M50 8L94 88H6z" fill="none" stroke="#fff" stroke-width="7"/><path d="M24 64q26-26 52 0q-26 22-52 0z" fill="#fff"/><circle cx="50" cy="63" r="8" fill="#1d2bd0"/></svg>
+    <p class="b-top">This is not a test</p>
+    <p class="b-big">Subject inactive</p>
+    <p class="b-sub">We will wait.</p>
+  </div>
+</div>
+<!-- subject reacquired: the page rewinds when you come back to the tab -->
+<div class="reacq" id="reacq" aria-hidden="true">
+  <span class="rq-osd" id="rqOsd">&#9664;&#9664; REW</span><span class="rq-tc" id="rqTc">00:00:00</span>
+  <span class="rq-box" id="rqBox"><b id="rqLbl">SUBJECT REACQUIRED</b></span>
+  <div class="rq-face"><span class="reye"><span class="reye-ball"><i></i></span></span><span class="reye"><span class="reye-ball"><i></i></span></span></div>
+</div>
 <div class="interrupt" id="interrupt" aria-hidden="true"><p class="int-meta" id="intCam">Feed interrupted // CAM 01</p><p class="int-msg" id="intMsg"></p><p class="int-meta" id="intTime"></p></div>
 
 <div class="wrap">
@@ -451,6 +512,11 @@
         </ul>
       </div>
       <p class="scrap hint-note" aria-hidden="true">After the form, they show you three cameras.<br>Only two of them are empty.<span>pick carefully</span></p>
+      <!-- the observation log: what you actually do on this page, typed back at you. Built in the browser, never sent anywhere. -->
+      <div class="card obslog" aria-hidden="true">
+        <div class="winbar off"><span>OBSERVATION.LOG</span><i><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+        <ol id="obsList"></ol>
+      </div>
       <div class="card status" id="statusCard" aria-live="polite">
         <span class="pill" id="statusPill">your application</span>
         <p class="big" id="statusBig"></p>
@@ -748,11 +814,190 @@
         leftAt = Date.now();
         const l = usable(C.tabTitles); if (l.length) document.title = fill(pick(l));
       } else {
-        document.title = title;
-        const secs = Math.round((Date.now() - leftAt) / 1000);
-        if (leftAt && secs >= 5 && (C.back || []).length) setTimeout(() => { if (!busy()) popup(pick(C.back).replace('{s}', secs)); }, 900);
+        document.title = title;   // coming back is handled by the observation protocol ("subject reacquired")
       }
     });
+  })();
+
+  /* ---------- observation protocol ----------
+     1. OBSERVATION.LOG types back what the subject actually does (sections reached, hesitations, files opened, idling,
+        leaving and coming back). Everything is noticed in this browser and never sent anywhere.
+     2. Shy eyes: point at a TV eye and it shuts; move away and it reopens, staring.
+     3. Idle: 45s without moving dims the room into a blue broadcast card; any movement snaps it back (a small jolt).
+     4. Subject reacquired: back on the tab after 5s+, the page rewinds like a tape with a timecode of how long they
+        were gone, a reticle locks on to the cursor, every eye stares, CAM 03 shows the replay. Rarely (20s+ away),
+        the rewind stops on a face against the glass.
+     CRT-off mode / reduced motion keep only the log. */
+  (function () {
+    const list = $('obsList');
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const quiet = () => reduce || document.documentElement.classList.contains('calm');
+    const pad = n => String(n).padStart(2, '0');
+    const now = () => new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Manila', hour12: false });
+    const subject = () => window.__creep && window.__creep.id ? 'SUBJECT ' + window.__creep.id.replace(/^APP-/, '') : 'SUBJECT';
+    const once = {};
+    let queue = [], typing = false;
+    function log(text, opts) {
+      opts = opts || {};
+      if (opts.once) { if (once[opts.once]) return; once[opts.once] = 1; }
+      queue.push({ text: text.replace('SUBJECT', subject()), inv: !!opts.inv, at: now() });
+      if (!typing) next();
+    }
+    function next() {
+      const item = queue.shift();
+      if (!item || !list) { typing = false; return; }
+      typing = true;
+      const li = document.createElement('li'); if (item.inv) li.className = 'inv';
+      const t = document.createElement('time'); t.textContent = item.at;
+      const span = document.createElement('span');
+      li.append(t, span); list.append(li);
+      while (list.children.length > 5) list.firstElementChild.remove();
+      if (quiet()) { span.textContent = item.text; setTimeout(next, 200); return; }
+      li.classList.add('typing');
+      let i = 0;
+      (function type() {
+        span.textContent = item.text.slice(0, ++i);
+        if (i < item.text.length) setTimeout(type, 22 + Math.random() * 30);
+        else { li.classList.remove('typing'); setTimeout(next, 450); }
+      })();
+    }
+    window.Obs = { log: log };
+
+    log('SUBJECT ENTERED. CAM 01 RECORDING.');
+    let lastAct = Date.now();
+
+    // sections reached, once each
+    const seen = [['.wall', 'SUBJECT LOOKED AT THE WALL. THE WALL LOOKED BACK.'], ['#mods', 'SUBJECT REACHED THEIR FILE.'],
+      ['#faq', 'SUBJECT FOUND THE CLASSIFIED FILES.'], ['#voices', 'SUBJECT IS READING THE TRANSCRIPTS.']];
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(es => es.forEach(e => {
+        if (!e.isIntersecting) return;
+        const hit = seen.find(s => e.target.matches(s[0]));
+        if (hit) { log(hit[1], { once: hit[0] }); io.unobserve(e.target); }
+      }), { threshold: .35 });
+      seen.forEach(s => { const el = document.querySelector(s[0]); if (el) io.observe(el); });
+    }
+    // hesitating over the main button
+    const main = $('mainBtn'); let hovers = 0, clicked = false;
+    if (main) {
+      main.addEventListener('mouseenter', () => {
+        if (clicked) return;
+        if (++hovers === 3) { log("SUBJECT HOVERED OVER '" + main.textContent.trim().toUpperCase() + "' 3 TIMES. DID NOT CLICK.", { once: 'hover' }); setTimeout(() => log("WHENEVER YOU'RE READY.", { inv: true, once: 'ready' }), 2400); }
+      });
+      main.addEventListener('click', () => { clicked = true; });
+    }
+    // went all the way down, then back up
+    let deep = false;
+    window.addEventListener('scroll', () => {
+      if (scrollY > 1400) deep = true;
+      if (deep && scrollY < 120) { log('SUBJECT WENT BACK TO THE TOP. LOOKING FOR SOMETHING?', { once: 'top' }); deep = false; }
+    }, { passive: true });
+    // opening a classified file (toggle doesn't bubble, so listen in the capture phase)
+    document.addEventListener('toggle', e => {
+      const d = e.target;
+      if (d && d.classList && d.classList.contains('file') && d.open) log('SUBJECT OPENED ' + (d.dataset.no || 'A FILE') + '.');
+    }, true);
+    // staring at the poster
+    const poster = document.querySelector('.poster'); let stareT = null;
+    if (poster) {
+      poster.addEventListener('mouseenter', () => { stareT = setTimeout(() => log('SUBJECT STARED BACK AT THE POSTER. 3 SECONDS.', { once: 'poster' }), 3000); });
+      poster.addEventListener('mouseleave', () => clearTimeout(stareT));
+    }
+
+    /* shy eyes */
+    const watchers = [...document.querySelectorAll('[data-watch]')];
+    let px = innerWidth / 2, py = innerHeight / 2;
+    function shy(x, y) {
+      watchers.forEach(e => {
+        const r = e.getBoundingClientRect(), inside = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+        if (inside && !e.classList.contains('shy')) e.classList.add('shy');
+        else if (!inside && e.classList.contains('shy')) {
+          e.classList.remove('shy'); e.classList.add('stare');
+          clearTimeout(e._st); e._st = setTimeout(() => e.classList.remove('stare'), 1300);
+          log('SUBJECT LOOKED A CAMERA IN THE EYE. IT LOOKED AWAY FIRST.', { once: 'shy' });
+        }
+      });
+    }
+
+    /* idle protocol */
+    let idleT = null, isIdle = false;
+    function activity() {
+      lastAct = Date.now();
+      if (isIdle) {
+        isIdle = false; document.body.classList.remove('idle');
+        const tv = document.querySelector('.tvs'); if (tv && !quiet()) { tv.classList.remove('jolt'); void tv.offsetWidth; tv.classList.add('jolt'); }
+        log('SUBJECT MOVED. NOTED.');
+      }
+      clearTimeout(idleT);
+      idleT = setTimeout(goIdle, 45000);
+    }
+    function goIdle() {
+      if (document.hidden || document.querySelector('dialog[open]') || $('ld').classList.contains('on')) { idleT = setTimeout(goIdle, 10000); return; }
+      isIdle = true;
+      log('SUBJECT STOPPED MOVING. 45 SECONDS.');
+      if (!quiet()) document.body.classList.add('idle');
+    }
+    window.addEventListener('pointermove', e => { px = e.clientX; py = e.clientY; shy(px, py); activity(); }, { passive: true });
+    window.addEventListener('pointerdown', e => { px = e.clientX; py = e.clientY; shy(px, py); activity(); unlockAudio(); }, { passive: true });
+    window.addEventListener('scroll', activity, { passive: true });
+    window.addEventListener('keydown', activity);
+    activity();
+
+    /* sound for the rare face (only possible after the subject has clicked or tapped somewhere) */
+    let audio = null;
+    function unlockAudio() {
+      if (audio || quiet()) return;
+      try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; }
+    }
+    function thud() {
+      if (!audio || audio.state !== 'running') return;
+      const t = audio.currentTime, g = audio.createGain(), o = audio.createOscillator();
+      o.type = 'sine'; o.frequency.setValueAtTime(85, t); o.frequency.exponentialRampToValueAtTime(35, t + .4);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.7, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + .45);
+      o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + .5);
+    }
+
+    /* subject reacquired */
+    let leftAt = 0;
+    const box = $('reacq'), osd = $('rqOsd'), tc = $('rqTc'), ret = $('rqBox'), lbl = $('rqLbl');
+    const fmt = s => pad(Math.floor(s / 3600)) + ':' + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { leftAt = Date.now(); log('SUBJECT LEFT THE ROOM.'); return; }
+      if (!leftAt) return;
+      const away = Math.round((Date.now() - leftAt) / 1000); leftAt = 0;
+      log('SUBJECT RETURNED. AWAY ' + fmt(away) + '.');
+      activity();
+      if (away < 5 || quiet() || document.querySelector('dialog[open]') || $('ld').classList.contains('on')) return;
+      reacquire(away);
+    });
+    function reacquire(away) {
+      const face = away >= 20 && Math.random() < .3;
+      box.className = 'reacq on rew'; osd.textContent = '◀◀ REW'; ret.classList.remove('lock');
+      document.body.classList.add('rewinding');
+      const start = performance.now(), dur = 1100;
+      (function count(t) {
+        const k = Math.min(1, (t - start) / dur);
+        tc.textContent = '-' + fmt(Math.round(away * (1 - k)));
+        if (k < 1) requestAnimationFrame(count);
+      })(start);
+      if (face) setTimeout(() => { box.classList.add('face'); thud(); setTimeout(() => box.classList.remove('face'), 450); }, 820);
+      setTimeout(() => {
+        document.body.classList.remove('rewinding');
+        box.classList.remove('rew'); osd.textContent = '▶ PLAY'; tc.textContent = fmt(0);
+        ret.style.left = Math.min(Math.max(px, 70), innerWidth - 70) + 'px';
+        ret.style.top = Math.min(Math.max(py, 70), innerHeight - 90) + 'px';
+        lbl.textContent = 'SUBJECT REACQUIRED · AWAY ' + fmt(away);
+        requestAnimationFrame(() => ret.classList.add('lock'));
+        watchers.forEach(e => { e.classList.add('stare'); clearTimeout(e._st); e._st = setTimeout(() => e.classList.remove('stare'), 3500); });
+        const camLabel = document.querySelector('#camYou b');
+        if (camLabel) {
+          const was = camLabel.textContent;
+          camLabel.textContent = 'CAM 03 // REPLAY · ' + away + 's AGO'; camLabel.classList.add('replay');
+          setTimeout(() => { camLabel.textContent = was; camLabel.classList.remove('replay'); }, 6000);
+        }
+      }, face ? 1400 : dur);
+      setTimeout(() => { box.className = 'reacq'; }, (face ? 1400 : dur) + 1500);
+    }
   })();
 
   /* ---------- redacted words in the lede: black bars until hovered, focused or tapped ---------- */
@@ -855,6 +1100,7 @@
     $('who').innerHTML = ctx.signedIn ? 'Logged in as <b></b>' : 'Not signed in';
     if (ctx.signedIn) $('who').querySelector('b').textContent = ctx.email;
     window.__creep.name = (a && a.firstName) || '';
+    window.__creep.id = (a && a.id) || '';
     $('hint').hidden = !(ctx.signedIn && !a && ctx.isOpen && ctx.allowedDomain);
     if (ctx.contact) $('contact').textContent = 'Portal issues? Email ' + ctx.contact;
     if (ctx.isAdmin && ctx.sheetUrl) {

@@ -158,6 +158,27 @@
   @keyframes jShake{0%{translate:-7px 5px}50%{translate:8px -6px}100%{translate:-3px -2px}}
   @keyframes jFlash{0%{opacity:.8}100%{opacity:0}}
   .cut.calmfeed p{color:var(--glow)}
+  /* the mirror: CAM 03 turns around and shows the subject */
+  .mirror{display:none;position:relative;width:min(520px,100%);aspect-ratio:4/3;margin:0 auto 18px;overflow:hidden;
+    background:radial-gradient(ellipse at 50% 40%,#46524d,#141816 58%,#060707 80%);box-shadow:0 0 0 3px #111,inset 0 0 50px #000}
+  .cut.mirrored .mirror{display:block;animation:mzoom 1.9s cubic-bezier(.5,0,.75,0) forwards}
+  @keyframes mzoom{to{transform:scale(1.18)}}
+  .mirror::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.35) 0 1px,transparent 1px 3px)}
+  .mirror .sil{position:absolute;left:50%;bottom:-8%;width:58%;aspect-ratio:1/1.05;translate:-50% 0;
+    background:radial-gradient(circle at 50% 27%,#040404 0 21%,transparent 21.6%),radial-gradient(ellipse 52% 44% at 50% 100%,#040404 0 99%,transparent 100%)}
+  .mirror .det{position:absolute;left:38%;top:31%;width:24%;height:36%;border:2px solid var(--danger);z-index:1}
+  .mirror .det::after{content:attr(data-tag);position:absolute;left:-2px;top:calc(100% + 4px);white-space:nowrap;font:400 1rem/1 var(--os);letter-spacing:.06em;color:var(--danger);background:rgba(0,0,0,.6);padding:2px 5px}
+  .mirror .m-osd,.mirror .m-rec{position:absolute;top:7%;z-index:2;font:400 1.05rem/1 var(--os);letter-spacing:.06em;color:#eee;text-shadow:1px 1px 0 #000}
+  .mirror .m-osd{left:6%}.mirror .m-rec{right:6%;color:var(--danger)}
+  .cut.quiet{background:#000;cursor:pointer}
+  .cut.quiet p{color:var(--text);font-size:clamp(1.6rem,6vw,2.8rem)}
+  .cut.quiet small{color:var(--muted);font-size:1rem;letter-spacing:.04em;text-transform:none;font-family:var(--type)}
+  /* findings: typed case-file lines under the observer */
+  .findings{margin:16px 0 8px;padding:12px 14px;background:var(--paper);color:var(--paper-ink);font-family:var(--type);font-size:.98rem;line-height:1.55;
+    transform:rotate(-.6deg);box-shadow:3px 4px 0 rgba(0,0,0,.6)}
+  .findings p{margin:0 0 4px}
+  .findings b{color:#8a0000;font-weight:400}
+  .findings .inv{margin-top:8px;color:#1d2bd0}
   .cut.dead > div{visibility:hidden}
   .subject h2{margin:4px 0 6px;font-family:var(--display);font-size:clamp(2rem,6vw,3rem);letter-spacing:.04em;text-transform:uppercase}
   .threat{display:inline-block;font-family:var(--mono);font-size:12px;letter-spacing:.1em;padding:4px 8px;border:1.5px solid var(--danger);color:var(--danger)}
@@ -236,7 +257,10 @@
   </div>
 
   <div class="state" id="state-cut">
-    <div class="cut" id="cutBox" role="status"><div><p id="cutTitle">All feeds clear</p><small id="cutSub">NO THREAT DETECTED. YOU CAN RELAX.</small></div></div>
+    <div class="cut" id="cutBox" role="status"><div>
+      <div class="mirror" id="mirror" aria-hidden="true"><span class="m-osd">CAM 03 &#183; REVERSED</span><span class="m-rec">REC</span><span class="sil"></span><span class="det" id="mirrorTag"></span></div>
+      <p id="cutTitle">All feeds clear</p><small id="cutSub">NO THREAT DETECTED. YOU CAN RELAX.</small>
+    </div></div>
   </div>
 
   <div class="card state" id="state-reveal">
@@ -245,10 +269,11 @@
     <div class="subject reveal-in" id="subject">
       <div class="subject-photo"><div class="mface" id="monsterFace" role="img"></div><span class="stamp-ink">Identified</span></div>
       <div>
-        <p class="mono" style="margin:0;color:var(--muted)">THE ONE WATCHING YOU WAS…</p>
+        <p class="mono" style="margin:0;color:var(--muted)">ASSIGNED OBSERVER</p>
         <h2 id="monsterName"></h2>
         <span class="threat" id="monsterThreat"></span>
         <p id="monsterLine" style="margin-top:14px"></p>
+        <div class="findings" id="findings"></div>
         <p class="mono" style="color:var(--muted)">Your answers are in. Filing your application sends both steps to the core team.</p>
         <div class="actions"><button class="btn" type="button" id="submitBtn">File my application</button></div>
       </div>
@@ -591,6 +616,37 @@
   window.addEventListener('beforeunload', e => { if (!saved) { e.preventDefault(); e.returnValue = ''; } });
 
   /* ---------------- reveal + submit ---------------- */
+  // Fear profile: each answer leans toward one reading of Oversight (W watched, B boxed in, F failing).
+  const LEAN = { Q1: { A: 'W', B: 'B', C: 'F' }, Q2: { A: 'F', B: 'W', C: 'B' }, Q3: { A: 'B', B: 'W', C: 'F' },
+    Q4: { A: 'W', B: 'F', C: 'B' }, Q5: { A: 'B', B: 'W', C: 'F' } };
+  const FINDING = {
+    W: ['Subject is most afraid of being seen.', 'At camp, people will see you. That is the point.'],
+    B: ['Subject is most afraid of being boxed in.', 'At camp, the walls move. Come and see.'],
+    F: ['Subject is most afraid of getting it wrong.', 'At camp, you will get things wrong. Out loud. With us.'],
+    all: ['Subject is afraid of all of it, a little. Most people are.', 'Bring all of it to camp.']
+  };
+  function renderFindings() {
+    const n = { W: 0, B: 0, F: 0 }, times = [];
+    let none = 0, slowQ = '', slowMs = 0;
+    Object.keys(answers).forEach(id => {
+      const a = answers[id];
+      if (!a || a.a === 'NONE') { none++; return; }
+      const k = (LEAN[id] || {})[a.a]; if (k) n[k]++;
+      times.push(a.ms || 0);
+      if ((a.ms || 0) > slowMs) { slowMs = a.ms; slowQ = id; }
+    });
+    const top = Object.keys(n).sort((x, y) => n[y] - n[x]);
+    const key = n[top[0]] === n[top[1]] ? 'all' : top[0];
+    const avg = times.length ? (times.reduce((s, t) => s + t, 0) / times.length / 1000).toFixed(1) : '0.0';
+    const box = $('findings'); box.textContent = '';
+    const line = (label, text, cls) => { const p = document.createElement('p'); if (cls) p.className = cls; if (label) { const b = document.createElement('b'); b.textContent = label + ' '; p.append(b); } p.append(document.createTextNode(text)); box.append(p); };
+    line('FINDING 01:', FINDING[key][0]);
+    line('FINDING 02:', 'Average hesitation ' + avg + 's. Longest on question ' + slowQ.replace('Q', '') + '.');
+    if (none) line('FINDING 03:', none + (none === 1 ? ' question was' : ' questions were') + ' left unanswered when the feed cut.');
+    line('', 'There were no right answers. Only honest ones.');
+    line('', FINDING[key][1], 'inv');
+  }
+
   function reveal() {
     const roll = Math.random();
     const m = MONSTERS.find(x => roll < x.upTo) || MONSTERS[0];
@@ -600,25 +656,39 @@
     $('monsterThreat').textContent = m.threat;
     $('monsterThreat').classList.toggle('rare', m.rare);
     $('monsterLine').textContent = m.line;
+    renderFindings();
     const showSubject = () => {
       show('reveal');
       kuya(m.rare ? 'excited' : 'scared', m.name + '. ' + m.line);
       $('submitBtn').focus();
     };
     if (calm()) { showSubject(); return; }
-    // 1. false calm   2. a beat of black   3. the face, the sound, "FOUND YOU"   4. it fades into the file
-    const cut = $('cutBox'), jump = $('jump');
-    cut.className = 'cut calmfeed';
+    // 1. false calm  2. CAM 03 turns around: it's a mirror  3. black  4. the face, the sound, "FOUND YOU"
+    // 5. silence: "The one watching you was you."  6. the file, with the findings (scare first, invitation last)
+    const cut = $('cutBox'), jump = $('jump'), title = $('cutTitle'), sub = $('cutSub');
+    const who = (window.__nick || '').toUpperCase();
+    cut.className = 'cut calmfeed'; title.textContent = 'All feeds clear'; sub.textContent = 'NO THREAT DETECTED. YOU CAN RELAX.';
     show('cut');
     paintFace($('jumpFace'), m);
-    scareSound(2.05);
-    setTimeout(() => { cut.classList.add('dead'); }, 1700);
+    scareSound(3.55);
+    let done = false;
+    const finish = () => { if (done) return; done = true; cut.className = 'cut'; cut.onclick = null; showSubject(); };
+    setTimeout(() => {
+      $('mirrorTag').dataset.tag = 'SUBJECT' + (who ? ': ' + who : '') + ' \u00B7 MATCH 99%';
+      cut.className = 'cut mirrored'; title.textContent = 'CAM 03 is pointed at you.'; sub.textContent = 'IT HAS BEEN THE WHOLE TIME.';
+    }, 1400);
+    setTimeout(() => { cut.classList.add('dead'); }, 3200);
     setTimeout(() => {
       jump.classList.remove('out'); jump.classList.add('on');
       if (navigator.vibrate) { try { navigator.vibrate([90, 40, 160]); } catch (e) { /* optional */ } }
-    }, 2050);
-    setTimeout(() => { jump.classList.add('out'); showSubject(); }, 3700);
-    setTimeout(() => { jump.classList.remove('on', 'out'); cut.className = 'cut'; }, 4100);
+    }, 3550);
+    setTimeout(() => {
+      jump.classList.add('out');
+      cut.className = 'cut quiet'; title.textContent = 'The one watching you was you.'; sub.textContent = "Who are you when you're not performing?";
+      cut.onclick = finish;
+    }, 5150);
+    setTimeout(() => { jump.classList.remove('on', 'out'); }, 5550);
+    setTimeout(finish, 8600);
   }
 
   async function submit() {
@@ -668,6 +738,7 @@
         show('hub'); go(BASE + '?page=apply', 'Open the application form', 'Fill in the application form first. The assessment comes after it.'); return;
       }
       answers = data.saved || {};
+      window.__nick = data.nickname || '';
       if (ROOMS.every(roomDone)) { updateTape(); reveal(); return; }
       showHub();
       if (answeredCount()) say('Picked up where you left off.', 'good');

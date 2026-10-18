@@ -26,6 +26,7 @@ function game_getInit_() {
     allowedDomain: email ? isAllowedDomain_(email) : false,
     alreadyApplied: found ? { id: found.data.ApplicantID, status: found.data.Status } : null,
     hasDraft: !!(draft && draft.data),
+    nickname: draft && draft.data ? String(draft.data.Nickname || '').slice(0, 30) : '',   // their own answer, for the mirror
     saved: saved   // answers from an earlier visit, so a reload resumes where they left off
   };
 }
