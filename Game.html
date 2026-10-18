@@ -15,39 +15,67 @@
   .g-msg.bad{color:var(--danger)}
   .g-msg.good{color:var(--glow)}
 
-  /* ---- CCTV wall ---- */
-  .feeds{display:grid;gap:14px;margin:18px 0 6px;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
-  .feed{display:block;width:100%;min-width:0;padding:0;margin:0;text-align:left;cursor:pointer;color:var(--text);
-    background:#000;border:1.5px solid var(--line);font:inherit;transition:border-color .2s ease}
-  .feed:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+  /* ---- CCTV wall: each feed is a little 90s window holding a curved CRT with VHS on-screen readouts ---- */
+  .feeds{display:grid;gap:22px;margin:22px 0 8px;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr))}
+  .feed{display:flex;flex-direction:column;width:100%;min-width:0;padding:4px;margin:0;text-align:left;cursor:pointer;color:var(--text);font:inherit;border:0;
+    background:var(--win);box-shadow:var(--bevel-out),6px 6px 0 #000;transform:rotate(var(--r,0deg));transition:transform .2s cubic-bezier(.2,.9,.3,1.2)}
+  .feed:nth-child(1){--r:-1.4deg}.feed:nth-child(2){--r:1deg}.feed:nth-child(3){--r:-.6deg}
+  @media (min-width:860px){.feed:nth-child(2){margin-top:14px}}
+  .feed:focus-visible{outline:3px dashed var(--glow);outline-offset:5px}
   .feed[aria-disabled="true"]{cursor:default}
-  .feed-screen{position:relative;aspect-ratio:4/3;overflow:hidden;background:#050505}
-  .feed-screen svg{display:block;width:100%;height:100%}
-  .feed-tag,.feed-rec,.feed-time{position:absolute;font-family:var(--mono);font-size:12px;letter-spacing:.06em;background:rgba(0,0,0,.7);padding:2px 6px}
-  .feed-tag{top:6px;left:6px;color:var(--glow)}
-  .feed-rec{top:6px;right:6px;color:var(--danger)}
-  .feed-rec::before{content:"";display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%;background:var(--danger);animation:g-blink 1.2s steps(2) infinite}
-  .feed-time{bottom:6px;left:6px;color:var(--text)}
-  .feed-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;padding:10px 12px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
-  .feed-foot b{color:var(--glow);font-weight:700}
-  .feed-state{color:var(--danger)}
-  /* a cleared feed drops to static + NO SIGNAL */
-  .feed.cleared .feed-scene{opacity:.12}
-  .feed.cleared .feed-rec{display:none}
-  .feed.cleared .feed-state{color:var(--muted)}
-  .feed-nosig{display:none;position:absolute;inset:0;place-items:center;font-family:var(--mono);font-size:14px;letter-spacing:.2em;color:var(--muted);
-    background:repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 2px,transparent 2px 4px)}
-  .feed.cleared .feed-nosig{display:grid}
-  @keyframes g-blink{50%{opacity:0}}
+  .feed-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 2px 2px 7px;
+    background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;font:400 1.05rem/1.2 var(--os);letter-spacing:.04em}
+  .feed-bar i{display:flex;gap:2px;font-style:normal}
+  .feed-bar b{display:grid;place-items:center;width:16px;height:14px;background:var(--win);color:#000;box-shadow:var(--bevel-out);font:700 10px/1 monospace}
+  /* the CRT: dark bezel, rounded glass, glow, scanlines, vignette, grain */
+  .feed-crt{position:relative;display:block;margin:4px 0 0;padding:9px;background:linear-gradient(160deg,#2c2c2c,#151515);box-shadow:var(--bevel-dark-in)}
+  .feed-glass{position:relative;display:block;aspect-ratio:4/3;overflow:hidden;border-radius:10%/13%;background:#050505;box-shadow:0 0 0 2px #000,0 0 14px rgba(120,160,150,.12)}
+  .feed-glass svg{display:block;width:100%;height:100%;filter:grayscale(.65) sepia(.25) hue-rotate(110deg) contrast(1.15) brightness(.95);transition:filter .3s ease}
+  .feed-glass::before{content:"";position:absolute;inset:-20px;z-index:2;pointer-events:none;opacity:.22;animation:grain .45s steps(3) infinite;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  .feed-glass::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;border-radius:inherit;
+    background:radial-gradient(ellipse at 32% 22%,rgba(255,255,255,.13),transparent 42%),radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,0,0,.75) 100%),
+      repeating-linear-gradient(0deg,rgba(0,0,0,.32) 0 1px,transparent 1px 3px)}
+  /* VHS on-screen display */
+  .osd{position:absolute;z-index:4;font:400 1.02rem/1 var(--os);letter-spacing:.06em;color:#f2f2f2;text-shadow:1px 1px 0 #000,0 0 6px rgba(0,0,0,.8)}
+  .osd.tl{left:9%;top:9%}.osd.tr{right:9%;top:9%;color:var(--danger)}.osd.bl{left:9%;bottom:9%}.osd.br{right:9%;bottom:9%;opacity:.85}
+  .osd.tr::before{content:"";display:inline-block;width:7px;height:7px;margin-right:5px;border-radius:50%;background:var(--danger);vertical-align:1px;animation:g-blink 1.2s steps(2) infinite}
+  .osd .t{font-variant-numeric:tabular-nums}
+  /* the info strip under the screen */
+  .feed-info{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 10px;margin-top:4px;padding:9px 10px 10px;background:var(--night);box-shadow:var(--bevel-dark-in)}
+  .feed-name{font:400 1.3rem/1.05 var(--display);text-transform:uppercase;letter-spacing:.02em;color:var(--text);min-width:0}
+  .feed-chips{grid-column:1;display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font:400 .95rem/1 var(--os);letter-spacing:.06em;padding:3px 7px 2px;background:#050505;color:var(--glow);box-shadow:var(--bevel-dark-in)}
+  .chip.time{color:var(--danger)}
+  .feed-go{grid-column:2;grid-row:1/span 2;align-self:center;font:400 1.1rem/1 var(--os);letter-spacing:.04em;color:#000;background:var(--glow);padding:9px 10px 8px;
+    box-shadow:inset -1px -1px #000,inset 1px 1px #ffffc0,inset -3px -3px #8f8f00,inset 3px 3px #ffff8a;white-space:nowrap}
+  .feed:active:not([aria-disabled="true"]) .feed-go{box-shadow:inset 1px 1px #000,inset -1px -1px #ffffc0,inset 3px 3px #8f8f00,inset -3px -3px #ffff8a;transform:translate(1px,1px)}
+  @media (hover:hover){
+    .feed:not([aria-disabled="true"]):hover{transform:rotate(0deg) translateY(-3px)}
+    .feed:not([aria-disabled="true"]):hover .feed-glass svg{filter:grayscale(.5) sepia(.25) hue-rotate(110deg) contrast(1.25) brightness(1.2)}
+  }
+  /* something is standing in one of the feeds (a random one each visit). Faint, rare, never a flash. */
+  .lurk{opacity:0}
+  .feed.haunted .lurk{animation:lurk 11s steps(1) infinite}
+  @keyframes lurk{0%,61%{opacity:0}62%,64%{opacity:.75}65%{opacity:0}66%,74%{opacity:.85}75%,100%{opacity:0}}
   @keyframes g-flicker{0%,100%{opacity:1}47%{opacity:1}48%{opacity:.35}50%{opacity:1}}
   .flicker{animation:g-flicker 4s infinite}
-  @media (hover:hover){.feed:not([aria-disabled="true"]):hover{border-color:var(--glow)}}
+  @keyframes g-blink{50%{opacity:0}}
+  /* cleared: the feed dies to colour bars + static, stamped */
+  .feed.cleared .feed-bar{background:linear-gradient(90deg,#3a3a3a,#7a7a7a)}
+  .feed.cleared .feed-glass svg{opacity:.08}
+  .feed.cleared .osd.tr{display:none}
+  .feed-nosig{display:none;position:absolute;inset:0;z-index:1;place-items:end center;padding-bottom:24%;font:400 1.3rem var(--os);letter-spacing:.2em;color:#ddd;
+    background:linear-gradient(90deg,#9a9a9a 0 14.3%,#9a9a00 0 28.6%,#009a9a 0 42.9%,#009a00 0 57.2%,#9a009a 0 71.5%,#9a0000 0 85.8%,#00009a 0);filter:brightness(.45)}
+  .feed.cleared .feed-nosig{display:grid}
+  .feed-stamp{display:none;position:absolute;z-index:5;left:50%;top:50%;translate:-50% -50%;font:400 1.5rem var(--type);letter-spacing:.14em;color:var(--glow);
+    border:3px solid currentColor;padding:.1em .5em;rotate:-12deg;-webkit-mask-image:var(--grunge);mask-image:var(--grunge)}
+  .feed.cleared .feed-stamp{display:block}
+  .feed.cleared .feed-go{background:var(--win);color:var(--win-sh);text-shadow:1px 1px 0 var(--win-hi);box-shadow:var(--bevel-out)}
+  html.calm .feed.haunted .lurk,html.calm .feed-glass::before,html.calm .flicker,html.calm .osd.tr::before{animation:none}
 
   /* ---- room ---- */
   .room{--py:20px;--px:20px;padding:20px;background:var(--night-2);box-shadow:var(--bevel-dark),6px 5px 0 -2px #000,6px 5px 0 -1px rgba(0,16,224,.55)}
-  /* clutter around the frame only: the feeds lean, the questions and answers stay straight */
-  .feed:nth-child(1){transform:rotate(-1.4deg)}.feed:nth-child(2){transform:rotate(1deg) translateY(8px)}.feed:nth-child(3){transform:rotate(-.5deg)}
-  .feed-foot{font-family:var(--os);font-size:1.05rem}
   .room-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px;margin-bottom:10px;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase}
   .room-head .t{color:var(--glow);font-weight:700;min-width:0}
   .room-head .clock{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
@@ -90,7 +118,7 @@
   .threat.rare{border-color:var(--glow);color:var(--glow)}
   .reveal-in{animation:g-in .6s ease-out}
   @keyframes g-in{0%{opacity:0;filter:contrast(3) brightness(2)}30%{opacity:1}100%{filter:none}}
-  html.calm .reveal-in,html.calm .flicker,html.calm .feed-rec::before{animation:none}
+  html.calm .reveal-in{animation:none}
   .case-id{font-family:var(--mono);font-size:clamp(1.4rem,5vw,2rem);color:var(--glow);overflow-wrap:anywhere}
 </style>
 </head>
@@ -243,15 +271,34 @@
   ];
   const TOTAL = ROOMS.reduce((n, r) => n + r.qs.length, 0);
 
-  // Small CCTV scenes, one per room (inline SVG, no images to load).
+  // CCTV scenes, one per room (inline SVG, no images to load). Each has a figure (.lurk) that only shows in the
+  // one "haunted" feed per visit: after the form there are three cameras, and only two of them are empty.
   const SCENES = {
-    1: '<rect width="160" height="120" fill="#0b0b0b"/><path d="M0 92h160" stroke="#1d1d1d"/><rect x="58" y="26" width="44" height="66" fill="#121212" stroke="#262626"/>' +
-       '<rect x="74" y="44" width="12" height="12" fill="#1d1d1d"/><path d="M20 92l14-30h10l-6 30z" fill="#151515"/><circle cx="128" cy="40" r="3" fill="#2a2a2a" class="flicker"/>',
-    2: '<rect width="160" height="120" fill="#0b0b0b"/><path d="M0 120L60 50h40l60 70z" fill="#101010"/><path d="M60 50v-38h40v38" fill="none" stroke="#222"/>' +
-       '<rect x="72" y="18" width="16" height="4" fill="#3a3a2a" class="flicker"/><path d="M78 50v-14a2 2 0 0 1 4 0v14z" fill="#050505"/><circle cx="80" cy="33" r="3" fill="#050505"/>',
-    3: '<rect width="160" height="120" fill="#0b0b0b"/><g fill="#0f1420" stroke="#1d2433"><rect x="14" y="20" width="38" height="28"/><rect x="61" y="20" width="38" height="28"/>' +
-       '<rect x="108" y="20" width="38" height="28"/><rect x="14" y="54" width="38" height="28"/><rect x="61" y="54" width="38" height="28"/><rect x="108" y="54" width="38" height="28"/></g>' +
-       '<rect x="10" y="90" width="140" height="10" fill="#141414"/><circle cx="80" cy="68" r="5" fill="#ff2a2a" opacity=".55" class="flicker"/>'
+    1: '<defs><radialGradient id="sc1" cx="50%" cy="8%" r="80%"><stop offset="0" stop-color="#8a8a80"/><stop offset=".35" stop-color="#3a3a36"/><stop offset="1" stop-color="#0a0a0a"/></radialGradient></defs>' +
+       '<rect width="160" height="120" fill="url(#sc1)"/>' +
+       '<path d="M0 88L30 70h100l30 18v32H0z" fill="#1c1c1a"/><path d="M30 70V14M130 70V14" stroke="#4a4a44" stroke-width=".8"/>' +
+       '<path d="M0 104L30 84M160 104L130 84M80 120V70" stroke="#2c2c28" stroke-width=".6"/>' +
+       '<rect x="62" y="28" width="34" height="42" fill="#232320" stroke="#5a5a52" stroke-width=".8"/><rect x="73" y="35" width="12" height="9" fill="#0c0c0b" stroke="#6a6a60" stroke-width=".5"/>' +
+       '<rect x="34" y="62" width="30" height="7" fill="#3a3a34"/><rect x="34" y="69" width="2" height="6" fill="#2a2a26"/><rect x="62" y="69" width="2" height="6" fill="#2a2a26"/>' +
+       '<path d="M80 0v9" stroke="#555" stroke-width=".6"/><circle class="flicker" cx="80" cy="10" r="2.2" fill="#e8e6d8"/>' +
+       '<path class="lurk" d="M115 72c0-14 2-25 6-28a4 4 0 1 1 4 0c4 3 6 14 6 28z" fill="#050505"/>',
+    2: '<defs><linearGradient id="sc2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2e2e2a"/><stop offset=".5" stop-color="#151513"/><stop offset="1" stop-color="#262622"/></linearGradient>' +
+       '<radialGradient id="sc2b" cx="50%" cy="45%" r="18%"><stop offset="0" stop-color="#000"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs>' +
+       '<rect width="160" height="120" fill="url(#sc2)"/>' +
+       '<path d="M0 0L62 44h36L160 0z" fill="#3a3a35"/><path d="M0 120L62 76h36l62 44z" fill="#2a2a26"/>' +
+       '<path d="M0 0L62 44V76L0 120zM160 0L98 44V76l62 44z" fill="#1d1d1a"/>' +
+       '<rect x="62" y="44" width="36" height="32" fill="#070707"/><rect x="62" y="44" width="36" height="32" fill="url(#sc2b)"/>' +
+       '<g fill="#d8d6c8"><rect class="flicker" x="74" y="47" width="12" height="1.4"/><rect x="70" y="38" width="20" height="2"/><rect x="62" y="25" width="36" height="3"/><rect class="flicker" x="48" y="8" width="64" height="4" style="animation-delay:-1.7s"/></g>' +
+       '<path d="M22 22v74M40 32v56M120 32v56M138 22v74" stroke="#3c3c36" stroke-width="1"/><rect x="26" y="40" width="10" height="44" fill="#141412"/><rect x="124" y="40" width="10" height="44" fill="#141412"/>' +
+       '<path class="lurk" d="M78 76c0-7 .6-12 1.6-13.4a1.6 1.6 0 1 1 .8 0C81.4 64 82 69 82 76z" fill="#000"/>',
+    3: '<defs><radialGradient id="sc3" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="#26302e"/><stop offset="1" stop-color="#070808"/></radialGradient></defs>' +
+       '<rect width="160" height="120" fill="url(#sc3)"/>' +
+       '<g stroke="#000" stroke-width="1.5"><rect x="18" y="16" width="38" height="26" fill="#6f8b86"/><rect x="61" y="16" width="38" height="26" fill="#56706b"/><rect x="104" y="16" width="38" height="26" fill="#6a8580"/>' +
+       '<rect x="18" y="46" width="38" height="26" fill="#4d6460"/><rect x="61" y="46" width="38" height="26" fill="#1a1f1e"/><rect x="104" y="46" width="38" height="26" fill="#5d7772"/></g>' +
+       '<ellipse class="flicker" cx="80" cy="59" rx="8" ry="4" fill="#e8e8e0"/><circle cx="80" cy="59" r="2.6" fill="#a00"/>' +
+       '<path d="M0 84h160v36H0z" fill="#121413"/><path d="M8 80h144l8 8H0z" fill="#232826"/>' +
+       '<path d="M70 82c0-9 4-15 10-15s10 6 10 15z" fill="#080909"/><rect x="78" y="82" width="4" height="14" fill="#080909"/>' +
+       '<path class="lurk" d="M128 84c0-16 2-27 6-30a4 4 0 1 1 4 0c4 3 6 14 6 30z" fill="#030303"/>'
   };
 
   // Monster stand-ins until real photos are added (put them in Drive / the repo and swap here).
@@ -331,31 +378,42 @@
       b.className = 'feed' + (done ? ' cleared' : '');
       if (done) b.setAttribute('aria-disabled', 'true');
       b.setAttribute('aria-label', 'Camera 0' + r.n + ', ' + r.name + (done ? ', cleared' : ', ' + r.qs.length + (r.qs.length === 1 ? ' question' : ' questions')));
+      if (!done && r.n === haunted) b.classList.add('haunted');
       b.innerHTML =
-        '<div class="feed-screen">' +
-          '<svg class="feed-scene" viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' + SCENES[r.n] + '</svg>' +
-          '<span class="feed-tag">CAM 0' + r.n + '</span><span class="feed-rec">REC</span>' +
-          '<span class="feed-time" data-clock></span><span class="feed-nosig">NO SIGNAL</span>' +
-        '</div>' +
-        '<div class="feed-foot"><b>' + r.name + '</b><span class="feed-state">' + (done ? 'Cleared' : r.qs.length + ' Q · ' + r.secs + 's') + '</span></div>';
+        '<span class="feed-bar" aria-hidden="true"><span>CAM_0' + r.n + '.AVI</span><i><b>_</b><b>&#9633;</b><b>&#215;</b></i></span>' +
+        '<span class="feed-crt" aria-hidden="true"><span class="feed-glass">' +
+          '<svg viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice">' + SCENES[r.n] + '</svg>' +
+          '<span class="osd tl">CH0' + r.n + '</span><span class="osd tr">REC</span>' +
+          '<span class="osd bl">SP <span class="t" data-clock></span></span><span class="osd br" data-date></span>' +
+          '<span class="feed-nosig">NO SIGNAL</span><span class="feed-stamp">CLEARED</span>' +
+        '</span></span>' +
+        '<span class="feed-info" aria-hidden="true"><span class="feed-name">' + r.name + '</span>' +
+          '<span class="feed-chips"><span class="chip">' + r.qs.length + (r.qs.length === 1 ? ' QUESTION' : ' QUESTIONS') + '</span><span class="chip time">' + r.secs + 's TIMER</span></span>' +
+          '<span class="feed-go">' + (done ? 'Done' : 'View feed \u25B8') + '</span></span>';
       b.addEventListener('click', () => { if (!roomDone(r)) enterRoom(r); });
       wrap.appendChild(b);
     });
     tickClocks();
   }
 
+  // which feed has something in it this visit (never a cleared one)
+  const haunted = 1 + Math.floor(Math.random() * 3);
+
   function tickClocks() {
-    const now = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Manila', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    document.querySelectorAll('[data-clock]').forEach(el => { el.textContent = now; });
+    const d = new Date();
+    const time = d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Manila', hour12: false });
+    const date = d.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: '2-digit', year: '2-digit' }).toUpperCase().replace(', ', " '");
+    document.querySelectorAll('[data-clock]').forEach(el => { el.textContent = time; });
+    document.querySelectorAll('[data-date]').forEach(el => { el.textContent = date; });
   }
   setInterval(tickClocks, 1000);
 
-  function showHub() {
+  function showHub(focusNext) {
     show('hub');
     renderFeeds();
     updateTape();
     const next = $('feeds').querySelector('.feed:not(.cleared)');
-    if (next) next.focus();
+    if (next && focusNext === true) next.focus({ preventScroll: true });   // keyboard users land on the next feed after a room
   }
 
   /* ---------------- room ---------------- */
@@ -542,7 +600,7 @@
   }
 
   $('qForm').addEventListener('submit', lockIn);
-  $('backToHub').addEventListener('click', showHub);
+  $('backToHub').addEventListener('click', () => showHub(true));
   $('submitBtn').addEventListener('click', submit);
   $('retry').addEventListener('click', load);
   load();
