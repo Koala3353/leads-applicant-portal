@@ -81,6 +81,34 @@
   .p-h.creeping,.hub-head h2.creeping{color:#a00000;animation:rgbJitter .7s steps(1) infinite}
   .hub-head h2.creeping{color:var(--danger)}
 
+  /* ---------- unsettling eyes: a few of them are wrong, which makes the normal ones worse ----------
+     bloodshot = red veins and a swollen pupil · dilated = almost all pupil · wide = lids pulled back, pinpoint pupil
+     twitch = tics and double blinks · late = follows a beat too slowly · noblink = never blinks · weep = a dark tear track
+     wrong = looks away from you until it suddenly snaps back (.caught) · void-flash = goes black for a moment */
+  .reye.bloodshot{--pupil:15%;filter:grayscale(.3) contrast(1.35) brightness(.88) saturate(1.4)}
+  .reye.bloodshot .reye-ball{background:linear-gradient(180deg,rgba(0,0,0,.55) 0%,transparent 34%,transparent 80%,rgba(0,0,0,.35) 100%),
+      radial-gradient(ellipse 60% 72% at 50% 50%,transparent 30%,rgba(190,30,30,.75) 100%),
+      repeating-conic-gradient(from 3deg at 50% 50%,transparent 0 5deg,rgba(185,20,20,.55) 5deg 6deg,transparent 6deg 11deg,rgba(150,10,10,.35) 11deg 11.6deg,transparent 11.6deg 17deg),
+      radial-gradient(ellipse 56% 66% at 50% 48%,#f3d8d2 0%,#e6b8ae 50%,#b8786c 86%,#7a4038 100%)}
+  .reye.dilated{--pupil:40%}
+  .reye.wide{--pupil:5%}
+  .reye.wide .reye-ball{top:7%;bottom:5%;clip-path:polygon(0 52%,6% 30%,17% 13%,32% 4%,50% 0,68% 3%,83% 12%,94% 28%,100% 50%,94% 70%,83% 85%,68% 95%,50% 99%,32% 95%,17% 86%,6% 72%)}
+  .reye.twitch .reye-ball{animation:eyeTic 6.3s infinite}
+  .reye.twitch .reye-ball::after{animation:reyeBlink2 4.1s infinite;animation-delay:var(--d,0s)}
+  @keyframes eyeTic{0%,68%,74%,100%{transform:none}69%{transform:translate(1.5px,-1px)}70%{transform:translate(-2px,1px) scaleY(.92)}71%{transform:translate(1px,0)}72%{transform:translate(-1px,1px)}}
+  @keyframes reyeBlink2{0%,80%,86%,92%,100%{transform:scaleY(0)}83%,89%{transform:scaleY(1.05)}}
+  .reye.late .reye-ball i{transition:transform 1.7s cubic-bezier(.65,0,.35,1)}
+  .reye.noblink .reye-ball::after{animation:none}
+  .reye.weep::before{box-shadow:inset 0 calc(var(--s)*.035) calc(var(--s)*.03) rgba(0,0,0,.6)}
+  .reye.weep{background:linear-gradient(90deg,transparent 55%,rgba(25,8,8,.75) 55.6%,rgba(25,8,8,.75) 57%,transparent 57.6%) 0 100%/100% 34% no-repeat,
+      radial-gradient(ellipse 72% 82% at 50% 58%,#c49b82 0%,#9c7059 42%,#5f3f30 78%,#24160f 100%)}
+  .reye.wrong .reye-ball i{transition:transform .9s cubic-bezier(.65,0,.35,1)}
+  .reye.wrong.caught{--pupil:36%}
+  .reye.wrong.caught .reye-ball i{transition:transform .12s ease-out}
+  .reye.void-flash .reye-ball{background:#030303}
+  .reye.void-flash .reye-ball i{background:#000;box-shadow:0 0 calc(var(--s)*.08) calc(var(--s)*.02) rgba(255,0,0,.35)}
+  html.calm .reye.twitch .reye-ball{animation:none}
+
   /* ---------- the wall: stacked CRT TVs, each with an eye, plus a propaganda poster (decorative) ---------- */
   .wall{position:relative;display:grid;grid-template-columns:1fr;gap:26px;margin:18px 0 34px;align-items:center}
   @media (min-width:860px){.wall{grid-template-columns:1.25fr .85fr;gap:0}}
@@ -451,12 +479,12 @@
 <div class="dark" id="dark" aria-hidden="true"></div>
 <? if (BRAND.effects.eyes) { ?>
 <!-- eyes in the dark that follow the pointer (decorative) -->
-<div class="watcher peek-l" style="--s0:74px;top:13%;left:2%;--d:-1s" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
+<div class="watcher peek-l" style="--s0:74px;top:13%;left:2%;--d:-1s" aria-hidden="true"><span class="reye weep"><span class="reye-ball"><i></i></span></span></div>
 <div class="watcher red hide-sm" style="--s0:48px;top:58%;left:1.5%;--d:-3s" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
 <div class="watcher peek-r" style="--s0:44px;top:7%;right:30%;--d:-4.5s;--o:.55" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
-<div class="watcher hide-sm" style="--s0:84px;bottom:30%;right:2%;--d:-2s" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
+<div class="watcher hide-sm" style="--s0:84px;bottom:30%;right:2%;--d:-2s" aria-hidden="true"><span class="reye late dilated"><span class="reye-ball"><i></i></span></span></div>
 <div class="watcher red" style="--s0:40px;bottom:22%;right:44%;--d:-5s;--o:.5" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
-<div class="watcher hide-sm" style="--s0:56px;top:44%;right:48%;--d:-.5s;--o:.3" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
+<div class="watcher hide-sm" style="--s0:56px;top:44%;right:48%;--d:-.5s;--o:.3" aria-hidden="true"><span class="reye wide noblink"><span class="reye-ball"><i></i></span></span></div>
 <? } ?>
 
 <!-- idle protocol: a broadcast card when you stop moving -->
@@ -544,15 +572,15 @@
     <div class="tvs">
       <div class="tv"><span class="tv-scr"><span class="reye" data-watch style="--d:-1.2s"><span class="reye-ball"><i></i></span></span></span><b>CH 03</b></div>
       <div class="tv"><span class="tv-scr static" data-msg="NO SIGNAL"></span><b>CH 04</b></div>
-      <div class="tv"><span class="tv-scr"><span class="reye red" data-watch style="--d:-4s"><span class="reye-ball"><i></i></span></span></span><b>CH 07</b></div>
-      <div class="tv"><span class="tv-scr"><span class="reye" data-watch style="--d:-2.6s"><span class="reye-ball"><i></i></span></span></span><b>CH 11</b></div>
-      <div class="tv"><span class="tv-scr"><span class="reye" data-watch style="--d:-5.5s"><span class="reye-ball"><i></i></span></span></span><b>CH 02</b></div>
+      <div class="tv"><span class="tv-scr"><span class="reye red bloodshot dilated" data-watch style="--d:-4s"><span class="reye-ball"><i></i></span></span></span><b>CH 07</b></div>
+      <div class="tv"><span class="tv-scr"><span class="reye wide twitch" data-watch style="--d:-2.6s"><span class="reye-ball"><i></i></span></span></span><b>CH 11</b></div>
+      <div class="tv"><span class="tv-scr"><span class="reye late noblink" data-watch style="--d:-5.5s"><span class="reye-ball"><i></i></span></span></span><b>CH 02</b></div>
       <div class="tv"><span class="tv-scr static" data-msg="NO SIGNAL"></span><b>CH 09</b></div>
     </div>
     <div class="poster">
       <span class="tape-strip"></span>
       <p class="p-top">Notice</p>
-      <span class="reye" data-watch style="--d:-3.3s"><span class="reye-ball"><i></i></span></span>
+      <span class="reye wrong" data-watch style="--d:-3.3s"><span class="reye-ball"><i></i></span></span>
       <p class="p-h">You are <em>being watched</em></p>
       <p class="p-s">Act natural. Apply anyway.</p>
       <p class="p-no">NO. 26/27</p>
@@ -666,8 +694,9 @@
         const r = e.getBoundingClientRect();
         const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
         const d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 260);
-        e.style.setProperty('--px', (dx / d * k * r.width * 0.22).toFixed(1) + 'px');
-        e.style.setProperty('--py', (dy / d * k * r.height * 0.12).toFixed(1) + 'px');
+        const away = e.classList.contains('wrong') && !e.classList.contains('caught') ? -1 : 1;   // the poster eye looks away from you
+        e.style.setProperty('--px', (away * dx / d * k * r.width * 0.22).toFixed(1) + 'px');
+        e.style.setProperty('--py', (away * dy / d * k * r.height * 0.12).toFixed(1) + 'px');
       });
     }
     let idle = null;
@@ -679,6 +708,16 @@
     window.addEventListener('pointermove', e => move(e.clientX, e.clientY), { passive: true });
     window.addEventListener('touchstart', e => { const t = e.touches[0]; move(t.clientX, t.clientY); }, { passive: true });
     draw();
+    // every few seconds the eye that was looking away snaps onto you, swells, and holds
+    (function caughtLoop() {
+      setTimeout(() => {
+        const w = document.querySelectorAll('.reye.wrong');
+        if (!document.documentElement.classList.contains('calm')) {
+          w.forEach(e => { e.classList.add('caught'); draw(); setTimeout(() => { e.classList.remove('caught'); draw(); }, 2600); });
+        }
+        caughtLoop();
+      }, 6000 + Math.random() * 5000);
+    })();
 
     const youDot = $('youDot'), cam = $('camYou');
     const placeDot = () => { if (!cam) return; youDot.style.left = (x / innerWidth * 100).toFixed(1) + '%'; youDot.style.top = (y / innerHeight * 100).toFixed(1) + '%'; const bx = $('youBox'); if (bx) { bx.style.left = youDot.style.left; bx.style.top = youDot.style.top; } };
@@ -806,6 +845,8 @@
     const events = [
       () => { const l = usable(C.popups); if (l.length) popup(fill(pick(l))); },
       screen, stare,
+      () => { const all = [...document.querySelectorAll('[data-watch], .watcher .reye')]; if (!all.length) return;
+        const e = pick(all); e.classList.add('void-flash'); setTimeout(() => e.classList.remove('void-flash'), 320); },
       () => swap(document.querySelector('.poster .p-h'), C.poster),
       () => swap($('hubTitle'), C.hub)
     ];
