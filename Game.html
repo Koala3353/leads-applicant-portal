@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<?!= include('Styles') ?>
+<?!= brand_css() ?>
+<style>
+  .state { display: none; }
+  .state.show { display: block; }
+
+  /* CCTV Surveillance Layout */
+  .cctv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+  }
+  .cctv-monitor {
+    background: #000;
+    border: 2px solid var(--line);
+    padding: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .cctv-monitor:hover:not(.cleared) {
+    border-color: var(--glow);
+    transform: translateY(-2px);
+  }
+  .cctv-monitor.cleared {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: var(--muted);
+  }
+  .cctv-screen {
+    width: 100%;
+    height: 160px;
+    background: #050b14;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .cctv-label {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--glow);
+    background: rgba(0,0,0,0.7);
+    padding: 2px 6px;
+  }
+  .cctv-status {
+    position: absolute;
+    bottom: 6px;
+    right: 8px;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--danger);
+  }
+
+  /* Room Interrogation & Vignette Dimmer */
+  .interrogation-box {
+    position: relative;
+    background: var(--card);
+    border: 1.5px solid var(--line);
+    padding: 24px;
+    margin-top: 16px;
+  }
+  .vignette-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 40;
+    background: radial-gradient(circle, transparent 40%, rgba(0,0,0, 0.95) 100%);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  /* Question Styling */
+  .game-q {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .game-q p {
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .opt-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: rgba(7, 18, 43, 0.8);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 10px 14px;
+    margin: 6px 0;
+    font-family: var(--body);
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .opt-btn:hover {
+    border-color: var(--glow);
+    background: rgba(255, 255, 0, 0.08);
+  }
+  .opt-btn.selected {
+    border-color: var(--glow);
+    background: rgba(255, 255, 0, 0.15);
+    color: var(--glow);
+  }
+
+  /* Timer & Countdown */
+  .timer-bar-wrap {
+    width: 100%;
+    height: 8px;
+    background: rgba(255,255,255,0.1);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .timer-bar-fill {
+    height: 100%;
+    width: 100%;
+    background: var(--glow);
+    transition: width 1s linear, background-color 0.3s;
+  }
+
+  /* Final Reveal / Jumpscare Modal */
+  .jumpscare-stage {
+    text-align: center;
+    padding: 20px;
+  }
+  .monster-img {
+    width: 260px;
+    height: 260px;
+    object-fit: cover;
+    border: 4px solid var(--danger);
+    margin: 16px auto;
+    box-shadow: 0 0 35px var(--danger);
+  }
+  
+  /* Shaky Jumpscare Animation */
+  @keyframes intense-shake {
+    0% { transform: translate(2px, 2px) rotate(0deg) scale(1.05); }
+    10% { transform: translate(-4px, -3px) rotate(-3deg) scale(1.12); }
+    20% { transform: translate(-5px, 0px) rotate(3deg) scale(1.08); }
+    30% { transform: translate(5px, 4px) rotate(0deg) scale(1.15); }
+    40% { transform: translate(3px, -2px) rotate(4deg) scale(1.1); }
+    50% { transform: translate(-3px, 4px) rotate(-2deg) scale(1.2); }
+    60% { transform: translate(-5px, 2px) rotate(0deg) scale(1.15); }
+    70% { transform: translate(4px, 2px) rotate(-3deg) scale(1.1); }
+    80% { transform: translate(-3px, -3px) rotate(4deg) scale(1.18); }
+    90% { transform: translate(3px, 3px) rotate(0deg) scale(1.12); }
+    100% { transform: translate(2px, -3px) rotate(-2deg) scale(1.05); }
+  }
+  .monster-img.shaking {
+    animation: intense-shake 0.12s infinite;
+  }
+
+  .knock-text {
+    font-family: var(--display);
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
+    color: var(--danger);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    animation: intense-shake 0.2s infinite;
+  }
+</style>
+</head>
+<body data-loader-wait>
+<div class="vignette-overlay" id="vignette"></div>
+<?!= include('Loader') ?>
+<?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
+
+<div class="wrap">
+  <?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
+
+  <section class="page-head">
+    <p class="eyebrow">FILE 02 // SURVEILLANCE GAME</p>
+    <h1 class="rgb">Threat Assessment</h1>
+    <p>An anomaly has breached the premises. Locate the threat across the CCTV feeds.</p>
+  </section>
+
+  <!-- State 1: Loading -->
+  <div class="card state show" id="state-loading">
+    <p class="mono">[REC] Initializing CCTV feeds...</p>
+  </div>
+
+  <!-- State 2: CCTV Monitor Hub -->
+  <div class="state" id="state-hub">
+    <div class="card">
+      <p class="eyebrow">SURVEILLANCE MANDATE</p>
+      <h2>Select CCTV Feed</h2>
+      <p>An entity is lurking within the facility. Check each CCTV feed room by room. Clear all interrogations before time runs out.</p>
+      
+      <div class="cctv-grid">
+        <!-- Room 1 -->
+        <div class="cctv-monitor" id="mon-1" onclick="enterRoom(1)">
+          <div class="cctv-screen">
+            <span class="cctv-label">CAM 01 // SECTOR A</span>
+            <p class="mono" style="color:var(--muted)">[ ISOLATION CELL ]</p>
+            <span class="cctv-status" id="st-1">FEED LIVE</span>
+          </div>
+        </div>
+        <!-- Room 2 -->
+        <div class="cctv-monitor" id="mon-2" onclick="enterRoom(2)">
+          <div class="cctv-screen">
+            <span class="cctv-label">CAM 02 // SECTOR B</span>
+            <p class="mono" style="color:var(--muted)">[ CORRIDOR LOCK ]</p>
+            <span class="cctv-status" id="st-2">FEED LIVE</span>
+          </div>
+        </div>
+        <!-- Room 3 -->
+        <div class="cctv-monitor" id="mon-3" onclick="enterRoom(3)">
+          <div class="cctv-screen">
+            <span class="cctv-label">CAM 03 // SECTOR C</span>
+            <p class="mono" style="color:var(--muted)">[ CONTROL ROOM ]</p>
+            <span class="cctv-status" id="st-3">FEED LIVE</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- State 3: Active CCTV Interrogation Room -->
+  <div class="state" id="state-room">
+    <div class="interrogation-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span class="mono" id="roomTitle" style="color:var(--glow); font-weight:700;">CAM 01 // INTERROGATION</span>
+        <span class="mono" id="timerDisplay" style="color:var(--danger); font-weight:700;">TIME: 30s</span>
+      </div>
+
+      <div class="timer-bar-wrap">
+        <div class="timer-bar-fill" id="timerFill"></div>
+      </div>
+
+      <div id="questionsContainer"></div>
+
+      <div class="actions">
+        <button class="btn" type="button" id="nextRoomBtn" onclick="submitRoom()">Clear Room & Proceed</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- State 4: Room Cleared Message -->
+  <div class="card state" id="state-cleared">
+    <p class="eyebrow" style="color:var(--glow)">SECTOR CLEAR</p>
+    <h2>Monster Not Found in This Room</h2>
+    <p>Target entity was not detected in this sector. Select the remaining CCTV feeds to continue tracking.</p>
+    <div class="actions">
+      <button class="btn" type="button" onclick="showHub()">Return to CCTV Monitors</button>
+    </div>
+  </div>
+
+  <!-- State 5: Final Room Jumpscare & Monster Reveal -->
+  <div class="card state" id="state-reveal">
+    <div class="jumpscare-stage">
+      <div class="knock-text">KNOCK KNOCK...</div>
+      <p class="mono" style="color:var(--danger); margin-top:8px;">HE'S KNOCKING AT YOUR DOOR.</p>
+      
+      <p style="margin-top:14px;">You turn around and look behind you...</p>
+      
+      <img id="monsterImage" class="monster-img shaking" src="" alt="Monster Reveal">
+      <h2 id="monsterName" style="color:var(--text); text-transform:uppercase;"></h2>
+      <p class="mono" id="monsterSub" style="color:var(--muted)"></p>
+
+      <div class="actions" style="justify-content:center; margin-top:24px;">
+        <button class="btn" type="button" onclick="finishGame()">Submit Application Dossier</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="page-foot">
+    <p><?= BRAND.footer.privacy ?></p>
+  </footer>
+</div>
+
+<script>
+  const BRAND = <?!= brand_json() ?>;
+  const BASE = <?!= JSON.stringify(String(baseUrl)) ?>;
+  const \$ = id => document.getElementById(id);
+
+  // Fallback image URLs defined directly in client script (No Settings dependency)
+  const MONSTER_IMAGES = {
+    kerish: 'https://via.placeholder.com/400x400/100000/ff0000?text=SIR+KERISH',
+    chums: 'https://via.placeholder.com/400x400/001000/00ff00?text=SIR+CHUMS',
+    aly: 'https://via.placeholder.com/400x400/000010/ffff00?text=SIR+ALY+(RARE)'
+  };
+
+  const QUESTIONS = {
+    1: [
+      {
+        id: 'Fear_Q1',
+        text: '1. You wake up alone in a dark room. What would terrify you the most?',
+        options: [
+          'A. Hearing someone whisper your name behind you',
+          'B. Seeing a shadow standing motionless in the corner',
+          'C. Realizing there is someone breathing underneath your bed'
+        ]
+      },
+      {
+        id: 'Fear_Q2',
+        text: '2. You have 60 seconds to escape a room. Which discovery would make you panic?',
+        options: [
+          'A. A message written in blood on the wall',
+          'B. A mirror reflecting someone who isn\'t there',
+          'C. A recording of your own voice begging for help'
+        ]
+      }
+    ],
+    2: [
+      {
+        id: 'Fear_Q3',
+        text: '3. You hear footsteps approaching from the other side of the door. What do you fear most?',
+        options: [
+          'A. The footsteps suddenly stop outside your door',
+          'B. The doorknob slowly begins to turn',
+          'C. The footsteps continue even after you hear the person enter'
+        ]
+      },
+      {
+        id: 'Fear_Q4',
+        text: '4. You\'re trapped in a room with three strangers. Which situation unsettles you the most?',
+        options: [
+          'A. One stranger keeps staring at you without blinking',
+          'B. Everyone suddenly goes silent whenever you speak',
+          'C. You realize one of the strangers has disappeared, but nobody acknowledges it'
+        ]
+      }
+    ],
+    3: [
+      {
+        id: 'Fear_Q5',
+        text: '5. You find three doors leading out of the room. Which would you least dare to open? 👁️',
+        options: [
+          'A. A door with scratching sounds coming from the other side',
+          'B. A door with a child\'s laughter echoing behind it',
+          'C. A door with a sign that reads, “Whatever you do, don\'t look behind you.”'
+        ]
+      }
+    ]
+  };
+
+  let clearedRooms = [];
+  let currentRoom = 0;
+  let roomAnswers = {};
+  let timerInterval = null;
+  let timeLeft = 30;
+  let isTabActive = true;
+
+  document.addEventListener('visibilitychange', () => {
+    isTabActive = !document.hidden;
+  });
+
+  function call(fn, ...args) {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)[fn](...args);
+    });
+  }
+
+  function showState(name) {
+    ['loading', 'hub', 'room', 'cleared', 'reveal'].forEach(s => {
+      const el = \$('state-' + s);
+      if (el) el.classList.toggle('show', s === name);
+    });
+    if (name !== 'loading') Loader.hide();
+  }
+
+  function enterRoom(roomNum) {
+    if (clearedRooms.includes(roomNum)) return;
+    currentRoom = roomNum;
+    showState('room');
+    \$('roomTitle').textContent = `CAM 0${roomNum} // SECTOR INTERROGATION`;
+
+    const container = \$('questionsContainer');
+    container.innerHTML = '';
+    const qList = QUESTIONS[roomNum];
+
+    qList.forEach(q => {
+      const qDiv = document.createElement('div');
+      qDiv.className = 'game-q';
+      qDiv.innerHTML = `<p>${q.text}</p>`;
+
+      q.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'opt-btn';
+        if (roomAnswers[q.id] === opt) btn.classList.add('selected');
+        btn.textContent = opt;
+        btn.onclick = () => {
+          qDiv.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          roomAnswers[q.id] = opt;
+        };
+        qDiv.appendChild(btn);
+      });
+      container.appendChild(qDiv);
+    });
+
+    startTimer(30);
+  }
+
+  function startTimer(seconds) {
+    clearInterval(timerInterval);
+    timeLeft = seconds;
+    const vignette = \$('vignette');
+    
+    function updateBar() {
+      const pct = (timeLeft / seconds) * 100;
+      $('timerFill').style.width = pct + '\%';$('timerDisplay').textContent = isTabActive ? `TIME: ${timeLeft}s` : `TIME: ${timeLeft}s (PAUSED)`;
+
+      const dimOpacity = 1 - (timeLeft / seconds);
+      vignette.style.opacity = Math.min(dimOpacity * 0.85, 0.85);
+
+      if (timeLeft <= 10) {
+        \$('timerFill').style.backgroundColor = 'var(--danger)';
+      } else {
+        \$('timerFill').style.backgroundColor = 'var(--glow)';
+      }
+    }
+
+    updateBar();
+    timerInterval = setInterval(() => {
+      if (!isTabActive) {
+        updateBar();
+        return;
+      }
+
+      timeLeft--;
+      updateBar();
+
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        alert("TIME EXPIRED // SURVEILLANCE PENALTY APPLIED");
+      }
+    }, 1000);
+  }
+
+  function submitRoom() {
+    const qList = QUESTIONS[currentRoom];
+    const allAnswered = qList.every(q => roomAnswers[q.id]);
+    
+    if (!allAnswered) {
+      alert("Answer all questions in this room before clearing the feed.");
+      return;
+    }
+
+    clearInterval(timerInterval);
+    \$('vignette').style.opacity = 0;
+    clearedRooms.push(currentRoom);
+
+    const mon = \$('mon-' + currentRoom);
+    if (mon) mon.classList.add('cleared');
+    const st = \$('st-' + currentRoom);
+    if (st) {
+      st.textContent = 'CLEARED';
+      st.style.color = 'var(--glow)';
+    }
+
+    if (clearedRooms.length < 3) {
+      showState('cleared');
+    } else {
+      triggerFinalReveal();
+    }
+  }
+
+  function showHub() {
+    showState('hub');
+  }
+
+  function triggerFinalReveal() {
+    showState('reveal');
+
+    // RNG for Monster Face Reveal
+    // Kerish (60%), Chums (30%), Aly (10%)
+    const rand = Math.random();
+    let selectedMonster = 'kerish';
+    let name = 'Sir Kerish';
+    let sub = 'MOST COMMON ANOMALY DETECTED';
+
+    if (rand > 0.90) {
+      selectedMonster = 'aly';
+      name = 'Sir Aly';
+      sub = '★ ULTRA RARE MONSTER ENCOUNTER ★';
+    } else if (rand > 0.60) {
+      selectedMonster = 'chums';
+      name = 'Sir Chums';
+      sub = 'MEDIUM THREAT LEVEL DETECTED';
+    }
+
+    $('monsterImage').src = MONSTER_IMAGES[selectedMonster];$('monsterName').textContent = name;
+    \$('monsterSub').textContent = sub;
+  }
+
+  async function finishGame() {
+    const btn = document.querySelector('#state-reveal .btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Submitting Application...';
+    }
+
+    try {
+      const res = await call('game_submitFinal', roomAnswers);
+      if (res && res.ok) {
+        alert(`APPLICATION SUBMITTED SUCCESSFULLY! Your Applicant ID is ${res.id}`);
+        window.location.href = BASE;
+      } else if (res && res.errors) {
+        alert('There was an issue with your draft data. Redirecting back to application form.');
+        window.location.href = BASE + '?page=apply';
+      }
+    } catch (e) {
+      alert('Submission failed: ' + (e.message || e));
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Submit Application Dossier';
+      }
+    }
+  }
+
+  async function init() {
+    showState('loading');
+    try {
+      const data = await call('game_getInit');
+      if (!data.signedIn || !data.allowedDomain) {
+        window.location.href = BASE + '?page=apply';
+        return;
+      }
+      showState('hub');
+    } catch (e) {
+      showState('hub');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

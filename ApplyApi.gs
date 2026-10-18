@@ -132,14 +132,17 @@ function apply_submit_(form) {
       YearLevel: Number(v.clean.YearLevel),
       Mobile: String(v.clean.Mobile),
       MEAInvolvement: v.clean.MEAInvolvement,
-      WhyLEADS: v.clean.WhyLEADS,
-      FearEssay: v.clean.FearEssay,
       DataConsent: v.clean.DataConsent,
       Block: v.clean.Block,
       MBTI: v.clean.MBTI,
       PastOrgs: v.clean.PastOrgs,
       FirstOvernight: v.clean.FirstOvernight,
       OffsiteAvailability: v.clean.OffsiteAvailability,
+      WhyParticipant: v.clean.WhyParticipant,
+      FirstImpression: v.clean.FirstImpression,
+      Rumors: v.clean.Rumors,
+      TakesLeadership: v.clean.TakesLeadership,
+      FearLeadership: v.clean.FearLeadership,
       Status: 'SUBMITTED',
       Requirements: 'NONE',
       Payment: 'NONE',
@@ -148,7 +151,7 @@ function apply_submit_(form) {
       Notes: ''
     };
 
-    ensureApplicantHeaders_();   // adds headers for any new COLS (e.g. Block, MBTI) the first time
+    ensureApplicantHeaders_();   // adds headers for any new COLS the first time
     const row = COLS.map(col => safeCell_(rowMap[col] !== undefined ? rowMap[col] : ''));
     sheet_(SHEET.APPLICANTS).appendRow(row);
 
@@ -219,9 +222,9 @@ function apply_saveDraft(data) {
   data = data || {};
   const clean = {};
   const fields = [
-    'FullName', 'Nickname', 'IDNumber', 'Course', 'YearLevel', 'Mobile',
-    'MEAInvolvement', 'WhyLEADS', 'FearEssay', 'DataConsent', 'Block',
-    'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability'
+    'DataConsent', 'IDNumber', 'FullName', 'Nickname', 'Course', 'YearLevel', 'Mobile',
+    'MEAInvolvement', 'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability',
+    'WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership'
   ];
   fields.forEach(f => {
     if (data[f] !== undefined && data[f] !== null) {
