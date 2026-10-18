@@ -281,6 +281,10 @@
     padding:.2em .75em;background:var(--win);color:#000;border:0;box-shadow:var(--bevel-out);font-family:var(--os);font-size:1.12rem;
     font-weight:400;letter-spacing:.04em;text-transform:none;text-decoration:none;cursor:pointer}
   .top .admin-chip:not(.show){display:none}
+  footer .report-btn{display:inline-flex;align-items:center;min-height:36px;padding:.2em .8em;background:var(--win);color:#a00000;border:0;
+    box-shadow:var(--bevel-out),3px 3px 0 #000;font-family:var(--os);font-size:1.12rem;font-weight:400;letter-spacing:.04em;text-transform:none}
+  footer .report-btn:hover,footer .report-btn:focus-visible{background:var(--win-lt);border:0}
+  footer .report-btn:active{box-shadow:var(--bevel-in);transform:translate(2px,2px)}
   .top .report-btn{color:#a00000}
   .top .lights[aria-pressed="true"],.top .back:active,.top .lights:active,.top .report-btn:active,.top .acct:active{box-shadow:var(--bevel-in)}
   .top .back:hover,.top .lights:hover,.top .lights:focus-visible,.top .report-btn:hover,.top .acct:hover{color:#000;background:var(--win-lt);border:0}
@@ -289,7 +293,8 @@
   .top .who,.top .who b{color:#000}
   @media (max-width:560px){
     .top{transform:none}
-    .top-links > *{border:0;font-size:1.05rem!important}
+    .top-links{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .top-links > *{border:0;font-size:1.05rem!important;white-space:normal;line-height:1.05}
   }
 
   /* ---------- pop-ups: a grey window frame around the dark message ---------- */

@@ -29,7 +29,7 @@
   .tv:nth-child(3n+2){background:linear-gradient(160deg,#3c3c3c,#262626 60%,#141414);box-shadow:inset -3px -3px 0 rgba(0,0,0,.6),inset 3px 3px 0 rgba(255,255,255,.12),5px 6px 0 #000}
   .tv::after{content:"";position:absolute;right:4%;top:22%;width:6%;aspect-ratio:1;border-radius:50%;background:#2a2a2a;
     box-shadow:0 calc(100% + 140%) 0 #2a2a2a,inset 1px 1px 0 rgba(255,255,255,.3)}
-  .tv b{position:absolute;left:8%;bottom:3%;font:400 clamp(.62rem,1.3vw,.95rem)/1 var(--os);letter-spacing:.06em;color:#111}
+  .tv b{position:absolute;left:8%;bottom:3%;font:400 clamp(.78rem,1.3vw,.95rem)/1 var(--os);letter-spacing:.06em;color:#111}
   .tv:nth-child(3n+2) b{color:#9a9a9a}
   .tv-scr{position:relative;display:grid;place-items:center;aspect-ratio:4/3;overflow:hidden;border-radius:14%/18%;background:#0b0b0b;
     box-shadow:inset 0 0 18px rgba(0,0,0,.95),0 0 0 3px #111}
@@ -173,8 +173,10 @@
   .file summary:focus-visible{outline:3px dashed #000;outline-offset:-6px}
   .file .fq{font-family:var(--type);font-size:1.05rem;line-height:1.35;min-width:0}
   .file .fq::before{content:"SUBJECT: ";color:#6b5a35;font-size:.85em;letter-spacing:.08em}
+  @media (max-width:560px){.file:nth-child(n){margin-left:0}.files{gap:32px}.file summary{gap:8px 10px}}
   .file .stamp{font:400 .95rem var(--type);letter-spacing:.14em;padding:.15em .55em;border:3px solid #a00000;color:#a00000;transform:rotate(-7deg);white-space:nowrap;
     -webkit-mask-image:var(--grunge);mask-image:var(--grunge)}
+  @media (max-width:420px){.file .stamp{font-size:.72rem;letter-spacing:.08em;border-width:2px}}
   .file[open] .stamp{border-color:#1d5a1d;color:#1d5a1d;transform:rotate(4deg)}
   .file .sheet{display:grid;gap:12px;grid-template-columns:1fr;margin:0 14px 16px;padding:14px 16px 16px;background:var(--paper);
     box-shadow:2px 3px 0 rgba(0,0,0,.35);transform:rotate(-.4deg)}
@@ -191,12 +193,11 @@
   .file[open] .sheet{animation:declass .32s cubic-bezier(.23,1,.32,1)}
   @keyframes declass{from{clip-path:inset(0 100% 0 0);opacity:.4}to{clip-path:inset(0 0 0 0);opacity:1}}
   @media (hover:hover) and (pointer:fine){.file summary:hover .fq{text-decoration:underline}}
-  .voices{list-style:none;margin:0;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
-  .voice{background:var(--paper);color:var(--paper-ink);padding:22px 18px 26px;position:relative;display:flex;flex-direction:column;gap:12px;
-    transform:rotate(var(--r,0deg));filter:drop-shadow(4px 5px 0 rgba(0,0,0,.6))}
-  .voice > *{position:relative}
-  .voice::after{content:"";position:absolute;left:0;right:0;bottom:-9px;height:10px;background:var(--paper);
-    -webkit-mask:var(--zig) top/26px 10px repeat-x;mask:var(--zig) top/26px 10px repeat-x;transform:scaleY(-1)}
+  .voices{list-style:none;margin:0;padding:0;display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+  .voice{background:var(--paper);color:var(--paper-ink);padding:22px 18px 30px;position:relative;display:flex;flex-direction:column;gap:12px;
+    transform:rotate(var(--r,0deg));
+    -webkit-mask:linear-gradient(#000 0 0) top/100% calc(100% - 9px) no-repeat,var(--zig) bottom/26px 10px repeat-x;
+    mask:linear-gradient(#000 0 0) top/100% calc(100% - 9px) no-repeat,var(--zig) bottom/26px 10px repeat-x}
   .voice:nth-child(3n+1){--r:-1.4deg}.voice:nth-child(3n+2){--r:1deg;margin-top:14px}.voice:nth-child(3n){--r:-.4deg}
   .voice .tape{font-family:var(--type);font-size:.8rem;letter-spacing:.12em;color:#a00000;text-transform:uppercase}
   .voice blockquote{margin:0;font-family:var(--type);font-size:.98rem;line-height:1.6}
@@ -336,7 +337,7 @@
     .hint{font-size:.7rem;line-height:1.5;padding-right:72px}
     .hero{padding:16px 0 8px}
     /* cards: tighter, and locked ones drop the dead button (the reason line says why) */
-    .mods{gap:10px;margin-top:16px}
+    .mods{gap:22px;margin-top:20px}
     .mod{padding:16px;gap:8px;--py:16px;--px:16px}
     .mod h3{font-size:1.45rem}
     .mod .fix{font-size:.9rem;line-height:1.5}
