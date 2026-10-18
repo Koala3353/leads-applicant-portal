@@ -33,13 +33,6 @@
   /* idle: the room dims slowly into a broadcast card, then snaps back the moment you move */
   .idle-veil{position:fixed;inset:0;z-index:9300;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.78);opacity:0;visibility:hidden;transition:opacity 0s,visibility 0s}
   body.idle .idle-veil{opacity:1;visibility:visible;transition:opacity 2.6s ease-in,visibility 0s}
-  .bcast{width:min(560px,100%);padding:26px 22px 28px;text-align:center;color:#fff;background:#1d2bd0;font-family:var(--display);text-transform:uppercase;
-    box-shadow:0 0 0 4px #000,0 0 0 7px #1d2bd0,0 0 60px rgba(29,43,208,.55);rotate:-1deg}
-  .bcast p{margin:0}
-  .bcast .b-ico{width:64px;height:64px;margin:0 auto 10px;display:block}
-  .bcast .b-top{font-size:clamp(1.1rem,4vw,1.5rem);letter-spacing:.08em}
-  .bcast .b-big{font-size:clamp(2.6rem,11vw,4.4rem);line-height:.9;margin:.1em 0 .15em}
-  .bcast .b-sub{font:400 1.3rem/1.2 var(--os);letter-spacing:.08em;text-transform:none}
   .tvs.jolt{animation:jolt .45s steps(3) 1}
   @keyframes jolt{0%{translate:-6px 3px}33%{translate:7px -4px}66%{translate:-3px 2px}100%{translate:0 0}}
   /* subject reacquired: a VHS rewind over the real page, then a reticle locks on to you */
@@ -199,6 +192,7 @@
 
   .notice{margin:8px 0 0;padding:12px 16px;background:color-mix(in srgb,var(--glow) 10%,transparent);border:1.5px solid var(--glow);
     font-family:var(--mono);font-size:.82rem}
+  #closingStrip{margin:14px 0 0}
   .notice.warn{background:color-mix(in srgb,var(--danger) 12%,transparent);border-color:var(--danger)}
 
   /* ---------- hero: a case file under surveillance ---------- */
@@ -267,11 +261,25 @@
     -webkit-mask:linear-gradient(#000 0 0) top/100% calc(100% - 9px) no-repeat,var(--zig) bottom/26px 10px repeat-x;
     mask:linear-gradient(#000 0 0) top/100% calc(100% - 9px) no-repeat,var(--zig) bottom/26px 10px repeat-x}
   .voice:nth-child(3n+1){--r:-1.4deg}.voice:nth-child(3n+2){--r:1deg;margin-top:14px}.voice:nth-child(3n){--r:-.4deg}
+  /* Negative + Findings layout inside each transcript */
+  .voice{display:grid;grid-template-columns:minmax(84px,34%) minmax(0,1fr);gap:14px;align-items:start}
+  .voice .neg-note{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .neg{position:relative;display:block;width:100%;aspect-ratio:3/4;padding:0;border:0;cursor:pointer;overflow:hidden;
+    background:#0b0b0b;box-shadow:0 0 0 4px #f2efe6,3px 4px 0 4px rgba(0,0,0,.35);transform:rotate(-2deg);filter:contrast(1.2)}
+  .neg .sil{position:absolute;left:50%;bottom:-6%;width:86%;aspect-ratio:1/1.05;translate:-50% 0;
+    background:radial-gradient(circle at 50% 27%,#ededed 0 21%,transparent 21.6%),radial-gradient(ellipse 52% 44% at 50% 100%,#ededed 0 99%,transparent 100%);filter:blur(.6px)}
+  .neg::after{content:"";position:absolute;inset:-10px;opacity:.35;mix-blend-mode:screen;background-image:var(--grunge)}
+  .neg-no{position:absolute;left:6px;top:6px;z-index:1;font:400 .85rem/1 var(--os);letter-spacing:.06em;color:#ff8a8a}
+  .neg.pos{filter:invert(1) contrast(1.2)}
+  .neg:focus-visible{outline:3px dashed var(--danger);outline-offset:4px}
+  @media (hover:hover){.neg:hover{filter:invert(1) contrast(1.2)}}
+  .voice .finding{margin:0;font-family:var(--type);font-size:.9rem;line-height:1.5;color:#1d2bd0}
+  .voice .finding b{color:#a00000;font-weight:400}
   .voice .tape{font-family:var(--type);font-size:.8rem;letter-spacing:.12em;color:#a00000;text-transform:uppercase}
   .voice blockquote{margin:0;font-family:var(--type);font-size:.98rem;line-height:1.6}
   .voice blockquote::before{content:"> "}
   .voice .by{font-family:var(--type);font-size:.8rem;letter-spacing:.08em;color:#555;text-transform:uppercase;margin-top:auto}
-  .voice .sample{position:absolute;right:10px;top:10px;font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.14em;color:var(--night);background:var(--glow);padding:.15em .5em}
+  .voice .sample{position:absolute;right:12px;bottom:16px;font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.14em;color:var(--night);background:var(--glow);padding:.15em .5em}
 
   /* countdown: a CCTV readout */
   .clock{position:relative;--py:20px;--px:22px}
@@ -479,6 +487,7 @@
 
   <? if (notice) { ?><p class="notice" role="status"><?= notice ?></p><? } ?>
   <p class="notice warn" id="acctWarn" role="alert" hidden></p>
+  <div class="bcast strip" id="closingStrip" role="status" hidden><p class="b-top">This is a test of your timing</p><p class="b-big"></p></div>
 
   <section class="hero">
     <div>
@@ -1093,6 +1102,30 @@
     document.dispatchEvent(new CustomEvent('hub:' + type, { detail: detail }));
   }
 
+  /* Broadcast Cards: a "closes today" strip for people who haven't applied, and a one-time full-screen card when the
+     subject's status becomes ACCEPTED or CONFIRMED (once per status, remembered in this browser). */
+  function broadcastMoments(ctx) {
+    const a = ctx.applicant, strip = $('closingStrip');
+    if (strip && ctx.isOpen && ctx.deadline && !a) {
+      const left = new Date(ctx.deadline) - new Date();
+      if (left > 0 && left < 864e5) {
+        const t = new Date(ctx.deadline).toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', hour12: false });
+        strip.querySelector('.b-big').textContent = 'Applications close today, ' + t;
+        strip.hidden = false;
+      }
+    }
+    if (!a || !window.Broadcast) return;
+    const CARDS = {
+      ACCEPTED: { top: 'This is not a test', big: 'Access granted', sub: 'Subject ' + a.id + ', your file is ready. Next: pay, then send your requirements.', btn: 'Open my file' },
+      CONFIRMED: { top: 'Broadcast', big: "You're in", sub: 'Camp confirmed. Please remain seated until then.', btn: 'Continue' }
+    };
+    const c = CARDS[a.status];
+    if (!c) return;
+    const key = 'leads-bcast-' + a.id + '-' + a.status;
+    try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch (e) { return; }
+    setTimeout(() => Broadcast.show(c), 900);
+  }
+
   function render(ctx) {
     Loader.hide();
     try { announce('context', ctx); } catch (e) { console.error(e); } // a widget error must not stop the hub
@@ -1101,6 +1134,7 @@
     if (ctx.signedIn) $('who').querySelector('b').textContent = ctx.email;
     window.__creep.name = (a && a.firstName) || '';
     window.__creep.id = (a && a.id) || '';
+    try { broadcastMoments(ctx); } catch (e) { console.error(e); }
     $('hint').hidden = !(ctx.signedIn && !a && ctx.isOpen && ctx.allowedDomain);
     if (ctx.contact) $('contact').textContent = 'Portal issues? Email ' + ctx.contact;
     if (ctx.isAdmin && ctx.sheetUrl) {
@@ -1264,12 +1298,23 @@
 
     const vl = $('voiceList');
     vl.textContent = '';
-    (BRAND.testimonials.items || []).forEach(t => {
+    // Negative + Findings (brand book): an inverted portrait (silhouette until real photos) next to the typed transcript
+    // and a finding. Tap or hover the negative to develop it.
+    (BRAND.testimonials.items || []).forEach((t, i) => {
       const li = document.createElement('li'); li.className = 'voice';
+      const neg = document.createElement('button'); neg.type = 'button'; neg.className = 'neg'; neg.setAttribute('aria-label', 'Develop the negative');
+      neg.innerHTML = '<span class="sil"></span>';
+      const no = document.createElement('span'); no.className = 'neg-no'; no.textContent = 'SUBJECT ' + String(17 + i * 23).padStart(3, '0'); neg.append(no);
+      neg.addEventListener('click', () => neg.classList.toggle('pos'));
+      const note = document.createElement('div'); note.className = 'neg-note';
       const tape = document.createElement('span'); tape.className = 'tape'; tape.textContent = 'Transcript // ' + (t.meta || 'LEADS');
       const bq = document.createElement('blockquote'); bq.textContent = t.quote;
+      const fd = document.createElement('p'); fd.className = 'finding';
+      const fb = document.createElement('b'); fb.textContent = 'FINDING: ';
+      fd.append(fb, document.createTextNode(t.fear ? 'Fear of ' + t.fear.toLowerCase() + '. Faced it anyway.' : 'Came back changed.'));
       const by = document.createElement('span'); by.className = 'by'; by.textContent = t.who || '';
-      li.append(tape, bq, by);
+      note.append(tape, bq, fd, by);
+      li.append(neg, note);
       if (t.sample) { const sm = document.createElement('span'); sm.className = 'sample'; sm.textContent = 'SAMPLE'; li.append(sm); }
       vl.append(li);
     });

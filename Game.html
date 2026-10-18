@@ -74,6 +74,16 @@
   .feed.cleared .feed-go{background:var(--win);color:var(--win-sh);text-shadow:1px 1px 0 var(--win-hi);box-shadow:var(--bevel-out)}
   html.calm .feed.haunted .lurk,html.calm .feed-glass::before,html.calm .flicker,html.calm .osd.tr::before{animation:none}
 
+  /* ---- Live Feed status bar (brand book): MISSION STATUS · CAPTURE TIME · STREAMS ---- */
+  .mstatus{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;margin:16px 0 0;background:#2f5552;box-shadow:var(--bevel-dark-in)}
+  .mstatus div{min-width:0;padding:7px 10px 6px;background:linear-gradient(180deg,#163634,#0b1f1e)}
+  .mstatus span{display:block;font:400 .78rem/1 var(--os);letter-spacing:.1em;text-transform:uppercase;color:#7fb5ae}
+  .mstatus b{display:block;margin-top:3px;font:400 clamp(1.15rem,3.4vw,1.55rem)/1 var(--os);letter-spacing:.04em;color:#a9fff0;text-shadow:0 0 8px rgba(120,255,230,.35);
+    font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mstatus b.lost{color:var(--danger);text-shadow:0 0 8px rgba(255,42,42,.4)}
+  .room .mstatus{margin:0 0 18px}
+  @media (max-width:520px){.mstatus{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
   /* ---- room ---- */
   .room{--py:20px;--px:20px;padding:20px;background:var(--night-2);box-shadow:var(--bevel-dark),6px 5px 0 -2px #000,6px 5px 0 -1px rgba(0,16,224,.55)}
   .room-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px;margin-bottom:10px;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase}
@@ -223,6 +233,7 @@
       <h2>Pick a camera</h2>
       <p>Three feeds, five questions. Each room has its own timer, and it pauses if you switch tabs. When time runs out, unanswered questions are filed as "no answer". There are no right answers, only honest ones.</p>
       <div class="feeds" id="feeds"></div>
+      <div class="mstatus" aria-hidden="true"><div><span>Mission status</span><b data-ms="status">IN PROGRESS</b></div><div><span>Capture time</span><b data-ms="time">00:00</b></div><div><span>Streams</span><b data-ms="streams">3/3</b></div><div><span>Subject</span><b data-ms="subj">UNKNOWN</b></div></div>
     </div>
   </div>
 
@@ -234,6 +245,7 @@
         <span class="clock" id="clock" aria-hidden="true"></span>
       </div>
       <div class="timer" id="timer" aria-hidden="true"><span id="timerFill"></span></div>
+      <div class="mstatus" aria-hidden="true"><div><span>Mission status</span><b data-ms="status">IN PROGRESS</b></div><div><span>Capture time</span><b data-ms="time">00:00</b></div><div><span>Streams</span><b data-ms="streams">3/3</b></div><div><span>Subject</span><b data-ms="subj">UNKNOWN</b></div></div>
       <p class="sr-only" id="timeAnnounce" aria-live="assertive" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></p>
       <form class="q" id="qForm" novalidate>
         <span class="q-num" id="qNum"></span>
@@ -451,6 +463,21 @@
   const roomDone = r => r.qs.every(q => answers[q.id]);
   const answeredCount = () => Object.keys(answers).length;
 
+  // Live Feed status bars: capture time runs from the first visit this session, streams = feeds still live
+  let gameStart = Date.now();
+  try { gameStart = Number(sessionStorage.getItem('leads-game-start')) || Date.now(); sessionStorage.setItem('leads-game-start', String(gameStart)); } catch (e) { /* fine */ }
+  let msStatus = 'IN PROGRESS';
+  function paintStatus() {
+    const secs = Math.floor((Date.now() - gameStart) / 1000);
+    const live = ROOMS.filter(r => !roomDone(r)).length;
+    const set = (k, v) => document.querySelectorAll('[data-ms="' + k + '"]').forEach(el => { el.textContent = v; el.classList.toggle('lost', k === 'status' && v === 'SIGNAL LOST'); });
+    set('status', live === 0 ? 'COMPLETE' : msStatus);
+    set('time', String(Math.floor(secs / 60)).padStart(2, '0') + ':' + String(secs % 60).padStart(2, '0'));
+    set('streams', live + '/' + ROOMS.length);
+    set('subj', (window.__nick || 'UNKNOWN').toUpperCase());
+  }
+  setInterval(paintStatus, 1000);
+
   function updateTape() {
     const n = answeredCount();
     const t = $('tape');
@@ -558,6 +585,7 @@
   }
 
   function finishRoom(timedOut) {
+    if (timedOut) { msStatus = 'SIGNAL LOST'; setTimeout(() => { msStatus = 'IN PROGRESS'; paintStatus(); }, 5000); }
     stopTimer();
     if (timedOut) room.qs.forEach(q => { if (!answers[q.id]) answers[q.id] = { a: 'NONE', ms: room.secs * 1000 }; });
     updateTape();
@@ -739,6 +767,7 @@
       }
       answers = data.saved || {};
       window.__nick = data.nickname || '';
+      paintStatus();
       if (ROOMS.every(roomDone)) { updateTape(); reveal(); return; }
       showHub();
       if (answeredCount()) say('Picked up where you left off.', 'good');

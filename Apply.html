@@ -415,6 +415,57 @@
       bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
     }
   }
+
+  /* ---------- Case File template: the form is a paper intake sheet in a manila folder ---------- */
+  .intake{position:relative;margin:40px 0 10px;padding:26px clamp(14px,4vw,34px) 30px;color:#1b1b1b;
+    background:linear-gradient(175deg,#ece7d8,#ddd5bf);box-shadow:0 0 0 10px var(--manila),0 0 0 11px var(--manila-dk),10px 12px 0 11px rgba(0,0,0,.55)}
+  .intake::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;mix-blend-mode:multiply;background-image:var(--grunge)}
+  .intake-tab{position:absolute;left:24px;top:-38px;padding:5px 16px 4px;background:var(--manila);color:#3b3220;font:400 .95rem var(--type);letter-spacing:.12em;
+    clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 100%,0 100%)}
+  .intake-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:6px;padding-bottom:16px;border-bottom:2px solid #1b1b1b}
+  .intake-fields{flex:1 1 260px;margin:0;display:grid;gap:8px;font-family:var(--type)}
+  .intake-fields div{display:grid;grid-template-columns:minmax(5.5em,7.5em) minmax(0,1fr);gap:8px;align-items:baseline}
+  .intake-fields dt{font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:#6b5a35}
+  .intake-fields dd{margin:0;font-size:1.05rem;border-bottom:1px solid #8a7e62;min-height:1.4em;overflow-wrap:anywhere}
+  #ihStatus{color:#a00000;letter-spacing:.06em}
+  /* the photo corner: a silhouette that comes into focus as the file fills up (--res 0 to 1) */
+  .idphoto{flex:none;width:132px;padding:7px 7px 6px;background:#f5f2ea;box-shadow:3px 4px 0 rgba(0,0,0,.35);transform:rotate(3deg);margin:0 auto}
+  .idp-img{position:relative;aspect-ratio:3/4;overflow:hidden;background:radial-gradient(ellipse at 50% 35%,#9a978e,#5e5b55 70%)}
+  .idp-img .sil{position:absolute;left:50%;bottom:-8%;width:96%;aspect-ratio:1/1.05;translate:-50% 0;
+    background:radial-gradient(circle at 50% 27%,#1a1a1a 0 21%,transparent 21.6%),radial-gradient(ellipse 52% 44% at 50% 100%,#1a1a1a 0 99%,transparent 100%);
+    filter:blur(calc((1 - var(--res,0)) * 9px));transition:filter .6s ease}
+  .idp-noise{position:absolute;inset:-10px;background-image:var(--grunge);opacity:calc((1 - var(--res,0)) * .9 + .1);transition:opacity .6s ease}
+  .idp-img .det{position:absolute;left:28%;top:16%;width:44%;height:40%;border:2px solid #c00000;opacity:0;font:400 .8rem/1 var(--os);color:#c00000;
+    display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;transition:opacity .3s ease}
+  .intake.resolved .idp-img .det{opacity:1}
+  .idp-lbl{margin:6px 0 0;font:400 .72rem/1.2 var(--type);letter-spacing:.06em;color:#3b3220;text-align:center}
+  .idp-lbl b{color:#a00000;font-weight:400}
+  @media (min-width:560px){.idphoto{margin:0}}
+  /* fields on paper: white sunken 90s boxes, dark ink */
+  .intake .field label,.intake .consent-title{color:#1b1b1b}
+  .intake .field label span[style],.intake .consent-title span[style]{color:#6b5a35!important}
+  .intake .field .field-hint,.intake .draft-status{color:#4a4538}
+  .intake .q-num{color:#a00000}
+  .intake .ex-tag,.intake .ex-box{color:#8a0000;border-color:#8a0000;background:rgba(160,0,0,.04)}
+  .intake p.mono[style]{color:#8a0000!important}
+  .intake .field input,.intake .field textarea,.intake .cs-btn{background:#fff;color:#111;border:2px inset #9a9a9a}
+  .intake .field input::placeholder,.intake .field textarea::placeholder{color:#8a8a8a}
+  .intake .cs-btn.placeholder .cs-val{color:#777}
+  .intake .cs-btn .cs-arrow{border-color:#000}
+  .intake .field :focus-visible,.intake .cs-btn:focus-visible{outline:3px solid #1d2bd0;outline-offset:2px}
+  .intake .field.has-error input,.intake .field.has-error textarea,.intake .has-error .cs-btn{background:#fff0f0;border-color:#c00000}
+  .intake .field-error{color:#b00000;font-weight:700}
+  .intake .char-counter{color:#5a5240}.intake .char-counter.valid{color:#1d5a1d}.intake .char-counter.error{color:#b00000}
+  .intake .consent-box{background:#fff;color:#111;border:2px inset #9a9a9a}
+  .intake .consent-box:has(input:checked){border-color:#1d5a1d}
+  .intake .consent-box:has(input:checked) .consent-text{color:#1d5a1d}
+  .intake .prefilled{box-shadow:inset 4px 0 0 #e0c200}
+  .intake .error-summary{background:#fff0f0;color:#1b1b1b;border-color:#c00000}
+  /* margin notes: I.R.I.S. writing on your file in red pen */
+  .mnote{margin:8px 0 0;max-width:30em;font:400 1.5rem/1.05 var(--hand);color:#b00000;transform:rotate(-1.4deg);transform-origin:left}
+  .mnote.in{animation:ink .7s steps(14) 1}
+  @keyframes ink{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+  html.calm .mnote.in{animation:none}
 </style>
 </head>
 <body data-loader-wait>
@@ -473,12 +524,13 @@
   </div>
 
   <!-- State 5: Closed -->
-  <div class="card state" id="state-closed">
-    <p class="eyebrow">ADMISSION WINDOW CLOSED</p>
-    <h2>Applications Are Closed</h2>
-    <p id="closedReasonText">The intake window for LEADS: Oversight is currently shut. No new dossiers are being accepted.</p>
-    <p id="closedContactText" class="mono" style="color:var(--muted); margin-top:14px;" hidden></p>
-    <div class="actions">
+  <div class="state" id="state-closed">
+    <div class="bcast" style="margin-top:24px">
+      <svg class="b-ico" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 8L94 88H6z" fill="none" stroke="#fff" stroke-width="7"/><path d="M24 64q26-26 52 0q-26 22-52 0z" fill="#fff"/><circle cx="50" cy="63" r="8" fill="#1d2bd0"/></svg>
+      <p class="b-top">Intake window</p>
+      <h2 class="b-big" style="font-weight:400">Closed</h2>
+      <p class="b-sub" id="closedReasonText">The intake window for LEADS: Oversight is currently shut. No new files are being accepted.</p>
+      <p class="b-sub" id="closedContactText" style="margin-top:10px" hidden></p>
       <a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a>
     </div>
   </div>
@@ -526,6 +578,20 @@
       <ul id="errorSummaryList"></ul>
     </div>
 
+    <div class="intake" id="intake">
+      <span class="intake-tab">FILE 26/27 // INTAKE</span>
+      <div class="intake-head" aria-hidden="true">
+        <dl class="intake-fields">
+          <div><dt>Subject</dt><dd id="ihName"></dd></div>
+          <div><dt>ID no.</dt><dd id="ihId"></dd></div>
+          <div><dt>File opened</dt><dd id="ihDate"></dd></div>
+          <div><dt>Status</dt><dd id="ihStatus">UNDER OBSERVATION</dd></div>
+        </dl>
+        <div class="idphoto">
+          <div class="idp-img"><span class="sil"></span><span class="idp-noise"></span><span class="det">MATCH</span></div>
+          <p class="idp-lbl">IDENTITY RESOLVED <b id="idpPct">0%</b></p>
+        </div>
+      </div>
     <form id="applyForm" novalidate autocomplete="on">
       <!-- SECTION 1: Primary Subject Identification & Data Consent -->
       <div class="form-section-head">
@@ -766,6 +832,7 @@
       </div>
       <p class="draft-status"><span id="draftState">Draft saves to your account automatically, so you can finish on any device.</span> Submission commits permanently to the record.</p>
     </form>
+    </div>
   </div>
 
   <!-- State 8: Success -->
@@ -1134,6 +1201,17 @@
     const label = String(completed).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
 
     $('tapeBarFill').style.setProperty('--p', pct + '%');
+    // the photo corner resolves with the file
+    const intake = $('intake');
+    if (intake) {
+      intake.style.setProperty('--res', (pct / 100).toFixed(2));
+      intake.classList.toggle('resolved', pct >= 100);
+      $('idpPct').textContent = pct + '%';
+      const v = id => (($('f-' + id) || {}).value || '').trim();
+      $('ihName').textContent = v('FullName');
+      $('ihId').textContent = v('IDNumber');
+      $('ihStatus').textContent = pct >= 100 ? 'READY FOR OBSERVATION' : 'UNDER OBSERVATION';
+    }
     $('tapeProgressBar').setAttribute('data-label', label);
     $('tapePercentText').textContent = pct + '% COMPLETE';
   }
@@ -1301,6 +1379,7 @@
     if (data.member) prefillMember(data.member, false);
 
     updateCounters();
+    $('ihDate').textContent = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
     updateProgress();
     showState('form');
     // Errors handed back from the Game page's final submit (#9)
@@ -1318,15 +1397,39 @@
     let last = 0, pause = null, idle = null;
     const pick = list => Array.isArray(list[0]) ? list[Math.floor(Math.random() * list.length)] : list;
     const fill = (line, v) => [line[0], String(line[1]).replace('{v}', String(v).trim().slice(0, 40))];
+    let noteField = '';   // the field being commented on, so the same line is written in its margin
     function say(line, v, force) {
       if (!line || !irisAwake) return;
       const now = Date.now();
       if (!force && now - last < 7000) return;
       last = now;
-      kuya.apply(null, fill(pick(line), v || ''));
+      const out = fill(pick(line), v || '');
+      kuya.apply(null, out);
+      if (noteField) marginNote(noteField, out[1]);
     }
+    // red-pen note under a field (decorative: the same words are in I.R.I.S.'s bubble or plain on screen)
+    function marginNote(f, text) {
+      const wrap = $('wrap-' + f);
+      if (!wrap || !text) return;
+      let n = wrap.querySelector('.mnote');
+      if (!n) { n = document.createElement('p'); n.className = 'mnote'; n.setAttribute('aria-hidden', 'true'); wrap.appendChild(n); }
+      n.textContent = text;
+      n.classList.remove('in'); void n.offsetWidth; n.classList.add('in');
+    }
+    // hesitation: focused on a field for a long time with almost nothing typed
+    const focusAt = {}, rewrites = {};
+    document.addEventListener('focusin', e => { const f = fieldOf(e.target); if (f) focusAt[f] = Date.now(); });
+    document.addEventListener('focusout', e => {
+      const f = fieldOf(e.target); if (!f || !focusAt[f]) return;
+      const secs = Math.round((Date.now() - focusAt[f]) / 1000), len = String(e.target.value || '').trim().length;
+      if (secs >= 12 && len < 25 && !said[f + ':hes']) { said[f + ':hes'] = 1; marginNote(f, 'Hesitated ' + secs + ' seconds here.'); }
+    });
     const fieldOf = el => el && el.id && el.id.indexOf('f-') === 0 ? el.id.slice(2) : '';
     function comment(f, el) {
+      noteField = f;
+      try { return commentOn(f, el); } finally { noteField = ''; }
+    }
+    function commentOn(f, el) {
       let v = String(el.value || '').trim();
       if (!v) return;
       const essay = ESSAY_FIELDS.includes(f);
@@ -1387,7 +1490,11 @@
       onInput(el) {
         const f = fieldOf(el); if (!f) return;
         const n = String(el.value || '').length;
-        if ((lastLen[f] || 0) - n > 40 && !said[f + ':del']) { said[f + ':del'] = 1; say(J.deleted); }
+        if ((lastLen[f] || 0) - n > 40) {
+          rewrites[f] = (rewrites[f] || 0) + 1;
+          if (!said[f + ':del']) { said[f + ':del'] = 1; say(J.deleted); }
+          if (rewrites[f] === 2) marginNote(f, 'Rewrote this twice. Noted.');
+        }
         lastLen[f] = n;
         clearTimeout(pause); pause = setTimeout(() => comment(f, el), 1600);
         clearTimeout(idle);

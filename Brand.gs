@@ -330,7 +330,8 @@ const BRAND = {
     mono: "'JetBrains Mono', ui-monospace, monospace",
     os: "'VT323', 'Lucida Console', monospace",                         // 90s OS chrome: buttons, title bars, taskbar
     type: "'Special Elite', 'Courier New', monospace",                  // typewriter: case folders, stamps, scraps
-    googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;700&family=Special+Elite&family=VT323&display=swap'
+    hand: "'Reenie Beanie', 'Comic Sans MS', cursive",                    // red-pen handwriting: margin notes on Apply
+    googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;700&family=Reenie+Beanie&family=Special+Elite&family=VT323&display=swap'
   },
   effects: {
     eyes: true,           // eyes in the background follow the pointer (Home); they stare harder when you stop moving
@@ -401,7 +402,7 @@ function brand_css() {
     '--blue': c.primary, '--sky': c.soft, '--glow': c.accent, '--pink': c.accent2, '--danger': c.danger,
     '--ok': c.ok, '--fear-text': c.fearText, '--fix-text': c.fixText,
     '--display': f.display, '--kicker': f.kicker, '--body': f.body, '--mono': f.mono,
-    '--os': f.os || f.mono, '--type': f.type || f.mono
+    '--os': f.os || f.mono, '--type': f.type || f.mono, '--hand': f.hand || f.type || f.mono
   };
   const body = Object.keys(vars).map(k => k + ':' + clean(vars[k])).join(';');
   return '<link rel="stylesheet" href="' + encodeURI(f.googleFontsUrl).replace(/"/g, '') + '">' +

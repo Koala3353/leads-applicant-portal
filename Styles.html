@@ -204,6 +204,7 @@
     --paper:#e6e1d1;--paper-ink:#1b1b1b;--manila:#d3bc86;--manila-dk:#a8925a;--note:#e8de74;
     --os:'VT323','Lucida Console',monospace;
     --type:'Special Elite','Courier New',monospace;
+    --hand:'Reenie Beanie','Comic Sans MS',cursive;
     --bevel-out:inset -1px -1px var(--win-dk),inset 1px 1px var(--win-hi),inset -2px -2px var(--win-sh),inset 2px 2px var(--win-lt);
     --bevel-in:inset -1px -1px var(--win-hi),inset 1px 1px var(--win-dk),inset -2px -2px var(--win-lt),inset 2px 2px var(--win-sh);
     --bevel-dark:inset -1px -1px #000,inset 1px 1px #707070,inset -2px -2px #222,inset 2px 2px #424242;
@@ -265,6 +266,23 @@
     border:3px solid currentColor;padding:.15em .5em;transform:rotate(var(--r,-8deg));opacity:.85;-webkit-mask-image:var(--grunge);mask-image:var(--grunge)}
   .redbar{display:inline-block;height:.95em;vertical-align:-.12em;background:#050505;width:var(--w,6em);transform:rotate(var(--r,-.6deg));
     border-radius:1px;box-shadow:1px 0 0 #111}
+
+  /* ---------- Broadcast Card (brand book template): solid blue field, bold centred caps, simple icon ----------
+     Inline: <div class="bcast"> ... </div>. Full screen: Broadcast.show({ top, big, sub, btn }) from the script below. */
+  .bcast{width:min(560px,100%);margin:0 auto;padding:26px 22px 28px;text-align:center;color:#fff;background:#1d2bd0;font-family:var(--display);text-transform:uppercase;
+    box-shadow:0 0 0 4px #000,0 0 0 7px #1d2bd0,0 0 60px rgba(29,43,208,.5);rotate:-1deg;overflow-wrap:anywhere}
+  .bcast p{margin:0;max-width:none}
+  .bcast .b-ico{width:64px;height:64px;margin:0 auto 10px;display:block}
+  .bcast .b-top{font-size:clamp(1.1rem,4vw,1.5rem);letter-spacing:.08em}
+  .bcast .b-big{font-size:clamp(2.4rem,10vw,4.4rem);line-height:.9;margin:.1em 0 .15em}
+  .bcast .b-sub{font:400 1.3rem/1.25 var(--os);letter-spacing:.06em;text-transform:none}
+  .bcast .btn{margin-top:18px}
+  .bcast.strip{width:100%;rotate:-.6deg;padding:10px 16px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 16px;box-shadow:0 0 0 3px #000,0 0 0 5px #1d2bd0}
+  .bcast.strip .b-top{font-size:1.1rem}.bcast.strip .b-big{font-size:clamp(1.4rem,5vw,2rem);margin:0}
+  .bcast-veil{position:fixed;inset:0;z-index:9350;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.82);opacity:0;transition:opacity .25s ease}
+  .bcast-veil.on{opacity:1}
+  .bcast-veil .bcast{scale:.94;transition:scale .3s cubic-bezier(.2,.9,.3,1.2)}
+  .bcast-veil.on .bcast{scale:1}
 
   /* ---------- pills: little sunken readouts ---------- */
   .pill{border:0;box-shadow:var(--bevel-dark-in);background:#050505;font-family:var(--os);font-size:1.02rem;font-weight:400;letter-spacing:.06em;padding:.12em .6em}
@@ -391,6 +409,26 @@
     tape.append(name, x);
     return tape;
   };
+
+  /* Broadcast.show({ top, big, sub, btn }): a full-screen Broadcast Card with one button (Esc / button closes). */
+  window.Broadcast = (function () {
+    const ICON = '<svg class="b-ico" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 8L94 88H6z" fill="none" stroke="#fff" stroke-width="7"/><path d="M24 64q26-26 52 0q-26 22-52 0z" fill="#fff"/><circle cx="50" cy="63" r="8" fill="#1d2bd0"/></svg>';
+    function show(o) {
+      o = o || {};
+      const veil = document.createElement('div'); veil.className = 'bcast-veil'; veil.setAttribute('role', 'alertdialog'); veil.setAttribute('aria-modal', 'true');
+      const card = document.createElement('div'); card.className = 'bcast'; card.innerHTML = ICON;
+      [['b-top', o.top], ['b-big', o.big], ['b-sub', o.sub]].forEach(([c, t]) => { if (!t) return; const p = document.createElement('p'); p.className = c; p.textContent = t; card.append(p); });
+      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn ghost'; btn.textContent = o.btn || 'Continue';
+      card.append(btn); veil.append(card); document.body.append(veil);
+      veil.setAttribute('aria-label', [o.top, o.big, o.sub].filter(Boolean).join('. '));
+      const close = () => { veil.classList.remove('on'); setTimeout(() => veil.remove(), 260); document.removeEventListener('keydown', esc); if (o.onClose) o.onClose(); };
+      const esc = e => { if (e.key === 'Escape') close(); };
+      btn.addEventListener('click', close); document.addEventListener('keydown', esc);
+      requestAnimationFrame(() => { veil.classList.add('on'); btn.focus(); });
+      return close;
+    }
+    return { show: show, icon: ICON };
+  })();
 
   /* lights on/off: set before the page paints so there's no flash; any button with data-lights toggles it */
   (function () {
