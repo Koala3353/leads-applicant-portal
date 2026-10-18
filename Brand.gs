@@ -221,87 +221,91 @@ const BRAND = {
     show: true,
     name: 'I.R.I.S.',
     fullName: 'Inspection, Reconnaissance & Identification System',
+    // I.R.I.S. is a wall-mounted CCTV camera (Mascot.html). Voice = the brand book: deadpan, clinical, observant, intimate.
+    // Second person, short declarative sentences, study vocabulary (file, subject, recorded, noted, observe).
+    // Quiet and specific; every line ends on an invitation, never a threat. No exclamation marks, no emoji.
+    // Errors and instructions stay plain: what happened, what to do.
     // Every line is [face, text]. Faces: 'nervous' 'happy' 'excited' 'sad' 'scared' 'wink' 'love' 'thinking'.
-    // A plain 'text' (no face) works too and uses 'nervous'.
-    colors: {                              // I.R.I.S.'s screen color for each face
-      nervous:  '#0010E0',                 // the default CRT blue
-      scared:   '#E00000',                 // alarm red (also the random "panic" trick)
-      happy:    '#FFFF00',
-      excited:  '#FFFF00',
-      sad:      '#808080',
-      wink:     '#EAEAEA',
-      love:     '#E00000',
-      thinking: '#0010E0'
+    colors: {                              // the status LED for each face (the LCD word comes from Mascot.html)
+      nervous:  '#FF2A2A',                 // REC: the default, steady watching
+      scared:   '#FF2A2A',                 // ALERT (blinks fast)
+      happy:    '#3DFF6E',                 // NOTED
+      excited:  '#FFFF00',                 // MATCH
+      sad:      '#6A6A6A',                 // IDLE (the head droops)
+      wink:     '#EAEAEA',                 // SAVED
+      love:     '#FFB347',                 // CLEARED: the one warm light (brand book: reveal phase)
+      thinking: '#4D7CFF'                  // READING (the focus ring turns)
     },
-    pageFace: {                            // I.R.I.S.'s resting face on each page (key = ?page= value)
+    pageFace: {                            // resting face on each page (key = ?page= value)
       home: 'nervous',
       apply: 'thinking',
       game: 'nervous'
     },
     hello: {                               // first line on each page
-      home:  ['nervous', "Hi, I'm I.R.I.S. I keep an eye on things around here. Don't mind me."],
-      apply: ['thinking', "Take your time. I'll be right here."],
-      game:  ['nervous', "Three feeds. One of them has something in it. Pick a camera."]
+      home:  ['nervous', 'Camera 01 is on. You are being observed. Please continue as normal.'],
+      apply: ['thinking', 'This is your intake file. Answer honestly. I am only taking notes.'],
+      game:  ['nervous', 'Three feeds. Two of them are empty. Choose a camera when you are ready.']
     },
-    guest: ['thinking', "I can't see who you are. Sign in with your Ateneo account so I can find your file."],
-    admin: ['wink', "Core team on duty. The Sheet button's at the top."],
+    guest: ['thinking', "I can't see who you are. Sign in with your Ateneo account and I can find your file."],
+    admin: ['wink', 'Core team detected. The Sheet is in the top bar.'],
     status: {                              // shown on Home once the applicant's status loads; the face stays after
-      'SUBMITTED':    ['happy',    "Got it. You're officially on file."],
-      'UNDER REVIEW': ['scared',   'Someone is reading your file right now. Act natural.'],
-      'WAITLISTED':   ['thinking', "Waitlisted isn't a no. I'm keeping an eye on your file."],
-      'ACCEPTED':     ['excited',  'ACCESS GRANTED. Pay first, then requirements.'],
-      'REJECTED':     ['sad',      'Not this time. Your file stays on record. Try again next year.'],
-      'CONFIRMED':    ['love',     "You're in. See you at camp. I'll be watching out for you."],
-      'WITHDRAWN':    ['sad',      'You withdrew. Message the core team if that was a mistake.']
+      'SUBMITTED':    ['happy',    'File received. You are on record now. Please remain seated.'],
+      'UNDER REVIEW': ['thinking', "Your file is open on someone's desk. Nothing to do yet. Breathe."],
+      'WAITLISTED':   ['thinking', 'Waitlisted. Your file stays open. So does the door.'],
+      'ACCEPTED':     ['excited',  'Subject cleared. Next: payment, then requirements. Your file is ready.'],
+      'REJECTED':     ['sad',      'Not this time. Your file stays on record. You can open it again next year.'],
+      'CONFIRMED':    ['love',     'Confirmed. We have been watching. We will see you at camp.'],
+      'WITHDRAWN':    ['sad',      'You withdrew. If that was a mistake, the core team can reopen your file.']
     },
     tips: [                                // a random one each time someone taps I.R.I.S.
-      ['scared',   'When something breaks, I turn red. Then I go back to blue. Usually.'],
-      ['thinking', "Write your fear essay like no one is watching. (Except me.)"],
-      ['scared',   'Keep an eye on the countdown. I do.'],
-      ['thinking', "Use your Ateneo account, or the portal can't see you. Neither can I."],
-      ['happy',    "The essay doesn't have to be impressive. It has to be yours."],
-      ['wink',     'Everyone else is nervous too. I can see it.']
+      ['nervous',  'When something breaks, my light turns red. Then I go back to watching.'],
+      ['thinking', 'Write the fear essay as if no one is reading. Someone will. That is the point.'],
+      ['nervous',  'The countdown is real. I watch it so you can stop watching it.'],
+      ['thinking', "Use your Ateneo account. Otherwise I can't see you, and neither can your file."],
+      ['happy',    'The essays do not need to be impressive. They need to be yours.'],
+      ['wink',     'Everyone who applies is nervous. I have the footage.'],
+      ['thinking', "Who are you when you're not performing? Take your time with that one."]
     ],
-    back: ['scared', "Oh. You're back. I noticed you left."],   // after the visitor leaves the tab for a while
-    error: ['scared', 'SIGNAL LOST. Something broke on our side. Try reloading. If it keeps happening, message the core team.'],
-    // Apply page: I.R.I.S. reads over your shoulder and comments (the "being judged" bit). One line at a time,
+    back: ['nervous', 'You left for a while. Your file waited. Continue when you are ready.'],   // after leaving the tab
+    error: ['scared', 'SIGNAL LOST. Something broke on our side. Reload the page. If it happens again, message the core team.'],
+    // Apply page: I.R.I.S. records what you write and comments (also in red pen in the margin). One line at a time,
     // at most every ~7s, only after you pause or leave a field. Never blocks anything. {v} = what they typed.
     judge: {
-      FullName:       [['thinking', "Full legal name. Very official. I've saved it."], ['wink', "Nice name. I'll be seeing a lot of it."]],
-      Nickname:       [['wink', "So we're calling you {v} at camp. Okay, I can work with that."], ['thinking', '{v}, huh? I\'ll make sure everyone uses it.']],
-      IDNumber:       [['thinking', 'ID number saved. Not that I checked it twice.']],
-      IDNumberBad:    ['scared', "That ID doesn't look right. It should be exactly six digits, and yes, I counted."],
-      Course:         [['thinking', '{v}. Interesting. I have a few theories about you now.']],
-      YearLevel:      { '1': ['excited', "First year and already applying? That's braver than most."], '4': ['wink', 'Fourth year. Going out with one last camp, I see.'], other: ['thinking', "Year {v}. Right in the thick of it. Noted."] },
-      Mobile:         [['wink', "Got your number. Don't worry, I won't call. Probably."]],
+      FullName:       [['thinking', 'Full name recorded. Subject identified.'], ['happy', 'Name on file. This is officially yours now.']],
+      Nickname:       [['wink', '{v}. That is what we will call you at camp.'], ['thinking', '{v}. Noted for the name tag.']],
+      IDNumber:       [['thinking', 'ID number recorded. Cross-referencing.']],
+      IDNumberBad:    ['scared', "That ID doesn't look right. It should be exactly six digits."],
+      Course:         [['thinking', '{v}. Added to your file.']],
+      YearLevel:      { '1': ['excited', 'First year, applying early. That is worth noting.'], '4': ['thinking', 'Fourth year. One last camp. Noted.'], other: ['thinking', 'Year {v}. Noted.'] },
+      Mobile:         [['thinking', 'Number recorded. It is only used for camp.']],
       MobileBad:      ['scared', 'That number looks off. It should be 11 digits starting with 09.'],
-      MEAInvolvement: [['thinking', "Interesting. I'll keep that in mind while I read the rest."]],
-      Block:          [['thinking', 'Block {v}. I know exactly which classroom to watch now.']],
-      MBTI:           { I: ['wink', "{v}. An introvert. Don't worry, I do most of the watching for you."],
-                        E: ['excited', "{v}. An extrovert. Camp is going to be loud with you around."],
+      MEAInvolvement: [['thinking', 'Involvement recorded. Context helps.']],
+      Block:          [['thinking', 'Block {v}. Recorded.']],
+      MBTI:           { I: ['thinking', '{v}. You notice more than you say. So do I.'],
+                        E: ['happy', '{v}. You fill rooms. Camp has room.'],
                         other: ['thinking', '{v}. Filed under personality.'] },
-      PastOrgs:       [['thinking', "Quite the record. I'll be cross-checking these, of course."], ['wink', "So you've done this before. Good. Less explaining for me."]],
-      FirstOvernight: { Yes: ['wink', 'First overnight? Bring a jacket. And maybe a nightlight.'], No: ['thinking', "A veteran. You already know nobody really sleeps."] },
-      OffsiteAvailability: { Yes: ['happy', "Free on camp dates. I'll pencil you in."], No: ['scared', "Not free on camp dates? That's going to be hard to explain. Talk to the core team."] },
-      DataConsent:    { Y: ['happy', "Consent noted. I'll only use it for LEADS. Promise."], N: ['scared', "Without your consent, I can't keep your file. You'll need to say yes to apply."] },
+      PastOrgs:       [['thinking', 'History recorded. Experience is a finding, not a requirement.'], ['happy', 'You have done this before. It shows.']],
+      FirstOvernight: { Yes: ['thinking', 'First overnight. Noted. You will not be alone.'], No: ['thinking', 'Not your first overnight. You know how the nights go.'] },
+      OffsiteAvailability: { Yes: ['happy', 'Available on camp dates. Your spot is held.'], No: ['scared', 'Not available on camp dates. Message the core team before you continue.'] },
+      DataConsent:    { Y: ['happy', 'Consent recorded. Your file is used for LEADS and nothing else.'], N: ['scared', 'Without consent there is no file. Saying yes is required to apply.'] },
       // essays: said once each, when the answer reaches a decent length
-      WhyParticipant:  [['thinking', "So that's why you want in. I've read worse reasons. Not many, but some."], ['happy', "Okay, that's a real reason. It's going in your file."]],
-      FirstImpression: [['wink', "Interesting first impression. Let's see if it survives camp."], ['thinking', "That's what you think it'll be like? Cute. I'll remember you said that."]],
-      Rumors:          [['excited', "Ooh, rumors. I've heard that one too. I hear everything."], ['wink', "Where did you hear that? Never mind, I'll find out."]],
-      TakesLeadership: [['thinking', "So that's how you lead. I'll be watching to see if it's true."], ['happy', "Noted. Everyone says they step up. You actually gave an example."]],
-      FearLeadership:  [['sad', "That's a heavy one. Thanks for being honest. I won't make fun of this one."], ['thinking', "Naming it is the hard part. Camp handles the rest."]],
-      essayShort:     ['thinking', "That's all? You need at least 50 characters. I'll wait."],
-      essayOk:        [['thinking', "Hm. Go on, I'm reading."], ['happy', "Noted. That one's going in your file."]],
-      essayLong:      ['excited', "Okay, you're really going for it. I respect that."],
-      cliche:         ['wink', 'Everyone says "leadership". Try saying something only you would say.'],
-      deleted:        ['wink', "I saw you delete that. Don't worry, I won't tell anyone."],
-      idle:           ['nervous', "Still thinking? Take your time. I'm not going anywhere."],
-      errors:         ['scared', "A few fields need a look. They're marked in red."],
+      WhyParticipant:  [['thinking', 'Reason recorded. It sounds like you.'], ['happy', 'That is a real reason. It is going in your file.']],
+      FirstImpression: [['thinking', 'First impression recorded. We will compare it at the end of camp.'], ['wink', 'Hold on to that picture. It will change.']],
+      Rumors:          [['thinking', 'Rumor recorded. Some of them are true. You will find out which.'], ['wink', 'We have heard that one too. Keep listening.']],
+      TakesLeadership: [['thinking', 'Example recorded. You have done this before.'], ['happy', 'Specific. That is rare. Noted.']],
+      FearLeadership:  [['sad', 'Thank you for writing that down. It stays in your file, and with us.'], ['thinking', 'Naming it is the hard part. Camp is for the rest.']],
+      essayShort:     ['thinking', "At least 50 characters. Take your time. I'll wait."],
+      essayOk:        [['thinking', 'Recording. Go on.'], ['happy', 'Noted. That one is going in your file.']],
+      essayLong:      ['thinking', 'You are giving us a lot. We are reading all of it.'],
+      cliche:         ['wink', 'Everyone writes "leadership". Write the thing only you would say.'],
+      deleted:        ['thinking', 'You deleted that. It was a start. Try again.'],
+      idle:           ['nervous', 'Still here. Take your time. The file stays open.'],
+      errors:         ['scared', 'A few fields need a look. They are marked in red.'],
       // progress check every ~40s. {name} = their nickname/first name (or "you"), {done} = what they've filled in so far
-      slow:           [['wink', "So {name}, {done} so far... Going pretty slow, aren't you?"], ['thinking', "{name}, {done}, and I've been watching the whole time. Need a minute?"]],
-      halfway:        ['happy', 'Halfway there, {name}. Not bad. Keep going.'],
-      allDone:        ['excited', "Everything's filled in. Read it over once. I already did."],
-      prefilled:      ['wink', 'I pulled your details from the member list. Saves time. Check them, though.']
+      slow:           [['thinking', '{name}, {done} so far. No rush. I am still here.'], ['nervous', '{name}, {done}, and the camera is still running. Take the time you need.']],
+      halfway:        ['happy', 'Halfway, {name}. The file is taking shape.'],
+      allDone:        ['excited', 'Every field is filled. Read it once more. Then we observe.'],
+      prefilled:      ['thinking', 'I pulled your details from the member list. Check them before you continue.']
     },
     afterError: 'sad',                     // resting face after an error (so I.R.I.S. doesn't stay red forever)
     hideLabel: 'Hide I.R.I.S.'

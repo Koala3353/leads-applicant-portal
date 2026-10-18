@@ -472,18 +472,20 @@ No `<!DOCTYPE>`/`<html>`/`<head>`/`<body>`, Styles, Loader, Mascot or PageTop: H
 
 ### 7.2 I.R.I.S., the mascot (shared, `Mascot.html`)
 
-A little beige CRT with antennas, a REC tag and **one eye that follows the pointer**, in the bottom-right corner of every page. It blinks and idles every 8s, alternating six body animations (lean, tilt, shiver, antenna, spin, nap) with six screen effects (glitch, static, scan, stare, roll, or a red "panic"), sends a random message when tapped, can be dragged anywhere on screen (the spot is remembered per browser), can be hidden for the session ("Hide I.R.I.S."; a small "▣ I.R.I.S." button brings him back), and says each page's hello line from `BRAND.mascot.hello[page]`. The Loader shows a big watching eye. On server errors I.R.I.S.'s screen turns red, it shakes, says `BRAND.mascot.error` ("SIGNAL LOST…"), then rests sad.
+I.R.I.S. is a **wall-mounted CCTV camera** (redesigned Oct 2026 to match the brand book). Its lens is a real-looking eye behind glass; the **whole camera head pans and tilts to follow the pointer** within its mount's range, and it faces whichever side of the screen has more page (it flips to face right when parked on the left, e.g. Apply's docked spot, with its labels kept readable). A status **LED** shows the face's colour (`BRAND.mascot.colors`) and a small green **LCD** shows a word: REC, NOTED, MATCH, ALERT, IDLE, SAVED, CLEARED, READING. **Hover it and the lens shows your own silhouette** (the mirror: the observer is you). It idles every ~7s, alternating a head move (scan the room, nod, recoil, shiver, jolt, crane, slide out of view and back) with a lens effect (glitch, static, stare, red panic, IR night-vision, refocus, shutter flutter, one flash, mirror). It can be dragged anywhere (spot remembered per browser), hidden for the session ("Hide I.R.I.S."; a small 90s button brings it back), and says each page's hello line from `BRAND.mascot.hello[page]`. Its messages appear in a small 90s window titled "I.R.I.S. // TRANSMISSION". On server errors the LED goes red, it shakes and says `BRAND.mascot.error` ("SIGNAL LOST…"), then rests on the sad face (head drooped, LED grey).
 
-| Face | Screen + eye | Use for |
+**Voice:** the brand book's (§7.5): deadpan, clinical, second person, study vocabulary ("recorded", "noted", "your file"), quiet and specific, always ending on an invitation. No exclamation marks or emoji.
+
+| Face | LED + LCD + lens | Use for |
 |---|---|---|
-| `nervous` | blue, open eye (default) | neutral, "take your time", waiting |
-| `happy` | yellow, eye closed in a smile | done, saved, friendly hello |
-| `excited` | yellow, huge pupil, sparks (hops) | big wins: application sent, accepted |
-| `scared` | red, pinpoint pupil, red veins (shakes) | errors, deadline panic |
-| `sad` | grey, drooping lid, a tear | rejected, withdrawn, after an error |
-| `wink` | white, eye shut | playful messages |
-| `love` | red, heart pupil | confirmed, thank-yous |
-| `thinking` | blue, half lid, "…" | "check this", validation problems, sign-in needed |
+| `nervous` | red LED blinking, REC (default) | neutral, waiting, "take your time" |
+| `happy` | green, NOTED, lens relaxed | saved, recorded, friendly hello |
+| `excited` | yellow, MATCH, pupil wide, lens zooms | big moments: application filed, accepted |
+| `scared` | red fast blink, ALERT, pinpoint pupil, red veins, shake | errors, deadline panic |
+| `sad` | grey, IDLE, head droops, lid half down | rejected, withdrawn, after an error |
+| `wink` | white, SAVED, lens half shut | small playful lines |
+| `love` | amber (the one warm light), CLEARED | confirmed, thank-yous |
+| `thinking` | blue, READING, focus ring turns | "check this", validation, sign-in needed |
 
 ```js
 window.Iris.say(['excited', 'Sent! Your ID is APP-0042.'], 9000);   // [face, text], ms optional (default 7s)

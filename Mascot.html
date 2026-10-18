@@ -1,166 +1,152 @@
-<!-- Mascot.html  (shared: I.R.I.S., the little CRT with one eye in the bottom-right corner.)
-     I.R.I.S. = Inspection, Reconnaissance & Identification System: the portal's 1984 nod. Its eye follows the pointer, it blinks,
-     and its screen color changes with each face (BRAND.mascot.colors).
+<!-- Mascot.html  (shared: I.R.I.S., the wall-mounted CCTV camera in the bottom-right corner.)
+     I.R.I.S. = Inspection, Reconnaissance & Identification System. Its lens is a real-looking eye; the whole camera head
+     pans and tilts to follow the pointer, a status LED and a small LCD show its state, and hovering it shows your own
+     silhouette reflected in the lens (the brand book's mirror: the observer is you).
      Every page adds it right after the Loader line, as a force-print scriptlet:
-       includeOptional_('Mascot', { BRAND: BRAND, page: page })   (optional: if Kuya breaks, the page still loads)
-     Words, faces and colors live in Brand.gs (BRAND.mascot). Set BRAND.mascot.show = false to turn Kuya off.
-     Faces: nervous, happy, excited, sad, scared, wink, love, thinking. Each line picks one; when the
-     transmission box closes Kuya goes back to the page's resting face (or, on Home, the face for the applicant's status).
-     Every ~7 seconds I.R.I.S. idles: it alternates a body animation (MOVES_IDLE: lean, tilt, shiver, antenna, spin, nap,
-     jump, wobble, flip, peek) with a screen effect (EFFECTS: glitch, static, scan, stare, panic, roll, bars, zoom, eyeroll).
-     It never repeats one of its last three. TRICK_EVERY below sets the gap.
-     Errors: Kuya turns red and says BRAND.mascot.error on 'hub:error', 'portal:error', or an unhandled server error.
-     Pages report their own failures with: document.dispatchEvent(new CustomEvent('portal:error'))
-     Pages make it talk with window.Kuya.say([face, text]) (window.Iris is the same object).
+       includeOptional_('Mascot', { BRAND: BRAND, page: page })   (optional: if it breaks, the page still loads)
+     Words, faces and LED colours live in Brand.gs (BRAND.mascot). Set BRAND.mascot.show = false to turn it off.
+     Faces (kept for every page's existing calls): nervous, happy, excited, sad, scared, wink, love, thinking (+ off for
+     Apply's power-on intro). Each face sets the LED colour, the LCD word, the aperture and the head angle.
+     Every ~7 seconds it idles: a body move (MOVES_IDLE) alternating with a lens effect (EFFECTS); never one of its last three.
+     Errors: it turns red and says BRAND.mascot.error on 'hub:error', 'portal:error', or an unhandled error.
+     Pages make it talk with window.Iris.say([face, text]) (window.Kuya is the same object).
      Never write a real scriptlet tag in a comment here: Apps Script runs scriptlets even inside comments. -->
 <? if (BRAND.mascot && BRAND.mascot.show) { ?>
 <style>
-  body{padding-bottom:100px}                /* so Kuya never covers the last line of a page */
-  .kuya{position:fixed;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));
-    z-index:60;display:flex;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:none;--kuya-c:#0010E0}
-  .kuya-btn{pointer-events:auto;width:84px;height:88px;padding:0;border:0;background:none;cursor:grab;touch-action:none;
-    -webkit-tap-highlight-color:transparent}
+  body{padding-bottom:100px}                /* so I.R.I.S. never covers the last line of a page */
+  .kuya{position:fixed;right:calc(10px + env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));
+    z-index:60;display:flex;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:none;--kuya-c:#FF2A2A}
+  .kuya-btn{pointer-events:auto;width:112px;height:84px;padding:0;border:0;background:none;cursor:grab;touch-action:none;-webkit-tap-highlight-color:transparent}
   .kuya.dragging .kuya-btn{cursor:grabbing}
-  /* picked up: lifts and tilts (transition, so it eases in and settles back on drop) */
-  .kuya-btn svg{transition:transform .18s cubic-bezier(.23,1,.32,1),filter .18s ease}
-  .kuya.dragging svg{transform:scale(1.08) rotate(-4deg);filter:drop-shadow(0 10px 8px rgba(0,0,0,.55));animation:none!important}
-  .kuya.dragging .kuya-float,.kuya.dragging .kuya-shadow{animation-play-state:paused}
-  /* moved by dragging: placed with left/top; the message box flips to the side with room */
+  .kuya-btn svg{width:100%;height:100%;overflow:visible;display:block;transform-origin:85% 30%;transition:transform .18s cubic-bezier(.23,1,.32,1),filter .18s ease;
+    filter:drop-shadow(3px 4px 0 rgba(0,0,0,.6))}
+  .kuya.dragging svg{transform:scale(1.08) rotate(-3deg);filter:drop-shadow(0 10px 8px rgba(0,0,0,.55));animation:none!important}
   .kuya.placed{right:auto;bottom:auto}
   .kuya.on-left{align-items:flex-start}
   .kuya.on-left .kuya-bubble{margin:0 0 0 6px;transform-origin:bottom left}
   .kuya.on-top{flex-direction:column-reverse}
-  .kuya-btn:focus-visible{outline:3px solid var(--glow,#FFFF00);outline-offset:4px}
-  .kuya-btn svg{width:100%;height:100%;overflow:visible;display:block;transform-origin:50% 60%}
+  .kuya-btn:focus-visible{outline:3px dashed var(--glow,#FFFF00);outline-offset:4px}
 
-  .kuya-screen{fill:var(--kuya-c);transition:fill .35s steps(3)}
-  .kuya-float{animation:kuyaFloat 3.6s ease-in-out infinite}
-  .kuya-shadow{transform-box:fill-box;transform-origin:center;animation:kuyaShadow 3.6s ease-in-out infinite}
-  .kuya-rec{animation:kuyaRec 1.2s steps(1) infinite}
-  .kuya-iris{transition:transform .12s linear}
-  .kuya-pupil{transform-box:fill-box;transform-origin:center;transition:transform .25s ease}
-  .kuya-open{transform-box:fill-box;transform-origin:center;animation:kuyaBlink 5.2s infinite}
-  .kuya-lid{transition:transform .3s ease;transform:translateY(-22px)}
+  /* ---- the camera ---- */
+  /* the head turns around the mount pivot to follow you; .cam-mood adds the face's own angle on top */
+  .cam-head{transform-box:view-box;transform-origin:88px 30px;transform:rotate(var(--pan,0deg));transition:transform .45s cubic-bezier(.23,1,.32,1)}
+  .cam-mood{transform-box:view-box;transform-origin:88px 30px;transition:transform .5s cubic-bezier(.23,1,.32,1)}
+  .kuya-iris{transition:transform .2s ease-out}
+  .kuya-pupil{transform-box:fill-box;transform-origin:center;transition:transform .3s ease}
+  .cam-led{fill:var(--kuya-c);filter:drop-shadow(0 0 2px var(--kuya-c))}
+  .cam-led.blink{animation:camLed 1.2s steps(1) infinite}
+  .cam-lcd-t{font:700 5.4px/1 monospace;letter-spacing:.6px;fill:#9dff9d}
+  .cam-lid{transform-box:fill-box;transition:transform .3s cubic-bezier(.23,1,.32,1)}
+  .cam-lid.top{transform-origin:50% 0;transform:scaleY(0)}
+  .cam-lid.bot{transform-origin:50% 100%;transform:scaleY(0)}
+  .cam-blink{animation:camBlink 5.6s infinite}
+  .cam-veins,.cam-mirror,.cam-ir,.kuya-static,.cam-flash{opacity:0;transition:opacity .25s}
+  @keyframes camLed{50%{opacity:.15}}
+  @keyframes camBlink{0%,46%,50%,100%{transform:scaleY(0)}48%{transform:scaleY(1)}}
 
-  /* faces */
-  .kuya-closed,.kuya-heart,.kuya-veins,.kuya-dots,.kuya-tear,.kuya-spark{opacity:0;transition:opacity .2s}
-  .kuya[data-mood="off"]{--kuya-c:#080808 !important}
-  .kuya[data-mood="off"] .kuya-screen{fill:#080808 !important}
-  .kuya[data-mood="off"] .kuya-open,.kuya[data-mood="off"] .kuya-closed{opacity:0 !important}
-  .kuya[data-mood="off"] .kuya-rec{opacity:0 !important;animation:none !important}
-  .kuya[data-mood="off"] .kuya-lid{transform:translateY(0) !important}
-  .kuya[data-mood="off"] .kuya-spark,.kuya[data-mood="off"] .kuya-heart,.kuya[data-mood="off"] .kuya-veins,.kuya[data-mood="off"] .kuya-dots,.kuya[data-mood="off"] .kuya-tear{opacity:0 !important}
+  /* faces: LED colour (BRAND.mascot.colors), LCD word (set by the script), aperture, angle */
+  .kuya[data-mood="nervous"] .cam-led{animation:camLed 1.2s steps(1) infinite}
+  .kuya[data-mood="happy"] .cam-lid.bot{transform:scaleY(.32)}
+  .kuya[data-mood="excited"] .kuya-pupil{transform:scale(1.5)}
+  .kuya[data-mood="excited"] .cam-lens{animation:camZoom .5s cubic-bezier(.2,1.4,.4,1) 1}
+  .kuya[data-mood="scared"] .kuya-pupil{transform:scale(.4)}
+  .kuya[data-mood="scared"] .cam-veins{opacity:1}
+  .kuya[data-mood="scared"] .cam-led{animation:camLed .4s steps(1) infinite}
+  .kuya[data-mood="sad"] .cam-mood{transform:rotate(-16deg)}
+  .kuya[data-mood="sad"] .cam-lid.top{transform:scaleY(.45)}
+  .kuya[data-mood="sad"] .cam-led{filter:none}
+  .kuya[data-mood="thinking"] .cam-lid.top{transform:scaleY(.3)}
+  .kuya[data-mood="thinking"] .cam-focus{animation:camFocus 1.6s linear infinite}
+  .kuya[data-mood="love"] .kuya-pupil{transform:scale(1.25)}
+  .kuya[data-mood="love"] .cam-iris-tint{opacity:.55}
+  .kuya[data-mood="wink"] .cam-lid.top{transform:scaleY(.7)}
+  .kuya[data-mood="wink"] .cam-lid.bot{transform:scaleY(.3)}
+  .cam-iris-tint{opacity:0;transition:opacity .4s}
+  .kuya[data-mood="off"] .cam-lid.top,.kuya[data-mood="off"] .cam-lid.bot{transform:scaleY(1) !important}
+  .kuya[data-mood="off"] .cam-led{fill:#2a2a2a;filter:none;animation:none !important}
+  .kuya[data-mood="off"] .cam-lcd-t{opacity:0}
+  .kuya[data-mood="off"] .cam-blink{animation:none}
+  .kuya[data-mood="off"] .cam-head{transform:rotate(-24deg) !important}
   .kuya[data-mood="off"] .kuya-btn{cursor:pointer !important}
-  .kuya[data-mood="happy"] .kuya-open,.kuya[data-mood="wink"] .kuya-open{opacity:0}
-  .kuya[data-mood="happy"] .kuya-closed.happy,.kuya[data-mood="wink"] .kuya-closed.wink{opacity:1}
-  .kuya[data-mood="excited"] .kuya-pupil{transform:scale(1.45)}
-  .kuya[data-mood="excited"] .kuya-spark{opacity:1}
-  .kuya[data-mood="scared"] .kuya-pupil{transform:scale(.45)}
-  .kuya[data-mood="scared"] .kuya-veins{opacity:1}
-  .kuya[data-mood="sad"] .kuya-lid{transform:translateY(-7px)}
-  .kuya[data-mood="sad"] .kuya-tear{opacity:1}
-  .kuya[data-mood="thinking"] .kuya-lid{transform:translateY(-10px)}
-  .kuya[data-mood="thinking"] .kuya-dots{opacity:1}
-  .kuya[data-mood="love"] .kuya-pupil{opacity:0}
-  .kuya[data-mood="love"] .kuya-heart{opacity:1}
-  .kuya-dots circle{animation:kuyaDot 1.4s steps(2) infinite}
-  .kuya-dots circle:nth-child(2){animation-delay:.25s}
-  .kuya-dots circle:nth-child(3){animation-delay:.5s}
+  @keyframes camZoom{40%{transform:scale(1.18)}100%{transform:none}}
+  @keyframes camFocus{to{transform:rotate(360deg)}}
+  .cam-focus{transform-box:fill-box;transform-origin:center}
+  /* parked on the left half of the screen (Apply docks it bottom-left): the camera faces right, labels stay readable */
+  .kuya.facing-right .kuya-btn svg{scale:-1 1}
+  .kuya.facing-right .cam-text{transform-box:fill-box;transform-origin:center;scale:-1 1}
+  /* the mirror: hover it and the lens shows you */
+  @media (hover:hover){.kuya-btn:hover .cam-mirror{opacity:.85}}
+  .kuya.trick-mirror .cam-mirror{opacity:.9}
 
   /* one-off moves */
-  .kuya.peek svg{animation:kuyaPeek .6s steps(6)}
-  .kuya.scared svg{animation:kuyaShake .4s steps(4)}
-  .kuya.hop svg{animation:kuyaHop .5s ease 2}
-  .kuya.poke svg{animation:kuyaPoke .3s steps(3)}
-  /* idle tricks (names in TRICKS below) */
-  .kuya.trick-glitch svg{animation:kuyaTGlitch .7s steps(1)}
-  .kuya.trick-stare svg{animation:kuyaTStare 1.6s ease}
-  .kuya.trick-stare .kuya-pupil{transform:scale(1.7)}
-  .kuya-static{opacity:0}
-  .kuya.trick-static .kuya-static{animation:kuyaTStatic .8s steps(4)}
+  .kuya.peek svg{animation:camPeek .7s cubic-bezier(.23,1,.32,1)}
+  .kuya.scared svg{animation:camShake .45s steps(4)}
+  .kuya.hop svg{animation:camHop .5s ease 2}
+  .kuya.poke svg{animation:camPoke .3s steps(3)}
+  @keyframes camPeek{0%{transform:translateX(40px);opacity:0}60%{opacity:1;transform:translateX(-4px)}100%{transform:none}}
+  @keyframes camShake{25%{transform:translateX(-4px) rotate(-2deg)}50%{transform:translateX(4px) rotate(2deg)}75%{transform:translateX(-2px)}}
+  @keyframes camHop{40%{transform:translateY(-8px)}70%{transform:translateY(0) scaleY(.94)}}
+  @keyframes camPoke{50%{transform:scale(1.06,.94)}}
 
-  /* idle body animations (MOVES_IDLE) */
-  .kuya-ant,.kuya-wave,.kuya-tube,.kuya-roll,.kuya-zz{transform-box:fill-box}
-  .kuya-wave,.kuya-roll,.kuya-zz{opacity:0}
-  .kuya.trick-lean svg{animation:kuyaTLean 2.2s ease-in-out}
-  .kuya.trick-tilt svg{animation:kuyaTTilt 1.8s ease-in-out}
-  .kuya.trick-shiver svg{animation:kuyaTShiver 1s linear}
-  .kuya.trick-antenna .kuya-ant{transform-origin:50% 100%;animation:kuyaTAnt 1.4s steps(6)}
-  .kuya.trick-antenna .kuya-wave{animation:kuyaTWave 1.4s ease-out}
-  .kuya.trick-spin svg{animation:kuyaTSpin .9s ease-in-out}
-  .kuya.trick-nap .kuya-tube{transform-origin:center;animation:kuyaTNap 3s ease}
-  .kuya.trick-nap svg{animation:kuyaTSink 3s ease}
-  .kuya.trick-nap .kuya-zz{animation:kuyaTZz 3s ease}
-  /* more body moves */
-  .kuya.trick-jump svg{animation:kuyaTJumpBig 1s cubic-bezier(.23,1,.32,1)}
-  .kuya.trick-wobble svg{transform-origin:50% 95%;animation:kuyaTWobble 1.3s ease-in-out}
-  .kuya.trick-flip svg{animation:kuyaTFlip 1.1s cubic-bezier(.77,0,.175,1)}
-  .kuya.trick-peek svg{animation:kuyaTPeekaboo 2.6s cubic-bezier(.77,0,.175,1)}
-  @keyframes kuyaTJumpBig{0%{transform:none}15%{transform:scale(1.12,.82) translateY(6px)}45%{transform:scale(.92,1.1) translateY(-34px)}70%{transform:scale(1.1,.88) translateY(2px)}85%{transform:translateY(-4px)}100%{transform:none}}
-  @keyframes kuyaTWobble{0%,100%{transform:none}15%{transform:rotate(-14deg) scaleY(.94)}30%{transform:rotate(11deg) scaleY(1.04)}45%{transform:rotate(-8deg)}60%{transform:rotate(5deg)}75%{transform:rotate(-2deg)}}
-  @keyframes kuyaTFlip{0%{transform:none}40%{transform:translateY(-30px) rotate(180deg)}75%{transform:translateY(-6px) rotate(360deg)}100%{transform:rotate(360deg)}}
-  @keyframes kuyaTPeekaboo{0%,100%{transform:none}20%,62%{transform:translateY(70px) scale(.9);opacity:.15}72%{transform:translateY(30px) rotate(-12deg);opacity:1}82%{transform:translateY(-6px)}}
-  /* more screen effects */
-  .kuya-bars{opacity:0}
-  .kuya.trick-bars .kuya-bars{animation:kuyaTBars 1.6s steps(1)}
-  .kuya.trick-bars .kuya-open{opacity:0}
-  .kuya.trick-zoom .kuya-open{transform-origin:43px 49px;transform-box:view-box;animation:kuyaTZoom 1.6s cubic-bezier(.23,1,.32,1)}
-  .kuya.trick-zoom .kuya-pupil{transform:scale(1.9)}
-  .kuya.trick-eyeroll .kuya-iris{animation:kuyaTEyeroll 1.2s linear}
-  @keyframes kuyaTBars{0%,100%{opacity:0}8%,30%{opacity:1}31%,36%{opacity:0}37%,88%{opacity:1}}
-  @keyframes kuyaTZoom{0%,100%{transform:none}25%,70%{transform:scale(1.9)}}
-  @keyframes kuyaTEyeroll{0%{transform:translate(0,-5px)}25%{transform:translate(9px,0)}50%{transform:translate(0,5px)}75%{transform:translate(-9px,0)}100%{transform:translate(0,-5px)}}
+  /* idle body moves (MOVES_IDLE) */
+  .kuya.trick-nod .cam-mood{animation:camNod 1.8s cubic-bezier(.65,0,.35,1)}
+  .kuya.trick-recoil svg{animation:camRecoil 1s cubic-bezier(.23,1,.32,1)}
+  .kuya.trick-shiver svg{animation:camShiver 1s linear}
+  .kuya.trick-jolt .cam-mood{animation:camJolt .6s steps(3)}
+  .kuya.trick-crane .cam-mood{animation:camCrane 2.2s cubic-bezier(.65,0,.35,1)}
+  .kuya.trick-peek svg{animation:camPeekaboo 2.6s cubic-bezier(.77,0,.175,1)}
+  @keyframes camNod{0%,100%{transform:none}35%,60%{transform:rotate(-20deg)}}
+  @keyframes camRecoil{0%,100%{transform:none}25%{transform:translateX(10px) scale(.94)}}
+  @keyframes camShiver{0%,100%{transform:none}10%,30%,50%,70%,90%{transform:translateX(-2.5px)}20%,40%,60%,80%{transform:translateX(2.5px)}}
+  @keyframes camJolt{0%,100%{transform:none}33%{transform:rotate(14deg)}66%{transform:rotate(-8deg)}}
+  @keyframes camCrane{0%,100%{transform:none}30%,70%{transform:rotate(18deg) translateX(-3px)}}
+  @keyframes camPeekaboo{0%,100%{transform:none}20%,62%{transform:translateX(90px);opacity:.15}72%{transform:translateX(30px);opacity:1}84%{transform:translateX(-4px)}}
 
-  /* screen effect: vertical hold rolls a bright band down the screen */
-  .kuya.trick-roll .kuya-roll{animation:kuyaTRoll 1.1s linear 2}
-  .kuya.trick-roll .kuya-tube{animation:kuyaTJump 1.1s steps(1) 2}
-  @keyframes kuyaTLean{0%,100%{transform:none}20%,45%{transform:translateX(-10px) rotate(-16deg)}55%,80%{transform:translateX(10px) rotate(16deg)}}
-  @keyframes kuyaTTilt{0%,100%{transform:none}20%,80%{transform:rotate(24deg) translateY(-4px)}}
-  @keyframes kuyaTShiver{0%,100%{transform:none}10%,30%,50%,70%,90%{transform:translateX(-3.5px) rotate(-2deg)}20%,40%,60%,80%{transform:translateX(3.5px) rotate(2deg)}}
-  @keyframes kuyaTAnt{0%,100%{transform:none}20%{transform:rotate(-12deg)}40%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(4deg)}}
-  @keyframes kuyaTWave{0%{opacity:0;transform:scale(.4)}30%{opacity:1}100%{opacity:0;transform:scale(1.6)}}
-  @keyframes kuyaTSpin{0%{transform:none}25%{transform:scaleX(0) translateY(-14px)}50%{transform:scaleX(-1) translateY(-18px)}75%{transform:scaleX(0) translateY(-14px)}100%{transform:none}}
-  @keyframes kuyaTNap{0%,100%{transform:none}12%{transform:scale(1,.03)}16%,72%{transform:scale(.02,.03)}80%{transform:scale(1,.03)}84%{transform:none}}
-  @keyframes kuyaTSink{0%,100%{transform:none}20%,75%{transform:translateY(5px) scaleY(.95)}82%{transform:translateY(-6px)}}
-  @keyframes kuyaTZz{0%,18%,76%,100%{opacity:0;transform:none}30%{opacity:1}70%{opacity:.8;transform:translate(6px,-10px)}}
-  @keyframes kuyaTRoll{from{opacity:.55;transform:translateY(-10px)}to{opacity:.55;transform:translateY(60px)}}
-  @keyframes kuyaTJump{0%,100%{transform:none}40%{transform:translateY(3px)}45%{transform:none}}
-
-  @keyframes kuyaFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-  @keyframes kuyaShadow{0%,100%{transform:scale(1);opacity:.5}50%{transform:scale(.85);opacity:.3}}
-  @keyframes kuyaRec{50%{opacity:0}}
-  @keyframes kuyaBlink{0%,46%,50%,100%{transform:scaleY(1)}48%{transform:scaleY(.08)}}
-  @keyframes kuyaDot{50%{opacity:.2}}
-  @keyframes kuyaPeek{0%{transform:translateY(30px);opacity:0}50%{opacity:1;transform:translateY(-6px) skewX(-8deg)}100%{transform:none}}
-  @keyframes kuyaShake{25%{transform:translateX(-4px)}50%{transform:translateX(4px) skewX(6deg)}75%{transform:translateX(-2px)}}
-  @keyframes kuyaHop{40%{transform:translateY(-12px)}70%{transform:translateY(0) scaleY(.92)}}
-  @keyframes kuyaPoke{50%{transform:scale(1.08,.92)}}
-  @keyframes kuyaTGlitch{0%{transform:none}15%{transform:translate(-5px,0) skewX(14deg)}30%{transform:translate(4px,1px)}
+  /* lens effects (EFFECTS) */
+  .kuya.trick-glitch svg{animation:camGlitch .7s steps(1)}
+  .kuya.trick-static .kuya-static{animation:camStatic .8s steps(4)}
+  .kuya.trick-stare .kuya-pupil{transform:scale(1.8)}
+  .kuya.trick-stare .cam-lid{transform:scaleY(0) !important}
+  .kuya.trick-irmode .cam-ir{opacity:1}
+  .kuya.trick-irmode .cam-eye{filter:grayscale(1) sepia(1) hue-rotate(70deg) saturate(3) brightness(.9)}
+  .kuya.trick-refocus .cam-focus{animation:camFocus .5s linear 3}
+  .kuya.trick-refocus .cam-lens{animation:camZoom 1.4s ease}
+  .kuya.trick-shutter .cam-lid{animation:camShutter .9s steps(6)}
+  .kuya.trick-flash .cam-flash{animation:camFlash .5s ease-out 1}
+  @keyframes camGlitch{0%{transform:none}15%{transform:translate(-5px,0) skewX(14deg)}30%{transform:translate(4px,1px)}
     45%{transform:translate(-2px,-1px) skewX(-10deg);filter:invert(1)}60%{transform:none;filter:none}75%{transform:translateX(3px)}100%{transform:none}}
-  @keyframes kuyaTStare{0%,100%{transform:none}30%,70%{transform:scale(1.3) translateY(-4px)}}
-  @keyframes kuyaTStatic{0%,100%{opacity:0}25%,75%{opacity:1}50%{opacity:.5}}
+  @keyframes camStatic{0%,100%{opacity:0}25%,75%{opacity:1}50%{opacity:.5}}
+  @keyframes camShutter{0%,100%{transform:scaleY(0)}20%,60%{transform:scaleY(1)}40%,80%{transform:scaleY(.2)}}
+  @keyframes camFlash{0%{opacity:.95}100%{opacity:0}}
 
-  .kuya-bubble{pointer-events:auto;position:relative;max-width:min(270px,calc(100vw - 32px));margin-right:6px;
-    background:#0A0A0A;color:#EAEAEA;border:2px solid var(--glow,#FFFF00);border-radius:0;
-    padding:10px 14px;font-family:var(--mono,ui-monospace,monospace);font-size:.8rem;line-height:1.45;
-    box-shadow:4px 4px 0 var(--blue,#0010E0);overflow-wrap:anywhere;transform-origin:bottom right;animation:kuyaPop .22s steps(3)}
-  .kuya-bubble b{display:block;font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--glow,#FFFF00);margin-bottom:4px}
+  /* ---- the transmission: a small 90s system window ---- */
+  .kuya-bubble{pointer-events:auto;position:relative;max-width:min(280px,calc(100vw - 32px));margin-right:6px;padding:3px;
+    background:var(--win,#c0c0c0);color:#EAEAEA;border:0;border-radius:0;font-family:var(--mono,ui-monospace,monospace);font-size:.8rem;line-height:1.45;
+    box-shadow:inset -1px -1px #0a0a0a,inset 1px 1px #fff,inset -2px -2px #808080,inset 2px 2px #dfdfdf,5px 5px 0 #000;
+    overflow-wrap:anywhere;transform-origin:bottom right;animation:kuyaPop .22s steps(3)}
+  .kuya-bubble b{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 3px;padding:2px 4px 2px 7px;
+    background:linear-gradient(90deg,var(--title-a,#000080),var(--title-b,#1084d0));color:#fff;font:400 1rem/1.15 var(--os,monospace);letter-spacing:.05em;text-transform:uppercase}
+  .kuya-bubble b::after{content:"\25CF REC";font-size:.85rem;color:#ff6b6b}
+  .kuya-bubble > span,.kuya-bubble > button{background:#0a0a0a}
+  #kuyaText{display:block;padding:9px 11px 4px;background:#0a0a0a;min-height:1.4em}
   .kuya-cursor{display:inline-block;width:6px;height:1em;background:var(--glow,#FFFF00);vertical-align:-2px;margin-left:2px;animation:kuyaCursor .6s steps(1) infinite}
   @keyframes kuyaCursor{50%{opacity:0}}
-  .kuya-hide{display:block;margin-top:8px;padding:0;border:0;background:none;font:inherit;font-size:.68rem;letter-spacing:.08em;
+  .kuya-hide{display:block;width:100%;margin:0;padding:4px 11px 9px;border:0;font:inherit;font-size:.68rem;letter-spacing:.08em;text-align:left;
     text-transform:uppercase;color:#8C8C8C;text-decoration:underline;cursor:pointer}
   @keyframes kuyaPop{from{transform:scaleY(.1);opacity:0}to{transform:none;opacity:1}}
 
   @media (max-width:560px){
     body{padding-bottom:84px}
-    .kuya{right:calc(10px + env(safe-area-inset-right,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px))}
-    .kuya-btn{width:56px;height:60px}
+    .kuya{right:calc(6px + env(safe-area-inset-right,0px));bottom:calc(6px + env(safe-area-inset-bottom,0px))}
+    .kuya-btn{width:80px;height:60px}
   }
-  /* after "Hide Kuya": a small button in the same corner brings him back */
+  /* after "Hide I.R.I.S.": a small 90s button in the same corner brings it back */
   .kuya-recall{position:fixed;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60;
-    font-family:var(--mono,monospace);font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted,#8C8C8C);
-    background:#0A0A0A;border:1.5px solid var(--line,#2E2E2E);padding:.5em .8em;min-height:36px;cursor:pointer}
-  .kuya-recall:hover,.kuya-recall:focus-visible{color:var(--glow,#FFFF00);border-color:var(--glow,#FFFF00)}
+    font:400 1rem/1 var(--os,monospace);letter-spacing:.06em;color:#000;background:var(--win,#c0c0c0);border:0;padding:.45em .8em;min-height:36px;cursor:pointer;
+    box-shadow:inset -1px -1px #0a0a0a,inset 1px 1px #fff,inset -2px -2px #808080,inset 2px 2px #dfdfdf,3px 3px 0 #000}
+  .kuya-recall:active{box-shadow:inset 1px 1px #0a0a0a,inset -1px -1px #fff,inset 2px 2px #808080,inset -2px -2px #dfdfdf}
+  html.calm .cam-led,html.calm .cam-blink,html.calm .cam-focus{animation:none !important}
+  @media (prefers-reduced-motion:reduce){.cam-head,.cam-mood{transition:none}}
   @media print{.kuya,.kuya-recall{display:none}}
 </style>
 
@@ -171,77 +157,62 @@
     <button type="button" class="kuya-hide" id="kuyaHide"></button>
   </div>
   <button type="button" class="kuya-btn" id="kuyaBtn">
-    <svg viewBox="0 0 100 104" aria-hidden="true" focusable="false">
+    <svg viewBox="0 0 112 84" aria-hidden="true" focusable="false">
       <defs>
-        <clipPath id="kuyaScreenClip"><rect x="15" y="23" width="56" height="50" rx="6"/></clipPath>
-        <clipPath id="kuyaEyeClip"><path d="M22 49 Q43 31 64 49 Q43 67 22 49 Z"/></clipPath>
-        <pattern id="kuyaLines" width="4" height="3" patternUnits="userSpaceOnUse"><rect width="4" height="1.2" fill="#000" opacity=".28"/></pattern>
-        <filter id="kuyaNoise"><feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="1"/><feColorMatrix values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.3"/></filter>
+        <clipPath id="camEyeClip"><circle cx="22" cy="31" r="10.5"/></clipPath>
+        <radialGradient id="camSclera" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#f5f2ec"/><stop offset=".6" stop-color="#ddd5cc"/><stop offset=".9" stop-color="#9a8a82"/><stop offset="1" stop-color="#5c4c46"/></radialGradient>
+        <radialGradient id="camIris" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#2a2f30"/><stop offset=".45" stop-color="#6f7f80"/><stop offset=".8" stop-color="#4a5a5c"/><stop offset=".95" stop-color="#101414"/><stop offset="1" stop-color="#050505"/></radialGradient>
+        <linearGradient id="camBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9e7e1"/><stop offset=".55" stop-color="#c9c6be"/><stop offset="1" stop-color="#8f8c85"/></linearGradient>
+        <linearGradient id="camHood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4a4a"/><stop offset="1" stop-color="#1e1e1e"/></linearGradient>
+        <filter id="kuyaNoise"><feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="1"/><feColorMatrix values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.3"/></filter>
       </defs>
-      <ellipse class="kuya-shadow" cx="50" cy="99" rx="30" ry="3.5" fill="#000"/>
-      <g class="kuya-float">
-        <!-- antennas -->
-        <g class="kuya-ant">
-          <path d="M42 17 L30 3 M58 17 L71 4" stroke="#0A0A0A" stroke-width="5" stroke-linecap="square"/>
-          <path d="M42 17 L30 3 M58 17 L71 4" stroke="#D8D6CC" stroke-width="2.4" stroke-linecap="square"/>
-          <circle cx="30" cy="3" r="2.6" fill="#E00000" stroke="#0A0A0A" stroke-width="1.4"/>
+      <!-- wall plate + cable (stay still) -->
+      <rect x="96" y="12" width="13" height="38" rx="1.5" fill="#3a3a3a" stroke="#0a0a0a" stroke-width="1.4"/>
+      <circle cx="102.5" cy="17" r="1.2" fill="#8a8a8a"/><circle cx="102.5" cy="45" r="1.2" fill="#8a8a8a"/>
+      <path d="M98 50 C 94 64, 104 70, 96 82" fill="none" stroke="#0a0a0a" stroke-width="2.4"/>
+      <!-- arm to the pivot -->
+      <path d="M96 30 H88" stroke="#0a0a0a" stroke-width="5.2"/><path d="M96 30 H88" stroke="#6a6a6a" stroke-width="2.6"/>
+      <g class="cam-head"><g class="cam-mood">
+        <circle cx="88" cy="30" r="4.6" fill="#2a2a2a" stroke="#0a0a0a" stroke-width="1.4"/>
+        <!-- housing -->
+        <rect x="18" y="19" width="66" height="24" rx="3" fill="url(#camBody)" stroke="#0a0a0a" stroke-width="1.8"/>
+        <path d="M22 24 H80" stroke="#fff" stroke-width="1" opacity=".55"/>
+        <!-- sun hood, overhanging the lens -->
+        <path d="M6 13 L84 13 L84 21 L10 21 Z" fill="url(#camHood)" stroke="#0a0a0a" stroke-width="1.6"/>
+        <!-- label + LCD + LED -->
+        <rect x="40" y="32.4" width="27" height="7.4" fill="#0e1f12" stroke="#0a0a0a" stroke-width=".8"/>
+        <g class="cam-text">
+          <text x="40" y="29.6" font-family="monospace" font-size="4.6" font-weight="700" fill="#2a2a2a" letter-spacing=".4">I.R.I.S.</text>
+          <text class="cam-lcd-t" id="kuyaLcd" x="42" y="38.2">REC</text>
         </g>
-        <!-- signal waves (antenna trick) -->
-        <g class="kuya-wave" fill="none" stroke="#FF2A2A" stroke-width="1.6" style="transform-origin:30px 3px">
-          <path d="M24 -2 Q30 -8 36 -2"/><path d="M20 -5 Q30 -14 40 -5"/>
-        </g>
-        <!-- Zz (nap trick) -->
-        <text class="kuya-zz" x="74" y="12" font-family="monospace" font-size="11" font-weight="700" fill="#EAEAEA" stroke="#0A0A0A" stroke-width=".6">Zz</text>
-        <!-- feet -->
-        <rect x="19" y="80" width="13" height="8" fill="#0A0A0A"/>
-        <rect x="68" y="80" width="13" height="8" fill="#0A0A0A"/>
-        <!-- the set -->
-        <rect x="7" y="16" width="86" height="66" rx="3" fill="#D8D6CC" stroke="#0A0A0A" stroke-width="2.5"/>
-        <rect x="7" y="16" width="86" height="66" rx="3" fill="url(#kuyaLines)" opacity=".5"/>
-        <!-- dials + speaker grille -->
-        <circle cx="82" cy="31" r="4.2" fill="#0A0A0A"/><path d="M82 31 L84.5 28.5" stroke="#D8D6CC" stroke-width="1.4"/>
-        <circle cx="82" cy="44" r="4.2" fill="#0A0A0A"/><path d="M82 44 L79 42.5" stroke="#D8D6CC" stroke-width="1.4"/>
-        <path d="M77 55 H87 M77 59 H87 M77 63 H87 M77 67 H87 M77 71 H87" stroke="#0A0A0A" stroke-width="1.6"/>
-        <!-- the screen -->
-        <rect x="13" y="21" width="60" height="54" rx="7" fill="#0A0A0A"/>
-        <g clip-path="url(#kuyaScreenClip)"><g class="kuya-tube">
-          <rect class="kuya-screen" x="15" y="23" width="56" height="50"/>
-          <rect x="15" y="23" width="56" height="50" fill="url(#kuyaLines)"/>
-          <!-- the eye -->
-          <g class="kuya-open">
-            <path d="M22 49 Q43 31 64 49 Q43 67 22 49 Z" fill="#F2F2EE"/>
-            <g clip-path="url(#kuyaEyeClip)">
-              <g class="kuya-iris" id="kuyaIris">
-                <circle cx="43" cy="49" r="9" fill="#1A1A1A"/>
-                <circle cx="43" cy="49" r="9" fill="none" stroke="#3A3A3A" stroke-width="2.4" stroke-dasharray="1.4 1.2"/>
-                <circle class="kuya-pupil" cx="43" cy="49" r="4" fill="#000"/>
-                <path class="kuya-heart" d="M43 54 C36 49 39 43 43 46.5 C47 43 50 49 43 54 Z" fill="#E00000"/>
-                <circle cx="46" cy="46" r="1.8" fill="#FFF"/>
-              </g>
-              <path class="kuya-veins" d="M23 49 L29 47 L31 49 M23 50 L28 52 M63 48 L57 46 L55 48 M63 50 L58 52.5" stroke="#E00000" stroke-width=".9" fill="none"/>
-              <path class="kuya-lid" d="M18 30 H68 V48 Q43 40 18 48 Z" fill="#0A0A0A"/>
+        <circle class="cam-led" cx="75" cy="30" r="2.6" stroke="#0a0a0a" stroke-width=".8"/>
+        <circle class="cam-ir" cx="75" cy="36.5" r="1.6" fill="#ff4d4d"/>
+        <!-- the lens: a real eye behind glass -->
+        <g class="cam-lens" style="transform-box:fill-box;transform-origin:center">
+          <circle cx="22" cy="31" r="14" fill="#0a0a0a"/>
+          <circle class="cam-focus" cx="22" cy="31" r="12.6" fill="none" stroke="#4a4a4a" stroke-width="1.6" stroke-dasharray="2 1.4"/>
+          <g class="cam-eye" clip-path="url(#camEyeClip)">
+            <circle cx="22" cy="31" r="10.5" fill="url(#camSclera)"/>
+            <g class="kuya-iris" id="kuyaIris">
+              <circle cx="22" cy="31" r="5.6" fill="url(#camIris)"/>
+              <circle cx="22" cy="31" r="4" fill="none" stroke="#9aa6a6" stroke-opacity=".5" stroke-width="2.6" stroke-dasharray=".45 .8"/>
+              <circle class="cam-iris-tint" cx="22" cy="31" r="5.6" fill="#c8862a"/>
+              <circle class="kuya-pupil" cx="22" cy="31" r="2.3" fill="#000"/>
+              <circle cx="24" cy="29" r="1.1" fill="#fff" opacity=".9"/>
             </g>
-            <path d="M22 49 Q43 31 64 49 Q43 67 22 49 Z" fill="none" stroke="#0A0A0A" stroke-width="1.6"/>
+            <path class="cam-veins" d="M12 31 L15.5 30 L17 31.6 M12 32.5 L15 34 M32 30 L28.5 29 L27 30.6 M32 32 L29 33.6" stroke="#c00000" stroke-width=".6" fill="none"/>
+            <!-- your reflection (the mirror) -->
+            <g class="cam-mirror"><circle cx="22" cy="31" r="10.5" fill="#0b0d0c"/><circle cx="22" cy="28" r="3" fill="#e9e9e9"/><path d="M15.5 41.5 Q22 31.5 28.5 41.5 Z" fill="#e9e9e9"/></g>
+            <rect class="kuya-static" x="11" y="20" width="22" height="22" filter="url(#kuyaNoise)"/>
+            <!-- lids / shutter: blink, squint, close -->
+            <rect class="cam-lid top" x="11" y="20.5" width="22" height="10.5" fill="#0a0a0a"/>
+            <rect class="cam-lid bot" x="11" y="31" width="22" height="10.5" fill="#0a0a0a"/>
+            <rect class="cam-blink cam-lid top" x="11" y="20.5" width="22" height="10.5" fill="#0a0a0a" style="transform-origin:50% 0"/>
+            <circle class="cam-flash" cx="22" cy="31" r="10.5" fill="#fff"/>
           </g>
-          <path class="kuya-closed happy" d="M26 52 Q43 38 60 52" stroke="#0A0A0A" stroke-width="3.4" fill="none" stroke-linecap="square"/>
-          <path class="kuya-closed wink" d="M26 49 H60 M30 49 L27 53 M43 49 V54 M56 49 L59 53" stroke="#0A0A0A" stroke-width="3" fill="none"/>
-          <path class="kuya-tear" d="M33 58 C35 62 36 64 33 66.5 C30 64 31 62 33 58 Z" fill="#F2F2EE" stroke="#0A0A0A" stroke-width="1"/>
-          <g class="kuya-spark" fill="#0A0A0A"><path d="M64 28 L65.5 32 L69.5 33.5 L65.5 35 L64 39 L62.5 35 L58.5 33.5 L62.5 32 Z"/><path d="M22 62 L23 64.5 L25.5 65.5 L23 66.5 L22 69 L21 66.5 L18.5 65.5 L21 64.5 Z"/></g>
-          <g class="kuya-dots" fill="#F2F2EE"><circle cx="54" cy="68" r="1.6"/><circle cx="59" cy="68" r="1.6"/><circle cx="64" cy="68" r="1.6"/></g>
-          <!-- REC tag -->
-          <rect x="17" y="25" width="17" height="7" fill="#0A0A0A"/>
-          <circle class="kuya-rec" cx="20.5" cy="28.5" r="1.8" fill="#FF2A2A"/>
-          <text x="23.5" y="30.6" font-family="monospace" font-size="5.2" font-weight="700" fill="#EAEAEA">REC</text>
-          <!-- static burst (trick) -->
-          <rect class="kuya-static" x="15" y="23" width="56" height="50" filter="url(#kuyaNoise)"/>
-          <!-- glass glare -->
-          <!-- vertical-hold band (roll trick) -->
-          <rect class="kuya-roll" x="15" y="23" width="56" height="7" fill="#FFF"/>
-          <!-- colour bars (bars trick) -->
-          <g class="kuya-bars"><rect x="15" y="23" width="8" height="50" fill="#C0C0C0"/><rect x="23" y="23" width="8" height="50" fill="#C0C000"/><rect x="31" y="23" width="8" height="50" fill="#00C0C0"/><rect x="39" y="23" width="8" height="50" fill="#00C000"/><rect x="47" y="23" width="8" height="50" fill="#C000C0"/><rect x="55" y="23" width="8" height="50" fill="#C00000"/><rect x="63" y="23" width="8" height="50" fill="#0000C0"/></g>
-          <path d="M17 27 Q30 24 44 25 L40 29 Q28 29 17 33 Z" fill="#FFF" opacity=".16"/>
-        </g></g>
-      </g>
+          <path d="M14 25 Q19 21 26 22" stroke="#fff" stroke-width="1.2" fill="none" opacity=".35"/>
+        </g>
+      </g></g>
     </svg>
   </button>
 </div>
@@ -252,9 +223,10 @@
     const PAGE = <?!= JSON.stringify(String(page || 'home')).replace(/</g, '\\u003c') ?>;
     const FACES = ['nervous', 'happy', 'excited', 'sad', 'scared', 'wink', 'love', 'thinking'];
     const MOVES = { excited: 'hop', scared: 'scared' };   // faces that come with a little move
-    const MOVES_IDLE = ['lean', 'tilt', 'shiver', 'antenna', 'spin', 'nap', 'jump', 'wobble', 'flip', 'peek'];   // body animations
-    const EFFECTS = ['glitch', 'static', 'scan', 'stare', 'panic', 'roll', 'bars', 'zoom', 'eyeroll'];         // screen effects (panic = screen goes red)
-    const TRICK_MS = { nap: 3100, peek: 2700, lean: 2300, roll: 2300, bars: 1700, zoom: 1700, flip: 1200, jump: 1100, wobble: 1400, eyeroll: 1300 };
+    const MOVES_IDLE = ['scan', 'nod', 'recoil', 'shiver', 'jolt', 'crane', 'peek'];                            // camera head moves (scan = sweeps the room)
+    const EFFECTS = ['glitch', 'static', 'stare', 'panic', 'irmode', 'refocus', 'shutter', 'flash', 'mirror'];  // lens effects (mirror = the lens shows you)
+    const TRICK_MS = { peek: 2700, crane: 2300, nod: 1900, irmode: 2600, refocus: 1600, mirror: 1900, shutter: 1000 };
+    const LCD = { nervous: 'REC', happy: 'NOTED', excited: 'MATCH', sad: 'IDLE', scared: 'ALERT', wink: 'SAVED', love: 'CLEARED', thinking: 'READING', off: '' };
     const TRICKS = MOVES_IDLE.concat(EFFECTS);
     const TRICK_EVERY = 7000;                             // ms between idle tricks
     const KEY = 'leads-kuya-hidden';
@@ -303,6 +275,7 @@
     function setFace(f, animate) {
       f = okFace(f);
       root.dataset.mood = f;
+      const lcd = document.getElementById('kuyaLcd'); if (lcd) lcd.textContent = LCD[f] || 'REC';
       const c = (M.colors || {})[f];
       if (c) root.style.setProperty('--kuya-c', c); else root.style.removeProperty('--kuya-c');
       if (animate && MOVES[f]) replay(MOVES[f]);
@@ -385,11 +358,17 @@
       queued = false;
       if (scanning) return;
       const r = btn.getBoundingClientRect();
-      const ex = r.left + r.width * .43, ey = r.top + r.height * .47;
-      const dx = px - ex, dy = py - ey, d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 220);
+      // the camera faces the side of the screen with more page in it; the whole head turns toward the pointer
+      // (within its mount's range), then the eye aims. Facing right, the drawing is mirrored, so x flips.
+      const right = r.left + r.width / 2 < innerWidth / 2;
+      root.classList.toggle('facing-right', right);
+      const ex = r.left + r.width * (right ? .8 : .2), ey = r.top + r.height * .37;
+      const dx = (px - ex) * (right ? -1 : 1), dy = py - ey, d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 220);
+      const ang = Math.atan2(dy, -dx) * 180 / Math.PI;                // 0 = straight ahead, + = below, - = above
+      root.style.setProperty('--pan', Math.max(-34, Math.min(30, -ang * .6)).toFixed(1) + 'deg');
       aim(dx / d * k, dy / d * k);
     }
-    function aim(ux, uy) { iris.style.transform = 'translate(' + (ux * 10).toFixed(2) + 'px,' + (uy * 5).toFixed(2) + 'px)'; }
+    function aim(ux, uy) { iris.style.transform = 'translate(' + (ux * 3.2).toFixed(2) + 'px,' + (uy * 2.6).toFixed(2) + 'px)'; }
     function onMove(x, y) { px = x; py = y; if (!queued) { queued = true; requestAnimationFrame(look); } }
     window.addEventListener('pointermove', e => onMove(e.clientX, e.clientY), { passive: true });
     window.addEventListener('touchstart', e => { const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: true });
@@ -547,9 +526,9 @@
         return;
       }
       if (t === 'scan') {                               // the eye sweeps left, right, then back to you
-        const path = [[-1, -.2], [1, -.2], [-.6, .6], [0, 0]];
+        const path = [[-1, -.2, -26], [1, -.2, 20], [-.6, .6, -8], [0, 0, 0]];
         scanning = 1;
-        path.forEach((p, i) => setTimeout(() => aim(p[0], p[1]), i * 380));
+        path.forEach((p, i) => setTimeout(() => { aim(p[0], p[1]); root.style.setProperty('--pan', p[2] + 'deg'); }, i * 420));
         setTimeout(() => { scanning = 0; look(); }, path.length * 380 + 200);
         return;
       }

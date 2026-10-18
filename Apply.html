@@ -1325,7 +1325,7 @@
       pill.className = 'pill ' + getStatusPillClass(st);
       $('existingStatusCopy').textContent = (BRAND.statusCopy && BRAND.statusCopy[st]) || '';
       showState('already-applied');
-      kuya('happy', "Your file is already on record. I'm keeping watch.");
+      kuya('happy', "Your file is already on record. Check the hub for what comes next.");
       return;
     }
 
@@ -1341,7 +1341,7 @@
         contactEl.hidden = false;
       }
       showState('closed');
-      kuya('sad', "Applications are closed for this cycle. The window has shut.");
+      kuya('sad', "Applications are closed for this cycle. Your file can open next year.");
       return;
     }
 

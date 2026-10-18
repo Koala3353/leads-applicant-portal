@@ -774,7 +774,7 @@
     (function loop() {
       setTimeout(() => {
         const busy = document.hidden || document.getElementById('ld').classList.contains('on') || document.documentElement.classList.contains('calm');
-        if (!busy) { (turn++ % 2 ? interrupt : whisper)(); if (window.Kuya && turn % 3 === 0) window.Kuya.say(['scared', 'Did you see that too?'], 4000); }
+        if (!busy) { (turn++ % 2 ? interrupt : whisper)(); if (window.Kuya && turn % 3 === 0) window.Kuya.say(['scared', 'You saw that too. Noted.'], 4000); }
         loop();
       }, wait());
     })();
