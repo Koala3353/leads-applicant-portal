@@ -53,7 +53,7 @@ Member B: your file is **not a page**; `Home.html` pulls it in. Read §9.2 first
 5. **Confirmed:** ACCEPTED + Requirements APPROVED + Payment VERIFIED → automatically **CONFIRMED**.
 6. **Home + Dashboard:** where each person sees where they are, what's next and the right Form links. Member B builds the Dashboard.
 
-**Theme: LEADS: Oversight.** "Oversight" means (1) watchful supervision and (2) an inadvertent error. The fears are being watched, feeling boxed in, and failing; the third reading is oversight as leadership. Tagline "You are being watched. Good. Apply anyway." The mood is **1984-style surveillance, scary-ish but never gory**: CCTV, case files, REC timestamps, watching eyes, warning tape, photocopy grain, CRT scanlines. No blood, skulls, ghosts or horror fonts. The mascot is **I.R.I.S.** (Inspection, Reconnaissance & Identification System: the portal's Big Brother), a little one-eyed CRT whose screen color changes with its emotion (§7.2). Home has a CCTV wall of four custom SVG feeds (CAM 01 Lobby with a figure in the doorway, CAM 02 Hallway with flickering lights and a figure that steps closer, CAM 03 You with red tracking brackets on the pointer, CAM 04 Archive with colour bars and NO SIGNAL); it is Home-only, so don't copy it. Copy can be ominous in headings and labels; instructions and errors stay **clear first, creepy second**.
+**Theme: LEADS: Oversight.** "Oversight" means (1) watchful supervision and (2) an inadvertent error. The fears are being watched, feeling boxed in, and failing; the third reading is oversight as leadership. Brand-book concept: **"I Can See You / Do You See Yourself?"**: it starts unsettling and ends introspective; the applicant feels watched, then realizes the observer is a mirror (tone and voice in §7.5). Tagline "Someone is already watching. Apply anyway." The mood is **1984-style surveillance and analog horror, eerie, with scripted jump scares allowed, but never gory**: CCTV, case files, REC timestamps, watching eyes, warning tape, photocopy grain, CRT scanlines. No blood, skulls, ghosts or horror fonts. The mascot is **I.R.I.S.** (Inspection, Reconnaissance & Identification System: the portal's Big Brother), a little one-eyed CRT whose screen color changes with its emotion (§7.2). Home has a CCTV wall of four custom SVG feeds (CAM 01 Lobby with a figure in the doorway, CAM 02 Hallway with flickering lights and a figure that steps closer, CAM 03 You with red tracking brackets on the pointer, CAM 04 Archive with colour bars and NO SIGNAL); it is Home-only, so don't copy it. Copy can be ominous in headings and labels; instructions and errors stay **clear first, creepy second**.
 
 **Users:** Ateneo students, mostly **on phones**, signed in with `@student.ateneo.edu`. Timezone **Asia/Manila**. Currency **₱**.
 
@@ -460,12 +460,12 @@ No `<!DOCTYPE>`/`<html>`/`<head>`/`<body>`, Styles, Loader, Mascot or PageTop: H
 ### 7.1 Look and classes
 - A surveillance case file on a dark CRT. Near-black background (`--night`), files in `--night-2`, **square corners everywhere** (`--radius` is 0), 1.5px borders, hairline grids. Palette is only black, white `--text`, grey `--muted`, warning-tape yellow `--glow` (main button, labels, countdown), CRT blue `--blue` (button shadows, glow) and alarm red `--danger` (errors, REC dot, "FEAR //" lines). `--sky` is a lighter blue only for links.
 - Type: **Anton** (condensed grotesque) for uppercase headlines, **JetBrains Mono** for labels, buttons and data (uppercase, letter-spaced), **Inter** for body text. Buttons are mono uppercase with a hard blue offset shadow.
-- Analog horror is already laid over every page by Styles.html: moving grain, scanlines, a rolling VHS tracking band and a dark vignette. Don't add your own. Put class `rgb` on **one** big headline per page for the red/blue tape misregistration. The "signal interrupted" cutaways and whispering tagline are Home only; never add flashing or jump scares to a page with a form. Use bracket/slash labels sparingly (`FILE 01 // APPLY`, `[ CASE FILE ]`). Never gore or Halloween (§2.1).
+- Analog horror is already laid over every page by Styles.html: moving grain, scanlines, a rolling VHS tracking band and a dark vignette. Don't add your own. Put class `rgb` on **one** big headline per page for the red/blue tape misregistration. The "signal interrupted" cutaways and whispering tagline are Home only. **Jump scares are allowed** (owner's decision, Oct 2026; currently the Game reveal and Home cutaways), but never while someone is typing or choosing an answer (not on Apply's fields, not mid-question in the Game), never strobing (one flash at most), and always skipped in CRT-off mode and for reduced motion. Use bracket/slash labels sparingly (`FILE 01 // APPLY`, `[ CASE FILE ]`). Never gore or Halloween (§2.1).
 - **CSS variables:** `--night` (bg), `--night-2` (card), `--text`, `--muted`, `--sky` (links/eyebrows), `--glow` (yellow), `--blue`, `--pink`, `--danger`, `--ok`, `--line` (borders), `--radius`; fonts `--display`, `--body`, `--mono`, `--kicker` (one short mono label like "Case file 26/27", never body text). I.R.I.S.'s emotion colors are in `BRAND.mascot.colors` on the client.
 - **Classes (Styles.html):** `.wrap` (container), `.page-head` (+ `.eyebrow`, `h1`, `p`), `.card`, `.btn` (yellow) / `.btn.ghost` (outline; `aria-disabled="true"` or `disabled` greys out), `.pill` + `.ok`/`.warn`/`.wait`/`.dim`, `.field-error`, `.mono`, `.eyebrow`. `.notice`/`.notice.warn` live in Home; copy the rule if needed.
 - **Retro layer (Oct 2026, end of Styles.html):** the portal is a 90s OS left in a basement. `.btn` / `.btn.ghost` are bevelled 90s buttons (VT323, `--os`) that push in on click; `.card` is a dark bevelled window with a cut corner and a misregistered blue ghost outline; `.top` is a grey taskbar; dialogs get a grey frame and a navy title bar; fields are sunken (`border:2px inset`). Opt-in pieces: `.winbar` (title bar, first child of a `.card`; set `--py/--px` if the card's padding isn't 20px/22px), `.torn` (zigzag bottom edge), `.cut` / `.glitch-corner` (broken outlines), `.scrap` (taped paper note, `--r` = tilt), `.tape-strip`, `.stamp-ink`, `.redbar` (decorative redaction bar), and `.reye` (photo-like monochrome eye; markup `<span class="reye"><span class="reye-ball"><i></i></span></span>`, pupil follows `--px/--py`). Fonts: `--os` (VT323) for OS chrome, `--type` (Special Elite) for paper. **Tilt and overlap decoration, never inputs, answer choices or submit buttons**, and never put `.torn`/`.cut` (masks/clips) on a card that holds a dropdown. Home: stacked CRT TVs with eyes + a "You are being watched" poster, tilted windows, FAQ as manila case folders (fields, redaction bars, stamp, clipped photo), testimonials as torn printouts.
 - **Badge colors:** CONFIRMED/ACCEPTED/APPROVED/VERIFIED `.ok` · REJECTED/RETURNED/WITHDRAWN `.warn` · SUBMITTED/UNDER REVIEW/WAITLISTED/PARTIAL `.wait` · NONE/locked `.dim`.
-- **Copy:** `BRAND.statusCopy[status]` for status sentences. Fear theme in headings and empty states; errors plain: what happened + what to do.
+- **Copy:** `BRAND.statusCopy[status]` for status sentences. Fear theme in headings and empty states; errors plain: what happened + what to do. Follow the voice in §7.5.
 - **No** searchlight or watching-eye background effects on your page (Home only). I.R.I.S. already watches every page.
 - **Loading:** the Loader covers first load and page changes. For a slow action you may `Loader.show('Sending your application…')` and `Loader.hide()` in `finally`; quick actions use inline button text ("Saving…"). Always hide on error too.
 
@@ -519,6 +519,31 @@ PageTop always has **Sign out**. "Not signed in" state → **Sign in** button (`
 - Every input has a visible `<label for>` above it. `autocomplete` (`name`, `nickname`, `tel`), `maxlength`, live counters on essays ("120 / 1000, need 50+"). Errors next to the field (`aria-describedby`) **and** a summary at the top; focus and scroll to the first error.
 - Inputs on dark: use the `.field` CSS in §8.3 (readable dropdown options too).
 - Loading text `role="status"`, errors `role="alert"`, actions are `<button>`, navigation is `<a>`. Color is never the only signal (pills have text). `prefers-reduced-motion` is already handled by Styles.
+
+### 7.5 Tone and voice (from the LEADS brand book)
+
+**Concept.** "I Can See You / Do You See Yourself?" Three readings of Oversight: surveillance (being watched, boxed in), error (fear of failing), leadership (agency). Method: reflection through case study; every applicant is a subject who ends up reading their own file. Through-line: *Fear gets your attention. The mirror keeps it.* Message: *You were never being hunted; you were being asked to look.*
+
+**Personality.** Deadpan, clinical, observant, intimate. LEADS speaks in the second person, like a study that knows you a little too well, and it **always ends on an invitation, never a threat**.
+
+**Do**
+- Short declarative sentences. Speak to "you" directly.
+- Borrow study and case-file vocabulary: subject, file, finding, protocol, observation, debrief, intake, clearance.
+- Save the reveal for the last line. Keep it quiet and specific (a time, a number, a detail they just did).
+- Let the scare be visual and timed (jump scares are allowed, §7.1); let the words stay calm.
+
+**Don't**
+- Gore, blood, injury or body horror.
+- Jokes at the expense of the unsettling mood.
+- Over-explain the fear.
+- End a line, screen or flow on a threat. A scary beat is followed by an invitation (e.g. "FOUND YOU." then "Now look closer.").
+- Shout: no exclamation marks, no emoji. All caps only for labels, stamps and broadcast cards.
+
+**Sample lines.** "We have been watching. Please remain seated." / "Subject 000, your file is ready." / "Who are you when you're not performing?" / "You were never being hunted. You were being asked to look."
+
+**Where the voice bends.** Instructions, form labels, errors and anything legal (consent, RA 10173) stay **clear first, creepy second**: plain words, what happened, what to do. The voice lives in headings, empty states, I.R.I.S., the Game, cutaways and stamps.
+
+**Visual language (same book).** Elements: eyes, CCTV, signage ("YOUR ACTIONS ARE BEING MONITORED"), subject tags and numbers, REC + timestamp + detection boxes, manila folders and intake forms, negative portraits with notes, mask and mirror. Layout templates: **Case File** (folder/intake form, photo corner, stamped fields, handwritten notes), **Live Feed** (monitor frame, REC, timestamp, status bar "MISSION STATUS: IN PROGRESS"), **System Dialog** (retro OS windows), **Broadcast Card** (solid blue field, bold centered caps, simple icon), **Negative + Findings** (inverted portrait with a typed note). Photo phases: **Surveillance** (high, wide, cold, grain, dither, timestamp), **Reveal** (eye-level, close, into a mirror, cleaner, a warm note allowed), **Negatives** (inverted portrait paired with a typed finding).
 
 ---
 
