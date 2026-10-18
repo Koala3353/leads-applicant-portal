@@ -46,7 +46,7 @@ Three separate tracks, so payment can come before *or* after acceptance:
 | `Brand.gs` | anyone | All copy, colors, fonts. Edit this to re-theme |
 | `Setup.gs` | Keene | Sheet validation, colors, Log protection. Safe to re-run |
 | `HomeApi.gs` + `Home.html` | Keene | The hub |
-| `Styles.html`, `PageTop.html`, `Loader.html`, `Mascot.html` | shared | Base theme; top bar with "Back to the hub"; SVG loading overlay; I.R.I.S. the mascot, a one-eyed CRT (lines, faces and screen colors in `BRAND.mascot`, turn off with `show: false`) |
+| `Styles.html`, `PageTop.html`, `Loader.html`, `Mascot.html` | shared | Base theme; top bar with "Back to the hub"; SVG loading overlay; I.R.I.S. the mascot, a wall-mounted CCTV camera (lines, faces and LED colors in `BRAND.mascot`, turn off with `show: false`) |
 | `Apply.html` (+ `ApplyApi.gs`, to create) | Member A | Placeholder: the application form |
 | `Dashboard.html` + `DashboardApi.gs` | Member B | Placeholder inside Home; `dash_get()` starter already works |
 
