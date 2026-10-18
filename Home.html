@@ -216,6 +216,8 @@
     .status{transform:rotate(-1.4deg);margin-left:14px}
   }
   .hero .scrap{margin:18px 0 0 auto;--r:-5deg;font-size:.92rem}
+  /* the note hints at the Threat Assessment: a scrawled red afterthought under the typed lines */
+  .hint-note span{display:block;margin-top:8px;font-size:.85em;color:#9a0000;transform:rotate(-3deg);text-decoration:underline wavy rgba(154,0,0,.6)}
   .clock h2{margin:.5em 0 .7em;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.5rem;letter-spacing:.01em;line-height:1}
   .units{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
   .unit{background:var(--night);padding:12px 4px;text-align:center}
@@ -323,12 +325,16 @@
     .watcher.peek-l{top:auto!important;bottom:14%!important;left:-40px!important;right:auto!important;--s0:50px!important}
     .watcher.peek-r{top:34%!important;right:-40px!important;left:auto!important;bottom:auto!important;--s0:46px!important}
     /* top bar: logo, then who you are, then the three small buttons in one row */
-    .top{gap:10px;padding:12px 0}
-    .logo{font-size:1.35rem}
-    .who{width:100%;gap:8px;font-size:.62rem}
-    .who > span:first-child{flex-basis:100%;overflow-wrap:anywhere}
-    .who b{font-size:.74rem}
-    .who .acct,.who .lights,.who .report-btn{flex:1 1 0;min-height:40px;padding:.4em .5em;font-size:1.05rem;letter-spacing:.06em;text-align:center;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+    /* taskbar on phones: logo, then "logged in as", then the buttons in one even row (no full-width orphan) */
+    .top{gap:10px;padding:8px}
+    .logo{font-size:1.3rem}
+    .who{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;font-size:.66rem}
+    .who > span:first-child{grid-column:1/-1;overflow-wrap:anywhere;padding:2px 2px 4px;line-height:1.5}
+    .who b{display:block;font-size:.78rem}
+    .who .admin-chip.show{grid-column:1/-1}
+    .who .acct,.who .lights,.who .report-btn{min-width:0;min-height:44px;padding:.3em .4em;font-size:1.05rem;letter-spacing:.03em;line-height:1.05;text-align:center;
+      display:inline-flex;align-items:center;justify-content:center;white-space:normal}
+    .who .report-btn::before{margin-right:.35em}
     .rec{font-size:.62rem;gap:4px 12px;margin-bottom:14px}
     h1{font-size:clamp(2.6rem,13vw,3.4rem);line-height:.9}
     h1 .kicker{font-size:.72rem;margin-bottom:.6em}
@@ -422,7 +428,7 @@
           <li data-fact="slots">Slots <b></b></li>
         </ul>
       </div>
-      <p class="scrap" aria-hidden="true">"10 minutes" they said.<br>I rewrote my fear essay 4 times.</p>
+      <p class="scrap hint-note" aria-hidden="true">After the form, they show you three cameras.<br>Only two of them are empty.<span>pick carefully</span></p>
       <div class="card status" id="statusCard" aria-live="polite">
         <span class="pill" id="statusPill">your application</span>
         <p class="big" id="statusBig"></p>

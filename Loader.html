@@ -3,106 +3,92 @@
      - Covers the page while it first loads, then fades out.
        Pages that fetch data first: add data-loader-wait to the body tag and call Loader.hide() when ready.
      - Shows again automatically when someone clicks a link to another portal page.
-     - Loader.show('Uploading…') / Loader.hide() can also be used for slow actions. -->
+     - Loader.show('Uploading…') / Loader.hide() can also be used for slow actions.
+     Look: matches the retro layer in Styles.html. A 90s "CONNECTING.EXE" window over a dark, grainy CRT, with the
+     photo-like eye (.reye) on a little monitor, a block progress bar and a REC clock. -->
 <style>
-  /* Transition = an old CRT. Leaving a page: the screen shuts from a bright centre line outward (240ms).
-     Page ready: it collapses back to a line and blinks off (360ms), revealing the page.
-     Only clip-path / opacity / transform animate. Reduced motion: a plain fade. */
-  .ld{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;
-    background:radial-gradient(520px 380px at 50% 46%,color-mix(in srgb,var(--night-glow) 75%,transparent),transparent 72%),var(--night);
-    clip-path:inset(50% 0 50% 0);visibility:hidden;
-    transition:clip-path .36s cubic-bezier(.77,0,.175,1),visibility 0s linear .36s}
-  .ld.on{clip-path:inset(0 0 0 0);visibility:visible;transition:clip-path .24s cubic-bezier(.23,1,.32,1),visibility 0s}
-  /* the bright scan line at the centre, flashed on open and close */
-  .ld-line{position:fixed;left:0;right:0;top:50%;height:2px;margin-top:-1px;z-index:10000;pointer-events:none;
-    background:#fff;box-shadow:0 0 18px 4px rgba(122,134,255,.8);opacity:0;transform:scaleX(0)}
-  .ld-line.flash{animation:ldLine .42s cubic-bezier(.23,1,.32,1)}
-  @keyframes ldLine{0%{opacity:1;transform:scaleX(.15)}45%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1)}}
-  .ld-box{display:flex;flex-direction:column;align-items:center;gap:16px;opacity:0;transform:scale(.96);transition:opacity .2s ease,transform .3s cubic-bezier(.23,1,.32,1)}
-  .ld.on .ld-box{opacity:1;transform:none;transition-delay:.08s}
-  /* CCTV readout under the message: elapsed time + an indeterminate tape */
-  .ld-meta{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;color:var(--muted)}
-  .ld-tape{width:120px;height:4px;border:1px solid var(--line);position:relative;overflow:hidden}
-  .ld-tape::after{content:"";position:absolute;inset:0;width:40%;background:var(--glow);animation:ldTape 1s cubic-bezier(.77,0,.175,1) infinite}
-  @keyframes ldTape{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
-  .ld svg{width:148px;height:148px;overflow:visible}
-  .ld-msg{margin:0;min-height:1.4em;font-family:var(--mono);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);text-align:center;padding:0 16px;
-    transition:opacity .25s ease}
+  /* Flow: opening = the backdrop fades in (180ms) while the window pops up from slightly small, with one soft CRT
+     brightness flicker. Closing = the window shrinks away like a minimise (220ms), then the backdrop fades (320ms).
+     Only opacity / transform / filter animate, so it stays smooth on phones. */
+  .ld{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:16px;
+    background:radial-gradient(560px 400px at 50% 46%,color-mix(in srgb,var(--night-glow) 30%,transparent),transparent 72%),var(--night);
+    opacity:0;visibility:hidden;transition:opacity .32s cubic-bezier(.4,0,.2,1) .12s,visibility 0s linear .44s}
+  .ld.on{opacity:1;visibility:visible;transition:opacity .18s cubic-bezier(.4,0,.2,1),visibility 0s}
+  /* its own grain + scanlines (it sits above the page's) */
+  .ld::before,.ld::after{content:"";position:absolute;inset:0;pointer-events:none}
+  .ld::before{background:repeating-linear-gradient(0deg,rgba(0,0,0,.28) 0 1px,transparent 1px 3px)}
+  .ld::after{inset:-40px;opacity:.16;animation:grain .5s steps(4) infinite;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+
+  /* the window */
+  .ld-win{position:relative;z-index:1;width:min(340px,100%);padding:4px;background:var(--win,#c0c0c0);
+    box-shadow:var(--bevel-out),8px 8px 0 #000;transform:rotate(-1.2deg) scale(.94);opacity:0;
+    transition:transform .22s cubic-bezier(.4,0,1,1),opacity .2s ease}
+  .ld.on .ld-win{transform:rotate(-1.2deg) scale(1);opacity:1;transition:transform .34s cubic-bezier(.2,.9,.3,1.15) .06s,opacity .2s ease .06s;
+    animation:ldPower .5s ease-out .06s 1}
+  @keyframes ldPower{0%{filter:brightness(2.2) contrast(.6)}35%{filter:brightness(.8)}60%{filter:brightness(1.25)}100%{filter:none}}
+  .ld-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 3px 3px 8px;
+    background:linear-gradient(90deg,var(--title-a,#000080),var(--title-b,#1084d0));color:#fff;font:400 1.12rem/1.15 var(--os,monospace);letter-spacing:.04em}
+  .ld-bar i{display:flex;gap:2px;font-style:normal}
+  .ld-bar b{display:grid;place-items:center;width:18px;height:16px;background:var(--win,#c0c0c0);color:#000;box-shadow:var(--bevel-out);font:700 11px/1 monospace}
+  .ld-body{display:grid;gap:12px;margin-top:4px;padding:14px 14px 12px;background:var(--night);box-shadow:var(--bevel-dark-in)}
+
+  /* a small CRT monitor with the eye in it */
+  .ld-crt{position:relative;container-type:inline-size;display:grid;place-items:center;aspect-ratio:16/9;overflow:hidden;border-radius:12%/18%;
+    background:#0b0b0b;box-shadow:inset 0 0 22px rgba(0,0,0,.95),0 0 0 3px #1a1a1a,0 0 0 6px #4a4a4a}
+  .ld-crt::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    background:radial-gradient(ellipse at 35% 25%,rgba(255,255,255,.12),transparent 45%),repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0 1px,transparent 1px 3px)}
+  .ld-crt .reye{--s:96cqw}
+  /* the eye looks around on its own (slow moves, then holds) */
+  .ld-crt .reye-ball i{animation:ldLook 5.2s cubic-bezier(.65,0,.35,1) infinite}
+  @keyframes ldLook{0%,18%{transform:translate(0,0)}24%,42%{transform:translate(-62%,-6%)}48%,64%{transform:translate(58%,4%)}70%,88%{transform:translate(8%,10%)}94%,100%{transform:translate(0,0)}}
+  .ld-crt .ld-rec{position:absolute;left:8%;top:9%;z-index:4;font:400 .95rem/1 var(--os,monospace);letter-spacing:.08em;color:var(--danger);display:flex;align-items:center;gap:5px}
+  .ld-crt .ld-rec::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--danger);animation:ldPulse 1.2s steps(1) infinite}
+  .ld-crt .ld-clock{position:absolute;right:8%;bottom:9%;z-index:4;font:400 .95rem/1 var(--os,monospace);letter-spacing:.06em;color:#ddd;font-variant-numeric:tabular-nums}
+  @keyframes ldPulse{50%{opacity:0}}
+
+  .ld-msg{margin:0;min-height:1.3em;font:400 1.2rem/1.25 var(--os,monospace);letter-spacing:.04em;color:var(--text);text-align:left;transition:opacity .25s ease}
+  .ld-msg::before{content:"C:\\> ";color:var(--glow)}
   .ld-msg.swap{opacity:0}
+  /* classic block progress bar (indeterminate: the blocks glide across, never jump) */
+  .ld-prog{position:relative;height:20px;overflow:hidden;background:#060606;box-shadow:var(--bevel-dark-in)}
+  .ld-prog span{position:absolute;top:3px;bottom:3px;left:0;width:45%;
+    background:repeating-linear-gradient(90deg,var(--title-b,#1084d0) 0 9px,transparent 9px 12px);animation:ldBlocks 1.6s cubic-bezier(.45,0,.55,1) infinite}
+  @keyframes ldBlocks{from{transform:translateX(-105%)}to{transform:translateX(230%)}}
 
-  /* the ring: a camera lens focusing */
-  .ld-arc{transform-origin:66px 66px;animation:ld-spin 1.15s linear infinite}
-  .ld-arc2{transform-origin:66px 66px;animation:ld-spin 1.9s linear infinite reverse;opacity:.6}
-  /* the eye in the middle: looks around, blinks, never stops watching */
-  .ld-look{animation:ld-look 3.4s steps(1) infinite}
-  .ld-lid{transform-box:fill-box;transform-origin:center;animation:ld-blink 3.4s ease-in-out infinite}
-  .ld-rec{animation:ld-pulse 1.2s steps(1) infinite}
-
-  @keyframes ld-spin{to{transform:rotate(360deg)}}
-  @keyframes ld-blink{0%,40%,48%,100%{transform:scaleY(1)}44%{transform:scaleY(.06)}}
-  @keyframes ld-look{0%,22%{transform:translate(0,0)}23%,46%{transform:translate(-9px,-2px)}47%,70%{transform:translate(9px,1px)}71%,100%{transform:translate(0,3px)}}
-  @keyframes ld-pulse{50%{opacity:0}}
-
+  html.calm .ld::after,html.calm .ld.on .ld-win{animation:none}
   @media (prefers-reduced-motion:reduce){
-    .ld-arc,.ld-arc2,.ld-look,.ld-lid,.ld-rec,.ld-tape::after{animation:none!important}
-    .ld,.ld.on{clip-path:none;transition:opacity .2s ease,visibility 0s linear .2s}
-    .ld{opacity:0}.ld.on{opacity:1;transition:opacity .15s ease,visibility 0s}
-    .ld-line{display:none}
+    .ld-win,.ld.on .ld-win{transform:rotate(-1.2deg);transition:opacity .15s ease;animation:none}
+    .ld-crt .reye-ball i,.ld-prog span,.ld::after,.ld-rec::before{animation:none!important}
+    .ld-prog span{width:100%;transform:none}
   }
 </style>
 
 <div class="ld on" id="ld" role="status" aria-live="polite" aria-busy="true">
-  <div class="ld-box">
-    <svg viewBox="0 0 132 132" aria-hidden="true" focusable="false">
-      <!-- track + two arcs -->
-      <circle cx="66" cy="66" r="52" fill="none" style="stroke:var(--line)" stroke-width="2"/>
-      <circle class="ld-arc" cx="66" cy="66" r="52" fill="none" style="stroke:var(--glow)" stroke-width="3.5"
-              stroke-linecap="butt" stroke-dasharray="70 257"/>
-      <circle class="ld-arc2" cx="66" cy="66" r="44" fill="none" style="stroke:var(--sky)" stroke-width="1.5"
-              stroke-linecap="round" stroke-dasharray="18 34 6 34"/>
-
-      <!-- the eye -->
-      <!-- a photo-like eye: shaded sclera, fibrous iris, lid shadow, wet highlight (monochrome, like CCTV) -->
-      <defs>
-        <clipPath id="ldEyeClip"><path d="M30 66 Q66 36 102 66 Q66 96 30 66 Z"/></clipPath>
-        <radialGradient id="ldSclera" cx="50%" cy="48%" r="60%"><stop offset="0" stop-color="#f4f2ee"/><stop offset=".55" stop-color="#dcd8d2"/><stop offset=".85" stop-color="#9d9893"/><stop offset="1" stop-color="#5e5a57"/></radialGradient>
-        <radialGradient id="ldIris" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#2a2a2a"/><stop offset=".45" stop-color="#7b7f80"/><stop offset=".8" stop-color="#4b4f50"/><stop offset=".93" stop-color="#151515"/><stop offset="1" stop-color="#050505"/></radialGradient>
-        <linearGradient id="ldLidShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".7"/><stop offset=".35" stop-color="#000" stop-opacity="0"/><stop offset=".85" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></linearGradient>
-      </defs>
-      <g class="ld-lid">
-        <path d="M30 66 Q66 36 102 66 Q66 96 30 66 Z" fill="url(#ldSclera)"/>
-        <g clip-path="url(#ldEyeClip)"><g class="ld-look">
-          <circle cx="66" cy="66" r="15" fill="url(#ldIris)"/>
-          <circle cx="66" cy="66" r="10.5" fill="none" stroke="#9aa0a0" stroke-opacity=".55" stroke-width="7" stroke-dasharray=".5 1.1"/>
-          <circle cx="66" cy="66" r="6" fill="#000"/>
-          <circle cx="71" cy="61" r="2.4" fill="#FFF" fill-opacity=".95"/>
-          <circle cx="62" cy="71" r="1" fill="#FFF" fill-opacity=".35"/>
-        </g>
-        <rect x="28" y="40" width="76" height="52" fill="url(#ldLidShade)"/></g>
-        <path d="M30 66 Q66 36 102 66 Q66 96 30 66 Z" fill="none" style="stroke:var(--night)" stroke-width="2"/>
-      </g>
-      <circle class="ld-rec" cx="52" cy="112" r="2.4" style="fill:var(--danger)"/>
-      <text x="58" y="114.5" font-family="monospace" font-size="7.5" font-weight="700" letter-spacing="1" style="fill:var(--text)">REC</text>
-    </svg>
-    <p class="ld-msg" id="ldMsg">Establishing connection…</p>
-    <div class="ld-meta" aria-hidden="true"><span id="ldClock">REC 00:00</span><span class="ld-tape"></span></div>
+  <div class="ld-win">
+    <div class="ld-bar" aria-hidden="true"><span>CONNECTING.EXE</span><i><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+    <div class="ld-body">
+      <div class="ld-crt" aria-hidden="true">
+        <span class="reye"><span class="reye-ball"><i></i></span></span>
+        <span class="ld-rec">REC</span><span class="ld-clock" id="ldClock">00:00</span>
+      </div>
+      <p class="ld-msg" id="ldMsg">Establishing connection…</p>
+      <div class="ld-prog" aria-hidden="true"><span></span></div>
+    </div>
   </div>
 </div>
-<div class="ld-line" id="ldLine" aria-hidden="true"></div>
 
 <script>
   /** Page-transition overlay. Loader.show(msg?) / Loader.hide(). */
   window.Loader = (function () {
     const el = document.getElementById('ld');
     const msg = document.getElementById('ldMsg');
-    const line = document.getElementById('ldLine');
     const clock = document.getElementById('ldClock');
     let started = Date.now(), clockTimer = null;
-    function flash() { if (!line) return; line.classList.remove('flash'); void line.offsetWidth; line.classList.add('flash'); }
     function runClock() {
       clearInterval(clockTimer); started = Date.now();
       const pad = n => String(n).padStart(2, '0');
-      const draw = () => { const s = Math.floor((Date.now() - started) / 1000); if (clock) clock.textContent = 'REC ' + pad(Math.floor(s / 60)) + ':' + pad(s % 60); };
+      const draw = () => { const s = Math.floor((Date.now() - started) / 1000); if (clock) clock.textContent = pad(Math.floor(s / 60)) + ':' + pad(s % 60); };
       draw(); clockTimer = setInterval(draw, 1000);
     }
     const LINES = ['Establishing connection…', 'Pulling your file…', 'Adjusting the camera…',
@@ -122,16 +108,15 @@
     function show(text) {
       fixed = !!text;
       if (text) msg.textContent = text; else cycle();
-      if (!el.classList.contains('on')) flash();
       el.classList.add('on'); el.setAttribute('aria-busy', 'true');
       runClock();
       // never trap anyone behind the overlay (cancelled navigation, very slow network)
       clearTimeout(safety); safety = setTimeout(hide, 20000);
     }
     function hide() {
-      if (el.classList.contains('on')) setTimeout(flash, 260);   // the line blinks as the screen finishes collapsing
       el.classList.remove('on'); el.setAttribute('aria-busy', 'false');
-      clearInterval(timer); clearInterval(clockTimer); clearTimeout(safety);
+      clearInterval(timer); clearTimeout(safety);
+      setTimeout(function () { if (!el.classList.contains('on')) clearInterval(clockTimer); }, 450);
     }
 
     // first load: covered until the page is ready
