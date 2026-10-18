@@ -952,11 +952,20 @@
     } catch (e) { return null; }
   }
 
+  /* Autosave, gentle on the server so a crowd can apply at once: every change saves to this browser right away,
+     but the account copy only syncs after a pause in typing (6s, plus a little random spread), at most every 20s,
+     only if something changed, and right away when the tab is hidden. The Proceed button always saves. */
+  const DRAFT_IDLE_MS = 6000, DRAFT_MIN_GAP_MS = 20000;
+  let lastServerSave = 0, lastSentJson = '', localTimer = null;
+
   function saveDraft() {
     if (draftSaving) { draftDirty = true; return; }
     const data = readFormData();
     saveLocal(data);
+    const json = JSON.stringify(data);
+    if (json === lastSentJson) { setDraftState('All changes saved.'); return; }   // nothing new to send
     draftSaving = true; draftDirty = false;
+    lastServerSave = Date.now(); lastSentJson = json;
     setDraftState('Saving draft…');
     google.script.run
       .withSuccessHandler(res => {
@@ -966,7 +975,7 @@
         if (draftDirty) queueDraftSave();
       })
       .withFailureHandler(() => {
-        draftSaving = false;
+        draftSaving = false; lastSentJson = '';   // retry on the next change
         setDraftState('Offline? Draft saved in this browser for now; it will sync when you keep typing.');
       })
       .apply_saveDraft(data);
@@ -974,9 +983,15 @@
 
   function queueDraftSave() {
     clearTimeout(draftSaveTimer);
-    setDraftState('Unsaved changes…');
-    draftSaveTimer = setTimeout(saveDraft, 2000);
+    clearTimeout(localTimer); localTimer = setTimeout(() => saveLocal(readFormData()), 600);   // this browser: almost instant
+    setDraftState('Saved in this browser. Syncing to your account shortly…');
+    const wait = Math.max(DRAFT_IDLE_MS, DRAFT_MIN_GAP_MS - (Date.now() - lastServerSave)) + Math.random() * 3000;
+    draftSaveTimer = setTimeout(saveDraft, wait);
   }
+  // leaving the tab (switching apps on a phone counts): sync now if anything is waiting
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && draftSaveTimer) { clearTimeout(draftSaveTimer); draftSaveTimer = null; saveDraft(); }
+  });
 
   function restoreDraft(server) {
     const local = readLocal();

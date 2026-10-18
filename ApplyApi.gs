@@ -84,24 +84,25 @@ function apply_submit_(form) {
     return { ok: false, errors: errors };
   }
 
-  // 5. Data integrity lock and atomic write
+  // 5. Data integrity lock and atomic write. Keep the time inside the lock short: every applicant's submit waits on it.
+  // One read covers both duplicate checks; the Log row and draft clean-up happen after the lock is released.
   const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  lock.waitLock(30000);   // a submit is rare and precious: wait longer rather than fail during a rush
+  let nextId;
   try {
     // Re-verify applications open status inside lock
     if (!isOpen_()) {
       throw new Error('Applications just closed.');
     }
 
-    // Re-verify applicant has not already applied inside lock
-    if (getApplicantByEmail_(email)) {
-      throw new Error('You already applied.');
-    }
-
-    // Check Ateneo IDNumber uniqueness across all applicant rows
-    const idCol = COLS.indexOf('IDNumber');
+    const idCol = COLS.indexOf('IDNumber'), emailCol = COLS.indexOf('Email');
     const values = sheet_(SHEET.APPLICANTS).getDataRange().getValues();
     for (let i = 1; i < values.length; i++) {
+      // Re-verify applicant has not already applied inside lock
+      if (String(values[i][emailCol]).trim().toLowerCase() === email) {
+        throw new Error('You already applied.');
+      }
+      // Check Ateneo IDNumber uniqueness across all applicant rows
       if (String(values[i][idCol]).trim() === candidateIdStr) {
         return {
           ok: false,
@@ -113,7 +114,7 @@ function apply_submit_(form) {
     }
 
     // Generate next sequential ApplicantID
-    const nextId = nextApplicantId_();
+    nextId = nextApplicantId_();
     const now = new Date();
 
     // Build row adhering strictly to COLS order
@@ -151,18 +152,23 @@ function apply_submit_(form) {
     ensureApplicantHeaders_();   // adds headers for any new COLS the first time
     const row = COLS.map(col => safeCell_(rowMap[col] !== undefined ? rowMap[col] : ''));
     sheet_(SHEET.APPLICANTS).appendRow(row);
-
-    // Log initial status change and clear draft
-    logChange_(nextId, 'status', '', 'SUBMITTED', 'system');
-    apply_deleteDraft_(email);
-
-    return { ok: true, id: nextId };
+    SpreadsheetApp.flush();   // the row is written before the next submit reads the sheet
   } finally {
     lock.releaseLock();
   }
+
+  // Outside the lock: appends and a single-row clear don't need it
+  logChange_(nextId, 'status', '', 'SUBMITTED', 'system');
+  apply_deleteDraft_(email);
+  return { ok: true, id: nextId };
 }
 
-/* ---------------- drafts, saved per Google account ---------------- */
+/* ---------------- drafts, saved per Google account ----------------
+ * One row per account in the hidden Drafts tab. Rows are never deleted or moved (a cleared draft is a blank Data
+ * cell), so a save writes straight to the person's own row with NO script lock. Only someone's very first save
+ * (appending their row) takes the lock, for a moment. This keeps autosave from queueing behind everyone else's
+ * saves and submits when lots of people apply at once. The row number is cached and re-checked before use.
+ */
 
 function apply_draftSheet_() {
   const tabName = 'Drafts';
@@ -186,12 +192,39 @@ function apply_findDraftRow_(sh, email) {
   return 0;
 }
 
+/** Row number of this account's draft (cached, verified), or 0. */
+function apply_draftRow_(sh, email) {
+  const cache = CacheService.getScriptCache(), key = 'draftrow:' + email;
+  const hit = Number(cache.get(key) || 0);
+  if (hit && hit <= sh.getLastRow() && String(sh.getRange(hit, 1).getValue()).toLowerCase() === email) return hit;
+  const row = apply_findDraftRow_(sh, email);
+  if (row) cache.put(key, String(row), 21600);
+  return row;
+}
+
+/** Row for this account, adding it on the first save. Only the append is locked. */
+function apply_ensureDraftRow_(sh, email) {
+  let row = apply_draftRow_(sh, email);
+  if (row) return row;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    row = apply_findDraftRow_(sh, email);   // someone (another tab) may have added it while we waited
+    if (!row) { sh.appendRow([email, '', '']); SpreadsheetApp.flush(); row = sh.getLastRow(); }
+  } finally {
+    lock.releaseLock();
+  }
+  CacheService.getScriptCache().put('draftrow:' + email, String(row), 21600);
+  return row;
+}
+
 function apply_getDraft_(email) {
   try {
     const sh = apply_draftSheet_();
-    const row = apply_findDraftRow_(sh, email);
+    const row = apply_draftRow_(sh, email);
     if (!row) return null;
     const [, savedAt, json] = sh.getRange(row, 1, 1, 3).getValues()[0];
+    if (!String(json || '').trim()) return null;   // cleared
     return {
       data: JSON.parse(json || '{}'),
       savedAt: savedAt instanceof Date ? savedAt.toISOString() : String(savedAt)
@@ -202,17 +235,18 @@ function apply_getDraft_(email) {
   }
 }
 
+/** Clears the draft (keeps the row so no other row ever moves). */
 function apply_deleteDraft_(email) {
   try {
     const sh = apply_draftSheet_();
-    const row = apply_findDraftRow_(sh, email);
-    if (row) sh.deleteRow(row);
+    const row = apply_draftRow_(sh, email);
+    if (row) sh.getRange(row, 2, 1, 2).setValues([['', '']]);
   } catch (err) {
     activity_('draft_delete', String(err && err.message), { level: 'WARN', page: 'apply' });
   }
 }
 
-/** Saves the signed-in applicant's draft. Public. */
+/** Saves the signed-in applicant's draft. Public. No script lock in the normal case (see above). */
 function apply_saveDraft(data) {
   const email = currentEmail_();
   if (!email || !isAllowedDomain_(email)) return { ok: false };
@@ -229,39 +263,29 @@ function apply_saveDraft(data) {
     }
   });
 
-  const lock = LockService.getScriptLock();
   try {
-    lock.waitLock(10000);
+    // Already applied? (A guard only: apply_submit_ re-checks inside its lock and clears the draft.)
     if (getApplicantByEmail_(email)) return { ok: false, applied: true };
     const sh = apply_draftSheet_();
     const now = new Date();
-    const row = apply_findDraftRow_(sh, email);
-    // Merge onto the stored draft (re-read inside the lock): Apply sends only its 18 fields and the
-    // Game only GameAnswers, so replacing outright would wipe the other page's answers.
+    const row = apply_ensureDraftRow_(sh, email);
+    // Merge onto the stored draft: Apply sends only its 18 fields and the Game only GameAnswers,
+    // so replacing outright would wipe the other page's answers. Only this account writes this row.
     let stored = {};
-    if (row) { try { stored = JSON.parse(sh.getRange(row, 3).getValue() || '{}') || {}; } catch (e) { stored = {}; } }
+    try { stored = JSON.parse(sh.getRange(row, 3).getValue() || '{}') || {}; } catch (e) { stored = {}; }
     const merged = Object.assign({}, stored, clean);
-    const values = [[email, now, JSON.stringify(merged)]];
-    if (row) sh.getRange(row, 1, 1, 3).setValues(values);
-    else sh.appendRow(values[0]);
+    sh.getRange(row, 2, 1, 2).setValues([[now, JSON.stringify(merged)]]);
     return { ok: true, savedAt: now.toISOString() };
   } catch (err) {
     activity_('draft_save', String(err && err.message), { level: 'ERROR', page: 'apply' });
     throw err;
-  } finally {
-    lock.releaseLock();
   }
 }
 
-/** Deletes the signed-in applicant's draft ("Discard draft"). */
+/** Clears the signed-in applicant's draft ("Discard draft"). No lock needed: nothing moves. */
 function apply_discardDraft() {
   const email = currentEmail_();
-  if (email) {
-    // deleteRow shifts rows: hold the lock so a concurrent apply_saveDraft can't write to a stale row number
-    const lock = LockService.getScriptLock();
-    lock.waitLock(10000);
-    try { apply_deleteDraft_(email); } finally { lock.releaseLock(); }
-  }
+  if (email) apply_deleteDraft_(email);
   activity_('draft_discard', '', { page: 'apply' });
   return true;
 }
