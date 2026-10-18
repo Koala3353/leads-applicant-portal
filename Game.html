@@ -197,13 +197,117 @@
   @keyframes g-in{0%{opacity:0;filter:contrast(3) brightness(2)}30%{opacity:1}100%{filter:none}}
   html.calm .reveal-in{animation:none}
   .case-id{font-family:var(--mono);font-size:clamp(1.4rem,5vw,2rem);color:var(--glow);overflow-wrap:anywhere}
+
+  /* ================= the reveal theater (full screen) ================= */
+  .theater{position:fixed;inset:0;z-index:9600;display:none;background:#000;overflow:hidden;color:#eee}
+  .theater.on{display:block}
+  .theater.out{opacity:0;transition:opacity .5s ease}
+  .theater::after{content:"";position:absolute;inset:-30px;z-index:5;pointer-events:none;opacity:.22;animation:grain .4s steps(3) infinite;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.45) 0 1px,transparent 1px 3px),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='2'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  .th-scene{position:absolute;inset:0;display:none}
+  .theater[data-s="clear"] .th-clear,.theater[data-s="feed"] .th-feed,.theater[data-s="void"] .th-void,.theater[data-s="after"] .th-after{display:grid}
+  /* 1. false calm */
+  .th-clear{place-content:center;text-align:center;gap:12px;padding:20px}
+  .th-clear p{margin:0}
+  .th-big{font:400 clamp(2rem,8vw,4.4rem)/.95 var(--display);text-transform:uppercase;letter-spacing:.04em;color:var(--glow);animation:thFade 1.4s ease-out both}
+  .th-small{font:400 1.2rem var(--os);letter-spacing:.12em;text-transform:uppercase;color:#8a8a8a}
+  @keyframes thFade{from{opacity:0;filter:blur(6px)}to{opacity:1;filter:none}}
+  /* 2. CAM 03, reversed: it's you */
+  .th-feed{place-items:center}
+  .th-cam{position:relative;width:min(100vw,133.33vh);aspect-ratio:4/3;overflow:hidden;container-type:inline-size;
+    background:radial-gradient(ellipse 70% 60% at 50% 62%,#5c6a64,#2a322f 52%,#0d100f 88%);filter:contrast(1.15)}
+  .th-cam .sil{position:absolute;left:50%;bottom:-4%;width:58cqw;aspect-ratio:1/1.05;translate:-50% 0;transform-origin:50% 100%;
+    background:radial-gradient(circle at 50% 27%,#050505 0 21%,transparent 21.6%),radial-gradient(ellipse 52% 44% at 50% 100%,#050505 0 99%,transparent 100%);
+    animation:breathe 3.4s ease-in-out infinite}
+  @keyframes breathe{50%{transform:scale(1.018)}}
+  .th-cam.z1 .sil{scale:1.32}.th-cam.z2 .sil{scale:1.8}.th-cam.z3 .sil{scale:2.5}
+  .sil-eyes{position:absolute;left:50%;top:21%;translate:-50% 0;display:flex;gap:3.2cqw;opacity:0;transition:opacity 1.1s ease}
+  .th-cam.eyes .sil-eyes{opacity:1}
+  .sil-eyes .reye{--s:6.6cqw;--pupil:7%;filter:grayscale(1) contrast(1.5) brightness(.62);-webkit-mask:radial-gradient(ellipse 50% 50%,#000 55%,transparent 100%);mask:radial-gradient(ellipse 50% 50%,#000 55%,transparent 100%)}
+  .th-cam .det{position:absolute;left:28%;top:4%;width:44%;height:46%;border:2px solid var(--danger);opacity:0;transition:opacity .2s}
+  .th-cam.tag .det{opacity:1}
+  .th-cam .det::after{content:attr(data-tag);position:absolute;left:-2px;top:calc(100% + 4px);white-space:nowrap;font:400 clamp(.9rem,2.4cqw,1.3rem)/1 var(--os);letter-spacing:.06em;color:var(--danger);background:rgba(0,0,0,.65);padding:3px 6px}
+  .th-feed .osd{position:absolute;z-index:3;font:400 clamp(1.1rem,3.2vw,1.6rem)/1 var(--os);letter-spacing:.06em;color:#f0f0f0;text-shadow:2px 2px 0 #000}
+  .th-feed .osd.tl{left:max(16px,4vw);top:max(16px,4vh)}.th-feed .osd.tr{right:max(16px,4vw);top:max(16px,4vh);color:var(--danger)}
+  .th-feed .osd.bl{left:max(16px,4vw);bottom:max(16px,4vh);font-variant-numeric:tabular-nums}.th-feed .osd.br{right:max(16px,4vw);bottom:max(16px,4vh)}
+  .th-feed .osd.tr::before{content:"";display:inline-block;width:.6em;height:.6em;margin-right:.4em;border-radius:50%;background:var(--danger);animation:g-blink 1.2s steps(2) infinite}
+  .th-caption{position:absolute;z-index:3;left:0;right:0;bottom:14%;margin:0;padding:0 20px;text-align:center;font:400 clamp(1.5rem,5.6vw,3rem)/1 var(--display);text-transform:uppercase;letter-spacing:.03em;color:#fff;text-shadow:3px 3px 0 #000}
+  .th-feed.tear .th-cam{animation:tear .2s steps(3) 1}
+  @keyframes tear{0%{transform:translateX(-18px) skewX(9deg);filter:contrast(2.2) brightness(1.7) hue-rotate(40deg)}50%{transform:translateX(14px) skewX(-7deg);filter:contrast(1.6)}100%{transform:none}}
+  /* 3. silence */
+  .th-void span{position:absolute;right:6vw;bottom:8vh;font:400 1rem var(--type);color:#fff;opacity:.07;letter-spacing:.2em}
+  /* 5. aftermath: was you */
+  .th-after{place-content:center;justify-items:center;text-align:center;gap:14px;padding:24px;background:radial-gradient(ellipse at 50% 45%,#141414,#000 70%)}
+  .th-line{margin:0;min-height:1em;font:400 clamp(1.8rem,7vw,3.6rem)/1 var(--display);text-transform:uppercase;letter-spacing:.03em;color:#e8e8e8}
+  .th-line.red{color:var(--danger);text-shadow:-3px 0 rgba(0,16,224,.7),3px 0 rgba(255,255,255,.15)}
+  .th-neg{position:relative;width:min(170px,38vw);aspect-ratio:3/4;margin:8px 0;overflow:hidden;background:#050505;box-shadow:0 0 0 5px #e9e6dc;opacity:0;transition:opacity 1.2s ease}
+  .th-after.neg .th-neg{opacity:1}
+  .th-neg .sil{position:absolute;left:50%;bottom:-8%;width:92%;aspect-ratio:1/1.05;translate:-50% 0;filter:blur(.5px);
+    background:radial-gradient(circle at 50% 27%,#ececec 0 21%,transparent 21.6%),radial-gradient(ellipse 52% 44% at 50% 100%,#ececec 0 99%,transparent 100%)}
+  .th-neg .det{position:absolute;left:28%;top:38%;width:44%;height:32%;border:2px solid var(--danger)}
+  .th-neg .det::after{content:attr(data-tag);position:absolute;left:-2px;top:calc(100% + 3px);white-space:nowrap;font:400 .85rem/1 var(--os);color:var(--danger);background:#000;padding:2px 4px}
+  .th-q{margin:0;max-width:22em;min-height:1.4em;font:400 clamp(1.05rem,3.4vw,1.4rem)/1.4 var(--type);color:#cfcfcf}
+  #thOpen{opacity:0;pointer-events:none;transition:opacity .6s ease}
+  .th-after.ready #thOpen{opacity:1;pointer-events:auto}
+
+  /* ================= the debrief file ================= */
+  .db-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 14px;margin-bottom:12px}
+  .db-head .eyebrow{margin:0;color:var(--danger)}
+  .db-rec{font:400 1.05rem/1 var(--os);letter-spacing:.06em;color:var(--danger);font-variant-numeric:tabular-nums}
+  .db-rec::before{content:"";display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%;background:var(--danger);animation:g-blink 1.2s steps(2) infinite}
+  .debrief{display:grid;gap:22px;grid-template-columns:1fr;align-items:start}
+  @media (min-width:760px){.debrief{grid-template-columns:minmax(0,290px) 1fr}}
+  .db-photo{display:grid;justify-items:center;gap:6px}
+  .subject-photo .db-ghost{position:absolute;inset:8px 8px 28px;display:grid;place-items:end center;background:#060606;opacity:0;pointer-events:none}
+  .subject-photo .db-ghost .sil{position:absolute;left:50%;bottom:-8%;width:80%;aspect-ratio:1/1.05;translate:-50% 0;
+    background:radial-gradient(circle at 50% 27%,#ededed 0 21%,transparent 21.6%),radial-gradient(ellipse 52% 44% at 50% 100%,#ededed 0 99%,transparent 100%)}
+  .subject-photo .db-ghost b{position:relative;margin-bottom:6%;font:400 1.4rem/1 var(--os);letter-spacing:.3em;color:var(--danger)}
+  .subject-photo.ghosting .db-ghost{opacity:1}
+  .db-cap{margin:0;font:400 1.6rem/1 var(--hand);color:#e04a4a;transform:rotate(-2deg)}
+  .db-sheet{position:relative;padding:16px 18px 20px;background:var(--paper);color:var(--paper-ink);box-shadow:4px 5px 0 rgba(0,0,0,.6);transform:rotate(.4deg)}
+  .db-fields{margin:0 0 12px;display:grid;gap:6px;font-family:var(--type)}
+  .db-fields div{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:8px;align-items:baseline;border-bottom:1px solid #a89e84;padding-bottom:3px}
+  .db-fields dt{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:#6b5a35}
+  .db-fields dd{margin:0;min-height:1.3em;font-size:1.05rem;overflow-wrap:anywhere}
+  #monsterThreat{color:#a00000}#monsterThreat.rare{color:#8a6d00}
+  .db-sheet .findings{margin:0;padding:0;background:none;box-shadow:none;transform:none}
+  .db-sheet .findings p{min-height:1.5em}
+  .db-note{margin:12px 0 0;font:400 1.55rem/1.05 var(--hand);color:#b00000;transform:rotate(-1.2deg);min-height:1em}
+  .db-note.in{animation:ink .9s steps(18) 1}
+  @keyframes ink{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+  .db-stamp{position:absolute;right:14px;bottom:12px;--r:-12deg;font-size:1.3rem;opacity:0}
+  .db-stamp.slam{animation:slam .35s cubic-bezier(.3,1.6,.5,1) forwards}
+  @keyframes slam{from{opacity:0;transform:rotate(-12deg) scale(2.4)}to{opacity:.85;transform:rotate(-12deg) scale(1)}}
+  .db-foot{color:var(--muted);margin:18px 0 0}
+  .typing-caret::after{content:"\2588";margin-left:2px;animation:rec .6s steps(1) infinite}
+  @keyframes rec{50%{opacity:0}}
+  html.calm .db-stamp.slam,html.calm .db-note.in{animation:none;opacity:.85}
 </style>
 </head>
 <body data-loader-wait>
 <?!= include('Loader') ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 <div class="vignette" id="vignette" aria-hidden="true"></div>
-<div class="jump" id="jump" aria-hidden="true"><span class="jump-noise"></span><div class="jump-face"><div class="mface" id="jumpFace"></div></div><p class="jump-txt">Found you</p></div>
+<!-- the reveal, full screen: false calm -> CAM 03 shows you -> silence -> the scare -> "was you." -->
+<div class="theater" id="theater" role="dialog" aria-label="Observation sequence">
+  <div class="th-scene th-clear" aria-hidden="true"><p class="th-big">All feeds clear</p><p class="th-small">No threat detected. You can relax.</p></div>
+  <div class="th-scene th-feed" aria-hidden="true">
+    <div class="th-cam" id="thCam">
+      <span class="sil"><span class="sil-eyes follow"><span class="reye"><span class="reye-ball"><i></i></span></span><span class="reye"><span class="reye-ball"><i></i></span></span></span><span class="det" id="thTag"></span></span>
+    </div>
+    <span class="osd tl">CAM 03 &#183; REVERSED</span><span class="osd tr">REC</span><span class="osd bl" id="thTime">00:00:00</span><span class="osd br">SIGNAL 100%</span>
+    <p class="th-caption" id="thCaption"></p>
+  </div>
+  <div class="th-scene th-void" aria-hidden="true"><span>behind you</span></div>
+  <div class="th-scene th-after">
+    <p class="th-line" id="thL1"></p><p class="th-line red" id="thL2"></p>
+    <div class="th-neg" aria-hidden="true"><span class="sil"></span><span class="det" id="thNegTag"></span></div>
+    <p class="th-q" id="thQ"></p>
+    <button type="button" class="btn ghost" id="thOpen">Open your file</button>
+  </div>
+</div>
+<div class="jump" id="jump" aria-hidden="true"><span class="jump-noise"></span><div class="jump-face"><div class="mface follow" id="jumpFace"></div></div><p class="jump-txt">Found you</p></div>
 <div class="wrap">
   <?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
 
@@ -268,28 +372,28 @@
     <div class="actions"><button class="btn" type="button" id="backToHub">Back to the cameras</button></div>
   </div>
 
-  <div class="state" id="state-cut">
-    <div class="cut" id="cutBox" role="status"><div>
-      <div class="mirror" id="mirror" aria-hidden="true"><span class="m-osd">CAM 03 &#183; REVERSED</span><span class="m-rec">REC</span><span class="sil"></span><span class="det" id="mirrorTag"></span></div>
-      <p id="cutTitle">All feeds clear</p><small id="cutSub">NO THREAT DETECTED. YOU CAN RELAX.</small>
-    </div></div>
-  </div>
-
   <div class="card state" id="state-reveal">
-    <div class="winbar red"><span>SUBJECT_ID.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
-    <p class="eyebrow">SUBJECT IDENTIFIED</p>
-    <div class="subject reveal-in" id="subject">
-      <div class="subject-photo"><div class="mface" id="monsterFace" role="img"></div><span class="stamp-ink">Identified</span></div>
-      <div>
-        <p class="mono" style="margin:0;color:var(--muted)">ASSIGNED OBSERVER</p>
-        <h2 id="monsterName"></h2>
-        <span class="threat" id="monsterThreat"></span>
-        <p id="monsterLine" style="margin-top:14px"></p>
+    <div class="winbar red"><span>DEBRIEF_26-27.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+    <div class="db-head"><p class="eyebrow">OBSERVATION COMPLETE</p><span class="db-rec" aria-hidden="true">REC <span id="dbClock">00:00:00</span></span></div>
+    <div class="debrief" id="subject">
+      <div class="db-photo">
+        <div class="subject-photo follow"><div class="mface" id="monsterFace" role="img"></div><span class="db-ghost" aria-hidden="true"><span class="sil"></span><b>YOU</b></span></div>
+        <p class="db-cap" id="dbCap" aria-hidden="true"></p>
+      </div>
+      <div class="db-sheet" id="dbSheet">
+        <dl class="db-fields">
+          <div><dt>Subject</dt><dd id="dbSubject"></dd></div>
+          <div><dt>Observer</dt><dd id="monsterName"></dd></div>
+          <div><dt>Threat level</dt><dd id="monsterThreat"></dd></div>
+          <div><dt>Status</dt><dd id="dbStatus"></dd></div>
+        </dl>
         <div class="findings" id="findings"></div>
-        <p class="mono" style="color:var(--muted)">Your answers are in. Filing your application sends both steps to the core team.</p>
-        <div class="actions"><button class="btn" type="button" id="submitBtn">File my application</button></div>
+        <p class="db-note" id="monsterLine"></p>
+        <span class="stamp-ink db-stamp" id="dbStamp" aria-hidden="true">Observed</span>
       </div>
     </div>
+    <p class="mono db-foot">Your answers are in. Filing your application sends both steps to the core team.</p>
+    <div class="actions"><button class="btn" type="button" id="submitBtn">File my application</button></div>
   </div>
 
   <div class="card state" id="state-done">
@@ -409,6 +513,60 @@
     noise.connect(bp); env(bp, .55, .9); noise.start(t); noise.stop(t + .9);
   }
 
+  // A low, slowly beating drone under the CAM 03 scene; it bends upward as the figure lurches closer and cuts dead.
+  let drone = null;
+  function droneStart() {
+    if (!audio || audio.state !== 'running' || drone) return;
+    const t = audio.currentTime, g = audio.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.13, t + 1.4); g.connect(audio.destination);
+    const o1 = audio.createOscillator(), o2 = audio.createOscillator(), lfo = audio.createOscillator(), lg = audio.createGain();
+    o1.type = 'sine'; o1.frequency.value = 55; o2.type = 'triangle'; o2.frequency.value = 58.4;   // two close notes beat slowly
+    lfo.frequency.value = .35; lg.gain.value = .04; lfo.connect(lg); lg.connect(g.gain);
+    o1.connect(g); o2.connect(g); o1.start(t); o2.start(t); lfo.start(t);
+    drone = { g: g, o1: o1, o2: o2, lfo: lfo };
+  }
+  function droneBend(f) {
+    if (!drone) return;
+    const t = audio.currentTime;
+    drone.o1.frequency.setTargetAtTime(f, t, .04); drone.o2.frequency.setTargetAtTime(f * 1.06, t, .04); drone.g.gain.setTargetAtTime(.18, t, .04);
+  }
+  function droneStop() {
+    if (!drone) return;
+    const t = audio.currentTime;
+    drone.g.gain.cancelScheduledValues(t); drone.g.gain.setValueAtTime(0, t);
+    [drone.o1, drone.o2, drone.lfo].forEach(o => { try { o.stop(t + .05); } catch (e) { /* already stopped */ } });
+    drone = null;
+  }
+
+  // Eyes inside any .follow element look at the pointer (the silhouette's eyes, the observer's photo, the jump face).
+  (function () {
+    let x = innerWidth / 2, y = innerHeight / 2, queued = false;
+    function draw() {
+      queued = false;
+      document.querySelectorAll('.follow .reye').forEach(e => {
+        const r = e.getBoundingClientRect(); if (!r.width) return;
+        const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2), d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 240);
+        e.style.setProperty('--px', (dx / d * k * r.width * .2).toFixed(1) + 'px');
+        e.style.setProperty('--py', (dy / d * k * r.height * .12).toFixed(1) + 'px');
+      });
+    }
+    window.addEventListener('pointermove', e => { x = e.clientX; y = e.clientY; if (!queued) { queued = true; requestAnimationFrame(draw); } }, { passive: true });
+  })();
+
+  // Type text into an element like a terminal. Instant in CRT-off mode / reduced motion.
+  function typeInto(el, text, cps) {
+    return new Promise(resolve => {
+      if (calm()) { el.textContent = text; resolve(); return; }
+      let i = 0; el.textContent = ''; el.classList.add('typing-caret');
+      (function step() {
+        el.textContent = text.slice(0, ++i);
+        if (i < text.length) setTimeout(step, 1000 / (cps || 28) + Math.random() * 30);
+        else { el.classList.remove('typing-caret'); resolve(); }
+      })();
+    });
+  }
+  const wait = ms => new Promise(r => setTimeout(r, calm() ? 0 : ms));
+
   const MONSTERS = [   // Sir Kerish 60%, Sir Chums 30%, Sir Aly 10%
     { upTo: 0.6, key: 'kerish', name: 'Sir Kerish', threat: 'COMMON SIGHTING', rare: false,
       line: 'He has been in the corner of every feed this whole time. You only noticed now.' },
@@ -445,7 +603,7 @@
   }
 
   function show(name) {
-    ['loading', 'error', 'hub', 'room', 'cleared', 'cut', 'reveal', 'done'].forEach(s => $('state-' + s).classList.toggle('show', s === name));
+    ['loading', 'error', 'hub', 'room', 'cleared', 'reveal', 'done'].forEach(s => $('state-' + s).classList.toggle('show', s === name));
     if (name !== 'loading' && window.Loader) Loader.hide();
     $('tape').hidden = name === 'loading' || name === 'error' || name === 'done';
   }
@@ -661,13 +819,44 @@
     const top = Object.keys(n).sort((x, y) => n[y] - n[x]);
     const key = n[top[0]] === n[top[1]] ? 'all' : top[0];
     const avg = times.length ? (times.reduce((s, t) => s + t, 0) / times.length / 1000).toFixed(1) : '0.0';
-    const box = $('findings'); box.textContent = '';
-    const line = (label, text, cls) => { const p = document.createElement('p'); if (cls) p.className = cls; if (label) { const b = document.createElement('b'); b.textContent = label + ' '; p.append(b); } p.append(document.createTextNode(text)); box.append(p); };
-    line('FINDING 01:', FINDING[key][0]);
-    line('FINDING 02:', 'Average hesitation ' + avg + 's. Longest on question ' + slowQ.replace('Q', '') + '.');
-    if (none) line('FINDING 03:', none + (none === 1 ? ' question was' : ' questions were') + ' left unanswered when the feed cut.');
-    line('', 'There were no right answers. Only honest ones.');
-    line('', FINDING[key][1], 'inv');
+    const lines = [['FINDING 01:', FINDING[key][0]], ['FINDING 02:', 'Average hesitation ' + avg + 's. Longest on question ' + (slowQ.replace('Q', '') || '-') + '.']];
+    if (none) lines.push(['FINDING 03:', none + (none === 1 ? ' question was' : ' questions were') + ' left unanswered when the feed cut.']);
+    lines.push(['', 'There were no right answers. Only honest ones.'], ['', FINDING[key][1], 'inv']);
+    return lines;
+  }
+
+  // The debrief file types itself out: fields, findings one by one, the observer's red-pen note, then the stamp.
+  let ghostTimer = null, dbClockTimer = null;
+  async function playDebrief(m, findings) {
+    const who = (window.__nick || 'Subject').toUpperCase();
+    ['dbSubject', 'monsterName', 'monsterThreat', 'dbStatus'].forEach(id => { $(id).textContent = ''; });
+    $('findings').textContent = ''; $('monsterLine').textContent = ''; $('monsterLine').classList.remove('in'); $('dbStamp').classList.remove('slam');
+    $('dbCap').textContent = 'assigned observer: ' + m.name;
+    const t0 = Date.now(), pad = n => String(n).padStart(2, '0');
+    clearInterval(dbClockTimer);
+    dbClockTimer = setInterval(() => { const s = Math.floor((Date.now() - t0) / 1000); $('dbClock').textContent = pad(Math.floor(s / 3600)) + ':' + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60); }, 1000);
+    // every few seconds the observer's photo flickers to your own negative for a moment
+    clearInterval(ghostTimer);
+    if (!calm()) ghostTimer = setInterval(() => {
+      const ph = document.querySelector('#state-reveal .subject-photo'); if (!ph || !$('state-reveal').classList.contains('show')) return;
+      ph.classList.add('ghosting'); setTimeout(() => ph.classList.remove('ghosting'), 140);
+    }, 6500 + Math.random() * 2500);
+    await wait(500);
+    await typeInto($('dbSubject'), who, 30);
+    await typeInto($('monsterName'), m.name.toUpperCase(), 30);
+    await typeInto($('monsterThreat'), m.threat, 30);
+    await typeInto($('dbStatus'), 'OBSERVED', 30);
+    for (const f of findings) {
+      await wait(260);
+      const p = document.createElement('p'); if (f[2]) p.className = f[2];
+      if (f[0]) { const b = document.createElement('b'); b.textContent = f[0] + ' '; p.append(b); }
+      const span = document.createElement('span'); p.append(span); $('findings').append(p);
+      await typeInto(span, f[1], 40);
+    }
+    await wait(400);
+    $('monsterLine').textContent = m.line; $('monsterLine').classList.add('in');
+    await wait(1000);
+    $('dbStamp').classList.add('slam');
   }
 
   function reveal() {
@@ -675,43 +864,72 @@
     const m = MONSTERS.find(x => roll < x.upTo) || MONSTERS[0];
     paintFace($('monsterFace'), m);
     $('monsterFace').setAttribute('aria-label', m.name + ', staring into the camera');
-    $('monsterName').textContent = m.name;
-    $('monsterThreat').textContent = m.threat;
     $('monsterThreat').classList.toggle('rare', m.rare);
-    $('monsterLine').textContent = m.line;
-    renderFindings();
+    const findings = renderFindings();
     const showSubject = () => {
       show('reveal');
       kuya(m.rare ? 'excited' : 'scared', m.name + '. ' + m.line);
-      $('submitBtn').focus();
+      playDebrief(m, findings);
+      $('submitBtn').focus({ preventScroll: true });
     };
     if (calm()) { showSubject(); return; }
-    // 1. false calm  2. CAM 03 turns around: it's a mirror  3. black  4. the face, the sound, "FOUND YOU"
-    // 5. silence: "The one watching you was you."  6. the file, with the findings (scare first, invitation last)
-    const cut = $('cutBox'), jump = $('jump'), title = $('cutTitle'), sub = $('cutSub');
+
+    // Full-screen sequence. Scare first, invitation last (brand book).
+    const th = $('theater'), cam = $('thCam'), feed = th.querySelector('.th-feed'), after = th.querySelector('.th-after'), jump = $('jump');
     const who = (window.__nick || '').toUpperCase();
-    cut.className = 'cut calmfeed'; title.textContent = 'All feeds clear'; sub.textContent = 'NO THREAT DETECTED. YOU CAN RELAX.';
-    show('cut');
+    const timers = [], at = (ms, f) => timers.push(setTimeout(f, ms));
+    const pad = n => String(n).padStart(2, '0');
+    let tick = null;
     paintFace($('jumpFace'), m);
-    scareSound(3.55);
-    let done = false;
-    const finish = () => { if (done) return; done = true; cut.className = 'cut'; cut.onclick = null; showSubject(); };
-    setTimeout(() => {
-      $('mirrorTag').dataset.tag = 'SUBJECT' + (who ? ': ' + who : '') + ' \u00B7 MATCH 99%';
-      cut.className = 'cut mirrored'; title.textContent = 'CAM 03 is pointed at you.'; sub.textContent = 'IT HAS BEEN THE WHOLE TIME.';
-    }, 1400);
-    setTimeout(() => { cut.classList.add('dead'); }, 3200);
-    setTimeout(() => {
+    th.className = 'theater on'; th.dataset.s = 'clear'; cam.className = 'th-cam';
+    after.className = 'th-scene th-after'; ['thL1', 'thL2', 'thQ', 'thCaption'].forEach(id => { $(id).textContent = ''; });
+    droneStart();
+    scareSound(6.7);
+    // 2. CAM 03 is pointed at you
+    at(1800, () => {
+      th.dataset.s = 'feed';
+      $('thTag').dataset.tag = 'SUBJECT' + (who ? ': ' + who : '') + ' \u00B7 MATCH 99%';
+      const t0 = new Date();
+      tick = setInterval(() => { const d = new Date(); $('thTime').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); }, 250);
+    });
+    at(2300, () => cam.classList.add('tag'));
+    at(2600, () => typeInto($('thCaption'), 'This camera is pointed at you.', 26));
+    at(4000, () => cam.classList.add('eyes'));                      // it opens its eyes
+    const jerk = (z, f) => { cam.classList.remove('z1', 'z2', 'z3'); cam.classList.add(z); feed.classList.remove('tear'); void feed.offsetWidth; feed.classList.add('tear'); droneBend(f); };
+    at(4900, () => { $('thCaption').textContent = ''; jerk('z1', 72); });
+    at(5350, () => jerk('z2', 96));
+    at(5700, () => jerk('z3', 128));
+    // 3. silence
+    at(6000, () => { th.dataset.s = 'void'; droneStop(); clearInterval(tick); });
+    // 4. the scare
+    at(6700, () => {
       jump.classList.remove('out'); jump.classList.add('on');
       if (navigator.vibrate) { try { navigator.vibrate([90, 40, 160]); } catch (e) { /* optional */ } }
-    }, 3550);
-    setTimeout(() => {
-      jump.classList.add('out');
-      cut.className = 'cut quiet'; title.textContent = 'The one watching you was you.'; sub.textContent = "Who are you when you're not performing?";
-      cut.onclick = finish;
-    }, 5150);
-    setTimeout(() => { jump.classList.remove('on', 'out'); }, 5550);
-    setTimeout(finish, 8600);
+    });
+    // 5. aftermath
+    at(8300, async () => {
+      jump.classList.add('out'); th.dataset.s = 'after';
+      setTimeout(() => jump.classList.remove('on', 'out'), 400);
+      await typeInto($('thL1'), 'The one watching you', 18);
+      await wait(900);
+      await typeInto($('thL2'), 'was you.', 9);
+      await wait(700);
+      $('thNegTag').dataset.tag = 'OBSERVER' + (who ? ': ' + who : '');
+      after.classList.add('neg');
+      await wait(1100);
+      await typeInto($('thQ'), "Who are you when you're not performing?", 30);
+      after.classList.add('ready'); $('thOpen').focus({ preventScroll: true });
+    });
+    let done = false;
+    const finish = () => {
+      if (done) return; done = true;
+      timers.forEach(clearTimeout); clearInterval(tick); droneStop();
+      th.classList.add('out');
+      setTimeout(() => { th.className = 'theater'; jump.classList.remove('on', 'out'); }, 500);
+      showSubject();
+    };
+    $('thOpen').onclick = finish;
+    at(24000, finish);   // they can sit with it; it moves on by itself
   }
 
   async function submit() {
