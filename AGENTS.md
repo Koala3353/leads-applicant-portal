@@ -1,0 +1,46 @@
+# AI instructions: LEADS: Oversight applicant portal
+
+Google Apps Script web app. Read `CONTEXT.md` before writing any code (rules, file ownership, sheet columns, specs).
+`README.md` has the one-time clasp setup.
+
+## How code moves
+- **GitHub** = shared history. **Apps Script editor** = what runs. **clasp** syncs local files <-> editor.
+- `clasp push` updates the editor / test deployment only. Applicants see changes only after a manual
+  *Deploy > Manage deployments > Edit > New version*. **Never publish. Tell the human to ask Keene.**
+
+## First time only
+1. `npm install -g @google/clasp && clasp login`
+2. Create `.clasp.json` exactly as in README.md (sets `fileExtension: "gs"`; without it clasp makes `.js` duplicates).
+3. If clasp says the Apps Script API is off: https://script.google.com/home/usersettings
+
+## Start of every session (before touching any file)
+```
+git pull
+clasp pull
+git status
+```
+If `clasp pull` changed files, someone edited in the browser. Commit those first
+(`git add -A && git commit -m "sync from editor" && git push`) before your own work.
+
+## While working
+- Only edit the files the human owns (CONTEXT.md ownership table). For shared files (`Utils.gs`, `Styles.html`,
+  `Brand.gs`, `Mascot.html`, `Loader.html`, `Code.gs`) write an **"Ask Keene"** note instead of editing.
+- Keep `.gs` as `.gs`; never create `.js` copies. Never rename or reorder sheet columns.
+- New Apply question = `RULES` + `COLS` (append at the END) in Utils.gs, `FIELDS` + HTML in Apply.html,
+  the draft field list in ApplyApi.gs, and a `judge` line + `LABEL` for I.R.I.S. (CONTEXT.md §9.1).
+- User-facing copy says "core team", never "officers".
+
+## End of every change (in this order)
+1. `clasp pull`: catch anyone who pushed while you worked. If it overwrote your files, **stop** and tell the human.
+2. `clasp push`: only after step 1 is clean.
+3. Test with the editor's *Deploy > Test deployments* link (HEAD), not the public `/exec` link.
+4. `git add -A && git commit -m "<what changed, one line>" && git push`
+5. Report: files changed, what to test, and whether it needs publishing (Keene does that).
+
+## Handover / swapping who works on it
+- Before stopping, finish "End of every change" completely. Never leave work clasp-pushed but not committed,
+  or committed but not clasp-pushed. Post in the group chat: "Done on <files>, pushed + committed <commit id>".
+- The next person starts with "Start of every session". One person per file at a time; claim it in the
+  group chat first ("taking Apply.html").
+- If two people touched the same file, do **not** `clasp push` over it: `git pull`, resolve the conflict in git, then `clasp push`.
+- If anything looks off (missing files, `.js` files, huge diffs), stop and ask Keene instead of pushing.
