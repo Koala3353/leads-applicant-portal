@@ -84,23 +84,49 @@
   }
 
   /* Section headers */
+  /* section heads: a window title bar dropped on crooked (frame only; the fields under it stay straight) */
   .form-section-head {
-    margin: 32px 0 16px;
-    padding-bottom: 8px;
-    border-bottom: 1.5px dashed var(--line);
+    margin: 40px 0 18px;
+    transform: rotate(-.8deg);
+    transform-origin: left center;
   }
+  .form-section-head:nth-of-type(even) { transform: rotate(.6deg); }
   .form-section-head h2 {
-    font-family: var(--mono);
-    font-size: 0.95rem;
-    letter-spacing: 0.12em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--os);
+    font-weight: 400;
+    font-size: 1.2rem;
+    letter-spacing: .04em;
     text-transform: uppercase;
-    color: var(--glow);
-    margin: 0 0 4px;
+    color: #fff;
+    background: linear-gradient(90deg, var(--title-a), var(--title-b));
+    padding: 4px 4px 3px 10px;
+    margin: 0;
+    box-shadow: 5px 5px 0 #000;
+  }
+  .form-section-head h2::after {
+    content: "_ \25A1 \00D7";
+    flex: none;
+    font: 700 11px/16px monospace;
+    letter-spacing: 6px;
+    padding: 0 2px 0 8px;
+    color: #000;
+    background: var(--win);
+    box-shadow: var(--bevel-out);
   }
   .form-section-head p {
-    font-size: 0.8rem;
-    color: var(--muted);
-    margin: 0;
+    font-family: var(--type);
+    font-size: 0.88rem;
+    color: var(--paper-ink);
+    background: var(--paper);
+    display: inline-block;
+    margin: 0 0 0 14px;
+    padding: 6px 10px 8px;
+    transform: rotate(1deg);
+    box-shadow: 3px 4px 0 rgba(0,0,0,.6);
   }
 
   /* Form and inputs */
@@ -158,8 +184,8 @@
     font: inherit;
     font-size: 16px;
     color: var(--text);
-    background: rgba(7, 18, 43, 0.7);
-    border: 1.5px solid var(--line);
+    background: #060606;
+    border: 2px inset #7a7a7a;   /* sunken 90s field */
     border-radius: 0;
     padding: 0.75em 0.9em;
     min-height: 44px;

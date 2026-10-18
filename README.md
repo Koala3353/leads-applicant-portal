@@ -24,8 +24,8 @@ Three separate tracks, so payment can come before *or* after acceptance:
 | **Requirements** (Form) | NONE → PARTIAL → SUBMITTED → APPROVED (RETURNED = fix and resend) | officers, after checking Form responses |
 | **Payment** (Form) | NONE → SUBMITTED → VERIFIED (REJECTED = resend) | officers, after checking Form responses |
 
-- The requirements Form link appears once **ACCEPTED**.
-- The payment Form link appears once **ACCEPTED**, or right after applying when Settings › `PaymentStage` = `ANYTIME`.
+- **Pay first.** The payment Form link appears once **ACCEPTED**, or right after applying when Settings › `PaymentStage` = `ANYTIME`.
+- The requirements Form link appears once **ACCEPTED and Payment is VERIFIED**.
 - ACCEPTED + APPROVED + VERIFIED → **CONFIRMED** automatically.
 - `progress_()` in Utils.gs is the one place these unlock rules live. The hub and Dashboard both use it.
 

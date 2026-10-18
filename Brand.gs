@@ -64,7 +64,7 @@ const BRAND = {
     title: 'Classified files',
     note: 'Open a file to declassify it.',
     items: [
-      { q: 'How much does camp cost?', a: 'The camp fee is ₱{fee}. You pay through the payment form on this page once it unlocks.', needs: 'fee', fallback: "The fee hasn't been announced yet. It'll show up here first." },
+      { q: 'How much does camp cost?', a: 'The camp fee is ₱{fee}. Once you are accepted, you pay first through the payment form on this page. The requirements form opens after your payment is verified.', needs: 'fee', fallback: "The fee hasn't been announced yet. It'll show up here first." },
       { q: 'When and where is it?', a: '{dates}, at {venue}.', needs: 'dates', fallback: 'Dates and venue are still being finalized.' },
       { q: 'Who can apply? Can freshmen join?', a: 'TODO: core team, write the eligibility rule here (year levels, courses, MEA membership).', todo: true },
       { q: 'What should I bring?', a: 'TODO: core team, write the packing list here.', todo: true },
@@ -104,8 +104,8 @@ const BRAND = {
   },
   modules: {
     apply:   { n: '01', title: 'Apply',            fix: 'A short form and two questions. One of them is about a fear you want to face.' },
-    req:     { n: '02', title: 'Requirements',     fix: 'Once accepted, send your signed PDFs and camp info through our form.' },
-    pay:     { n: '03', title: 'Proof of payment', fix: 'Send your receipt through our form. This page says VERIFIED once the core team checks it.' },
+    pay:     { n: '02', title: 'Proof of payment', fix: 'Once accepted, pay first and send your receipt through our form. This page says VERIFIED once the core team checks it.' },
+    req:     { n: '03', title: 'Requirements',     fix: 'After your payment is verified, send your signed PDFs and camp info through our form.' },
     sheet:   { n: '00', title: 'Core team',        fix: 'Review applicants in the Sheet. Use the LEADS menu to accept, verify and confirm.' }
   },
   stateLabels: {                           // pill text on each hub card
@@ -113,7 +113,7 @@ const BRAND = {
   },
   lockedWhy: {                             // shown on locked cards
     apply: 'Applications are closed.',
-    req: "Opens once you're accepted.",
+    req: 'Opens once your payment is verified.',
     pay: "Opens once you're accepted.",
     payAnytime: 'Opens once you apply.',
     noForm: 'Link coming soon. Check back here.'
@@ -123,7 +123,7 @@ const BRAND = {
     'SUBMITTED':    'We got your application. Someone from the core team will read it soon.',
     'UNDER REVIEW': 'The core team is reading your file now. Honestly, the waiting is the worst part.',
     'WAITLISTED':   "You're on the waitlist. Slots open up more often than you think.",
-    'ACCEPTED':     "You're accepted. Next, send your requirements and payment.",
+    'ACCEPTED':     "You're accepted. Next: pay and send your receipt. The requirements form opens once payment is verified.",
     'REJECTED':     'Not this time. Applying still took guts, and we hope you try again next year.',
     'CONFIRMED':    "You're in. See you at camp.",
     'WITHDRAWN':    'You withdrew your application. Message the core team if that was a mistake.'
@@ -245,7 +245,7 @@ const BRAND = {
       'SUBMITTED':    ['happy',    "Got it. You're officially on file."],
       'UNDER REVIEW': ['scared',   'Someone is reading your file right now. Act natural.'],
       'WAITLISTED':   ['thinking', "Waitlisted isn't a no. I'm keeping an eye on your file."],
-      'ACCEPTED':     ['excited',  'ACCESS GRANTED. Next: requirements and payment.'],
+      'ACCEPTED':     ['excited',  'ACCESS GRANTED. Pay first, then requirements.'],
       'REJECTED':     ['sad',      'Not this time. Your file stays on record. Try again next year.'],
       'CONFIRMED':    ['love',     "You're in. See you at camp. I'll be watching out for you."],
       'WITHDRAWN':    ['sad',      'You withdrew. Message the core team if that was a mistake.']
@@ -324,7 +324,9 @@ const BRAND = {
     kicker: "'JetBrains Mono', ui-monospace, monospace",                // the case-file label
     body: "'Inter', 'Arimo', system-ui, sans-serif",
     mono: "'JetBrains Mono', ui-monospace, monospace",
-    googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap'
+    os: "'VT323', 'Lucida Console', monospace",                         // 90s OS chrome: buttons, title bars, taskbar
+    type: "'Special Elite', 'Courier New', monospace",                  // typewriter: case folders, stamps, scraps
+    googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;700&family=Special+Elite&family=VT323&display=swap'
   },
   effects: {
     eyes: true,           // eyes in the background follow the pointer (Home); they stare harder when you stop moving
@@ -368,7 +370,8 @@ function brand_css() {
     '--night': c.bg, '--night-glow': c.bgGlow, '--night-2': c.card, '--text': c.text, '--muted': c.muted,
     '--blue': c.primary, '--sky': c.soft, '--glow': c.accent, '--pink': c.accent2, '--danger': c.danger,
     '--ok': c.ok, '--fear-text': c.fearText, '--fix-text': c.fixText,
-    '--display': f.display, '--kicker': f.kicker, '--body': f.body, '--mono': f.mono
+    '--display': f.display, '--kicker': f.kicker, '--body': f.body, '--mono': f.mono,
+    '--os': f.os || f.mono, '--type': f.type || f.mono
   };
   const body = Object.keys(vars).map(k => k + ':' + clean(vars[k])).join(';');
   return '<link rel="stylesheet" href="' + encodeURI(f.googleFontsUrl).replace(/"/g, '') + '">' +

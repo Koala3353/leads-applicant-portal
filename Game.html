@@ -44,7 +44,10 @@
   @media (hover:hover){.feed:not([aria-disabled="true"]):hover{border-color:var(--glow)}}
 
   /* ---- room ---- */
-  .room{background:var(--night-2);border:1.5px solid var(--line);padding:clamp(16px,4vw,26px)}
+  .room{--py:20px;--px:20px;padding:20px;background:var(--night-2);box-shadow:var(--bevel-dark),6px 5px 0 -2px #000,6px 5px 0 -1px rgba(0,16,224,.55)}
+  /* clutter around the frame only: the feeds lean, the questions and answers stay straight */
+  .feed:nth-child(1){transform:rotate(-1.4deg)}.feed:nth-child(2){transform:rotate(1deg) translateY(8px)}.feed:nth-child(3){transform:rotate(-.5deg)}
+  .feed-foot{font-family:var(--os);font-size:1.05rem}
   .room-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px;margin-bottom:10px;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase}
   .room-head .t{color:var(--glow);font-weight:700;min-width:0}
   .room-head .clock{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
@@ -112,12 +115,14 @@
   </div>
 
   <div class="card state" id="state-error" role="alert">
+    <div class="winbar red"><span>ERROR.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
     <p id="errorMsg"></p>
     <div class="actions"><button class="btn ghost" type="button" id="retry">Try again</button></div>
   </div>
 
   <div class="state" id="state-hub">
     <div class="card">
+      <div class="winbar"><span>SURVEILLANCE.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
       <p class="eyebrow">STEP 2 OF 2 // SURVEILLANCE</p>
       <h2>Pick a camera</h2>
       <p>Three feeds, five questions. Each room has its own timer, and it pauses if you switch tabs. When time runs out, unanswered questions are filed as "no answer". There are no right answers, only honest ones.</p>
@@ -127,6 +132,7 @@
 
   <div class="state" id="state-room">
     <div class="room">
+      <div class="winbar red"><span>INTERROGATION.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
       <div class="room-head">
         <span class="t" id="roomTitle"></span>
         <span class="clock" id="clock" aria-hidden="true"></span>
@@ -147,6 +153,7 @@
   </div>
 
   <div class="card state" id="state-cleared">
+    <div class="winbar off"><span>FEED_STATUS.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
     <p class="eyebrow" id="clearedEyebrow">FEED CLEARED</p>
     <h2 id="clearedTitle">Nothing in this room</h2>
     <p id="clearedText">Whatever got in isn't here. Your answers are saved. Check the remaining feeds.</p>
@@ -158,6 +165,7 @@
   </div>
 
   <div class="card state" id="state-reveal">
+    <div class="winbar red"><span>SUBJECT_ID.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
     <p class="eyebrow">SUBJECT IDENTIFIED</p>
     <div class="subject reveal-in" id="subject">
       <img id="monsterImage" alt="">
@@ -173,6 +181,7 @@
   </div>
 
   <div class="card state" id="state-done">
+    <div class="winbar"><span>FILE_RECEIVED.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
     <p class="eyebrow">FILE RECEIVED</p>
     <h2>You are now on record.</h2>
     <p>Your applicant ID:</p>

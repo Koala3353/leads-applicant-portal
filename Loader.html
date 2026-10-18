@@ -62,15 +62,23 @@
               stroke-linecap="round" stroke-dasharray="18 34 6 34"/>
 
       <!-- the eye -->
-      <defs><clipPath id="ldEyeClip"><path d="M30 66 Q66 36 102 66 Q66 96 30 66 Z"/></clipPath></defs>
+      <!-- a photo-like eye: shaded sclera, fibrous iris, lid shadow, wet highlight (monochrome, like CCTV) -->
+      <defs>
+        <clipPath id="ldEyeClip"><path d="M30 66 Q66 36 102 66 Q66 96 30 66 Z"/></clipPath>
+        <radialGradient id="ldSclera" cx="50%" cy="48%" r="60%"><stop offset="0" stop-color="#f4f2ee"/><stop offset=".55" stop-color="#dcd8d2"/><stop offset=".85" stop-color="#9d9893"/><stop offset="1" stop-color="#5e5a57"/></radialGradient>
+        <radialGradient id="ldIris" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#2a2a2a"/><stop offset=".45" stop-color="#7b7f80"/><stop offset=".8" stop-color="#4b4f50"/><stop offset=".93" stop-color="#151515"/><stop offset="1" stop-color="#050505"/></radialGradient>
+        <linearGradient id="ldLidShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".7"/><stop offset=".35" stop-color="#000" stop-opacity="0"/><stop offset=".85" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></linearGradient>
+      </defs>
       <g class="ld-lid">
-        <path d="M30 66 Q66 36 102 66 Q66 96 30 66 Z" style="fill:var(--text)"/>
+        <path d="M30 66 Q66 36 102 66 Q66 96 30 66 Z" fill="url(#ldSclera)"/>
         <g clip-path="url(#ldEyeClip)"><g class="ld-look">
-          <circle cx="66" cy="66" r="15" fill="#1A1A1A"/>
-          <circle cx="66" cy="66" r="15" fill="none" stroke="#3A3A3A" stroke-width="3" stroke-dasharray="2 1.6"/>
-          <circle cx="66" cy="66" r="6.5" fill="#000"/>
-          <circle cx="71" cy="61" r="2.6" fill="#FFF"/>
-        </g></g>
+          <circle cx="66" cy="66" r="15" fill="url(#ldIris)"/>
+          <circle cx="66" cy="66" r="10.5" fill="none" stroke="#9aa0a0" stroke-opacity=".55" stroke-width="7" stroke-dasharray=".5 1.1"/>
+          <circle cx="66" cy="66" r="6" fill="#000"/>
+          <circle cx="71" cy="61" r="2.4" fill="#FFF" fill-opacity=".95"/>
+          <circle cx="62" cy="71" r="1" fill="#FFF" fill-opacity=".35"/>
+        </g>
+        <rect x="28" y="40" width="76" height="52" fill="url(#ldLidShade)"/></g>
         <path d="M30 66 Q66 36 102 66 Q66 96 30 66 Z" fill="none" style="stroke:var(--night)" stroke-width="2"/>
       </g>
       <circle class="ld-rec" cx="52" cy="112" r="2.4" style="fill:var(--danger)"/>

@@ -48,8 +48,8 @@ Member B: your file is **not a page**; `Home.html` pulls it in. Read §9.2 first
 
 1. **Apply** (Member A): one application per person.
 2. **Review:** officers accept / waitlist / reject **in the Sheet** (LEADS menu).
-3. **Requirements:** accepted applicants send PDFs + camp info through the **requirements Google Form**; officers check and mark Requirements.
-4. **Payment:** proof of payment through the **payment Google Form**, after acceptance or any time after applying (a setting); officers mark Payment.
+3. **Payment (first):** proof of payment through the **payment Google Form**, after acceptance or any time after applying (a setting); officers mark Payment.
+4. **Requirements (after payment):** once Payment is **VERIFIED**, accepted applicants send PDFs + camp info through the **requirements Google Form**; officers check and mark Requirements.
 5. **Confirmed:** ACCEPTED + Requirements APPROVED + Payment VERIFIED → automatically **CONFIRMED**.
 6. **Home + Dashboard:** where each person sees where they are, what's next and the right Form links. Member B builds the Dashboard.
 
@@ -126,7 +126,7 @@ Camp info (emergency contact, dietary, medical, shirt size) and all files live i
 **Your code never changes these.** Allowed status moves (`NEXT_STATUS`): SUBMITTED → UNDER REVIEW, REJECTED, WITHDRAWN · UNDER REVIEW → ACCEPTED, WAITLISTED, REJECTED, WITHDRAWN · WAITLISTED → ACCEPTED, REJECTED, WITHDRAWN · ACCEPTED → CONFIRMED (only if APPROVED **and** VERIFIED), WITHDRAWN · CONFIRMED → WITHDRAWN · REJECTED, WITHDRAWN → final.
 
 **Unlock rules live only in `progress_(applicantData)`. Never re-implement them.**
-- Requirements Form: unlocked when Status is ACCEPTED/CONFIRMED, until Requirements is APPROVED.
+- **Pay first.** Requirements Form: unlocked when Status is ACCEPTED/CONFIRMED **and Payment is VERIFIED**, until Requirements is APPROVED (state `locked` while payment isn't verified).
 - Payment Form: unlocked when ACCEPTED/CONFIRMED, **or** `PaymentStage` = ANYTIME and they've applied and aren't REJECTED/WITHDRAWN. Locks again once VERIFIED.
 - REJECTED/WITHDRAWN still **see** their status, but get no Form links.
 
@@ -463,6 +463,7 @@ No `<!DOCTYPE>`/`<html>`/`<head>`/`<body>`, Styles, Loader, Mascot or PageTop: H
 - Analog horror is already laid over every page by Styles.html: moving grain, scanlines, a rolling VHS tracking band and a dark vignette. Don't add your own. Put class `rgb` on **one** big headline per page for the red/blue tape misregistration. The "signal interrupted" cutaways and whispering tagline are Home only; never add flashing or jump scares to a page with a form. Use bracket/slash labels sparingly (`FILE 01 // APPLY`, `[ CASE FILE ]`). Never gore or Halloween (§2.1).
 - **CSS variables:** `--night` (bg), `--night-2` (card), `--text`, `--muted`, `--sky` (links/eyebrows), `--glow` (yellow), `--blue`, `--pink`, `--danger`, `--ok`, `--line` (borders), `--radius`; fonts `--display`, `--body`, `--mono`, `--kicker` (one short mono label like "Case file 26/27", never body text). I.R.I.S.'s emotion colors are in `BRAND.mascot.colors` on the client.
 - **Classes (Styles.html):** `.wrap` (container), `.page-head` (+ `.eyebrow`, `h1`, `p`), `.card`, `.btn` (yellow) / `.btn.ghost` (outline; `aria-disabled="true"` or `disabled` greys out), `.pill` + `.ok`/`.warn`/`.wait`/`.dim`, `.field-error`, `.mono`, `.eyebrow`. `.notice`/`.notice.warn` live in Home; copy the rule if needed.
+- **Retro layer (Oct 2026, end of Styles.html):** the portal is a 90s OS left in a basement. `.btn` / `.btn.ghost` are bevelled 90s buttons (VT323, `--os`) that push in on click; `.card` is a dark bevelled window with a cut corner and a misregistered blue ghost outline; `.top` is a grey taskbar; dialogs get a grey frame and a navy title bar; fields are sunken (`border:2px inset`). Opt-in pieces: `.winbar` (title bar, first child of a `.card`; set `--py/--px` if the card's padding isn't 20px/22px), `.torn` (zigzag bottom edge), `.cut` / `.glitch-corner` (broken outlines), `.scrap` (taped paper note, `--r` = tilt), `.tape-strip`, `.stamp-ink`, `.redbar` (decorative redaction bar), and `.reye` (photo-like monochrome eye; markup `<span class="reye"><span class="reye-ball"><i></i></span></span>`, pupil follows `--px/--py`). Fonts: `--os` (VT323) for OS chrome, `--type` (Special Elite) for paper. **Tilt and overlap decoration, never inputs, answer choices or submit buttons**, and never put `.torn`/`.cut` (masks/clips) on a card that holds a dropdown. Home: stacked CRT TVs with eyes + a "You are being watched" poster, tilted windows, FAQ as manila case folders (fields, redaction bars, stamp, clipped photo), testimonials as torn printouts.
 - **Badge colors:** CONFIRMED/ACCEPTED/APPROVED/VERIFIED `.ok` · REJECTED/RETURNED/WITHDRAWN `.warn` · SUBMITTED/UNDER REVIEW/WAITLISTED/PARTIAL `.wait` · NONE/locked `.dim`.
 - **Copy:** `BRAND.statusCopy[status]` for status sentences. Fear theme in headings and empty states; errors plain: what happened + what to do.
 - **No** searchlight or watching-eye background effects on your page (Home only). I.R.I.S. already watches every page.

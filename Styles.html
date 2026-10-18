@@ -192,6 +192,161 @@
   .rpt .shot .rm{background:none;border:1.5px solid var(--danger);color:var(--danger);font-family:var(--mono);font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.4em .7em;min-height:36px;cursor:pointer}
   .rpt .status.ok{color:var(--glow)} .rpt .status.bad{color:var(--danger)}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* =====================================================================================================
+     RETRO LAYER: a 90s operating system left running in a basement. Bevelled buttons, windows with title
+     bars, sunken fields, broken corners, paper scraps and a photo-like watching eye (.reye).
+     Rule: decoration can tilt and overlap; inputs, answer choices and submit buttons always stay straight.
+     ===================================================================================================== */
+  :root{
+    --win:#c0c0c0;--win-hi:#ffffff;--win-lt:#dfdfdf;--win-sh:#808080;--win-dk:#0a0a0a;
+    --title-a:#000080;--title-b:#1084d0;
+    --paper:#e6e1d1;--paper-ink:#1b1b1b;--manila:#d3bc86;--manila-dk:#a8925a;--note:#e8de74;
+    --os:'VT323','Lucida Console',monospace;
+    --type:'Special Elite','Courier New',monospace;
+    --bevel-out:inset -1px -1px var(--win-dk),inset 1px 1px var(--win-hi),inset -2px -2px var(--win-sh),inset 2px 2px var(--win-lt);
+    --bevel-in:inset -1px -1px var(--win-hi),inset 1px 1px var(--win-dk),inset -2px -2px var(--win-lt),inset 2px 2px var(--win-sh);
+    --bevel-dark:inset -1px -1px #000,inset 1px 1px #707070,inset -2px -2px #222,inset 2px 2px #424242;
+    --bevel-dark-in:inset 1px 1px #000,inset -1px -1px #5c5c5c,inset 2px 2px #202020,inset -2px -2px #343434;
+    --grunge:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.7'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.4 1.9'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    --zig:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='26' height='10'><path d='M0 0H26V5L23 9 18 4 13 10 8 3 4 8 0 4Z'/></svg>");
+  }
+
+  /* heavier grain, plus old stains on the "screen" */
+  body::after{opacity:.17}
+  body{background:
+    radial-gradient(420px 300px at 8% 78%,rgba(120,95,40,.07),transparent 70%),
+    radial-gradient(360px 260px at 92% 22%,rgba(120,95,40,.05),transparent 70%),
+    radial-gradient(1100px 520px at 50% -12%,color-mix(in srgb,var(--blue) 18%,transparent) 0%,transparent 62%),var(--night)}
+
+  /* scrollbars: chunky and grey */
+  html{scrollbar-color:var(--win) #161616}
+  ::-webkit-scrollbar{width:16px;height:16px;background:repeating-conic-gradient(#2a2a2a 0 25%,#161616 0 50%) 0 0/4px 4px}
+  ::-webkit-scrollbar-thumb{background:var(--win);box-shadow:var(--bevel-out)}
+
+  /* ---------- buttons: raised, square, they push in when clicked ---------- */
+  .btn{font-family:var(--os);font-weight:400;font-size:1.3rem;letter-spacing:.05em;line-height:1;color:#000;background:var(--glow);
+    border:0;border-radius:0;padding:.55em 1.15em .5em;transition:none;text-shadow:none;
+    box-shadow:inset -1px -1px #000,inset 1px 1px #ffffc0,inset -3px -3px #8f8f00,inset 3px 3px #ffff8a,4px 4px 0 #000}
+  .btn.ghost{background:var(--win);color:#000;border:0;box-shadow:var(--bevel-out),4px 4px 0 #000}
+  @media (hover:hover){.btn:hover{transform:none;filter:brightness(1.07);box-shadow:inset -1px -1px #000,inset 1px 1px #ffffc0,inset -3px -3px #8f8f00,inset 3px 3px #ffff8a,4px 4px 0 #000}
+    .btn.ghost:hover{box-shadow:var(--bevel-out),4px 4px 0 #000}}
+  .btn:active{transform:translate(3px,3px);box-shadow:inset 1px 1px #000,inset -1px -1px #ffffc0,inset 3px 3px #8f8f00,inset -3px -3px #ffff8a,1px 1px 0 #000}
+  .btn.ghost:active{box-shadow:var(--bevel-in),1px 1px 0 #000}
+  .btn:focus-visible{outline:2px dotted #000;outline-offset:-7px}
+  .btn[aria-disabled="true"],.btn:disabled{opacity:1;filter:none;background:var(--win);color:var(--win-sh);text-shadow:1px 1px 0 var(--win-hi);box-shadow:var(--bevel-out)}
+
+  /* ---------- windows: every card is a dark window with a bevelled frame and a misregistered ghost outline ---------- */
+  .card{border:0;border-radius:0;
+    background:linear-gradient(225deg,var(--night) 0 10px,#5a5a5a 10px 11px,transparent 11px),var(--night-2);
+    box-shadow:var(--bevel-dark),6px 5px 0 -2px #000,6px 5px 0 -1px rgba(0,16,224,.55)}
+  /* opt-in title bar: put <div class="winbar"><span>FILE.EXE</span><i><b>_</b><b>&#9633;</b><b>&#215;</b></i></div> first in a .card */
+  .winbar{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;
+    margin:calc(3px - var(--py,20px)) calc(3px - var(--px,22px)) 14px;padding:3px 3px 3px 8px;
+    background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;font-family:var(--os);font-size:1.12rem;letter-spacing:.04em;line-height:1.15}
+  .winbar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .winbar i{flex:none;display:flex;gap:2px;font-style:normal}
+  .winbar b{display:grid;place-items:center;width:18px;height:16px;background:var(--win);color:#000;box-shadow:var(--bevel-out);font:700 11px/1 monospace}
+  .winbar.red{background:linear-gradient(90deg,#4a0000,#b00000)}
+  .winbar.off{background:linear-gradient(90deg,#3a3a3a,#7a7a7a)}
+
+  /* ---------- torn / cut edges (opt-in: masks clip anything that sticks out, so never on cards with dropdowns) ---------- */
+  .torn{-webkit-mask:linear-gradient(#000 0 0) top/100% calc(100% - 9px) no-repeat,var(--zig) bottom/26px 10px repeat-x;
+    mask:linear-gradient(#000 0 0) top/100% calc(100% - 9px) no-repeat,var(--zig) bottom/26px 10px repeat-x}
+  .cut{clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,22px 100%,0 calc(100% - 22px))}
+  .glitch-corner{clip-path:polygon(0 0,100% 0,100% calc(100% - 26px),calc(100% - 8px) calc(100% - 26px),calc(100% - 8px) calc(100% - 14px),100% calc(100% - 14px),100% 100%,0 100%,0 30px,6px 30px,6px 18px,0 18px)}
+
+  /* ---------- paper scraps, tape, stamps, redaction bars (all decorative) ---------- */
+  .scrap{position:relative;font-family:var(--type);color:var(--paper-ink);background:var(--note);padding:12px 14px 14px;line-height:1.35;
+    box-shadow:3px 4px 0 rgba(0,0,0,.55);transform:rotate(var(--r,3deg));max-width:15em}
+  .scrap::before,.tape-strip{content:"";position:absolute;left:50%;top:-10px;width:72px;height:20px;margin-left:-36px;
+    background:rgba(230,225,200,.55);box-shadow:0 1px 2px rgba(0,0,0,.3);transform:rotate(-4deg)}
+  .stamp-ink{display:inline-block;font-family:var(--type);font-size:1.05rem;letter-spacing:.12em;text-transform:uppercase;color:var(--danger);
+    border:3px solid currentColor;padding:.15em .5em;transform:rotate(var(--r,-8deg));opacity:.85;-webkit-mask-image:var(--grunge);mask-image:var(--grunge)}
+  .redbar{display:inline-block;height:.95em;vertical-align:-.12em;background:#050505;width:var(--w,6em);transform:rotate(var(--r,-.6deg));
+    border-radius:1px;box-shadow:1px 0 0 #111}
+
+  /* ---------- pills: little sunken readouts ---------- */
+  .pill{border:0;box-shadow:var(--bevel-dark-in);background:#050505;font-family:var(--os);font-size:1.02rem;font-weight:400;letter-spacing:.06em;padding:.12em .6em}
+  .pill.ok{background:var(--text);color:#000;box-shadow:var(--bevel-in)}
+
+  /* ---------- the top bar becomes a taskbar ---------- */
+  .top{background:var(--win);color:#000;border:0;padding:4px 6px;margin:12px 0 0;
+    box-shadow:inset 0 1px var(--win-hi),inset 0 -1px var(--win-dk),inset 0 2px var(--win-lt),inset 0 -2px var(--win-sh),0 4px 0 #000;transform:rotate(-.35deg)}
+  .logo{display:inline-flex;align-items:center;gap:8px;background:var(--win);color:#000;box-shadow:var(--bevel-out);padding:5px 10px 4px;font-size:1.35rem}
+  .logo span{color:var(--title-a)}
+  .logo::before{content:"";width:18px;height:12px;flex:none;border-radius:50%/60%;
+    background:radial-gradient(circle,#000 0 26%,#3a4a4c 28% 48%,#f2efe8 50% 100%);box-shadow:inset 0 0 0 1.5px #000}
+  .top .back,.top .lights,.top .report-btn,.top .acct,.top .admin-chip{display:inline-flex;align-items:center;justify-content:center;min-height:34px;
+    padding:.2em .75em;background:var(--win);color:#000;border:0;box-shadow:var(--bevel-out);font-family:var(--os);font-size:1.12rem;
+    font-weight:400;letter-spacing:.04em;text-transform:none;text-decoration:none;cursor:pointer}
+  .top .admin-chip:not(.show){display:none}
+  .top .report-btn{color:#a00000}
+  .top .lights[aria-pressed="true"],.top .back:active,.top .lights:active,.top .report-btn:active,.top .acct:active{box-shadow:var(--bevel-in)}
+  .top .back:hover,.top .lights:hover,.top .lights:focus-visible,.top .report-btn:hover,.top .acct:hover{color:#000;background:var(--win-lt);border:0}
+  .top .report-btn:hover{color:#a00000}
+  .top a:focus-visible,.top button:focus-visible{outline:2px dotted #000;outline-offset:-5px}
+  .top .who,.top .who b{color:#000}
+  @media (max-width:560px){
+    .top{transform:none}
+    .top-links > *{border:0;font-size:1.05rem!important}
+  }
+
+  /* ---------- pop-ups: a grey window frame around the dark message ---------- */
+  .sih{border:0;padding:4px;background:var(--win);box-shadow:var(--bevel-out),8px 8px 0 #000}
+  .sih-body{background:var(--night);box-shadow:var(--bevel-dark-in)}
+  .sih-tape{height:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 3px 3px 8px;margin-bottom:4px;
+    background:linear-gradient(90deg,var(--title-a),var(--title-b));color:#fff;font-family:var(--os);font-size:1.1rem}
+  .sih-tape::before{content:"SYSTEM_MESSAGE.EXE"}
+  .sih-tape::after{content:"\00D7";display:grid;place-items:center;width:18px;height:16px;background:var(--win);color:#000;box-shadow:var(--bevel-out);font:700 12px/1 monospace}
+
+  /* ---------- fields: sunken, like 1996 ---------- */
+  .cs-btn,.rpt input[type=text],.rpt input[type=email],.rpt textarea{background:#060606;border:2px inset #7a7a7a}
+  .cs-list{background:var(--win);color:#000;border:0;box-shadow:var(--bevel-out),4px 4px 0 #000}
+  .cs-opt.active{background:var(--title-a);color:#fff}
+  .cs-opt[aria-selected="true"]::before{background:#000}
+  .cs-opt.active[aria-selected="true"]::before{background:#fff}
+  .cs-opt[data-empty]{color:#555}
+
+  /* ---------- page heads (Apply, Game): tilted headline + an ink stamp; the form below stays straight ---------- */
+  .page-head{position:relative}
+  .page-head h1{rotate:-1.6deg;transform-origin:left center}   /* rotate, not transform: the .rgb jitter animation owns transform */
+  .page-head::after{content:"CONFIDENTIAL";position:absolute;right:2%;top:30px;font-family:var(--type);font-size:1.1rem;letter-spacing:.14em;color:var(--danger);
+    border:3px solid currentColor;padding:.15em .5em;transform:rotate(9deg);opacity:.75;pointer-events:none;-webkit-mask-image:var(--grunge);mask-image:var(--grunge)}
+  @media (max-width:860px){.page-head::after{display:none}}
+  .page-foot{border-top:1.5px dashed var(--line)}
+
+  /* ---------- .reye: a photo-like human eye on a CCTV monitor (pure CSS stand-in until real photos) ----------
+     <span class="reye"><span class="reye-ball"><i></i></span></span>. Set --s for size. The pupil follows
+     --px / --py (set by page JS), --pupil sets its size, --d offsets the blink. Monochrome on purpose: grain + B&W
+     footage is what makes it read as a real eye. */
+  .reye{--s:140px;position:relative;display:block;width:var(--s);aspect-ratio:2.1/1;overflow:hidden;flex:none;
+    background:radial-gradient(ellipse 72% 82% at 50% 58%,#c49b82 0%,#9c7059 42%,#5f3f30 78%,#24160f 100%);
+    filter:grayscale(1) contrast(1.28) brightness(.92)}
+  .reye::before{content:"";position:absolute;left:3%;right:3%;top:-4%;height:66%;border-radius:50%;z-index:2;pointer-events:none;
+    box-shadow:inset 0 calc(var(--s)*.035) calc(var(--s)*.03) rgba(0,0,0,.6),0 calc(var(--s)*-.01) calc(var(--s)*.02) rgba(255,255,255,.12)}
+  .reye::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;opacity:.55;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.35) 0 1px,transparent 1px 3px),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .7 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  .reye-ball{position:absolute;left:9%;right:9%;top:15%;bottom:13%;
+    clip-path:polygon(0 54%,7% 38%,18% 22%,33% 10%,50% 5%,66% 8%,81% 18%,93% 33%,100% 50%,93% 63%,81% 77%,66% 88%,50% 93%,34% 89%,19% 79%,7% 67%);
+    background:linear-gradient(180deg,rgba(0,0,0,.62) 0%,rgba(0,0,0,.16) 24%,transparent 42%,transparent 78%,rgba(0,0,0,.38) 100%),
+      radial-gradient(ellipse 58% 70% at 50% 50%,transparent 42%,rgba(130,40,40,.4) 100%),
+      repeating-conic-gradient(from 8deg at 50% 50%,transparent 0 9deg,rgba(150,30,30,.2) 9deg 9.6deg,transparent 9.6deg 22deg),
+      radial-gradient(ellipse 56% 66% at 50% 48%,#f7f3ed 0%,#e8ded4 48%,#c4aea2 84%,#8c7064 100%)}
+  .reye-ball i{position:absolute;left:50%;top:50%;width:37%;aspect-ratio:1;border-radius:50%;translate:-50% -50%;
+    transform:translate(var(--px,0),var(--py,0));transition:transform .12s linear;
+    background:radial-gradient(circle at 36% 32%,rgba(255,255,255,.95) 0 5%,transparent 7.5%),
+      radial-gradient(circle at 61% 64%,rgba(255,255,255,.28) 0 3%,transparent 5%),
+      radial-gradient(circle,#000 0 var(--pupil,26%),#140d09 calc(var(--pupil,26%) + 2%),transparent calc(var(--pupil,26%) + 7%)),
+      radial-gradient(circle,transparent 34%,rgba(0,0,0,.6) 86%,#050505 95%),
+      repeating-conic-gradient(#6d7e82 0 2.5deg,#3b484b 2.5deg 5deg,#8d9d99 5deg 6deg,#4a5a5c 6deg 9deg),#4e5e60;
+    box-shadow:inset 0 calc(var(--s)*.07) calc(var(--s)*.05) rgba(0,0,0,.6)}
+  .reye-ball::after{content:"";position:absolute;inset:0;background:linear-gradient(#93684f,#6c4838 70%,#3a241a);
+    transform:scaleY(0);transform-origin:top;animation:reyeBlink 7s infinite;animation-delay:var(--d,0s)}
+  @keyframes reyeBlink{0%,93%,100%{transform:scaleY(0)}95.5%{transform:scaleY(1.05)}}
+  .reye.red{filter:grayscale(1) contrast(1.35) sepia(1) hue-rotate(-45deg) saturate(3.5) brightness(.72)}
+  html.calm .reye-ball::after{animation:none}
 </style>
 <script>
   /* lights on/off: set before the page paints so there's no flash; any button with data-lights toggles it */

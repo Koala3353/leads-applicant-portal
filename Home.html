@@ -12,21 +12,62 @@
   .dark{position:fixed;inset:0;z-index:0;pointer-events:none;
     background:radial-gradient(circle 240px at var(--x,50%) var(--y,30%),color-mix(in srgb,var(--glow) 9%,transparent),transparent 70%),
                radial-gradient(1100px 520px at 50% -12%,color-mix(in srgb,var(--blue) 26%,transparent) 0%,transparent 62%),var(--night)}
-  /* almond-shaped eyes with pointed corners (sharper than an oval) */
-  .watcher{position:fixed;z-index:1;pointer-events:none;width:var(--s,60px);height:calc(var(--s,60px)*.4);opacity:var(--o,.85);
-    background:#F2F1EC;clip-path:polygon(0 50%,10% 36%,22% 22%,36% 11%,50% 6%,64% 11%,78% 22%,90% 36%,100% 50%,90% 62%,78% 76%,64% 87%,50% 92%,36% 87%,22% 76%,10% 62%)}
-  .watcher i{position:absolute;left:50%;top:50%;width:40%;aspect-ratio:1;height:auto;transform-origin:center;border-radius:50%;
-    margin:0;translate:-50% -50%;
-    background:radial-gradient(circle at 50% 50%,#000 0 34%,#1c1c1c 35% 66%,#000 67% 71%,transparent 72%);
-    transform:translate(var(--px,0),var(--py,0));transition:transform .1s linear}
-  .watcher i::after{content:"";position:absolute;width:16%;height:16%;left:58%;top:24%;border-radius:50%;background:#fff}
-  .watcher::after{content:"";position:absolute;inset:0;background:var(--night);transform:scaleY(0);transform-origin:top;
-    animation:lid 6s infinite;animation-delay:var(--d,0s)}
-  .watcher.red i{background:radial-gradient(circle at 50% 50%,#000 0 28%,var(--danger) 29% 64%,#000 65% 70%,transparent 71%)}
-  @keyframes lid{0%,92%,100%{transform:scaleY(0)}95%{transform:scaleY(1)}}
-  /* stop moving and they stare harder */
-  body.still .watcher{opacity:calc(var(--o,.8) + .15)}
-  body.still .watcher i{background:radial-gradient(circle at 50% 50%,#000 0 44%,#3a0000 45% 64%,#000 65% 70%,transparent 71%)}
+  /* watching eyes in the dark: photo-like (.reye in Styles), monochrome, half-lost in the grain */
+  .watcher{position:fixed;z-index:1;pointer-events:none;opacity:var(--o,.7)}
+  .watcher .reye{--s:calc(var(--s0,60px) * 1.7);-webkit-mask:radial-gradient(ellipse 50% 50% at 50% 50%,#000 55%,transparent 100%);mask:radial-gradient(ellipse 50% 50% at 50% 50%,#000 55%,transparent 100%)}
+  /* stop moving and they stare harder: pupils open up */
+  .watcher.red .reye{filter:grayscale(1) contrast(1.35) sepia(1) hue-rotate(-45deg) saturate(3.5) brightness(.72)}
+  body.still .reye{--pupil:34%}
+  body.still .watcher{opacity:calc(var(--o,.7) + .15)}
+
+  /* ---------- the wall: stacked CRT TVs, each with an eye, plus a propaganda poster (decorative) ---------- */
+  .wall{position:relative;display:grid;grid-template-columns:1fr;gap:26px;margin:18px 0 34px;align-items:center}
+  @media (min-width:860px){.wall{grid-template-columns:1.25fr .85fr;gap:0}}
+  .tvs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;align-items:end;padding:10px 4px 0}
+  .tv{position:relative;min-width:0;padding:9% 13% 17% 7%;background:linear-gradient(160deg,#cfc6b0,#a89f88 55%,#7d7563);
+    box-shadow:inset -3px -3px 0 rgba(0,0,0,.35),inset 3px 3px 0 rgba(255,255,255,.35),5px 6px 0 #000;transform:rotate(var(--r,0deg))}
+  .tv:nth-child(3n+2){background:linear-gradient(160deg,#3c3c3c,#262626 60%,#141414);box-shadow:inset -3px -3px 0 rgba(0,0,0,.6),inset 3px 3px 0 rgba(255,255,255,.12),5px 6px 0 #000}
+  .tv::after{content:"";position:absolute;right:4%;top:22%;width:6%;aspect-ratio:1;border-radius:50%;background:#2a2a2a;
+    box-shadow:0 calc(100% + 140%) 0 #2a2a2a,inset 1px 1px 0 rgba(255,255,255,.3)}
+  .tv b{position:absolute;left:8%;bottom:3%;font:400 clamp(.62rem,1.3vw,.95rem)/1 var(--os);letter-spacing:.06em;color:#111}
+  .tv:nth-child(3n+2) b{color:#9a9a9a}
+  .tv-scr{position:relative;display:grid;place-items:center;aspect-ratio:4/3;overflow:hidden;border-radius:14%/18%;background:#0b0b0b;
+    box-shadow:inset 0 0 18px rgba(0,0,0,.95),0 0 0 3px #111}
+  .tv-scr::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    background:radial-gradient(ellipse at 35% 25%,rgba(255,255,255,.14),transparent 45%),repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0 1px,transparent 1px 3px)}
+  .tv-scr{container-type:inline-size}
+  .tv-scr .reye{--s:108cqw}
+  .tv-scr.static{background:#222}
+  .tv-scr.static::before{content:"NO SIGNAL";position:absolute;inset:-20px;display:grid;place-items:center;font:400 13cqw/1 var(--os);letter-spacing:.2em;color:#ddd;
+    animation:grain .3s steps(3) infinite;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.3'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  .tv.big{grid-column:span 2;grid-row:span 2}
+  /* the stack piles up and leans */
+  @media (min-width:860px){
+    .tvs{margin-right:-30px}
+    .tv:nth-child(1){--r:-3deg}.tv:nth-child(2){--r:2deg;margin-left:-14px}.tv:nth-child(3){--r:-1deg;margin-left:-10px}
+    .tv:nth-child(4){--r:1.5deg;margin-top:-4px}.tv:nth-child(5){--r:-2.5deg;margin-top:-8px}.tv:nth-child(6){--r:4deg;margin-top:-2px}
+  }
+  @media (max-width:859px){.tv:nth-child(odd){--r:-1.5deg}.tv:nth-child(even){--r:1.5deg}.tv:nth-child(n+4){display:none}}
+
+  .poster{position:relative;z-index:3;justify-self:center;width:min(100%,360px);padding:22px 20px 26px;text-align:center;color:#111;
+    background:radial-gradient(ellipse at 30% 20%,#efe9d6,#d9cfb4 70%,#bfb28f);transform:rotate(3.5deg);box-shadow:6px 8px 0 rgba(0,0,0,.7);
+    -webkit-mask:linear-gradient(#000 0 0) top/100% calc(100% - 9px) no-repeat,var(--zig) bottom/26px 10px repeat-x;
+    mask:linear-gradient(#000 0 0) top/100% calc(100% - 9px) no-repeat,var(--zig) bottom/26px 10px repeat-x}
+  .poster::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.35;mix-blend-mode:multiply;background-image:var(--grunge)}
+  .poster .tape-strip{top:-6px}
+  .poster p{margin:0}
+  .poster .p-top{font:400 1.1rem/1 var(--type);letter-spacing:.3em;border-block:2px solid #111;padding:6px 0;margin-bottom:14px}
+  .poster{container-type:inline-size}
+  .poster .reye{--s:100cqw;margin:0 auto 12px;box-shadow:0 0 0 3px #111}
+  .poster .p-h{font-family:var(--display);text-transform:uppercase;font-size:clamp(2.2rem,8vw,3.2rem);line-height:.88;letter-spacing:.01em;color:#111}
+  .poster .p-h em{font-style:normal;color:#a00000}
+  .poster .p-s{margin-top:10px;font:400 .95rem/1.3 var(--type);letter-spacing:.06em;text-transform:uppercase}
+  .poster .p-no{position:absolute;right:12px;bottom:16px;font:400 .8rem var(--type);opacity:.7}
+  @media (min-width:860px){.poster{margin-left:-40px;margin-top:30px}}
+  .wall .scrap{position:absolute;z-index:4;--r:-7deg;font-size:.95rem}
+  .wall .scrap.s1{left:4%;bottom:-22px}
+  .wall .scrap.s2{right:2%;top:-14px;--r:6deg;background:var(--paper)}
+  @media (max-width:859px){.wall .scrap.s1{position:relative;left:auto;bottom:auto;justify-self:start}.wall .scrap.s2{display:none}}
 
   /* ---------- "signal interrupted": a rare full-screen cutaway (one slow flash, never strobing) ---------- */
   .interrupt{position:fixed;inset:0;z-index:9500;display:none;place-items:center;align-content:center;gap:14px;pointer-events:none;
@@ -44,7 +85,7 @@
 
   /* CCTV wall: four small feeds under the hero (tablet and up). CAM 03 follows your pointer. */
   .feeds{display:none;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1.5px solid var(--line);margin:8px 0 6px}
-  @media (min-width:860px){.feeds{display:grid}}
+  @media (min-width:860px){.feeds{display:grid;transform:rotate(-.8deg) translateX(-10px);box-shadow:6px 6px 0 #000}}
   .feed{position:relative;aspect-ratio:16/9;background:#0d0d0d;overflow:hidden;min-width:0}
   .feed::before{content:"";position:absolute;inset:-30px;opacity:.22;animation:grain .4s steps(3) infinite;
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='1'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
@@ -120,31 +161,60 @@
   /* ---------- FAQ as classified files + past campers (hidden once you have a file) ---------- */
   .intel{margin:56px 0 0}
   body.applied .intel{display:none}
-  .files{display:grid;gap:10px}
-  .file{border:1.5px solid var(--line);background:var(--night-2);position:relative}
-  .file summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px 16px;min-height:52px}
+  /* manila case folders: tab, typed form fields, redaction bars, ink stamp, a clipped photo. They pile up crooked. */
+  .files{display:grid;gap:30px;padding-top:22px}
+  .file{position:relative;color:var(--paper-ink);background:linear-gradient(175deg,var(--manila),#c7ae74);
+    box-shadow:inset 0 -2px 0 var(--manila-dk),4px 5px 0 rgba(0,0,0,.65);transform:rotate(var(--r,0deg));margin-top:6px}
+  .file:nth-child(4n+1){--r:-.9deg}.file:nth-child(4n+2){--r:.7deg;margin-left:10px}.file:nth-child(4n+3){--r:-.3deg;margin-left:-4px}.file:nth-child(4n){--r:1.1deg;margin-left:6px}
+  .file::before{content:attr(data-no);position:absolute;left:18px;top:-20px;height:22px;padding:3px 14px 0;
+    background:var(--manila);font:400 .85rem var(--type);letter-spacing:.12em;color:#3b3220;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 100%,0 100%)}
+  .file summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:10px 14px;align-items:center;padding:16px 18px;min-height:56px}
   .file summary::-webkit-details-marker{display:none}
-  .file summary:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
-  .file .fno{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;color:var(--muted);white-space:nowrap}
-  .file .fq{font-weight:600;min-width:0}
-  .file .stamp{font-family:var(--mono);font-size:.62rem;font-weight:700;letter-spacing:.16em;padding:.25em .6em;border:1.5px solid var(--danger);color:var(--danger);transform:rotate(-3deg);white-space:nowrap}
-  .file[open] .stamp{border-color:var(--glow);color:var(--glow);transform:rotate(0)}
-  .file .fa{padding:0 16px 16px 16px;color:color-mix(in srgb,var(--text) 86%,var(--muted));max-width:62ch;margin:0}
-  .file[open] .fa{animation:declass .32s cubic-bezier(.23,1,.32,1)}
-  .file .fa.todo{color:var(--glow);font-family:var(--mono);font-size:.82rem}
+  .file summary:focus-visible{outline:3px dashed #000;outline-offset:-6px}
+  .file .fq{font-family:var(--type);font-size:1.05rem;line-height:1.35;min-width:0}
+  .file .fq::before{content:"SUBJECT: ";color:#6b5a35;font-size:.85em;letter-spacing:.08em}
+  .file .stamp{font:400 .95rem var(--type);letter-spacing:.14em;padding:.15em .55em;border:3px solid #a00000;color:#a00000;transform:rotate(-7deg);white-space:nowrap;
+    -webkit-mask-image:var(--grunge);mask-image:var(--grunge)}
+  .file[open] .stamp{border-color:#1d5a1d;color:#1d5a1d;transform:rotate(4deg)}
+  .file .sheet{display:grid;gap:12px;grid-template-columns:1fr;margin:0 14px 16px;padding:14px 16px 16px;background:var(--paper);
+    box-shadow:2px 3px 0 rgba(0,0,0,.35);transform:rotate(-.4deg)}
+  @media (min-width:600px){.file .sheet{grid-template-columns:minmax(0,1fr) 120px}}
+  .file .meta{display:flex;flex-wrap:wrap;gap:4px 18px;margin:0;font:400 .8rem var(--type);letter-spacing:.06em;color:#4a4130;text-transform:uppercase}
+  .file .meta span{border-bottom:1px solid #8a7e62;padding-bottom:2px}
+  .file .fa{margin:0;font-family:var(--type);font-size:1rem;line-height:1.6;color:var(--paper-ink);max-width:60ch}
+  .file .fa.todo{color:#8a0000}
+  .file .bars{display:flex;flex-wrap:wrap;gap:6px 8px;margin:0}
+  .file .photo{position:relative;justify-self:start;width:120px;padding:6px 6px 18px;background:#f4f1e8;box-shadow:2px 3px 0 rgba(0,0,0,.4);transform:rotate(4deg)}
+  .file .photo .reye{--s:108px}
+  .file .photo::before{content:"";position:absolute;left:16px;top:-12px;width:12px;height:32px;border:2.5px solid #7d7d7d;border-radius:8px 8px 0 0;border-bottom:0}
+  .file .photo small{position:absolute;left:8px;bottom:2px;font:400 .62rem var(--type);color:#555}
+  .file[open] .sheet{animation:declass .32s cubic-bezier(.23,1,.32,1)}
   @keyframes declass{from{clip-path:inset(0 100% 0 0);opacity:.4}to{clip-path:inset(0 0 0 0);opacity:1}}
-  @media (hover:hover) and (pointer:fine){.file summary:hover .fq{color:var(--glow)}}
-  @media (max-width:560px){.file summary{grid-template-columns:1fr auto}.file .fno{grid-column:1/-1}}
+  @media (hover:hover) and (pointer:fine){.file summary:hover .fq{text-decoration:underline}}
   .voices{list-style:none;margin:0;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
-  .voice{border:1.5px solid var(--line);background:var(--night-2);padding:18px;position:relative;display:flex;flex-direction:column;gap:12px}
-  .voice .tape{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;color:var(--danger);text-transform:uppercase}
-  .voice blockquote{margin:0;font-family:var(--mono);font-size:.88rem;line-height:1.55}
+  .voice{background:var(--paper);color:var(--paper-ink);padding:22px 18px 26px;position:relative;display:flex;flex-direction:column;gap:12px;
+    transform:rotate(var(--r,0deg));filter:drop-shadow(4px 5px 0 rgba(0,0,0,.6))}
+  .voice > *{position:relative}
+  .voice::after{content:"";position:absolute;left:0;right:0;bottom:-9px;height:10px;background:var(--paper);
+    -webkit-mask:var(--zig) top/26px 10px repeat-x;mask:var(--zig) top/26px 10px repeat-x;transform:scaleY(-1)}
+  .voice:nth-child(3n+1){--r:-1.4deg}.voice:nth-child(3n+2){--r:1deg;margin-top:14px}.voice:nth-child(3n){--r:-.4deg}
+  .voice .tape{font-family:var(--type);font-size:.8rem;letter-spacing:.12em;color:#a00000;text-transform:uppercase}
+  .voice blockquote{margin:0;font-family:var(--type);font-size:.98rem;line-height:1.6}
   .voice blockquote::before{content:"> "}
-  .voice .by{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-top:auto}
+  .voice .by{font-family:var(--type);font-size:.8rem;letter-spacing:.08em;color:#555;text-transform:uppercase;margin-top:auto}
   .voice .sample{position:absolute;right:10px;top:10px;font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.14em;color:var(--night);background:var(--glow);padding:.15em .5em}
 
   /* countdown: a CCTV readout */
-  .clock{position:relative}
+  .clock{position:relative;--py:20px;--px:22px}
+  /* clutter: the headline leans, the countdown window is dropped on at an angle over the lede */
+  .hero h1{rotate:-1.8deg;transform-origin:left bottom}
+  .hero .lede{background:var(--paper);color:var(--paper-ink);font-family:var(--type);font-size:1rem;line-height:1.55;padding:14px 16px 18px;
+    transform:rotate(.8deg);box-shadow:4px 5px 0 rgba(0,0,0,.6);max-width:30em}
+  @media (min-width:861px){
+    .clock{transform:rotate(2.6deg);margin-top:18px;margin-left:-46px}
+    .status{transform:rotate(-1.4deg);margin-left:14px}
+  }
+  .hero .scrap{margin:18px 0 0 auto;--r:-5deg;font-size:.92rem}
   .clock h2{margin:.5em 0 .7em;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.5rem;letter-spacing:.01em;line-height:1}
   .units{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
   .unit{background:var(--night);padding:12px 4px;text-align:center}
@@ -209,19 +279,29 @@
   .mods.with-admin{grid-template-columns:repeat(2,minmax(0,1fr))}
   @media (min-width:1000px){.mods.with-admin{grid-template-columns:repeat(4,minmax(0,1fr))}}
   /* two columns (tablets, narrow laptop windows): three cards would leave a hole, so the third spans the full row */
-  @media (max-width:759px){.mods:not(.with-admin) .mod[data-key="pay"]{grid-column:1/-1}}
-  .mod{display:flex;flex-direction:column;gap:10px;position:relative;min-width:0;transition:border-color .2s ease}
-  .mod.is-action{border-color:var(--glow);box-shadow:5px 5px 0 var(--glow)}
+  @media (max-width:759px){.mods:not(.with-admin) .mod[data-key="req"]{grid-column:1/-1}}
+  .mod{display:flex;flex-direction:column;gap:10px;position:relative;min-width:0;--py:20px;--px:22px}
+  .mod.is-action{box-shadow:var(--bevel-dark),6px 6px 0 var(--glow)}
+  .mod.is-action .winbar{background:linear-gradient(90deg,#6b6b00,#c8c800);color:#000}
+  .mod.is-locked .winbar,.mod.is-stopped .winbar{background:linear-gradient(90deg,#3a3a3a,#7a7a7a)}
+  @media (min-width:761px){
+    .mod:nth-child(1){transform:rotate(-1.6deg)}
+    .mod:nth-child(2){transform:rotate(1.2deg) translateY(14px);margin-left:-12px;z-index:1}
+    .mod:nth-child(3){transform:rotate(-.6deg) translateY(-6px);margin-left:-10px}
+    .mod:nth-child(4){transform:rotate(2deg)}
+  }
+  @media (max-width:760px){.mod:nth-child(odd){transform:rotate(-.6deg)}.mod:nth-child(even){transform:rotate(.6deg)}}
   .mod.is-locked,.mod.is-stopped{opacity:.55}
   .mod[data-key="sheet"]{display:none;border-style:dashed}
   .mod[data-key="sheet"].show{display:flex}
   .mod .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
   .mod .n{font-family:var(--mono);font-weight:700;font-size:.74rem;letter-spacing:.12em;color:var(--muted)}
   .mod .n::before{content:"FILE "}
+  .mod .n{font-family:var(--os);font-size:1rem;font-weight:400}
   .mod h3{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.7rem;line-height:.95;margin:0}
   .mod .fix{margin:0;font-size:.92rem;color:var(--fix-text)}
   .mod .go{margin-top:auto;padding-top:6px}
-  .mod .go .btn{font-size:.82rem;padding:.75em 1.1em;width:100%;justify-content:center}
+  .mod .go .btn{font-size:1.2rem;padding:.55em 1em;width:100%;justify-content:center}
   .mod .why{margin:0;font-family:var(--mono);font-size:.72rem;color:var(--muted);min-height:1.2em}
 
   /* ---------- footer ---------- */
@@ -239,15 +319,15 @@
     /* phones: eyes only peek in from the edges so they never sit on top of text or buttons */
     .watcher{display:none}
     .watcher.peek-l,.watcher.peek-r{display:block;--o:.4}
-    .watcher.peek-l{top:auto!important;bottom:14%!important;left:-22px!important;right:auto!important;--s:58px!important}
-    .watcher.peek-r{top:34%!important;right:-20px!important;left:auto!important;bottom:auto!important;--s:52px!important}
+    .watcher.peek-l{top:auto!important;bottom:14%!important;left:-40px!important;right:auto!important;--s0:50px!important}
+    .watcher.peek-r{top:34%!important;right:-40px!important;left:auto!important;bottom:auto!important;--s0:46px!important}
     /* top bar: logo, then who you are, then the three small buttons in one row */
     .top{gap:10px;padding:12px 0}
     .logo{font-size:1.35rem}
     .who{width:100%;gap:8px;font-size:.62rem}
     .who > span:first-child{flex-basis:100%;overflow-wrap:anywhere}
     .who b{font-size:.74rem}
-    .who .acct,.who .lights,.who .report-btn{flex:1 1 0;min-height:40px;padding:.4em .5em;font-size:.64rem;letter-spacing:.06em;text-align:center;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+    .who .acct,.who .lights,.who .report-btn{flex:1 1 0;min-height:40px;padding:.4em .5em;font-size:1.05rem;letter-spacing:.06em;text-align:center;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
     .rec{font-size:.62rem;gap:4px 12px;margin-bottom:14px}
     h1{font-size:clamp(2.6rem,13vw,3.4rem);line-height:.9}
     h1 .kicker{font-size:.72rem;margin-bottom:.6em}
@@ -257,7 +337,7 @@
     .hero{padding:16px 0 8px}
     /* cards: tighter, and locked ones drop the dead button (the reason line says why) */
     .mods{gap:10px;margin-top:16px}
-    .mod{padding:16px;gap:8px}
+    .mod{padding:16px;gap:8px;--py:16px;--px:16px}
     .mod h3{font-size:1.45rem}
     .mod .fix{font-size:.9rem;line-height:1.5}
     .mod.is-locked .go .btn,.mod.is-stopped .go .btn{display:none}
@@ -267,7 +347,7 @@
     footer{flex-direction:column;gap:10px;margin:32px 0 calc(90px + env(safe-area-inset-bottom,0px))}
     .ticker{margin:32px 0}
     .watcher.hide-sm{display:none}
-    .cta .btn{width:100%;justify-content:center;min-height:56px;font-size:.95rem}
+    .cta .btn{width:100%;justify-content:center;min-height:56px;font-size:1.4rem}
     .mods.with-admin{grid-template-columns:1fr}
     .unit{padding:10px 2px}
     /* the three tracks become slim label/value rows */
@@ -288,12 +368,12 @@
 <div class="dark" id="dark" aria-hidden="true"></div>
 <? if (BRAND.effects.eyes) { ?>
 <!-- eyes in the dark that follow the pointer (decorative) -->
-<div class="watcher peek-l" style="--s:74px;top:13%;left:2%;--d:-1s" aria-hidden="true"><i></i></div>
-<div class="watcher red hide-sm" style="--s:48px;top:58%;left:1.5%;--d:-3s" aria-hidden="true"><i></i></div>
-<div class="watcher peek-r" style="--s:44px;top:7%;right:30%;--d:-4.5s;--o:.55" aria-hidden="true"><i></i></div>
-<div class="watcher hide-sm" style="--s:84px;bottom:30%;right:2%;--d:-2s" aria-hidden="true"><i></i></div>
-<div class="watcher red" style="--s:40px;bottom:22%;right:44%;--d:-5s;--o:.5" aria-hidden="true"><i></i></div>
-<div class="watcher hide-sm" style="--s:56px;top:44%;right:48%;--d:-.5s;--o:.3" aria-hidden="true"><i></i></div>
+<div class="watcher peek-l" style="--s0:74px;top:13%;left:2%;--d:-1s" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
+<div class="watcher red hide-sm" style="--s0:48px;top:58%;left:1.5%;--d:-3s" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
+<div class="watcher peek-r" style="--s0:44px;top:7%;right:30%;--d:-4.5s;--o:.55" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
+<div class="watcher hide-sm" style="--s0:84px;bottom:30%;right:2%;--d:-2s" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
+<div class="watcher red" style="--s0:40px;bottom:22%;right:44%;--d:-5s;--o:.5" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
+<div class="watcher hide-sm" style="--s0:56px;top:44%;right:48%;--d:-.5s;--o:.3" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
 <? } ?>
 
 <div class="interrupt" id="interrupt" aria-hidden="true"><p class="int-meta" id="intCam">Feed interrupted // CAM 01</p><p class="int-msg" id="intMsg"></p><p class="int-meta" id="intTime"></p></div>
@@ -324,6 +404,7 @@
 
     <div>
       <div class="card clock" id="clock">
+        <div class="winbar red"><span>COUNTDOWN.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
         <span class="pill" id="openPill">loading</span>
         <h2 id="clockTitle"><?= BRAND.countdown.title ?></h2>
         <div class="units" aria-live="off">
@@ -340,17 +421,40 @@
           <li data-fact="slots">Slots <b></b></li>
         </ul>
       </div>
+      <p class="scrap" aria-hidden="true">"10 minutes" they said.<br>I rewrote my fear essay 4 times.</p>
       <div class="card status" id="statusCard" aria-live="polite">
         <span class="pill" id="statusPill">your application</span>
         <p class="big" id="statusBig"></p>
         <p id="statusMsg"></p>
         <div class="tracks">
           <div class="track"><span>Decision</span><b id="trStatus">-</b></div>
-          <div class="track"><span>Requirements</span><b id="trReq">-</b></div>
           <div class="track"><span>Payment</span><b id="trPay">-</b></div>
+          <div class="track"><span>Requirements</span><b id="trReq">-</b></div>
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- the wall: TVs that watch back + the poster (decorative) -->
+  <section class="wall" aria-hidden="true">
+    <div class="tvs">
+      <div class="tv"><span class="tv-scr"><span class="reye" data-watch style="--d:-1.2s"><span class="reye-ball"><i></i></span></span></span><b>CH 03</b></div>
+      <div class="tv"><span class="tv-scr static"></span><b>CH 04</b></div>
+      <div class="tv"><span class="tv-scr"><span class="reye red" data-watch style="--d:-4s"><span class="reye-ball"><i></i></span></span></span><b>CH 07</b></div>
+      <div class="tv"><span class="tv-scr"><span class="reye" data-watch style="--d:-2.6s"><span class="reye-ball"><i></i></span></span></span><b>CH 11</b></div>
+      <div class="tv"><span class="tv-scr"><span class="reye" data-watch style="--d:-5.5s"><span class="reye-ball"><i></i></span></span></span><b>CH 02</b></div>
+      <div class="tv"><span class="tv-scr static"></span><b>CH 09</b></div>
+    </div>
+    <div class="poster">
+      <span class="tape-strip"></span>
+      <p class="p-top">Notice</p>
+      <span class="reye" data-watch style="--d:-3.3s"><span class="reye-ball"><i></i></span></span>
+      <p class="p-h">You are <em>being watched</em></p>
+      <p class="p-s">Act natural. Apply anyway.</p>
+      <p class="p-no">NO. 26/27</p>
+    </div>
+    <p class="scrap s1">don't look<br>behind you</p>
+    <p class="scrap s2">CAM 02 has<br>a better angle</p>
   </section>
 
   <!-- CCTV wall (decorative) -->
@@ -397,14 +501,15 @@
     <ol class="path" id="path" aria-label="Your progress">
       <li data-step="apply">Applied</li>
       <li data-step="review">Accepted</li>
-      <li data-step="requirements">Requirements</li>
       <li data-step="payment">Payment</li>
+      <li data-step="requirements">Requirements</li>
       <li data-step="confirmed">Confirmed</li>
     </ol>
 
     <ul class="mods" id="mods">
-      <? ['apply', 'req', 'pay', 'sheet'].forEach(function (key) { var m = BRAND.modules[key]; ?>
+      <? ['apply', 'pay', 'req', 'sheet'].forEach(function (key) { var m = BRAND.modules[key]; ?>
       <li class="card mod is-locked" data-key="<?= key ?>">
+        <div class="winbar"><span>FILE_<?= m.n ?>.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
         <div class="row"><span class="n"><?= m.n ?></span><span class="pill dim" data-pill>…</span></div>
         <h3><?= m.title ?></h3>
         <p class="fix"><?= m.fix ?></p>
@@ -448,7 +553,7 @@
   /* ---------- searchlight + watching eyes follow the pointer; REC clock ticks ---------- */
   (function () {
     const dark = $('dark');
-    const eyes = [...document.querySelectorAll('.watcher')];
+    const eyes = [...document.querySelectorAll('.watcher, [data-watch]')];
     let x = innerWidth / 2, y = innerHeight / 3, queued = false;
     function draw() {
       queued = false;
@@ -613,8 +718,8 @@
   function nextMove(ctx) {
     const p = ctx.progress, base = document.body.dataset.base;
     if (!ctx.applicant) return ctx.isOpen && ctx.allowedDomain ? { href: base + '?page=apply', text: BRAND.buttons.apply } : null;
+    if (p.payment.state === 'action' && ctx.forms.payment) return { href: ctx.forms.payment, text: BRAND.buttons.pay, external: true };   // pay first
     if (p.requirements.state === 'action' && ctx.forms.requirements) return { href: ctx.forms.requirements, text: BRAND.buttons.upload, external: true };
-    if (p.payment.state === 'action' && ctx.forms.payment) return { href: ctx.forms.payment, text: BRAND.buttons.pay, external: true };
     return { scroll: true, text: BRAND.buttons.status };
   }
 
@@ -701,7 +806,7 @@
     if (a) {
       $('path').classList.add('show');
       let nowSet = false;
-      ['apply', 'review', 'requirements', 'payment', 'confirmed'].forEach(step => {
+      ['apply', 'review', 'payment', 'requirements', 'confirmed'].forEach(step => {
         const li = document.querySelector('[data-step="' + step + '"]');
         const st = p[step].state;
         li.className = st === 'done' ? 'done' : (st === 'stopped' ? 'stopped' : '');
@@ -767,15 +872,27 @@
     let fileNo = 0;
     (BRAND.faq.items || []).forEach(it => {
       if (it.todo && !ctx.isAdmin) return;                  // unanswered: only officers see the TODO
-      const d = document.createElement('details'); d.className = 'file';
-      const s = document.createElement('summary');
-      const no = document.createElement('span'); no.className = 'fno'; no.textContent = 'FILE ' + String(++fileNo).padStart(2, '0') + '-A';
-      const q = document.createElement('span'); q.className = 'fq'; q.textContent = it.q;
-      const st = document.createElement('span'); st.className = 'stamp'; st.textContent = 'CLASSIFIED';
-      s.append(no, q, st);
-      const p = document.createElement('p'); p.className = 'fa' + (it.todo ? ' todo' : '');
+      const n = ++fileNo;
+      const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+      const d = el('details', 'file'); d.dataset.no = 'FILE ' + String(n).padStart(2, '0') + '-A';
+      const s = el('summary');
+      const st = el('span', 'stamp', 'CLASSIFIED');
+      s.append(el('span', 'fq', it.q), st);
+      // the opened file: typed fields, the answer, decorative redaction bars and a clipped surveillance photo
+      const sheet = el('div', 'sheet');
+      const body = el('div');
+      const meta = el('p', 'meta');
+      ['Case 26/27-' + String(n * 37 % 100).padStart(2, '0'), 'Clearance: public', 'Filed by: core team'].forEach(t => meta.append(el('span', '', t)));
+      const p = el('p', 'fa' + (it.todo ? ' todo' : ''));
       p.textContent = it.needs && !vals[it.needs] ? it.fallback : String(it.a).replace(/\{(\w+)\}/g, (_, k) => vals[k] || '');
-      d.append(s, p);
+      const bars = el('p', 'bars'); bars.setAttribute('aria-hidden', 'true');
+      [7, 4, 9, 3].forEach((w, i) => { const b = el('span', 'redbar'); b.style.setProperty('--w', ((w + n * (i + 1)) % 8 + 3) + 'em'); bars.append(b); });
+      body.append(meta, p, bars);
+      const photo = el('div', 'photo'); photo.setAttribute('aria-hidden', 'true');
+      photo.innerHTML = '<span class="reye" style="--d:-' + n + 's"><span class="reye-ball"><i></i></span></span>';
+      photo.append(el('small', '', 'EXHIBIT ' + String.fromCharCode(64 + n)));
+      sheet.append(body, photo);
+      d.append(s, sheet);
       d.addEventListener('toggle', () => { st.textContent = d.open ? 'DECLASSIFIED' : 'CLASSIFIED'; });
       list.append(d);
     });

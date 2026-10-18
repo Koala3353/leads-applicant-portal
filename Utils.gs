@@ -458,14 +458,17 @@ function progress_(a) {
   else if (ended) out.review.state = 'stopped';
   else out.review.state = 'waiting'; // SUBMITTED, UNDER REVIEW, WAITLISTED
 
+  // Pay first: the requirements Form opens only after acceptance AND the core team marks Payment VERIFIED.
+  const pay = a ? String(a.Payment || 'NONE') : 'NONE';
+  const paid = pay === 'VERIFIED';
   const req = a ? String(a.Requirements || 'NONE') : 'NONE';
-  out.requirements = { unlocked: accepted && req !== 'APPROVED', value: req };
+  out.requirements = { unlocked: accepted && paid && req !== 'APPROVED', value: req };
   if (!accepted) out.requirements.state = ended ? 'stopped' : 'locked';
   else if (req === 'APPROVED') out.requirements.state = 'done';
+  else if (!paid) out.requirements.state = 'locked';
   else if (req === 'SUBMITTED') out.requirements.state = 'waiting';
   else out.requirements.state = 'action'; // NONE, PARTIAL, RETURNED
 
-  const pay = a ? String(a.Payment || 'NONE') : 'NONE';
   const payOpen = !!a && !ended && (accepted || paymentStage_() === 'ANYTIME');
   out.payment = { unlocked: payOpen && pay !== 'VERIFIED', value: pay };
   if (pay === 'VERIFIED') out.payment.state = 'done';
