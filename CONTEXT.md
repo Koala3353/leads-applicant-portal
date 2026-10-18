@@ -1,0 +1,786 @@
+# LEADS Applicant Portal: Team Context File
+
+> **Humans:** paste this whole file into your AI chat first, then your two files, then a prompt from §13. Read §1 yourself before you start.
+>
+> **AI:** you are helping a beginner on a student team build **one part** of a small Google Apps Script web app. Everything you need is here. Follow §3 strictly. When this file and your general knowledge disagree, this file wins.
+
+**Contents:** 1 Setup · 2 The project · 3 Rules for the AI · 4 Shared helpers · 5 Gotchas · 6 Starter code · 7 Look, I.R.I.S., accessibility · 8 Responsiveness · 9 Specs (Apply, Dashboard) · 10 Edge-case checklist · 11 Testing · 12 Troubleshooting · 13 Prompts
+
+---
+
+## 1. Setup (humans, read this)
+
+**Where you work.** The Google **Sheet** is the database (one row per applicant in `Applicants`). **Apps Script** is the code attached to it (Sheet → **Extensions → Apps Script**). It runs as a **web app** at a link ending in `/exec` (live) or `/dev` (your test version). No GitHub, nothing to install: edit in the browser, **Save** (Ctrl/Cmd+S), reload `/dev`.
+
+**Access.** Ask Keene (the integrator) to share the Sheet with you as **Editor**; that includes the Apps Script project. Use your **Ateneo account**. Several Google accounts signed in at once confuses the web app ("unable to open the file", or the wrong email shows): click **Sign out** in the portal's top bar (signs you out of Google, then back to sign in), or use a separate Chrome profile / incognito with only your Ateneo account.
+
+**Who owns what**
+
+| Part | Where people see it | Files | Owner |
+|---|---|---|---|
+| **Home (the hub)** | plain link `.../exec` | `Home.html`, `HomeApi.gs` | Keene (done) |
+| **Application form** | `.../exec?page=apply` | `Apply.html`, `ApplyApi.gs` | **Member A** |
+| **Applicant dashboard** | **inside Home**, under the top section (no `?page=`) | `Dashboard.html`, `DashboardApi.gs` (starter exists) | **Member B** |
+| Requirements + proof of payment | two **Google Forms** (not code); links shown on Home and the Dashboard | Forms, links in Settings | officers |
+| Officer side | **the Sheet itself**, with a **LEADS** menu | `AdminMenu.gs` | Keene (done) |
+
+Member B: your file is **not a page**; `Home.html` pulls it in. Read §9.2 first. Everything else is **shared: don't edit it** (`Code.gs`, `Utils.gs`, `Brand.gs`, `Setup.gs`, `AdminMenu.gs`, `HomeApi.gs`, `Home.html`, `Styles.html`, `PageTop.html`, `Loader.html`, `Mascot.html`). Need a change there? Message Keene with *what*, *why*, and the exact function signature you want. Don't edit it even if your AI suggests it.
+
+**Making your files.** Editor → **+** next to Files → **Script** → name it **without** `.gs` (e.g. `ApplyApi`) → delete the empty `myFunction` → paste → Save. `Apply.html` / `Dashboard.html` / `DashboardApi.gs` already exist; open and replace their contents. A `.gs` and an `.html` **can't share a name**, hence `Apply.html` + `ApplyApi.gs`.
+
+**Testing.**
+- **Deploy → Test deployments** → copy the Web app URL (ends `/dev`). Member A: add `?page=apply`. Member B: the plain link. After each change: Save, reload. No redeploy needed for `/dev` (editors only; applicants use `/exec`, which Keene deploys).
+- Run server code by hand: pick a function in the toolbar → **Run**. First time: **Review permissions → your account → Advanced → Go to LEADS Applicant Portal (unsafe) → Allow** (normal for internal scripts). Output in the **Execution log**. For functions with arguments, write a throwaway `function test_x() { console.log(apply_submit({ FullName: 'Test' })); }`, run it, **delete it**.
+- Errors: browser → right-click → Inspect → **Console**. Server → editor's **Executions** (☰ icon): every call with its error and `console.log` output.
+
+**Golden rules.** (1) Only edit your two files: in Apps Script, whoever saves last wins. (2) Before pasting AI code, back up your current file in a note; there's no undo after closing the tab. (3) Never test on real applicant data (§11). (4) No `console.log` of personal data in final code. (5) Never rename Sheet column headers.
+
+**What to paste into your AI:** this file → your current two files → (optional) `Utils.gs` if it needs to see a helper → a prompt from §13.
+
+---
+
+## 2. The project
+
+### 2.1 What LEADS is
+
+**LEADS** is an off-site **leadership camp** by **MEA** (Management Engineering Association, Ateneo) for its members, **MEAns**. The portal takes someone from application to "you're in":
+
+1. **Apply** (Member A): one application per person.
+2. **Review:** officers accept / waitlist / reject **in the Sheet** (LEADS menu).
+3. **Requirements:** accepted applicants send PDFs + camp info through the **requirements Google Form**; officers check and mark Requirements.
+4. **Payment:** proof of payment through the **payment Google Form**, after acceptance or any time after applying (a setting); officers mark Payment.
+5. **Confirmed:** ACCEPTED + Requirements APPROVED + Payment VERIFIED → automatically **CONFIRMED**.
+6. **Home + Dashboard:** where each person sees where they are, what's next and the right Form links. Member B builds the Dashboard.
+
+**Theme: LEADS: Oversight.** "Oversight" means (1) watchful supervision and (2) an inadvertent error. The fears are being watched, feeling boxed in, and failing; the third reading is oversight as leadership. Tagline "You are being watched. Good. Apply anyway." The mood is **1984-style surveillance, scary-ish but never gory**: CCTV, case files, REC timestamps, watching eyes, warning tape, photocopy grain, CRT scanlines. No blood, skulls, ghosts or horror fonts. The mascot is **I.R.I.S.** (Inspection, Reconnaissance & Identification System: the portal's Big Brother), a little one-eyed CRT whose screen color changes with its emotion (§7.2). Home has a CCTV wall of four custom SVG feeds (CAM 01 Lobby with a figure in the doorway, CAM 02 Hallway with flickering lights and a figure that steps closer, CAM 03 You with red tracking brackets on the pointer, CAM 04 Archive with colour bars and NO SIGNAL); it is Home-only, so don't copy it. Copy can be ominous in headings and labels; instructions and errors stay **clear first, creepy second**.
+
+**Users:** Ateneo students, mostly **on phones**, signed in with `@student.ateneo.edu`. Timezone **Asia/Manila**. Currency **₱**.
+
+### 2.2 How it's built
+
+- Apps Script (V8) web app, deployed **Execute as: Me** (MEA's Ateneo account) and **Access: Anyone within Ateneo**. All server code runs with the owner's permissions, and **any visitor can call any public function**, so each one checks who's calling (§3.2).
+- **One** `doGet` (Code.gs): no `?page=` → Home, `?page=apply` → Apply, anything else → Home. Pages are HTML templates (`<?= ?>` scriptlets).
+- Pages talk to the server only through `google.script.run` (async). The Sheet is the database. **Files never touch our code**: the Google Forms collect them.
+- Plain HTML/CSS/JS and Apps Script. **No React, Vue, Tailwind, jQuery, npm, CDNs.**
+
+| File | What it does |
+|---|---|
+| `Code.gs` | `doGet` routing; `include(name)`, `includeTemplate(name, vars)`, `includeOptional_(name, vars)`. Passes `BRAND`, `baseUrl`, `notice`, `page` into every template. |
+| `Utils.gs` | All shared logic: settings, lookups, validation, status rules, Form links, `progress_()`, logging (§4). |
+| `Brand.gs` | `BRAND`: all copy, colors, fonts, I.R.I.S.'s lines/faces/colors. `brand_css()`, `brand_json()`. |
+| `AdminMenu.gs` | The LEADS menu, and the check that logs/undoes hand edits to the three track columns. |
+| `Setup.gs` | `setup_applyValidation()`: Sheet validation rules (owner runs it). |
+| `HomeApi.gs` + `Home.html` | The hub (done): progress, next step, Form links, the Dashboard slot. |
+| `Styles.html` · `PageTop.html` · `Loader.html` · `Mascot.html` | Shared CSS · top bar (logo, "← Back to the hub", **Sign out**) · full-screen loading overlay with a bouncing I.R.I.S. · **I.R.I.S.** in the bottom-right corner (§7.2). |
+| `Apply.html` + `ApplyApi.gs` | **Member A.** Placeholder now; you create `ApplyApi.gs`. |
+| `Dashboard.html` + `DashboardApi.gs` | **Member B.** Placeholder inside the hub; `dash_get()` already returns the applicant's own data. |
+
+### 2.3 The Sheet
+
+Navy headers: **never rename or reorder** (code finds columns by name). Yellow cells: officers edit.
+
+**`Applicants`** (column order = `COLS` in Utils.gs):
+
+| Column | Format | Set by / notes |
+|---|---|---|
+| `ApplicantID` | `APP-0001`, unique | Apply via `nextApplicantId_()`. Never typed by users; applicants enter it in the Forms (pre-filled). |
+| `Timestamp` | Date | Apply |
+| `Email` | lowercase, allowed domain, unique | Apply, **from the login**, never a form field. How we identify people. |
+| `FullName` | 2–80 letters, spaces, `. ' -`, accents/ñ | Apply |
+| `Nickname` | 1–30 letters | Apply. Used for "Hi ___". |
+| `IDNumber` | exactly 6 digits within 200000–280000, **text**, unique | Apply (check uniqueness yourself, §9.1). Out-of-range IDs just get "Invalid ID number." (never reveal the range to applicants) |
+| `Course` / `MEAInvolvement` | from Lists | Apply |
+| `YearLevel` | integer 1–5 | Apply |
+| `Mobile` | `09` + 9 digits, **text** (leading zero!) | Apply. `+63 917…`, `0917-…`, `917…` are cleaned to `09…` by `normalizeMobile_()` (server) / `normalizePhone()` (page) |
+| `WhyLEADS` / `FearEssay` | 50–1000 chars, multiline | Apply. Essay 2 = "a fear you want to face". |
+| `Status` / `Requirements` / `Payment` | §2.4 | Apply creates `SUBMITTED`/`NONE`/`NONE`; then core team only |
+| `ReviewedBy`, `LastUpdated` | email, Date | automatic |
+| `Notes` | text | **core team only, never shown to applicants** |
+| `Block` | letters/numbers, ≤30 | Apply. **Required for first years** (ID starts with `26` or YearLevel 1), optional otherwise |
+| `MBTI` | one of the 16 types (`INTJ`…) or blank | Apply. Autofilled from MemData (header "MBTI", else column AB); `INTJ-A` → `INTJ` |
+| `PastOrgs` | ≤500 chars, multiline, optional | Apply |
+| `FirstOvernight` / `OffsiteAvailability` | `Yes` / `No` | Apply. Availability question shows Settings › `EventDates` |
+| `DataConsent` | `Y` (must be Y to submit) | Apply (RA 10173) |
+
+The last six columns were added Oct 2026 at the **end** of `COLS` so older rows still line up. `ensureApplicantHeaders_()` writes any missing header cells on the next submit.
+
+Camp info (emergency contact, dietary, medical, shirt size) and all files live in the **Form responses**, not here.
+
+**`Settings`** (Key | Value; any may be **blank**, so hide the line or show "TBA" / "link coming soon"): `EventName`, `EventDates`, `EventVenue`, `CampFee` (number), `Slots` (number), `ApplicationsOpen` (checkbox), `Deadline`, `RequirementsFormURL`, `RequirementsDeadline`, `PaymentStage` (`AFTER_ACCEPTANCE` | `ANYTIME`), `PaymentDeadline`, `PaymentFormURL`, `PaymentInstructions`, `AllowedEmailDomains` (comma list), `ContactEmail`.
+- Dates may come back as a `Date` **or** text: always `parseDate_()`. Deadlines are **display-only** (officers close the Forms).
+- Form URLs are pre-filled links with `APP-0000` as the Applicant ID. **Never read them directly**: `formLink_()` swaps in the ID and only accepts real Google Forms links.
+
+**Other tabs.** The Sheet has `Applicants`, `Settings`, `Lists`, `Admins`, `Log`, plus **`Activity`** (made automatically; the portal's debug/tracking log, see §4 `activity_`). A hidden **`Drafts`** tab (`Email | SavedAt | Data`) holds each applicant's unsent Apply draft, so it follows their account across browsers; `apply_saveDraft` writes only the signed-in person's row and `apply_submit` deletes it. (Requirements, Uploads, Summary and README were removed on 2026-10-15. This portal is for participants only, not core-team applications. The requirements Google Form itself says what to send, so don't build a requirements checklist or add those tabs back.) `Lists`: dropdown options (Statuses, RequirementStates, PaymentStates, PaymentStages, Courses, MEAInvolvement, YearLevels) via `getList_()`. `Admins`: `Email | Name | Role` (LEADS menu, can edit tracks, see "Open the Sheet" on Home). `Log`: `When | Who | ApplicantID | Action | From | To`, written only by `logChange_()`.
+
+### 2.4 The three tracks
+
+| Track | Values | Who changes it |
+|---|---|---|
+| **Status** | `SUBMITTED` → `UNDER REVIEW` → `ACCEPTED` / `WAITLISTED` / `REJECTED` → `CONFIRMED`; `WITHDRAWN` | Apply creates SUBMITTED; officers (menu or by hand, both checked); system auto-sets CONFIRMED |
+| **Requirements** | `NONE` → `PARTIAL` → `SUBMITTED` → `APPROVED`; `RETURNED` = fix and resend | officers |
+| **Payment** | `NONE` → `SUBMITTED` → `VERIFIED`; `REJECTED` = resend | officers |
+
+**Your code never changes these.** Allowed status moves (`NEXT_STATUS`): SUBMITTED → UNDER REVIEW, REJECTED, WITHDRAWN · UNDER REVIEW → ACCEPTED, WAITLISTED, REJECTED, WITHDRAWN · WAITLISTED → ACCEPTED, REJECTED, WITHDRAWN · ACCEPTED → CONFIRMED (only if APPROVED **and** VERIFIED), WITHDRAWN · CONFIRMED → WITHDRAWN · REJECTED, WITHDRAWN → final.
+
+**Unlock rules live only in `progress_(applicantData)`. Never re-implement them.**
+- Requirements Form: unlocked when Status is ACCEPTED/CONFIRMED, until Requirements is APPROVED.
+- Payment Form: unlocked when ACCEPTED/CONFIRMED, **or** `PaymentStage` = ANYTIME and they've applied and aren't REJECTED/WITHDRAWN. Locks again once VERIFIED.
+- REJECTED/WITHDRAWN still **see** their status, but get no Form links.
+
+```js
+progress_(a) → {
+  status: 'ACCEPTED',
+  apply: { state, unlocked }, review: { state, unlocked },
+  requirements: { state, unlocked, value },   // value = Requirements column
+  payment:      { state, unlocked, value },   // value = Payment column
+  confirmed: { state, unlocked }
+}
+// state: 'open' | 'locked' | 'waiting' (on officers) | 'action' (applicant must send the Form) | 'done' | 'stopped' (rejected/withdrawn)
+```
+
+---
+
+## 3. Rules for the AI (follow strictly)
+
+### 3.1 Scope
+1. Only write the user's **own two files** (A: `Apply.html`, `ApplyApi.gs` · B: `Dashboard.html`, `DashboardApi.gs`). Never output edits to shared files (§1). If a shared change is truly needed, add a labeled **"Ask Keene"** note with the exact function wanted; never duplicate shared code into the user's file.
+2. Don't build what the portal deliberately doesn't do: **no uploads** (Forms collect files), **no admin pages** (officers use the Sheet), **no new `?page=` routes, no emails, no code that changes Status/Requirements/Payment.**
+3. Reuse §4 helpers; don't re-implement validation, lookups, Form links, status or unlock logic, and don't invent helpers that aren't listed. Need one? Put it in the user's `.gs` with the page prefix and a trailing `_` (e.g. `apply_isIdTaken_()`).
+4. Plain HTML/CSS/vanilla JS + Apps Script. No frameworks, no CDNs, no `fetch` to other sites.
+
+### 3.2 Security (non-negotiable)
+1. **Any public server function (no trailing `_`) can be called by any visitor with any arguments.** Public = only what the page calls, prefixed `apply_` or `dash_`. Everything else ends in `_`.
+2. Identify the user with `requireApplicant_()` / `currentEmail_()`. **Never** accept an email, ApplicantID or row number from the page to decide whose data to read or change.
+3. **Validate on the server** even if the page did (`validateApplication_`); whitelist fields, ignore unknown keys. Every Sheet write goes through `safeCell_()` (blocks `=IMPORTXML(...)` etc.; `updateApplicant_()` already does).
+4. **Return only what the page needs.** Never `Notes`, `ReviewedBy`, other applicants, the Admins list, or a Form link `progress_()` says is locked. Sensitive data never in template scriptlets; load it with `google.script.run` from a guarded function.
+5. In the browser, insert user text with **`textContent`**; if you must build HTML, escape with `esc()` (§6.2). No personal data in `console.log`. Respect **RA 10173**: applicants see only their own data.
+
+### 3.3 Data integrity
+1. Every write happens inside a script lock, and you **re-read inside it** before deciding anything:
+   ```js
+   const lock = LockService.getScriptLock();
+   lock.waitLock(20000);
+   try { /* re-read, check, write */ } finally { lock.releaseLock(); }
+   ```
+2. `updateApplicant_()` and `nextApplicantId_()` expect you to hold the lock.
+3. Read the Sheet in bulk (`getValues()` once), never cell by cell.
+
+### 3.4 Must-haves on every page (1:1 with the hub)
+
+Shared pieces are **included, never copied or redrawn**, so when Keene changes I.R.I.S., the loader or the top bar, every page updates. Confirm each item in your answer.
+
+**A full page (Apply)**, all shown in the §6.2 skeleton:
+1. `<head>`: `<base target="_top">`, `<?!= include('Styles') ?>`, `<?!= brand_css() ?>`. No other fonts; colors only from CSS variables.
+2. `<body data-loader-wait>`; first line `<?!= include('Loader') ?>`; second line `<?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>` (**I.R.I.S.**; pass `page` as-is so I.R.I.S. says this page's hello line).
+3. Inside `.wrap`, first: `<?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>` (logo, back to the hub, **Sign out**).
+4. `const BRAND = <?!= brand_json() ?>;`. Never hard-code text that exists in `BRAND`.
+5. The `call()` wrapper unchanged: its failure path fires `portal:error` so **I.R.I.S. reacts to server errors**. Any raw `google.script.run` failure handler must fire it too.
+6. `Loader.hide()` on success **and** on error.
+7. States: **loading, not signed in, wrong account, locked/not allowed yet, empty, error with retry, success.** Not signed in → **Sign in** button; wrong account → **Switch account** button (§7.3).
+8. I.R.I.S. reacts to the page's big moments via the guarded `kuya()` helper (§7.2), and the same message is also on the page.
+9. Buttons disable while working (no double submits). Keyboard and screen-reader friendly.
+10. Nothing fixed in the bottom-right corner (I.R.I.S.'s spot). Responsive per §8 at every width; this is a hard requirement, not polish.
+
+**The Dashboard (fragment inside Home):** items 4, 5, 7 (Home already shows the account warnings, so the Dashboard shows nothing for guests), 8, 9, 10 apply. **Don't** include Styles, Loader, Mascot or PageTop: Home has them (a second I.R.I.S. would appear).
+
+### 3.5 Output format (every answer)
+1. **Complete files**, never snippets or "…rest unchanged…": both files, each in its own code block with the filename above.
+2. **How to install:** which file, paste, save, reload `/dev?page=apply` (or plain `/dev` for the Dashboard).
+3. **Edge cases handled:** map to §10 and the page's list in §9; say what's not handled and why.
+4. **Must-haves:** confirm each §3.4 item.
+5. **Responsive check** (§8.4): one line per width (320, 360, 390, 768, 1024, 1440) and confirm every §8 rule. If one fails, fix the code first; don't just report it.
+6. **How to test** (§11): which rows to fake, what they should see.
+7. Style: 2-space indent, `const`/`let`, short functions, comments explain *why*; match `Utils.gs` / `Home.html`. If the request is ambiguous, state your assumption in one line and go ahead.
+
+---
+
+## 4. Shared helpers (already exist; just call them)
+
+Functions ending in `_` are server-only. Public shared functions: `home_getContext()`, `utils_getFormRules()`, `dash_get()` (Dashboard starter), `include()`, `includeTemplate()`, `brand_css()`, `brand_json()`, `doGet()`, plus the officers' `menu_…`/`onOpen`/`onEdit` (never call those).
+
+| Helper | Returns / does |
+|---|---|
+| **Constants** | `SHEET` (tab names: `APPLICANTS, SETTINGS, ADMINS, LOG, LISTS, ACTIVITY`), `COLS` (Applicants column order), `TRACK_COLS` (`['Status','Requirements','Payment']`), `STATUSES`, `REQUIREMENT_STATES`, `PAYMENT_STATES`, `NEXT_STATUS`, `RULES` (Apply field rules: `{ stage, required, requiredIfFreshman, requiredMsg, pattern, list, options, min, max, idMin, idMax, rangeMsg, phone, minLen, maxLen, multiline, msg }`; the page's `fieldError()` mirrors `validateApplication_()` from the same rules, so add new fields here, not as one-off checks), `BRAND` (copy, colors, `statusCopy`, `messages`, `buttons`, `modules`, `mascot`) |
+| `getSettings_()` / `getSetting_(key)` | Settings as `{ Key: value }` (cached per execution; values may be `Date`, number, boolean, `''`) / one value |
+| `isTrue_(v)` · `parseDate_(v)` | `true` for `true`/`"TRUE"` · `Date` or `null` (text like `2026-10-24 23:59` read as Manila time) |
+| `getList_(name)` | non-blank strings from a Lists column; throws if the column doesn't exist |
+| `isOpen_()` · `paymentStage_()` | applications open (switch **and** deadline) · `'ANYTIME'` or `'AFTER_ACCEPTANCE'` |
+| `formLink_(settingKey, applicantId)` | `'RequirementsFormURL'`/`'PaymentFormURL'` → Form link with the applicant's ID, or `''`. **Only after `progress_()` says that step is unlocked.** |
+| `currentEmail_()` | logged-in email (lowercase) or `''` (not signed in / Google hides it) |
+| `isAllowedDomain_(email)` · `isAdmin_(email)` | domain in AllowedEmailDomains · email in Admins |
+| `requireAdmin_()` · `requireApplicant_()` | admin email or throws `'Admins only.'` · `{ row, data }` or throws (`'Sign in…'` / `'You have not applied yet.'`) |
+| `ownerOnly_()` | throws unless run from the editor by the owner |
+| `getApplicantByEmail_(email)` · `getApplicantById_(id)` | `{ row, data }` or `null`; `data` keyed by `COLS`, Dates already ISO strings |
+| `toObject_(rowValues, cols?)` | row array → object (Dates → ISO) |
+| `nextApplicantId_()` | next `APP-0007`. **Inside a lock.** |
+| `updateApplicant_(row, { Field: value })` | writes through `safeCell_`, sets `LastUpdated`. **Inside a lock.** Throws on unknown column. |
+| `safeCell_(v)` | prefixes `'` to text starting with `= + - @` |
+| `validateApplication_(input, 'apply')` | `{ ok, errors: { Field: msg }, clean: { Field: value } }`. Trims, strips control chars, collapses spaces (not essays), checks pattern/list/range/length; `YearLevel` → number. Does **not** check IDNumber uniqueness. |
+| `utils_getFormRules()` *(public)* | `{ rules: RULES, lists: { Courses, MEAInvolvement }, isOpen }` so the page shows the same messages as the server |
+| `logChange_(id, action, from, to, by)` | appends to Log (`by` defaults to current email or `'system'`) and mirrors it to Activity. Member A uses it once: `logChange_(id, 'status', '', 'SUBMITTED', 'system')`. |
+| `traced_(event, page, fn, summarize?)` | **Wrap every public server function in it** (see `apply_submit` / `dash_get`): logs OK + ms, `{ ok:false }` as WARN, and throws as ERROR with the stack, to the Activity tab. Pattern: `function x_get() { return traced_('x_get', 'x', x_get_, r => 'short summary'); }` with the real code in `x_get_()`. |
+| `activity_(event, details, { level, page, ms })` | one row in the **Activity** tab (`When | Level | Who | Page | Event | Details | ms`); level `INFO`/`WARN`/`ERROR`. Never throws. **Never log essays, ID numbers, phone numbers or other private answers**, just IDs, statuses and field names. |
+| `log_client(evt)` *(public)* | Styles.html calls it for browser errors (max 5 per page load). Don't call it yourself. |
+| `setStatus_` / `setStatusLocked_` / `setTrack_` | officers only (LEADS menu). **Not for your code.** |
+| `progress_(dataOrNull)` | unlock states (§2.4). The only source of truth. |
+| `home_getContext()` *(public)* | `{ email, signedIn, allowedDomain, isOpen, deadline, contact, isAdmin, paymentStage, event:{name,dates,venue,fee,slots}, applicant:{id,firstName,status,requirements,payment}\|null, progress, forms:{requirements,payment}, sheetUrl }`. `forms` already gated and pre-filled. |
+| `dash_get()` *(public, Member B owns it)* | `{ applicant:{id,nickname,status,requirements,payment,appliedAt,lastUpdated}, progress, requirements:[…], forms:{requirements,payment}, payment:{fee,instructions}, deadlines:{requirements,payment}, event:{name,dates,venue} }` or `{ applicant: null }` |
+
+**In templates and pages**
+- Template variables: `BRAND`, `baseUrl` (the `/exec` or `/dev` URL, pinned to the school domain by `portalUrl_()`: `https://script.google.com/a/macros/student.ateneo.edu/s/<id>/exec`), `notice`, `page`. Always build links from `baseUrl`, never from `ScriptApp.getService().getUrl()`: the plain `/macros/s/...` link shows Google's "file not found" page to anyone signed in to several Google accounts.
+- `includeOptional_(name, vars)`: like `includeTemplate` but returns `''` if the file is missing or throws, so an optional piece can't break the page (Home uses it for the Dashboard and I.R.I.S.).
+- **Hub events:** after `home_getContext()` returns, Home fires `document` event **`hub:context`** (`detail` = that object) and sets `window.HUB = { type: 'context', detail }`. On failure: **`hub:error`** (`detail.message`). If the Dashboard adds `has-dash` to `<body>`, Home hides its own status card and progress path.
+- **Loader:** `Loader.show('Sending…')` / `Loader.hide()`. With `data-loader-wait` on `<body>` it stays up until you call `hide()`; auto-hides after 20s as a last resort. It also shows automatically on clicks to other portal pages.
+- **I.R.I.S.:** `window.Iris.say([face, text], ms?)`, `window.Iris.error()`, and the `portal:error` event (§7.2). Always guard with `if (window.Iris)`.
+
+---
+
+## 5. Apps Script gotchas (these break silently)
+
+1. **Trailing `_` = invisible to the page.** `google.script.run.foo_()` fails silently.
+2. **`google.script.run` is async and returns nothing**: use the `call()` wrapper (§6.2). One chain = one call. Failure handlers fire `portal:error` (I.R.I.S. reacts) **and** show your own message: I.R.I.S. is extra, not the error UI.
+3. **Can cross page↔server:** strings, numbers, booleans, `null`, plain arrays/objects. **Never a `Date`** (one Date can make the whole result `null`). Row helpers already convert; **Settings values don't**: `parseDate_(x) ? parseDate_(x).toISOString() : null`. No functions, no `undefined` in arrays, no class instances.
+4. **Thrown errors** reach the failure handler as `err.message`: throw friendly text (`throw new Error('Applications are closed.')`), not stack traces.
+5. **Scriptlets run even inside HTML comments.** Never write a scriptlet tag in a comment.
+6. `<?= x ?>` escapes (safe for text). `<?!= x ?>` prints raw: only for `include`, `brand_css`, `brand_json`, the templates in §3.4. Never for user data.
+7. **The page is in an iframe.** Links need `target="_top"` (the `<base>` tag does it); build them as `baseUrl + '?page=apply'`. **No `href="#x"` jumps** (reloads the portal); use a button + `el.scrollIntoView()`. Google Form links: `target="_blank" rel="noopener"`.
+8. **Server has no `setTimeout`, `fetch`, `URL`, `FormData`** (use `Utilities.sleep`, `UrlFetchApp`). They're fine in the browser.
+9. Calls take ~0.5–2s (6-minute cap): **load everything in one call.**
+10. Uploads → always a link to the Google Form, never our code.
+11. `IDNumber` and `Mobile` are text columns: pass **strings** (`'09171234567'`), never `Number(...)`.
+12. Script timezone is Asia/Manila; on the client format with `{ timeZone: 'Asia/Manila' }`.
+13. `currentEmail_()` can be `''` (not signed in, or non-Ateneo account): treat as not signed in.
+14. `/dev` = latest saved code (editors). `/exec` = last **deployed** version; Keene redeploys.
+15. **Sheet validation also checks script writes**: a bad value makes `setValues`/`appendRow` throw the rule's help text (e.g. `Exception: 11 digits starting with 09`). Validate first; `IDNumber`/`Email` must be unique.
+16. `localStorage` is per-browser: unsent drafts at most (wrapped in try/catch), never the source of truth.
+
+---
+
+## 6. Starter code
+
+### 6.1 Server file (`ApplyApi.gs`)
+
+```js
+/**
+ * ApplyApi.gs  (server code for Apply.html; public functions start with apply_)
+ * Every public function: identify the user from the login, never from arguments.
+ */
+
+/** Everything the Apply page needs to draw itself, in one call. */
+function apply_getForm() {
+  const email = currentEmail_();
+  const found = email ? getApplicantByEmail_(email) : null;
+  const deadline = parseDate_(getSetting_('Deadline'));
+  const rules = utils_getFormRules();
+  return {
+    signedIn: !!email,
+    email: email,
+    allowedDomain: email ? isAllowedDomain_(email) : false,
+    isOpen: rules.isOpen,
+    deadline: deadline ? deadline.toISOString() : null,   // never return a Date object
+    alreadyApplied: found ? { id: found.data.ApplicantID, status: found.data.Status } : null,
+    rules: rules.rules,
+    lists: rules.lists
+  };
+}
+
+// apply_submit(form): see the steps in §9.1.
+```
+
+**Return shapes:** validation problems → **return** `{ ok: false, errors: { Field: 'message' } }`; success → `{ ok: true, ...data }`; anything else (not allowed, closed, not signed in, unexpected) → **throw** `new Error('friendly message')`.
+
+### 6.2 Page skeleton (Apply; the Dashboard uses §6.4)
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<?!= include('Styles') ?>
+<?!= brand_css() ?>
+<style>
+  /* page-only styles; reuse Styles.html classes first */
+  .state{display:none}
+  .state.show{display:block}
+</style>
+</head>
+<body data-loader-wait>
+<?!= include('Loader') ?>
+<?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
+<div class="wrap">
+  <?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
+
+  <section class="page-head">
+    <p class="eyebrow">01 · Apply</p>
+    <h1>Apply to LEADS</h1>
+  </section>
+
+  <!-- exactly one of these is visible at a time -->
+  <div class="card state show" id="loading" role="status" aria-live="polite">Loading…</div>
+  <div class="card state" id="error" role="alert">
+    <p id="errorMsg"></p>
+    <button class="btn ghost" type="button" id="retry">Try again</button>
+  </div>
+  <div class="state" id="content"><!-- your page --></div>
+</div>
+
+<script>
+  const BRAND = <?!= brand_json() ?>;
+  const BASE = <?!= JSON.stringify(String(baseUrl)) ?>;   // safe: our own URL
+  const $ = id => document.getElementById(id);
+
+  /** google.script.run as a Promise: await call('apply_getForm'). A failure also makes I.R.I.S. react. */
+  function call(fn, ...args) {
+    return new Promise((resolve, reject) =>
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(err => {
+        document.dispatchEvent(new CustomEvent('portal:error', { detail: err }));
+        reject(err);
+      })[fn](...args));
+  }
+  /** For the rare time you must build HTML from text. Prefer textContent. */
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+  /** Account links (same as the hub's): Sign in / Switch account buttons (§7.3). */
+  const ACCOUNT = {
+    out: 'https://accounts.google.com/Logout?continue=' + encodeURIComponent('https://appengine.google.com/_ah/logout?continue=' + BASE),
+    choose: 'https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(BASE)
+  };
+  /** I.R.I.S., the mascot (§7.2). Guarded: I.R.I.S. can be hidden or turned off. */
+  const kuya = (face, text) => { try { if (window.Iris) window.Iris.say([face, text]); } catch (e) { /* never break the page */ } };
+
+  function show(id) {
+    ['loading', 'error', 'content'].forEach(x => $(x).classList.toggle('show', x === id));
+    if (id !== 'loading') Loader.hide();   // first load done (data or error)
+  }
+  function fail(err) { $('errorMsg').textContent = (err && err.message) || String(err); show('error'); }
+
+  async function load() {
+    show('loading');
+    try { render(await call('apply_getForm')); show('content'); }
+    catch (err) { fail(err); }
+  }
+  function render(data) { /* build with textContent, never innerHTML with user data */ }
+
+  $('retry').addEventListener('click', load);
+  load();
+</script>
+</body>
+</html>
+```
+
+### 6.3 Submitting safely (no double submits)
+
+```js
+async function onSubmit(e) {
+  e.preventDefault();
+  const btn = $('submitBtn');
+  if (btn.disabled) return;
+  btn.disabled = true; btn.textContent = 'Sending…';
+  clearErrors();
+  try {
+    const res = await call('apply_submit', readForm());   // plain object, not the <form> element
+    if (!res.ok) { showErrors(res.errors); kuya('thinking', "A few fields need a look. They're marked in red."); return; }
+    showSuccess(res);
+    kuya('excited', 'Sent! Your ID is ' + res.id + '.');
+  } catch (err) {
+    showFormError(err.message);                           // I.R.I.S. already reacted through call()
+  } finally {
+    btn.disabled = false; btn.textContent = 'Submit';
+  }
+}
+```
+
+### 6.4 Dashboard fragment (`Dashboard.html`, Member B)
+
+No `<!DOCTYPE>`/`<html>`/`<head>`/`<body>`, Styles, Loader, Mascot or PageTop: Home has them. Just `<style>`, `<section id="dash">`, `<script>`. Everything scoped to `#dash`.
+
+```html
+<style>
+  #dash{display:none;margin:8px 0 6px}
+  #dash.show{display:block}
+  #dash .dash-grid{display:grid;gap:14px;grid-template-columns:1fr}
+  @media (min-width:860px){#dash .dash-grid{grid-template-columns:1.2fr 1fr}}
+</style>
+
+<section id="dash" aria-label="Your dashboard">
+  <div class="card" id="dash-loading" role="status">Loading your dashboard…</div>
+  <div class="card" id="dash-error" role="alert" hidden><p id="dash-errorMsg"></p>
+    <button class="btn ghost" type="button" id="dash-retry">Try again</button></div>
+  <div class="dash-grid" id="dash-content" hidden><!-- your cards --></div>
+</section>
+
+<script>
+  (function () {
+    const root = document.getElementById('dash');
+    const $ = id => document.getElementById(id);   // local, not a global
+    const call = (fn, ...args) => new Promise((ok, no) =>
+      google.script.run.withSuccessHandler(ok).withFailureHandler(err => {
+        document.dispatchEvent(new CustomEvent('portal:error', { detail: err }));   // I.R.I.S. reacts
+        no(err);
+      })[fn](...args));
+
+    async function load() {
+      $('dash-error').hidden = true; $('dash-loading').hidden = false; $('dash-content').hidden = true;
+      try {
+        const data = await call('dash_get');
+        if (!data.applicant) { root.classList.remove('show'); return; }   // not applied: show nothing
+        render(data);
+        $('dash-loading').hidden = true; $('dash-content').hidden = false;
+        document.body.classList.add('has-dash');   // only now: the hub hides its own status card
+      } catch (err) {
+        $('dash-loading').hidden = true;
+        $('dash-errorMsg').textContent = (err && err.message) || String(err);
+        $('dash-error').hidden = false;             // has-dash stays off: hub's status card still works
+      }
+    }
+    function render(data) { /* textContent only; Form links: target="_blank" rel="noopener" */ }
+
+    function onContext(ctx) {
+      if (!ctx || !ctx.applicant) return;          // guests and non-applicants: nothing
+      root.classList.add('show');
+      load();
+    }
+    $('dash-retry').addEventListener('click', load);
+    document.addEventListener('hub:context', e => { try { onContext(e.detail); } catch (err) { console.error(err); } });
+    document.addEventListener('hub:error', () => root.classList.remove('show'));
+    if (window.HUB && window.HUB.type === 'context') { try { onContext(window.HUB.detail); } catch (err) { console.error(err); } }
+  })();
+</script>
+```
+
+---
+
+## 7. Look, I.R.I.S., accessibility
+
+### 7.1 Look and classes
+- A surveillance case file on a dark CRT. Near-black background (`--night`), files in `--night-2`, **square corners everywhere** (`--radius` is 0), 1.5px borders, hairline grids. Palette is only black, white `--text`, grey `--muted`, warning-tape yellow `--glow` (main button, labels, countdown), CRT blue `--blue` (button shadows, glow) and alarm red `--danger` (errors, REC dot, "FEAR //" lines). `--sky` is a lighter blue only for links.
+- Type: **Anton** (condensed grotesque) for uppercase headlines, **JetBrains Mono** for labels, buttons and data (uppercase, letter-spaced), **Inter** for body text. Buttons are mono uppercase with a hard blue offset shadow.
+- Analog horror is already laid over every page by Styles.html: moving grain, scanlines, a rolling VHS tracking band and a dark vignette. Don't add your own. Put class `rgb` on **one** big headline per page for the red/blue tape misregistration. The "signal interrupted" cutaways and whispering tagline are Home only; never add flashing or jump scares to a page with a form. Use bracket/slash labels sparingly (`FILE 01 // APPLY`, `[ CASE FILE ]`). Never gore or Halloween (§2.1).
+- **CSS variables:** `--night` (bg), `--night-2` (card), `--text`, `--muted`, `--sky` (links/eyebrows), `--glow` (yellow), `--blue`, `--pink`, `--danger`, `--ok`, `--line` (borders), `--radius`; fonts `--display`, `--body`, `--mono`, `--kicker` (one short mono label like "Case file 26/27", never body text). I.R.I.S.'s emotion colors are in `BRAND.mascot.colors` on the client.
+- **Classes (Styles.html):** `.wrap` (container), `.page-head` (+ `.eyebrow`, `h1`, `p`), `.card`, `.btn` (yellow) / `.btn.ghost` (outline; `aria-disabled="true"` or `disabled` greys out), `.pill` + `.ok`/`.warn`/`.wait`/`.dim`, `.field-error`, `.mono`, `.eyebrow`. `.notice`/`.notice.warn` live in Home; copy the rule if needed.
+- **Badge colors:** CONFIRMED/ACCEPTED/APPROVED/VERIFIED `.ok` · REJECTED/RETURNED/WITHDRAWN `.warn` · SUBMITTED/UNDER REVIEW/WAITLISTED/PARTIAL `.wait` · NONE/locked `.dim`.
+- **Copy:** `BRAND.statusCopy[status]` for status sentences. Fear theme in headings and empty states; errors plain: what happened + what to do.
+- **No** searchlight or watching-eye background effects on your page (Home only). I.R.I.S. already watches every page.
+- **Loading:** the Loader covers first load and page changes. For a slow action you may `Loader.show('Sending your application…')` and `Loader.hide()` in `finally`; quick actions use inline button text ("Saving…"). Always hide on error too.
+
+### 7.2 I.R.I.S., the mascot (shared, `Mascot.html`)
+
+A little beige CRT with antennas, a REC tag and **one eye that follows the pointer**, in the bottom-right corner of every page. It blinks and idles every 8s, alternating six body animations (lean, tilt, shiver, antenna, spin, nap) with six screen effects (glitch, static, scan, stare, roll, or a red "panic"), sends a random message when tapped, can be dragged anywhere on screen (the spot is remembered per browser), can be hidden for the session ("Hide I.R.I.S."; a small "▣ I.R.I.S." button brings him back), and says each page's hello line from `BRAND.mascot.hello[page]`. The Loader shows a big watching eye. On server errors I.R.I.S.'s screen turns red, it shakes, says `BRAND.mascot.error` ("SIGNAL LOST…"), then rests sad.
+
+| Face | Screen + eye | Use for |
+|---|---|---|
+| `nervous` | blue, open eye (default) | neutral, "take your time", waiting |
+| `happy` | yellow, eye closed in a smile | done, saved, friendly hello |
+| `excited` | yellow, huge pupil, sparks (hops) | big wins: application sent, accepted |
+| `scared` | red, pinpoint pupil, red veins (shakes) | errors, deadline panic |
+| `sad` | grey, drooping lid, a tear | rejected, withdrawn, after an error |
+| `wink` | white, eye shut | playful messages |
+| `love` | red, heart pupil | confirmed, thank-yous |
+| `thinking` | blue, half lid, "…" | "check this", validation problems, sign-in needed |
+
+```js
+window.Iris.say(['excited', 'Sent! Your ID is APP-0042.'], 9000);   // [face, text], ms optional (default 7s)
+window.Iris.error();                                                  // red + shake + BRAND.mascot.error, then sad
+document.dispatchEvent(new CustomEvent('portal:error'));              // same as error(); call() already does it
+```
+
+**Rules**
+1. **Always guard** (`if (window.Iris)`, or the `kuya()` helper): I.R.I.S. can be hidden, off (`BRAND.mascot.show = false`) or fail to load; the page must work without it.
+2. **Never redraw, copy, restyle or move I.R.I.S.**; never style `.kuya*` classes or `#kuya*` ids. Keep the bottom-right corner free; the body already has bottom padding for it.
+3. **I.R.I.S. is extra, not the UI**: everything it says must also be on the page.
+4. **Big moments only.** Apply: submit success (`excited`), validation errors (`thinking`), closed (`sad`), already applied (`happy`). Dashboard: only actions taken inside it (e.g. `['happy', 'Opening the requirements form in a new tab.']`); Home already comments on the status. Server errors are automatic.
+5. Lines: one or two short sentences, first person, watchful and a little ominous but on the applicant's side ("File received. You are now on record."), plain text, no gore.
+6. New face, color or shared line → it's Brand.gs: ask Keene.
+
+### 7.3 Sign in / sign out / switch account
+PageTop always has **Sign out**. "Not signed in" state → **Sign in** button (`ACCOUNT.choose`, Google's account picker). "Wrong account" → **Switch account** (`ACCOUNT.out`). Both are plain links (`<a class="btn" href="…" target="_top">`), never `window.open`. Sign out signs out of **every** Google account in that browser; say so in a `title` or small note.
+
+### 7.4 Forms and accessibility
+- **Home extras for non-applicants:** an FAQ of "classified files" (`BRAND.faq`, `{fee} {dates} {venue}` filled from Settings; `todo: true` answers only show to admins) and past-camper quotes (`BRAND.testimonials`; `sample: true` shows a SAMPLE stamp). Both hide once the person has a file (`body.applied`), so the Dashboard has room. Confirmed campers' countdown switches to camp start (Settings › `CampStart`, else the first date in `EventDates`).
+- **Dropdowns are themed** (`CustomSelect` in Styles.html): every `<select>` on every page is replaced by a styled button + listbox on load, with the real select kept underneath for the value and validation. Use plain `<select>` in your markup; setting `el.value` from code updates the themed one too. Don't style native selects yourself.
+- **Report an issue** (`ReportIssue` in Styles.html, `report_issue` in Utils.gs, copy in `BRAND.report`): a red "Report an issue" button is added to every page's top bar and footer automatically (any `[data-report]` element opens it too). The form asks for the category, what happened, what they were doing, steps, when, how bad and a reply email (+ optional screenshot). It attaches the page, browser, screen, in-app browser, recent page errors, their account, applicant ID/status and last Activity rows, then emails a themed case file to Settings › `IssueEmail` (or `BRAND.report.to`). Max 3 reports per person per 10 minutes. The owner must run `report_authorize` once so Google allows sending email.
+- **Wording: say "core team", never "officers"**, in anything applicants see. The footer reads "Portal issues? …".
+- **Autofill from MemData** (ApplyApi.gs `apply_memberFor_`): the `MemData` tab (MEA member sign-ups) fills empty Apply fields. Matched ONLY by the signed-in email (Student Email / Email Address), never by ID alone, so nobody can pull someone else's details by guessing IDs. The ID Number is question 1; changing it re-runs the lookup among rows tied to the same email and refills anything autofilled that wasn't edited. Prefilled fields get a yellow edge until edited. Assume every applicant is in MemData, but never block someone who isn't. Autofilled: ID, name, nickname, course, year level, mobile, Block and MBTI (header "MBTI", else column AB; cleaned to the 4 letters). Only the email columns are compared, never other cells.
+- **Wrong-account pop-up** (`SignInHelp` in Styles.html, copy in `BRAND.signInHelp`): opens once per session on Home/Apply when the visitor isn't signed in or is on a non-Ateneo account; a "Trouble signing in?" link reopens it. It gives the school-pinned portal link (`baseUrl`) plus private-window and sign-out steps.
+- **I.R.I.S. judges your answers on Apply** (`judge` in Apply.html, lines in `BRAND.mascot.judge`): it comments after a pause or when you leave a field, at most once every 7s, and calls out invalid IDs/mobiles, short or very long essays, "leadership" clichés, big deletions and long idles. Validation errors use `judge.force()`. Comments are extra; the page's own error messages stay the source of truth.
+  - **Every question has a reaction.** `judge` entries come in three shapes: a list of `[face, text]` lines (random pick, `{v}` = their answer), e.g. `FullName`, `Block`, `PastOrgs`; an object keyed by answer, e.g. `YearLevel {1,4,other}`, `FirstOvernight {Yes,No}`, `OffsiteAvailability {Yes,No}`, `DataConsent {Y,N}`; and `MBTI {I,E,other}`, keyed by the type's first letter. Each field/answer is commented on once.
+  - **Progress check** every 40s: `slow` ("So Bea, you've put in only your name so far…"), `halfway`, `allDone`. Field names in those lines come from `LABEL` in Apply.html, so **a new question needs a `LABEL` entry and a `judge` line** in Brand.gs.
+  - The ID/mobile call-outs use `fieldError()`, so I.R.I.S. never disagrees with the form (and never says the ID range out loud).
+- **Page transitions** (Loader.html) look like an old CRT: leaving a page, the screen shuts from a bright centre line; when the next page is ready it collapses back to a line and blinks off. Reduced motion gets a plain fade.
+- **Apply opens with a wake-up intro** (Apply.html, `initIrisWakeSequence`): the form is hidden behind a black stage with I.R.I.S. centred and switched off (`data-mood="off"`); clicking it (or the prompt button, which gets focus) turns it on, it docks bottom-left and the form fades in. Skipped once seen this session (`sessionStorage leads-iris-awake`), when I.R.I.S. is hidden, and for reduced motion / CRT off. On Apply, I.R.I.S. can't be dragged and types its lines out. The top-bar toggle reads **CRT on / CRT off** (`BRAND.horror.lightsOn/lightsOff`).
+- **Apply looks like an official form under observation.** Number every question with `<span class="q-num">Q.04 / 09</span>` above its label. Show progress with the shared CCTV-timeline bar: `<div class="tape-progress" data-label="04 / 09"><span style="--p:44%"></span></div>` (update `--p` and `data-label` as fields get filled). I.R.I.S. reacts once when the fear essay passes 50 characters: `kuya('happy', "Noted. That one's going in your file.")`.
+- **Redacted words** are **off** (`BRAND.hero.redact: []`); don't add black-bar redactions to any page. The `.redact` class stays in Styles only so it can be switched back on. The **Lights on/off** toggle (`data-lights` buttons; PageTop already has one) is shared. Respect `document.documentElement.classList.contains('calm')`: in lights-on mode, add no motion of your own.
+- Every input has a visible `<label for>` above it. `autocomplete` (`name`, `nickname`, `tel`), `maxlength`, live counters on essays ("120 / 1000, need 50+"). Errors next to the field (`aria-describedby`) **and** a summary at the top; focus and scroll to the first error.
+- Inputs on dark: use the `.field` CSS in §8.3 (readable dropdown options too).
+- Loading text `role="status"`, errors `role="alert"`, actions are `<button>`, navigation is `<a>`. Color is never the only signal (pills have text). `prefers-reduced-motion` is already handled by Styles.
+
+---
+
+## 8. Responsiveness (strict, every page)
+
+Most applicants are on phones, often on slow data, from a group-chat link. Every rule here must pass; check before answering.
+
+### 8.1 Apps Script specifics
+- The viewport tag is set by `Code.gs`; a `<meta name="viewport">` in your HTML does nothing (the page is in Google's iframe). Don't remove Code.gs's.
+- The iframe fills the window: `vw`, `dvh` and media queries work, but never assume a fixed height. Google may show a banner at the top ("created by another user"): don't pin things to `top:0`.
+
+### 8.2 Widths, breakpoints, rules
+
+**Test at** 320 (small Android, split screen) · **360** (main target) · 390–430 (iPhones) · 768 (tablet) · 1024 (laptop) · 1440+ (desktop; content must not stretch), plus **landscape phone** (740×360), **200% zoom** and Android **large font**.
+
+**Breakpoints, mobile-first** (base CSS = phones; add with `min-width`, never patch desktop down): `560px` (big phones: 2 columns where useful) · `860px` (side-by-side layouts) · `1080px` (content stops growing; `.wrap` max 1080px). Only add another query if these can't solve it, and say why.
+
+**Layout**
+1. **No horizontal scroll** at any width ≥ 320: `document.documentElement.scrollWidth === innerWidth`.
+2. No fixed widths on containers: `width:100%` + `max-width`, `min()`, `clamp()`, `%`, `fr`, `minmax()`. Fixed px only for small things (icons, a 44px button).
+3. Content inside `.wrap` (max 1080px, 20px side padding). Paragraphs/essays `max-width:40em`.
+4. Rows of cards/buttons: flex with `flex-wrap:wrap`, or grid `repeat(auto-fit, minmax(min(100%, 260px), 1fr))`.
+5. Every flex/grid child holding text gets `min-width:0`. Long strings (emails, links, IDs, essays) get `overflow-wrap:anywhere`. Test with `a.very.long.name.with.dots@student.ateneo.edu`.
+6. Images/SVG: `max-width:100%; height:auto`.
+7. Never fix the height of text containers (`min-height`; full-screen = `100vh` fallback then `100dvh`).
+8. Big headings and section padding use `clamp()`; body text ≥ 1rem, small labels ≥ 12px, line-height ≥ 1.4; `rem`/`em` sizes; never disable zoom.
+
+**Touch and input**
+
+9. Tap targets ≥ 44×44px with ≥ 8px between them.
+10. Inputs/selects/textareas `font-size:16px`+ (or iPhones zoom in).
+11. Right keyboard: ID `inputmode="numeric" pattern="[0-9]*"`; mobile `type="tel" inputmode="tel"`.
+12. Nothing hover-only; hover effects inside `@media (hover:hover)`.
+13. After an error, `scrollIntoView({ block: 'center' })` + focus the first bad field. Never a `position:fixed` submit bar.
+
+**Components**
+
+14. Main buttons full-width on phones, side by side from 560px; labels never wrap to 3 lines.
+15. Forms: one column on phones; two only from 860px for short related fields (Course + Year level); labels above inputs.
+16. Modals (if any): full-screen on phones, scroll inside, 44px close button; centered with `max-height:90dvh; overflow:auto` on larger screens; lock background scroll.
+17. **No tables**: cards and lists. Pills sit in a wrapping row.
+18. **No fixed/sticky elements of your own** if avoidable. I.R.I.S. is fixed bottom-right (~68–88px): keep that corner free, never cover inputs, don't override the body's bottom padding. Anything stuck to an edge adds `padding-bottom: max(16px, env(safe-area-inset-bottom))`.
+19. Performance: one server call to load, loader shown instantly, no big images or extra fonts (inline SVG only), never call the server per keystroke.
+
+**Instant fails:** fixed px width on a container/form/card · `white-space:nowrap` on user text · `position:absolute` for page layout · `height:100vh` on growing content · `overflow:hidden` on `html`/`body` to hide sideways scroll · separate mobile and desktop copies of content · fonts < 12px or inputs < 16px · tables · mouse-only interactions.
+
+### 8.3 Starter CSS (copy into your `<style>`)
+
+```css
+/* fields */
+.field{display:flex;flex-direction:column;gap:6px;margin:0 0 16px;min-width:0}
+.field label{font-weight:700}
+.field input,.field select,.field textarea{
+  width:100%;font:inherit;font-size:16px;            /* 16px = no iPhone zoom */
+  color:var(--text);background:rgba(7,18,43,.7);
+  border:1.5px solid var(--line);border-radius:12px;padding:.75em .9em;min-height:44px}
+.field textarea{min-height:9em;resize:vertical}
+.field :focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+.form-grid{display:grid;gap:0 16px;grid-template-columns:1fr}
+@media (min-width:860px){.form-grid{grid-template-columns:1fr 1fr}.form-grid .full{grid-column:1/-1}}
+
+/* card lists that reflow on their own */
+.cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+
+/* button rows */
+.actions{display:flex;flex-wrap:wrap;gap:12px}
+.actions .btn{width:100%;justify-content:center;min-height:44px}
+@media (min-width:560px){.actions .btn{width:auto}}
+
+/* long words never break the layout */
+.wrap,.card{min-width:0;overflow-wrap:anywhere}
+p{max-width:40em}
+
+/* hover only where hover exists */
+@media (hover:hover){.btn:hover{transform:translate(-2px,-2px)}}
+```
+
+### 8.4 The responsive check (AI must report it)
+At 320, 360, 390, 768, 1024, 1440: (1) no sideways scroll (name the widest element and why it fits); (2) columns/stacking at each width; (3) all tap targets ≥ 44px, inputs 16px; (4) long email / 60-char name / 1000-char essay wrap; (5) modals full-screen on phones; (6) landscape 740×360: nothing hidden behind fixed elements (including I.R.I.S.); (7) 200% zoom usable.
+
+Console snippet to find what's too wide:
+```js
+[...document.querySelectorAll('body *')].filter(el => el.getBoundingClientRect().right > innerWidth + 1)
+  .forEach(el => console.log(el, Math.round(el.getBoundingClientRect().width) + 'px'));
+console.log('page', document.documentElement.scrollWidth, 'vs screen', innerWidth);
+```
+
+---
+
+## 9. Specs
+
+### 9.1 Apply (`Apply.html` + `ApplyApi.gs`), Member A
+
+**Server**
+```
+apply_getForm()    → { signedIn, email, allowedDomain, isOpen, deadline (ISO|null), alreadyApplied: {id,status}|null, rules, lists, contact, eventDates, draft, member }
+apply_submit(form) → { ok:false, errors } | { ok:true, id }
+```
+`apply_submit` **must**, in order:
+1. `email = currentEmail_()`; blank → throw "Sign in with your Ateneo account first."
+2. `!isAllowedDomain_(email)` → throw "Use your Ateneo account to apply."
+3. `v = validateApplication_(form, 'apply')` (covers phone cleanup, ID range, Block-for-first-years, consent, Yes/No choices); `!v.ok` → return `{ ok:false, errors: v.errors }`. Build the row from `v.clean`, never raw input.
+4. Take the lock. **Inside it:** `!isOpen_()` → throw "Applications just closed." · `getApplicantByEmail_(email)` → throw "You already applied." · same `IDNumber` on another row → return `{ ok:false, errors:{ IDNumber:'That ID number already has an application. Message an officer if this is wrong.' } }` · `id = nextApplicantId_()` · build the row in **`COLS` order** (every column; `ReviewedBy`/`Notes` blank; `Timestamp`/`LastUpdated` = `new Date()`; `Email` = login; `SUBMITTED`/`NONE`/`NONE`; `IDNumber`/`Mobile` as strings; everything through `safeCell_`) · `sheet_(SHEET.APPLICANTS).appendRow(row)` · `logChange_(id, 'status', '', 'SUBMITTED', 'system')`.
+5. Return `{ ok:true, id }`.
+
+**Page must**
+- **15 questions in two sections** (`FIELDS` in Apply.html, progress tape shows `NN / 15`):
+  - *Section 1, Primary Subject Identification:* Q.01 IDNumber, FullName, Nickname, Course (select), YearLevel (select 1–5), Block, Mobile, MBTI (select of 16), MEAInvolvement (select).
+  - *Section 2, Interrogation & Psychological Dossier:* PastOrgs, FirstOvernight (Yes/No), OffsiteAvailability (Yes/No, shows `eventDates`), WhyLEADS, FearEssay, DataConsent (Y/N; must be Y).
+  - **No email field**: show "Applying as juan@…". Examples use `.ex-tag` (one line) / `.ex-box` (multi-line).
+- **How an answer gets saved, end to end:**
+  1. While typing: the draft (all 15 fields) saves to the hidden `Drafts` tab via `apply_saveDraft` (falls back to localStorage), so it follows the account.
+  2. On submit: the page runs `validateClientForm()` → `fieldError()` per field (same `RULES` as the server). Mobile is normalized to `09…` on blur.
+  3. Server: `apply_submit` → `validateApplication_()` → row built from `v.clean` in `COLS` order → `ensureApplicantHeaders_()` → `appendRow` → `logChange_` → draft deleted.
+  4. **Adding a question** = add it to `RULES` (Utils.gs), `COLS` (append at the **end**), `FIELDS` + the HTML field (Apply.html), the draft field list in `apply_saveDraft`, and a `judge` line + `LABEL`. Miss `COLS` and the answer is silently dropped.
+- Selects from `lists` (never hard-coded). Deadline in Manila time. Client checks use the same `rules` and `rule.msg`; live essay counters.
+- Success: replace the form with "You're in the queue" + ApplicantID + a button back to the hub.
+- I.R.I.S.: `excited` on success (with the ID), `thinking` on validation errors, `sad` when closed, `happy` when already applied (each also shown on the page).
+- Not signed in → **Sign in** button; non-Ateneo account → **Switch account** button.
+
+**Edge cases**
+- Not signed in / non-Ateneo → no form, clear message, account button, link to the hub.
+- Already applied → no form; their ID/status + link to the hub.
+- Closed (switch off or deadline passed) → no form; "Applications are closed" + contact.
+- Deadline passes **while typing** → server refuses; show it and **keep their text** so they can copy it.
+- Double click / two tabs → one row only (lock + email check).
+- Duplicate IDNumber → field error, not a crash.
+- Names with ñ, accents, `O'Neil`, hyphens → accepted; emojis/numbers in names → rejected with the rule message.
+- Essays: line breaks and emojis OK; exactly 50 and 1000 chars accepted, 49/1001 rejected; count like the server (`.trim().length`).
+- Mobile typed `0917 123 4567` / `+639171234567` / `9171234567` → normalized to `09171234567` (page on blur, server in `validateApplication_`).
+- Leading/trailing spaces trimmed; text starting `= + - @` stored safely (server).
+- A Lists option removed mid-application → server field error; show it.
+- Network error / timeout → error state, values kept, retry.
+- Drafts: saved per account in the `Drafts` tab (localStorage fallback, try/catch); the newer copy wins; deleted after success.
+- First year (ID `26…` or Year 1) with no Block → field error; everyone else may leave it blank.
+- ID outside 200000–280000 → "Invalid ID number." (no range shown, on the page or by I.R.I.S.).
+- Consent "No" → can't submit; I.R.I.S. explains why.
+- MemData MBTI like `INTJ-A` → autofilled as `INTJ`; anything unrecognisable → left blank.
+
+### 9.2 Dashboard inside the hub (`Dashboard.html` + `DashboardApi.gs`), Member B
+
+**Purpose:** the applicant's personal area **on the home page**. There's no separate status page: this is where they see where they are, what's next, what to prepare, and the Form links when it's their turn.
+
+**Wiring (done; don't change Home.html).** Home includes your file with `includeOptional_('Dashboard', { BRAND, baseUrl })` right after the hero; if it's missing or throws, Home renders without it (Executions shows `includeOptional_(Dashboard) skipped:`). Your file is a fragment (§6.4). Decide whether to show anything from the `hub:context` data **before** calling the server; extra data comes from `dash_get()` (extend it in your own file, following §3).
+
+**Isolation (must; everyone shares the hub)**
+1. Everything inside `<section id="dash">`; all CSS selectors start with `#dash`, all ids with `dash-`. Never style bare tags, `body`, `.wrap` or hub classes; never reuse hub ids (`statusCard`, `path`, `mods`, `who`…).
+2. All JS in **one IIFE**; no globals (the hub defines `$`, `BRAND`, `render`, `fail`, `announce`). Reading `BRAND`, `Loader`, `window.HUB`, `window.Iris` is fine.
+3. The only effect on the hub: `document.body.classList.add('has-dash')`, **only after your dashboard rendered for an applicant**.
+4. Never throw out of listeners (try/catch); on error show an inline message in `#dash` (or hide it) and leave `has-dash` off.
+5. Don't use the full-screen Loader: show an inline skeleton the same height as the final card.
+6. Handle both `hub:context` **and** `window.HUB` already being set.
+
+**Who sees what**
+
+| Who | Dashboard shows |
+|---|---|
+| Guest / wrong account | nothing (Home explains sign-in) |
+| Signed in, not applied | nothing, or one small "Apply now" nudge only if `ctx.isOpen` (don't duplicate the hub's big button) |
+| SUBMITTED / UNDER REVIEW / WAITLISTED | greeting (`nickname`), status + `BRAND.statusCopy`, what happens next, payment card if `forms.payment` is set (ANYTIME) |
+| ACCEPTED | **one** clear next action, "Open the requirements form", payment card (fee, `instructions` with line breaks, "Open the payment form"), nearest deadline with days left |
+| Requirements / Payment `SUBMITTED` | "Received, an officer is checking"; button becomes "Send again" |
+| Requirements `RETURNED` / Payment `REJECTED` | "Something needs fixing: check your email or message an officer, then send it again" + the Form button |
+| REJECTED / WITHDRAWN | kind message only; no Form buttons |
+| CONFIRMED | celebratory "You're in" + event dates/venue |
+| Officer who also applied | same as an applicant |
+
+**Edge cases**
+- `hub:error` → hide `#dash`. `dash_get()` fails → inline error + Retry, `has-dash` stays off.
+- No requirements checklist (`requirements` is always `[]`; the Form lists what to send). Step unlocked but link `''` → "Link coming soon", no dead button.
+- Form links open in a **new tab**; say so ("opens Google Forms") and remind them to use the same Ateneo account and not change the pre-filled Applicant ID.
+- `PaymentStage` ANYTIME and not yet accepted → payment can be "your move" first. Next action uses `progress` (requirements `action` first, then payment `action`), like the hub's main button.
+- Deadlines blank/passed → hide / "passed" (never "Invalid Date", "NaN days"). Long nickname/email wraps.
+- Responsive: one column on phones; 2–3 columns from 860px, never wider than its parent `.wrap`. Use `.card`, `.pill`, `.btn`, CSS variables; no new fonts.
+- I.R.I.S.: no Mascot include; optional guarded `I.R.I.S..say` for actions inside the Dashboard only.
+
+**Placeholder now:** only admins see a dashed "being built" note; applicants see nothing.
+
+---
+
+## 10. Edge-case checklist (go through it; say which apply and how)
+
+- **Who:** not signed in (`''`) · wrong/non-Ateneo account · signed in but not applied · officer who also applied · someone calling your public functions from the console with wrong/missing/malicious arguments (`null`, `{}`, huge strings, other people's IDs, `=FORMULA`).
+- **When:** closed / deadline passed / reopened · state changed between page load and click · Settings blank, text instead of a date, number stored as text.
+- **What:** every Status, Requirements and Payment value · `PaymentStage` both ways · zero active requirements, blank fee, blank Form links · long text, line breaks, emojis, ñ/accents, extra spaces · leading-zero numbers stay strings.
+- **Shared pieces (§3.4):** Styles/brand_css, Loader, I.R.I.S., PageTop exactly as §6.2 (Dashboard: none) · `call()` fires `portal:error`; `Loader.hide()` on success and error · I.R.I.S. reacts to success and validation errors, guarded, with the same message on the page · Sign in / Switch account buttons · bottom-right corner free · no Halloween visuals or wording.
+- **Layout:** every §8 rule at every test width (report per §8.4).
+- **How:** loading state within 100ms, never blank · server error → readable message + retry, nothing half-saved · double click / two tabs → no duplicates · slow or dropped connection while submitting · keyboard-only and screen reader · no `Date` from the server; "undefined", "null", "NaN", "Invalid Date" never on screen · user text via `textContent` · no personal data in `console.log`.
+
+---
+
+## 11. Testing
+
+You can't make fake Google accounts, so **fake states with your own row**:
+1. Apply once with your account on `/dev` (or, until Apply works, add a row by hand in `Applicants` with **your** email, a unique `APP-9xxx` ID, `Notes` = `TEST - delete`).
+2. Change your row's `Status` / `Requirements` / `Payment` and reload. You must be in `Admins` (non-officer edits are undone on purpose), or ask Keene to use the LEADS menu. Illegal jumps (SUBMITTED → CONFIRMED) are blocked: follow §2.4.
+3. Flip Settings: `ApplicationsOpen`, clear `Deadline`, switch `PaymentStage`, blank `CampFee`, clear a Form URL. **Put them back after.**
+4. Not signed in: open `/dev` signed into a personal Gmail only (you may get a Google error page since `/dev` needs edit access; test the real path on `/exec` after Keene deploys).
+5. Officer vs not: add/remove your email in `Admins`.
+6. I.R.I.S.: check the hello line, a success/validation reaction, and an error (temporarily throw in your server function). Click "Hide I.R.I.S." and confirm the page still works, then open a new tab to get it back.
+7. Phone: open `/dev` in mobile Chrome/Safari with your Ateneo account; portrait and landscape; type in every field; tap the Form buttons.
+8. Laptop: Inspect → device toolbar (Ctrl/Cmd+Shift+M) → Responsive → 320, 360, 390, 768, 1024, 1440; scroll sideways at each; run the §8.4 snippet; try 200% zoom.
+9. **Clean up:** delete your TEST row and test Form responses (Log rows stay).
+
+Server-only: `function test_mine() { console.log(JSON.stringify(dash_get(), null, 2)); }` → Run → read the log → delete it.
+
+---
+
+## 12. Troubleshooting
+
+**First stop: the Sheet's Activity tab.** Filter `Level` = ERROR, or `Who` = the person's email. Server errors there include the stack (file and line); browser errors show as `client_js_error`.
+
+| You see | Fix |
+|---|---|
+| Button does nothing when calling the server | Function ends in `_`, is misspelled, or its file isn't saved |
+| Success handler gets `null` | You returned a `Date` (often from Settings): convert to ISO |
+| `Script function not found: doGet` | Saved with errors, or Code.gs edited: fix red marks, don't touch Code.gs |
+| `?page=apply` shows the hub | `Apply.html` missing or misnamed |
+| `No HTML file named PageTop` | Shared file missing: ask Keene |
+| Dashboard doesn't appear | It threw while rendering: Executions → `includeOptional_(Dashboard) skipped:` |
+| Hub looks broken after adding the Dashboard | CSS not scoped to `#dash`, or a reused hub id/global (§9.2) |
+| Page shows raw `<?= ?>` | Used `include()` on a file with scriptlets: use `includeTemplate()` |
+| Infinite loading / "Maximum call stack" | A scriptlet tag inside an HTML comment |
+| Loader stuck (vanishes after 20s) | `data-loader-wait` without `Loader.hide()`, often missing in the error path |
+| `Loader is not defined` | `include('Loader')` missing or not first in `<body>` |
+| I.R.I.S. missing | Mascot include missing, or "Hide I.R.I.S." was clicked (open a new tab) |
+| `I.R.I.S. is not defined` / page breaks when I.R.I.S. is hidden | Use the guarded `kuya()` helper |
+| Two I.R.I.S. mascots on Home | The Dashboard included Mascot: remove it |
+| I.R.I.S. covers my button | Something is in the bottom-right corner: move it |
+| I.R.I.S. doesn't react to errors | A raw `google.script.run` without `portal:error`: use `call()` |
+| Wrong email / "unable to open the file" | Several Google accounts: **Sign out**, then sign in with only the Ateneo account |
+| `Exception: You do not have permission…` | Run any function from the editor once and Allow |
+| My Status/Requirements/Payment edit was undone | Not in Admins, or illegal move: add yourself / follow §2.4 / use the LEADS menu |
+| No LEADS menu | Reload the Sheet tab |
+| "Link coming soon" on a Form button | Form URL blank or not a Google Forms link in Settings |
+| `You have not applied yet.` | No row with your email: add a TEST row (§11) |
+| `Can't go from X to Y.` | Not allowed by `NEXT_STATUS`, or someone changed it first: refresh |
+| `Exception:` + a short rule (e.g. `6 digits, and only once in this column`) | Sheet validation rejected the write: validate and check uniqueness first |
+| Sideways scroll on phones | Run the §8.4 snippet; fix that element (`min-width:0`, `overflow-wrap:anywhere`, `minmax(min(100%,260px),1fr)`) |
+| iPhone zooms into fields | Input font under 16px |
+| Bottom button behind keyboard/iPhone bar | No fixed submit bar; `100dvh`; `env(safe-area-inset-bottom)` |
+| Heading one word per line on phones | Use `clamp()` |
+| Mobile shows `9171234567` | Written as a number: write strings |
+| Links open in a tiny frame / do nothing | Missing `target="_top"` or not using `baseUrl` |
+| "Sorry, unable to open the file" / file not found | Several Google accounts signed in and the link isn't the `/a/macros/student.ateneo.edu/` one. Share only that link; inside the portal use `baseUrl`. |
+| Works on `/dev`, not `/exec` | Ask Keene to redeploy |
+| `Service invoked too many times` / slow | Reading cells in a loop: one `getValues()` |
+
+---
+
+## 13. Prompts (fill in, paste after this file)
+
+**Build my page**
+> I'm Member **[A/B]**. I own **[Apply.html + ApplyApi.gs / Dashboard.html + DashboardApi.gs]**. Using the context file above, build both files completely, following §3 (including every §3.4 must-have: Loader, I.R.I.S., PageTop, `call()`, account buttons), my spec in §9 (and the §6.4 skeleton if I'm the Dashboard), and the §10 checklist. Current files: [paste]. Give full files, install steps, edge cases handled, the must-haves, the §8.4 responsive check, and a test plan.
+
+**Fix a bug**
+> I'm Member **[X]** on **[file]**. Expected: **[…]**. Actual: **[…]**. Error from Console/Executions: **[exact text]**. Files: [paste]. Explain the cause in 2–3 sentences and give the full fixed files. Don't touch shared files.
+
+**Add a feature**
+> Add **[feature]** to my page. Stay in my two files, reuse §4 helpers, keep existing behavior, keep the §3.4 must-haves, and list new edge cases.
+
+**Review before I hand it in**
+> Review my files against §3 (rules, security, must-haves), §5 (gotchas), §8 (responsiveness) and §10 (edge cases). List problems as severity, where, why, fix, then give the corrected full files.
+
+**Make it responsive**
+> Audit my page against §8 at 320, 360, 390, 768, 1024, 1440, landscape phone and 200% zoom. List every broken rule (number, element, why), then give the full fixed files and the §8.4 check.
+
+**I'm stuck and new**
+> Explain this code line by line in simple words, then tell me the exact next step to get it working on my `/dev` link: [paste].

@@ -1,0 +1,587 @@
+<!-- Mascot.html  (shared: I.R.I.S., the little CRT with one eye in the bottom-right corner.)
+     I.R.I.S. = Inspection, Reconnaissance & Identification System: the portal's 1984 nod. Its eye follows the pointer, it blinks,
+     and its screen color changes with each face (BRAND.mascot.colors).
+     Every page adds it right after the Loader line, as a force-print scriptlet:
+       includeOptional_('Mascot', { BRAND: BRAND, page: page })   (optional: if Kuya breaks, the page still loads)
+     Words, faces and colors live in Brand.gs (BRAND.mascot). Set BRAND.mascot.show = false to turn Kuya off.
+     Faces: nervous, happy, excited, sad, scared, wink, love, thinking. Each line picks one; when the
+     transmission box closes Kuya goes back to the page's resting face (or, on Home, the face for the applicant's status).
+     Every ~7 seconds I.R.I.S. idles: it alternates a body animation (MOVES_IDLE: lean, tilt, shiver, antenna, spin, nap,
+     jump, wobble, flip, peek) with a screen effect (EFFECTS: glitch, static, scan, stare, panic, roll, bars, zoom, eyeroll).
+     It never repeats one of its last three. TRICK_EVERY below sets the gap.
+     Errors: Kuya turns red and says BRAND.mascot.error on 'hub:error', 'portal:error', or an unhandled server error.
+     Pages report their own failures with: document.dispatchEvent(new CustomEvent('portal:error'))
+     Pages make it talk with window.Kuya.say([face, text]) (window.Iris is the same object).
+     Never write a real scriptlet tag in a comment here: Apps Script runs scriptlets even inside comments. -->
+<? if (BRAND.mascot && BRAND.mascot.show) { ?>
+<style>
+  body{padding-bottom:100px}                /* so Kuya never covers the last line of a page */
+  .kuya{position:fixed;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));
+    z-index:60;display:flex;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:none;--kuya-c:#0010E0}
+  .kuya-btn{pointer-events:auto;width:84px;height:88px;padding:0;border:0;background:none;cursor:grab;touch-action:none;
+    -webkit-tap-highlight-color:transparent}
+  .kuya.dragging .kuya-btn{cursor:grabbing}
+  /* picked up: lifts and tilts (transition, so it eases in and settles back on drop) */
+  .kuya-btn svg{transition:transform .18s cubic-bezier(.23,1,.32,1),filter .18s ease}
+  .kuya.dragging svg{transform:scale(1.08) rotate(-4deg);filter:drop-shadow(0 10px 8px rgba(0,0,0,.55));animation:none!important}
+  .kuya.dragging .kuya-float,.kuya.dragging .kuya-shadow{animation-play-state:paused}
+  /* moved by dragging: placed with left/top; the message box flips to the side with room */
+  .kuya.placed{right:auto;bottom:auto}
+  .kuya.on-left{align-items:flex-start}
+  .kuya.on-left .kuya-bubble{margin:0 0 0 6px;transform-origin:bottom left}
+  .kuya.on-top{flex-direction:column-reverse}
+  .kuya-btn:focus-visible{outline:3px solid var(--glow,#FFFF00);outline-offset:4px}
+  .kuya-btn svg{width:100%;height:100%;overflow:visible;display:block;transform-origin:50% 60%}
+
+  .kuya-screen{fill:var(--kuya-c);transition:fill .35s steps(3)}
+  .kuya-float{animation:kuyaFloat 3.6s ease-in-out infinite}
+  .kuya-shadow{transform-box:fill-box;transform-origin:center;animation:kuyaShadow 3.6s ease-in-out infinite}
+  .kuya-rec{animation:kuyaRec 1.2s steps(1) infinite}
+  .kuya-iris{transition:transform .12s linear}
+  .kuya-pupil{transform-box:fill-box;transform-origin:center;transition:transform .25s ease}
+  .kuya-open{transform-box:fill-box;transform-origin:center;animation:kuyaBlink 5.2s infinite}
+  .kuya-lid{transition:transform .3s ease;transform:translateY(-22px)}
+
+  /* faces */
+  .kuya-closed,.kuya-heart,.kuya-veins,.kuya-dots,.kuya-tear,.kuya-spark{opacity:0;transition:opacity .2s}
+  .kuya[data-mood="off"]{--kuya-c:#080808 !important}
+  .kuya[data-mood="off"] .kuya-screen{fill:#080808 !important}
+  .kuya[data-mood="off"] .kuya-open,.kuya[data-mood="off"] .kuya-closed{opacity:0 !important}
+  .kuya[data-mood="off"] .kuya-rec{opacity:0 !important;animation:none !important}
+  .kuya[data-mood="off"] .kuya-lid{transform:translateY(0) !important}
+  .kuya[data-mood="off"] .kuya-spark,.kuya[data-mood="off"] .kuya-heart,.kuya[data-mood="off"] .kuya-veins,.kuya[data-mood="off"] .kuya-dots,.kuya[data-mood="off"] .kuya-tear{opacity:0 !important}
+  .kuya[data-mood="off"] .kuya-btn{cursor:pointer !important}
+  .kuya[data-mood="happy"] .kuya-open,.kuya[data-mood="wink"] .kuya-open{opacity:0}
+  .kuya[data-mood="happy"] .kuya-closed.happy,.kuya[data-mood="wink"] .kuya-closed.wink{opacity:1}
+  .kuya[data-mood="excited"] .kuya-pupil{transform:scale(1.45)}
+  .kuya[data-mood="excited"] .kuya-spark{opacity:1}
+  .kuya[data-mood="scared"] .kuya-pupil{transform:scale(.45)}
+  .kuya[data-mood="scared"] .kuya-veins{opacity:1}
+  .kuya[data-mood="sad"] .kuya-lid{transform:translateY(-7px)}
+  .kuya[data-mood="sad"] .kuya-tear{opacity:1}
+  .kuya[data-mood="thinking"] .kuya-lid{transform:translateY(-10px)}
+  .kuya[data-mood="thinking"] .kuya-dots{opacity:1}
+  .kuya[data-mood="love"] .kuya-pupil{opacity:0}
+  .kuya[data-mood="love"] .kuya-heart{opacity:1}
+  .kuya-dots circle{animation:kuyaDot 1.4s steps(2) infinite}
+  .kuya-dots circle:nth-child(2){animation-delay:.25s}
+  .kuya-dots circle:nth-child(3){animation-delay:.5s}
+
+  /* one-off moves */
+  .kuya.peek svg{animation:kuyaPeek .6s steps(6)}
+  .kuya.scared svg{animation:kuyaShake .4s steps(4)}
+  .kuya.hop svg{animation:kuyaHop .5s ease 2}
+  .kuya.poke svg{animation:kuyaPoke .3s steps(3)}
+  /* idle tricks (names in TRICKS below) */
+  .kuya.trick-glitch svg{animation:kuyaTGlitch .7s steps(1)}
+  .kuya.trick-stare svg{animation:kuyaTStare 1.6s ease}
+  .kuya.trick-stare .kuya-pupil{transform:scale(1.7)}
+  .kuya-static{opacity:0}
+  .kuya.trick-static .kuya-static{animation:kuyaTStatic .8s steps(4)}
+
+  /* idle body animations (MOVES_IDLE) */
+  .kuya-ant,.kuya-wave,.kuya-tube,.kuya-roll,.kuya-zz{transform-box:fill-box}
+  .kuya-wave,.kuya-roll,.kuya-zz{opacity:0}
+  .kuya.trick-lean svg{animation:kuyaTLean 2.2s ease-in-out}
+  .kuya.trick-tilt svg{animation:kuyaTTilt 1.8s ease-in-out}
+  .kuya.trick-shiver svg{animation:kuyaTShiver 1s linear}
+  .kuya.trick-antenna .kuya-ant{transform-origin:50% 100%;animation:kuyaTAnt 1.4s steps(6)}
+  .kuya.trick-antenna .kuya-wave{animation:kuyaTWave 1.4s ease-out}
+  .kuya.trick-spin svg{animation:kuyaTSpin .9s ease-in-out}
+  .kuya.trick-nap .kuya-tube{transform-origin:center;animation:kuyaTNap 3s ease}
+  .kuya.trick-nap svg{animation:kuyaTSink 3s ease}
+  .kuya.trick-nap .kuya-zz{animation:kuyaTZz 3s ease}
+  /* more body moves */
+  .kuya.trick-jump svg{animation:kuyaTJumpBig 1s cubic-bezier(.23,1,.32,1)}
+  .kuya.trick-wobble svg{transform-origin:50% 95%;animation:kuyaTWobble 1.3s ease-in-out}
+  .kuya.trick-flip svg{animation:kuyaTFlip 1.1s cubic-bezier(.77,0,.175,1)}
+  .kuya.trick-peek svg{animation:kuyaTPeekaboo 2.6s cubic-bezier(.77,0,.175,1)}
+  @keyframes kuyaTJumpBig{0%{transform:none}15%{transform:scale(1.12,.82) translateY(6px)}45%{transform:scale(.92,1.1) translateY(-34px)}70%{transform:scale(1.1,.88) translateY(2px)}85%{transform:translateY(-4px)}100%{transform:none}}
+  @keyframes kuyaTWobble{0%,100%{transform:none}15%{transform:rotate(-14deg) scaleY(.94)}30%{transform:rotate(11deg) scaleY(1.04)}45%{transform:rotate(-8deg)}60%{transform:rotate(5deg)}75%{transform:rotate(-2deg)}}
+  @keyframes kuyaTFlip{0%{transform:none}40%{transform:translateY(-30px) rotate(180deg)}75%{transform:translateY(-6px) rotate(360deg)}100%{transform:rotate(360deg)}}
+  @keyframes kuyaTPeekaboo{0%,100%{transform:none}20%,62%{transform:translateY(70px) scale(.9);opacity:.15}72%{transform:translateY(30px) rotate(-12deg);opacity:1}82%{transform:translateY(-6px)}}
+  /* more screen effects */
+  .kuya-bars{opacity:0}
+  .kuya.trick-bars .kuya-bars{animation:kuyaTBars 1.6s steps(1)}
+  .kuya.trick-bars .kuya-open{opacity:0}
+  .kuya.trick-zoom .kuya-open{transform-origin:43px 49px;transform-box:view-box;animation:kuyaTZoom 1.6s cubic-bezier(.23,1,.32,1)}
+  .kuya.trick-zoom .kuya-pupil{transform:scale(1.9)}
+  .kuya.trick-eyeroll .kuya-iris{animation:kuyaTEyeroll 1.2s linear}
+  @keyframes kuyaTBars{0%,100%{opacity:0}8%,30%{opacity:1}31%,36%{opacity:0}37%,88%{opacity:1}}
+  @keyframes kuyaTZoom{0%,100%{transform:none}25%,70%{transform:scale(1.9)}}
+  @keyframes kuyaTEyeroll{0%{transform:translate(0,-5px)}25%{transform:translate(9px,0)}50%{transform:translate(0,5px)}75%{transform:translate(-9px,0)}100%{transform:translate(0,-5px)}}
+
+  /* screen effect: vertical hold rolls a bright band down the screen */
+  .kuya.trick-roll .kuya-roll{animation:kuyaTRoll 1.1s linear 2}
+  .kuya.trick-roll .kuya-tube{animation:kuyaTJump 1.1s steps(1) 2}
+  @keyframes kuyaTLean{0%,100%{transform:none}20%,45%{transform:translateX(-10px) rotate(-16deg)}55%,80%{transform:translateX(10px) rotate(16deg)}}
+  @keyframes kuyaTTilt{0%,100%{transform:none}20%,80%{transform:rotate(24deg) translateY(-4px)}}
+  @keyframes kuyaTShiver{0%,100%{transform:none}10%,30%,50%,70%,90%{transform:translateX(-3.5px) rotate(-2deg)}20%,40%,60%,80%{transform:translateX(3.5px) rotate(2deg)}}
+  @keyframes kuyaTAnt{0%,100%{transform:none}20%{transform:rotate(-12deg)}40%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(4deg)}}
+  @keyframes kuyaTWave{0%{opacity:0;transform:scale(.4)}30%{opacity:1}100%{opacity:0;transform:scale(1.6)}}
+  @keyframes kuyaTSpin{0%{transform:none}25%{transform:scaleX(0) translateY(-14px)}50%{transform:scaleX(-1) translateY(-18px)}75%{transform:scaleX(0) translateY(-14px)}100%{transform:none}}
+  @keyframes kuyaTNap{0%,100%{transform:none}12%{transform:scale(1,.03)}16%,72%{transform:scale(.02,.03)}80%{transform:scale(1,.03)}84%{transform:none}}
+  @keyframes kuyaTSink{0%,100%{transform:none}20%,75%{transform:translateY(5px) scaleY(.95)}82%{transform:translateY(-6px)}}
+  @keyframes kuyaTZz{0%,18%,76%,100%{opacity:0;transform:none}30%{opacity:1}70%{opacity:.8;transform:translate(6px,-10px)}}
+  @keyframes kuyaTRoll{from{opacity:.55;transform:translateY(-10px)}to{opacity:.55;transform:translateY(60px)}}
+  @keyframes kuyaTJump{0%,100%{transform:none}40%{transform:translateY(3px)}45%{transform:none}}
+
+  @keyframes kuyaFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  @keyframes kuyaShadow{0%,100%{transform:scale(1);opacity:.5}50%{transform:scale(.85);opacity:.3}}
+  @keyframes kuyaRec{50%{opacity:0}}
+  @keyframes kuyaBlink{0%,46%,50%,100%{transform:scaleY(1)}48%{transform:scaleY(.08)}}
+  @keyframes kuyaDot{50%{opacity:.2}}
+  @keyframes kuyaPeek{0%{transform:translateY(30px);opacity:0}50%{opacity:1;transform:translateY(-6px) skewX(-8deg)}100%{transform:none}}
+  @keyframes kuyaShake{25%{transform:translateX(-4px)}50%{transform:translateX(4px) skewX(6deg)}75%{transform:translateX(-2px)}}
+  @keyframes kuyaHop{40%{transform:translateY(-12px)}70%{transform:translateY(0) scaleY(.92)}}
+  @keyframes kuyaPoke{50%{transform:scale(1.08,.92)}}
+  @keyframes kuyaTGlitch{0%{transform:none}15%{transform:translate(-5px,0) skewX(14deg)}30%{transform:translate(4px,1px)}
+    45%{transform:translate(-2px,-1px) skewX(-10deg);filter:invert(1)}60%{transform:none;filter:none}75%{transform:translateX(3px)}100%{transform:none}}
+  @keyframes kuyaTStare{0%,100%{transform:none}30%,70%{transform:scale(1.3) translateY(-4px)}}
+  @keyframes kuyaTStatic{0%,100%{opacity:0}25%,75%{opacity:1}50%{opacity:.5}}
+
+  .kuya-bubble{pointer-events:auto;position:relative;max-width:min(270px,calc(100vw - 32px));margin-right:6px;
+    background:#0A0A0A;color:#EAEAEA;border:2px solid var(--glow,#FFFF00);border-radius:0;
+    padding:10px 14px;font-family:var(--mono,ui-monospace,monospace);font-size:.8rem;line-height:1.45;
+    box-shadow:4px 4px 0 var(--blue,#0010E0);overflow-wrap:anywhere;transform-origin:bottom right;animation:kuyaPop .22s steps(3)}
+  .kuya-bubble b{display:block;font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--glow,#FFFF00);margin-bottom:4px}
+  .kuya-cursor{display:inline-block;width:6px;height:1em;background:var(--glow,#FFFF00);vertical-align:-2px;margin-left:2px;animation:kuyaCursor .6s steps(1) infinite}
+  @keyframes kuyaCursor{50%{opacity:0}}
+  .kuya-hide{display:block;margin-top:8px;padding:0;border:0;background:none;font:inherit;font-size:.68rem;letter-spacing:.08em;
+    text-transform:uppercase;color:#8C8C8C;text-decoration:underline;cursor:pointer}
+  @keyframes kuyaPop{from{transform:scaleY(.1);opacity:0}to{transform:none;opacity:1}}
+
+  @media (max-width:560px){
+    body{padding-bottom:84px}
+    .kuya{right:calc(10px + env(safe-area-inset-right,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+    .kuya-btn{width:56px;height:60px}
+  }
+  /* after "Hide Kuya": a small button in the same corner brings him back */
+  .kuya-recall{position:fixed;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60;
+    font-family:var(--mono,monospace);font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted,#8C8C8C);
+    background:#0A0A0A;border:1.5px solid var(--line,#2E2E2E);padding:.5em .8em;min-height:36px;cursor:pointer}
+  .kuya-recall:hover,.kuya-recall:focus-visible{color:var(--glow,#FFFF00);border-color:var(--glow,#FFFF00)}
+  @media print{.kuya,.kuya-recall{display:none}}
+</style>
+
+<button type="button" class="kuya-recall" id="kuyaRecall" hidden></button>
+<div class="kuya" id="kuya" data-mood="nervous" hidden>
+  <div class="kuya-bubble" id="kuyaBubble" role="status" aria-live="polite" hidden>
+    <b id="kuyaName"></b><span id="kuyaText"></span><span class="kuya-cursor" id="kuyaCursor" hidden></span>
+    <button type="button" class="kuya-hide" id="kuyaHide"></button>
+  </div>
+  <button type="button" class="kuya-btn" id="kuyaBtn">
+    <svg viewBox="0 0 100 104" aria-hidden="true" focusable="false">
+      <defs>
+        <clipPath id="kuyaScreenClip"><rect x="15" y="23" width="56" height="50" rx="6"/></clipPath>
+        <clipPath id="kuyaEyeClip"><path d="M22 49 Q43 31 64 49 Q43 67 22 49 Z"/></clipPath>
+        <pattern id="kuyaLines" width="4" height="3" patternUnits="userSpaceOnUse"><rect width="4" height="1.2" fill="#000" opacity=".28"/></pattern>
+        <filter id="kuyaNoise"><feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="1"/><feColorMatrix values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.3"/></filter>
+      </defs>
+      <ellipse class="kuya-shadow" cx="50" cy="99" rx="30" ry="3.5" fill="#000"/>
+      <g class="kuya-float">
+        <!-- antennas -->
+        <g class="kuya-ant">
+          <path d="M42 17 L30 3 M58 17 L71 4" stroke="#0A0A0A" stroke-width="5" stroke-linecap="square"/>
+          <path d="M42 17 L30 3 M58 17 L71 4" stroke="#D8D6CC" stroke-width="2.4" stroke-linecap="square"/>
+          <circle cx="30" cy="3" r="2.6" fill="#E00000" stroke="#0A0A0A" stroke-width="1.4"/>
+        </g>
+        <!-- signal waves (antenna trick) -->
+        <g class="kuya-wave" fill="none" stroke="#FF2A2A" stroke-width="1.6" style="transform-origin:30px 3px">
+          <path d="M24 -2 Q30 -8 36 -2"/><path d="M20 -5 Q30 -14 40 -5"/>
+        </g>
+        <!-- Zz (nap trick) -->
+        <text class="kuya-zz" x="74" y="12" font-family="monospace" font-size="11" font-weight="700" fill="#EAEAEA" stroke="#0A0A0A" stroke-width=".6">Zz</text>
+        <!-- feet -->
+        <rect x="19" y="80" width="13" height="8" fill="#0A0A0A"/>
+        <rect x="68" y="80" width="13" height="8" fill="#0A0A0A"/>
+        <!-- the set -->
+        <rect x="7" y="16" width="86" height="66" rx="3" fill="#D8D6CC" stroke="#0A0A0A" stroke-width="2.5"/>
+        <rect x="7" y="16" width="86" height="66" rx="3" fill="url(#kuyaLines)" opacity=".5"/>
+        <!-- dials + speaker grille -->
+        <circle cx="82" cy="31" r="4.2" fill="#0A0A0A"/><path d="M82 31 L84.5 28.5" stroke="#D8D6CC" stroke-width="1.4"/>
+        <circle cx="82" cy="44" r="4.2" fill="#0A0A0A"/><path d="M82 44 L79 42.5" stroke="#D8D6CC" stroke-width="1.4"/>
+        <path d="M77 55 H87 M77 59 H87 M77 63 H87 M77 67 H87 M77 71 H87" stroke="#0A0A0A" stroke-width="1.6"/>
+        <!-- the screen -->
+        <rect x="13" y="21" width="60" height="54" rx="7" fill="#0A0A0A"/>
+        <g clip-path="url(#kuyaScreenClip)"><g class="kuya-tube">
+          <rect class="kuya-screen" x="15" y="23" width="56" height="50"/>
+          <rect x="15" y="23" width="56" height="50" fill="url(#kuyaLines)"/>
+          <!-- the eye -->
+          <g class="kuya-open">
+            <path d="M22 49 Q43 31 64 49 Q43 67 22 49 Z" fill="#F2F2EE"/>
+            <g clip-path="url(#kuyaEyeClip)">
+              <g class="kuya-iris" id="kuyaIris">
+                <circle cx="43" cy="49" r="9" fill="#1A1A1A"/>
+                <circle cx="43" cy="49" r="9" fill="none" stroke="#3A3A3A" stroke-width="2.4" stroke-dasharray="1.4 1.2"/>
+                <circle class="kuya-pupil" cx="43" cy="49" r="4" fill="#000"/>
+                <path class="kuya-heart" d="M43 54 C36 49 39 43 43 46.5 C47 43 50 49 43 54 Z" fill="#E00000"/>
+                <circle cx="46" cy="46" r="1.8" fill="#FFF"/>
+              </g>
+              <path class="kuya-veins" d="M23 49 L29 47 L31 49 M23 50 L28 52 M63 48 L57 46 L55 48 M63 50 L58 52.5" stroke="#E00000" stroke-width=".9" fill="none"/>
+              <path class="kuya-lid" d="M18 30 H68 V48 Q43 40 18 48 Z" fill="#0A0A0A"/>
+            </g>
+            <path d="M22 49 Q43 31 64 49 Q43 67 22 49 Z" fill="none" stroke="#0A0A0A" stroke-width="1.6"/>
+          </g>
+          <path class="kuya-closed happy" d="M26 52 Q43 38 60 52" stroke="#0A0A0A" stroke-width="3.4" fill="none" stroke-linecap="square"/>
+          <path class="kuya-closed wink" d="M26 49 H60 M30 49 L27 53 M43 49 V54 M56 49 L59 53" stroke="#0A0A0A" stroke-width="3" fill="none"/>
+          <path class="kuya-tear" d="M33 58 C35 62 36 64 33 66.5 C30 64 31 62 33 58 Z" fill="#F2F2EE" stroke="#0A0A0A" stroke-width="1"/>
+          <g class="kuya-spark" fill="#0A0A0A"><path d="M64 28 L65.5 32 L69.5 33.5 L65.5 35 L64 39 L62.5 35 L58.5 33.5 L62.5 32 Z"/><path d="M22 62 L23 64.5 L25.5 65.5 L23 66.5 L22 69 L21 66.5 L18.5 65.5 L21 64.5 Z"/></g>
+          <g class="kuya-dots" fill="#F2F2EE"><circle cx="54" cy="68" r="1.6"/><circle cx="59" cy="68" r="1.6"/><circle cx="64" cy="68" r="1.6"/></g>
+          <!-- REC tag -->
+          <rect x="17" y="25" width="17" height="7" fill="#0A0A0A"/>
+          <circle class="kuya-rec" cx="20.5" cy="28.5" r="1.8" fill="#FF2A2A"/>
+          <text x="23.5" y="30.6" font-family="monospace" font-size="5.2" font-weight="700" fill="#EAEAEA">REC</text>
+          <!-- static burst (trick) -->
+          <rect class="kuya-static" x="15" y="23" width="56" height="50" filter="url(#kuyaNoise)"/>
+          <!-- glass glare -->
+          <!-- vertical-hold band (roll trick) -->
+          <rect class="kuya-roll" x="15" y="23" width="56" height="7" fill="#FFF"/>
+          <!-- colour bars (bars trick) -->
+          <g class="kuya-bars"><rect x="15" y="23" width="8" height="50" fill="#C0C0C0"/><rect x="23" y="23" width="8" height="50" fill="#C0C000"/><rect x="31" y="23" width="8" height="50" fill="#00C0C0"/><rect x="39" y="23" width="8" height="50" fill="#00C000"/><rect x="47" y="23" width="8" height="50" fill="#C000C0"/><rect x="55" y="23" width="8" height="50" fill="#C00000"/><rect x="63" y="23" width="8" height="50" fill="#0000C0"/></g>
+          <path d="M17 27 Q30 24 44 25 L40 29 Q28 29 17 33 Z" fill="#FFF" opacity=".16"/>
+        </g></g>
+      </g>
+    </svg>
+  </button>
+</div>
+
+<script>
+  (function () {
+    const M = <?!= mascotJson_() ?>;
+    const PAGE = <?!= JSON.stringify(String(page || 'home')).replace(/</g, '\\u003c') ?>;
+    const FACES = ['nervous', 'happy', 'excited', 'sad', 'scared', 'wink', 'love', 'thinking'];
+    const MOVES = { excited: 'hop', scared: 'scared' };   // faces that come with a little move
+    const MOVES_IDLE = ['lean', 'tilt', 'shiver', 'antenna', 'spin', 'nap', 'jump', 'wobble', 'flip', 'peek'];   // body animations
+    const EFFECTS = ['glitch', 'static', 'scan', 'stare', 'panic', 'roll', 'bars', 'zoom', 'eyeroll'];         // screen effects (panic = screen goes red)
+    const TRICK_MS = { nap: 3100, peek: 2700, lean: 2300, roll: 2300, bars: 1700, zoom: 1700, flip: 1200, jump: 1100, wobble: 1400, eyeroll: 1300 };
+    const TRICKS = MOVES_IDLE.concat(EFFECTS);
+    const TRICK_EVERY = 7000;                             // ms between idle tricks
+    const KEY = 'leads-kuya-hidden';
+    const root = document.getElementById('kuya');
+    const bubble = document.getElementById('kuyaBubble');
+    const text = document.getElementById('kuyaText');
+    const cursor = document.getElementById('kuyaCursor');
+    const btn = document.getElementById('kuyaBtn');
+    const iris = document.getElementById('kuyaIris');
+    let timer = null, typeTimer = null, lastTip = -1, spoke = false;
+
+    function stopTyping() {
+      if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; }
+      if (cursor) cursor.hidden = true;
+    }
+
+    const recall = document.getElementById('kuyaRecall');
+    recall.textContent = '\u25A3 ' + (M.name || 'I.R.I.S.');
+    recall.setAttribute('aria-label', 'Show ' + (M.name || 'I.R.I.S.') + ' again');
+    recall.addEventListener('click', function () {
+      try { sessionStorage.removeItem(KEY); } catch (e) { /* fine */ }
+      recall.hidden = true; root.hidden = false; replay('peek');
+    });
+    let startHidden = false;
+    try { startHidden = sessionStorage.getItem(KEY) === '1'; } catch (e) { /* storage blocked: just show Kuya */ }
+
+    const NAME = M.name || 'I.R.I.S.';
+    document.getElementById('kuyaName').textContent = NAME + ' // transmission';
+    document.getElementById('kuyaHide').textContent = M.hideLabel || 'Hide';
+    btn.setAttribute('aria-label', NAME + (M.fullName ? ' (' + M.fullName + ')' : '') + ', the LEADS mascot. Tap for a message.');
+
+    // A line is [face, text] or just 'text'.
+    function parse(line) {
+      if (Array.isArray(line)) return line.length > 1 ? { face: line[0], text: line[1] } : { face: '', text: line[0] };
+      return { face: '', text: line };
+    }
+    const okFace = f => FACES.indexOf(f) >= 0 ? f : 'nervous';
+    let rest = okFace((M.pageFace || {})[PAGE] || parse((M.hello || {})[PAGE]).face);   // face when Kuya is quiet
+
+    function replay(cls) {
+      root.classList.remove('peek', 'scared', 'hop', 'poke');
+      void root.offsetWidth;                 // restart the animation
+      root.classList.add(cls);
+    }
+
+    function setFace(f, animate) {
+      f = okFace(f);
+      root.dataset.mood = f;
+      const c = (M.colors || {})[f];
+      if (c) root.style.setProperty('--kuya-c', c); else root.style.removeProperty('--kuya-c');
+      if (animate && MOVES[f]) replay(MOVES[f]);
+    }
+
+    function say(line, ms) {
+      const l = parse(line);
+      if (!l.text) return;
+      spoke = true;
+      const targetText = String(l.text);
+      setFace(l.face, true);
+      bubble.hidden = false;
+      clearTimeout(timer);
+      stopTyping();
+
+      const isCalm = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+                     document.documentElement.classList.contains('calm');
+      if (isCalm) {
+        text.textContent = targetText;
+        timer = setTimeout(function () { bubble.hidden = true; setFace(rest); }, ms || 7000);
+        return;
+      }
+
+      text.textContent = '';
+      if (cursor) cursor.hidden = false;
+      let idx = 0;
+
+      function typeNext() {
+        if (idx >= targetText.length) {
+          stopTyping();
+          timer = setTimeout(function () { bubble.hidden = true; setFace(rest); }, ms || 7000);
+          return;
+        }
+
+        const ch = targetText.charAt(idx);
+        idx++;
+        text.textContent = targetText.slice(0, idx);
+
+        if (idx >= targetText.length) {
+          stopTyping();
+          timer = setTimeout(function () { bubble.hidden = true; setFace(rest); }, ms || 7000);
+          return;
+        }
+
+        // Punctuation pauses: short pause for , ; : and longer pause for . ! ?
+        let delay = 25; // standard typing pace
+        if (ch === ',' || ch === ';' || ch === ':') {
+          delay = 200; // short pause
+        } else if (ch === '.') {
+          const next = targetText.charAt(idx);
+          if (next === '.') {
+            delay = 90; // smooth pacing through ellipsis dots (...)
+          } else if (/[A-Za-z0-9]/.test(next)) {
+            delay = 60; // abbreviation dot (e.g. I.R.I.S., v1.0)
+          } else {
+            delay = 420; // longer pause for periods ending a sentence or clause
+          }
+        } else if (ch === '!' || ch === '?') {
+          delay = 420; // longer pause for sentence terminators
+        }
+
+        typeTimer = setTimeout(typeNext, delay);
+      }
+
+      typeTimer = setTimeout(typeNext, 25);
+    }
+
+    function randomTip() {
+      const tips = M.tips || [];
+      if (!tips.length) return '';
+      let i = Math.floor(Math.random() * tips.length);
+      if (tips.length > 1 && i === lastTip) i = (i + 1) % tips.length;
+      lastTip = i;
+      return tips[i];
+    }
+
+    /* ---------- the eye follows the pointer (and sweeps around during the "scan" trick) ---------- */
+    let px = innerWidth / 2, py = innerHeight / 2, scanning = 0, queued = false;
+    function look() {
+      queued = false;
+      if (scanning) return;
+      const r = btn.getBoundingClientRect();
+      const ex = r.left + r.width * .43, ey = r.top + r.height * .47;
+      const dx = px - ex, dy = py - ey, d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 220);
+      aim(dx / d * k, dy / d * k);
+    }
+    function aim(ux, uy) { iris.style.transform = 'translate(' + (ux * 10).toFixed(2) + 'px,' + (uy * 5).toFixed(2) + 'px)'; }
+    function onMove(x, y) { px = x; py = y; if (!queued) { queued = true; requestAnimationFrame(look); } }
+    window.addEventListener('pointermove', e => onMove(e.clientX, e.clientY), { passive: true });
+    window.addEventListener('touchstart', e => { const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: true });
+    window.addEventListener('scroll', () => onMove(px, py), { passive: true });
+
+    /* ---------- drag Kuya anywhere (mouse or finger); the spot is remembered in this browser ---------- */
+    // phones and desktops remember separate spots (a desktop spot would land mid-screen on a phone)
+    const POS_KEY = innerWidth <= 560 ? 'leads-kuya-pos-m' : 'leads-kuya-pos';
+    let drag = null, dragged = false;
+    function place(x, y, save) {
+      if (PAGE === 'apply') return;   // I.R.I.S. is strictly anchored on the apply page
+      const w = btn.offsetWidth, h = btn.offsetHeight;
+      x = Math.max(4, Math.min(innerWidth - w - 4, x));
+      y = Math.max(4, Math.min(innerHeight - h - 4, y));
+      root.classList.add('placed');
+      root.classList.toggle('on-left', x + w / 2 < innerWidth / 2);
+      root.classList.toggle('on-top', y + h / 2 < innerHeight / 2);
+      // the root holds the bubble too, so position it from the button's corner
+      const bub = bubble.hidden ? 0 : bubble.offsetHeight + 10;
+      root.style.left = (root.classList.contains('on-left') ? x : x + w - root.offsetWidth) + 'px';
+      root.style.top = (root.classList.contains('on-top') ? y : y - bub) + 'px';
+      root.dataset.x = x; root.dataset.y = y;
+      if (save) { try { localStorage.setItem(POS_KEY, JSON.stringify({ x: x / innerWidth, y: y / innerHeight })); } catch (e) { /* fine */ } }
+    }
+    function replace() { if (root.classList.contains('placed') && !root.classList.contains('dragging')) place(+root.dataset.x, +root.dataset.y, false); }
+    // Dragging: one position update per frame; the message box closes while you carry I.R.I.S.
+    // (so it can't flip sides mid-drag), idle tricks stop, and it settles with a small squash on drop.
+    let frame = 0, nextX = 0, nextY = 0;
+    function startDrag() {
+      dragged = true;
+      root.classList.add('dragging');
+      clearTricks();
+      stopTyping(); clearTimeout(timer); bubble.hidden = true;
+    }
+    function endDrag(save) {
+      if (!drag) return;
+      cancelAnimationFrame(frame); frame = 0;
+      if (dragged && save) { place(nextX, nextY, true); replay('poke'); }
+      drag = null; root.classList.remove('dragging');
+    }
+    btn.addEventListener('pointerdown', function (e) {
+      if (PAGE === 'apply') return;   // docked bottom-left on Apply (see Apply.html)
+      if (e.button !== 0 || drag) return;   // left button only; ignore a second finger
+      const r = btn.getBoundingClientRect();
+      drag = { id: e.pointerId, dx: e.clientX - r.left, dy: e.clientY - r.top, sx: e.clientX, sy: e.clientY };
+      dragged = false;
+      try { btn.setPointerCapture(e.pointerId); } catch (err) { /* old browsers: still works while over the button */ }
+    });
+    btn.addEventListener('pointermove', function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (!dragged) {
+        if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6) return;   // small wobble = still a tap
+        startDrag();
+      }
+      nextX = e.clientX - drag.dx; nextY = e.clientY - drag.dy;
+      if (!frame) frame = requestAnimationFrame(() => { frame = 0; place(nextX, nextY, false); });
+    });
+    btn.addEventListener('pointerup', e => { if (drag && e.pointerId === drag.id) endDrag(true); });
+    btn.addEventListener('pointercancel', () => endDrag(true));
+    btn.addEventListener('lostpointercapture', () => endDrag(true));
+    // keyboard: arrow keys move I.R.I.S. (Shift = bigger steps), so it's not mouse-only
+    btn.addEventListener('keydown', function (e) {
+      if (PAGE === 'apply') return;
+      const step = e.shiftKey ? 48 : 16, d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+      if (!d) return;
+      e.preventDefault();
+      const r = btn.getBoundingClientRect();
+      place(r.left + d[0], r.top + d[1], true);
+    });
+    window.addEventListener('resize', replace);
+    new MutationObserver(replace).observe(bubble, { attributes: true, attributeFilter: ['hidden'] });   // bubble opened/closed: keep I.R.I.S. still
+    // a new message changes the bubble's size while it's open; re-anchor so the button doesn't jump
+    // (moved to the next frame: moving I.R.I.S. inside the callback would trigger another resize round)
+    if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(replace)).observe(bubble);
+    try {
+      if (PAGE !== 'apply') {
+        const p = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
+        if (p) requestAnimationFrame(() => place(p.x * innerWidth, p.y * innerHeight, false));
+      }
+    } catch (e) { /* no saved spot */ }
+
+    btn.addEventListener('click', function (e) {
+      if (dragged) { dragged = false; e.preventDefault(); return; }   // a drag isn't a tap
+      if (root.dataset.mood === 'off') {
+        document.dispatchEvent(new CustomEvent('iris:wake'));
+        return;
+      }
+      replay('poke');
+      say(spoke ? randomTip() : ((M.hello || {})[PAGE] || randomTip()));
+    });
+
+    document.getElementById('kuyaHide').addEventListener('click', function () {
+      stopTyping();
+      clearTimeout(timer);
+      bubble.hidden = true;
+      root.hidden = true;
+      recall.hidden = false;
+      try { sessionStorage.setItem(KEY, '1'); } catch (e) { /* fine: hidden until reload */ }
+    });
+
+    // Home: react to what the hub loaded (status, guest, officer). The status face becomes the resting face.
+    function onContext(ctx) {
+      if (!ctx) return;
+      const st = ctx.applicant && ctx.applicant.status;
+      const byStatus = st && M.status && M.status[st];
+      if (byStatus) rest = okFace(parse(byStatus).face);
+      say(byStatus || (ctx.isAdmin && M.admin) || (!ctx.signedIn && M.guest) || (M.hello || {})[PAGE], 9000);
+    }
+    document.addEventListener('hub:context', function (e) {
+      try { onContext(e.detail); } catch (err) { console.error('Mascot:', err); }
+    });
+
+    // Errors: Kuya panics (red + shake), says BRAND.mascot.error, then rests with a sad face.
+    // Heard from: the hub failing to load ('hub:error'), any page's own failure handler ('portal:error'),
+    // and server errors no page handled (Apps Script throws those as uncaught errors).
+    let lastError = 0;
+    function onError() {
+      if (Date.now() - lastError < 4000) return;       // one reaction per burst of errors
+      lastError = Date.now();
+      rest = okFace(M.afterError || 'sad');
+      say(M.error || ['scared', 'Something went wrong. Try reloading.'], 12000);
+    }
+    const safe = fn => function () { try { fn(); } catch (err) { console.error('Mascot:', err); } };
+    document.addEventListener('hub:error', safe(onError));
+    document.addEventListener('portal:error', safe(onError));
+    window.addEventListener('error', safe(onError));
+    window.addEventListener('unhandledrejection', safe(onError));
+    window.Kuya = {
+      error: safe(onError),
+      say: function (line, ms) { try { say(line, ms); } catch (e) { /* never break the page */ } },
+      setFace: function (f, anim) { try { setFace(f, anim); } catch (e) {} },
+      replay: function (cls) { try { replay(cls); } catch (e) {} }
+    };
+    window.Iris = window.Kuya;   // Iris is the current name; Kuya kept so earlier page code still works
+
+    // Idle tricks: a random one every TRICK_EVERY ms. Skipped while the tab is hidden,
+    // right after someone taps Kuya, or when the device asks for reduced motion.
+    let lastTap = 0, turn = 0;
+    const recent = [];
+    btn.addEventListener('click', function () { if (!dragged) lastTap = Date.now(); });
+    const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function clearTricks() { TRICKS.forEach(x => root.classList.remove('trick-' + x)); }
+    function trick() {
+      if (calm || root.hidden || document.hidden || document.documentElement.classList.contains('calm') || Date.now() - lastTap < 3000) return;
+      if (root.classList.contains('dragging')) return;
+      if (root.dataset.mood === 'off') return;   // powered off (Apply's wake-up intro): no tricks until it's switched on
+      const pool = (turn++ % 2) ? EFFECTS : MOVES_IDLE;   // alternate: a body animation, then a screen effect
+      const fresh = pool.filter(x => recent.indexOf(x) < 0);   // never one of the last three
+      const t = fresh[Math.floor(Math.random() * fresh.length)];
+      recent.push(t); if (recent.length > 3) recent.shift();
+      if (t === 'panic') {                              // only while quiet, so it never fights a message
+        if (!bubble.hidden) return;
+        setFace('scared', true);
+        setTimeout(function () { if (bubble.hidden) setFace(rest); }, 1800);
+        return;
+      }
+      if (t === 'scan') {                               // the eye sweeps left, right, then back to you
+        const path = [[-1, -.2], [1, -.2], [-.6, .6], [0, 0]];
+        scanning = 1;
+        path.forEach((p, i) => setTimeout(() => aim(p[0], p[1]), i * 380));
+        setTimeout(() => { scanning = 0; look(); }, path.length * 380 + 200);
+        return;
+      }
+      clearTricks();
+      void root.offsetWidth;
+      root.classList.add('trick-' + t);
+      setTimeout(clearTricks, TRICK_MS[t] || 1800);
+    }
+    setInterval(trick, TRICK_EVERY);
+
+    // Leave the tab for 5+ seconds and Kuya notices when you come back.
+    let leftAt = 0;
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { leftAt = Date.now(); return; }
+      if (leftAt && Date.now() - leftAt > 5000 && M.back) setTimeout(() => say(M.back, 5000), 400);
+      leftAt = 0;
+    });
+
+    setFace(rest);
+    root.hidden = startHidden;
+    recall.hidden = !startHidden;
+    if (!startHidden) replay('peek');
+    look();
+    // Pages without the hub just say hello once the loader is gone.
+    setTimeout(function () {
+      try {
+        if (spoke) return;
+        if (window.HUB && window.HUB.type === 'error') return onError();
+        if (window.HUB && window.HUB.type === 'context') return onContext(window.HUB.detail);
+        if (PAGE !== 'home' && PAGE !== 'apply') say((M.hello || {})[PAGE]);
+      } catch (err) { console.error('Mascot:', err); }
+    }, 1200);
+  })();
+</script>
+<? } ?>

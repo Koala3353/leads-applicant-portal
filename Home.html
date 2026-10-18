@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<?!= include('Styles') ?>
+<?!= brand_css() ?>
+<style>
+  body{overflow-x:hidden}
+  /* ---------- background: a searchlight that follows the pointer + eyes that watch it ---------- */
+  .dark{position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(circle 240px at var(--x,50%) var(--y,30%),color-mix(in srgb,var(--glow) 9%,transparent),transparent 70%),
+               radial-gradient(1100px 520px at 50% -12%,color-mix(in srgb,var(--blue) 26%,transparent) 0%,transparent 62%),var(--night)}
+  /* almond-shaped eyes with pointed corners (sharper than an oval) */
+  .watcher{position:fixed;z-index:1;pointer-events:none;width:var(--s,60px);height:calc(var(--s,60px)*.4);opacity:var(--o,.85);
+    background:#F2F1EC;clip-path:polygon(0 50%,10% 36%,22% 22%,36% 11%,50% 6%,64% 11%,78% 22%,90% 36%,100% 50%,90% 62%,78% 76%,64% 87%,50% 92%,36% 87%,22% 76%,10% 62%)}
+  .watcher i{position:absolute;left:50%;top:50%;width:40%;aspect-ratio:1;height:auto;transform-origin:center;border-radius:50%;
+    margin:0;translate:-50% -50%;
+    background:radial-gradient(circle at 50% 50%,#000 0 34%,#1c1c1c 35% 66%,#000 67% 71%,transparent 72%);
+    transform:translate(var(--px,0),var(--py,0));transition:transform .1s linear}
+  .watcher i::after{content:"";position:absolute;width:16%;height:16%;left:58%;top:24%;border-radius:50%;background:#fff}
+  .watcher::after{content:"";position:absolute;inset:0;background:var(--night);transform:scaleY(0);transform-origin:top;
+    animation:lid 6s infinite;animation-delay:var(--d,0s)}
+  .watcher.red i{background:radial-gradient(circle at 50% 50%,#000 0 28%,var(--danger) 29% 64%,#000 65% 70%,transparent 71%)}
+  @keyframes lid{0%,92%,100%{transform:scaleY(0)}95%{transform:scaleY(1)}}
+  /* stop moving and they stare harder */
+  body.still .watcher{opacity:calc(var(--o,.8) + .15)}
+  body.still .watcher i{background:radial-gradient(circle at 50% 50%,#000 0 44%,#3a0000 45% 64%,#000 65% 70%,transparent 71%)}
+
+  /* ---------- "signal interrupted": a rare full-screen cutaway (one slow flash, never strobing) ---------- */
+  .interrupt{position:fixed;inset:0;z-index:9500;display:none;place-items:center;align-content:center;gap:14px;pointer-events:none;
+    background:#050505;text-align:center;padding:24px}
+  .interrupt.on{display:grid;animation:intIn .9s steps(1) forwards}
+  .interrupt::before{content:"";position:absolute;inset:-40px;opacity:.35;animation:grain .3s steps(3) infinite;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  .int-msg{position:relative;margin:0;font-family:var(--display);text-transform:uppercase;font-size:clamp(2.2rem,9vw,6rem);line-height:.9;color:var(--danger);
+    text-shadow:-4px 0 rgba(0,16,224,.8),4px 0 rgba(255,255,255,.25);max-width:14ch;overflow-wrap:anywhere}
+  .int-meta{position:relative;margin:0;font-family:var(--mono);font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;color:var(--text)}
+  @keyframes intIn{0%{opacity:1;transform:scaleY(.02)}8%{transform:none}86%{opacity:1}100%{opacity:0}}
+  .tagline.whisper{color:var(--text);animation:rgbJitter .8s steps(1) infinite}
+  .rec time.lost{color:var(--danger)}
+  .rec .seen{color:var(--muted)}
+
+  /* CCTV wall: four small feeds under the hero (tablet and up). CAM 03 follows your pointer. */
+  .feeds{display:none;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1.5px solid var(--line);margin:8px 0 6px}
+  @media (min-width:860px){.feeds{display:grid}}
+  .feed{position:relative;aspect-ratio:16/9;background:#0d0d0d;overflow:hidden;min-width:0}
+  .feed::before{content:"";position:absolute;inset:-30px;opacity:.22;animation:grain .4s steps(3) infinite;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='1'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  .feed svg{position:absolute;inset:0;width:100%;height:100%}
+  .feed b,.feed time{position:absolute;font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;color:var(--text);text-shadow:0 0 4px #000}
+  .feed b{left:8px;top:6px}.feed time{right:8px;bottom:6px;font-variant-numeric:tabular-nums}
+  .feed .dot{position:absolute;width:7px;height:7px;margin:-3.5px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 3px rgba(255,42,42,.25);transition:left .1s linear,top .1s linear}
+  .feed .nosig{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);font-size:.7rem;letter-spacing:.2em;color:var(--muted);text-shadow:0 0 6px #000}
+  /* feed drawings: grey line art like low-light CCTV. Figures appear and vanish; lights flicker; nothing flashes fast. */
+  .feed svg .ln{fill:none;stroke:#6a6a6a;stroke-width:1.2}
+  .feed svg .ln2{fill:none;stroke:#454545;stroke-width:1}
+  .feed svg .fig{fill:#050505;opacity:0;animation:figLobby 19s steps(1) infinite}
+  .feed svg .fig2{fill:#050505;animation:figHall 23s steps(1) infinite}
+  .feed svg .lamp{fill:#9a9a9a;animation:lamp 5s steps(1) infinite}
+  .feed svg .lamp.b{animation-duration:7.3s;animation-delay:-2s}
+  .feed svg .door{fill:#000;transform-box:fill-box;transform-origin:left;animation:door 29s ease-in-out infinite}
+  .feed .bars{position:absolute;inset:0;opacity:.18;background:linear-gradient(90deg,#c0c0c0 0 14.3%,#c0c000 0 28.6%,#00c0c0 0 42.9%,#00c000 0 57.2%,#c000c0 0 71.5%,#c00000 0 85.8%,#0000c0 0);animation:barsRoll 9s steps(1) infinite}
+  #camYou .dot{z-index:1}
+  #camYou .box{position:absolute;width:30px;height:30px;margin:-15px;border:1px solid transparent;transition:left .25s ease,top .25s ease;
+    background:linear-gradient(var(--danger),var(--danger)) 0 0/7px 1px,linear-gradient(var(--danger),var(--danger)) 0 0/1px 7px,
+    linear-gradient(var(--danger),var(--danger)) 100% 0/7px 1px,linear-gradient(var(--danger),var(--danger)) 100% 0/1px 7px,
+    linear-gradient(var(--danger),var(--danger)) 0 100%/7px 1px,linear-gradient(var(--danger),var(--danger)) 0 100%/1px 7px,
+    linear-gradient(var(--danger),var(--danger)) 100% 100%/7px 1px,linear-gradient(var(--danger),var(--danger)) 100% 100%/1px 7px;background-repeat:no-repeat}
+  #camYou .box::after{content:"ID: PENDING";position:absolute;left:0;top:calc(100% + 3px);white-space:nowrap;font:700 .5rem var(--mono);letter-spacing:.1em;color:var(--danger)}
+  @keyframes figLobby{0%,58%{opacity:0}59%,71%{opacity:.95}72%,100%{opacity:0}}
+  @keyframes figHall{0%,30%{transform:translate(0,0) scale(1);opacity:.9}31%,62%{transform:translate(-4px,-6px) scale(1.6);opacity:.95}63%,64%{opacity:0}65%,100%{transform:none;opacity:.9}}
+  @keyframes lamp{0%,100%{opacity:1}12%{opacity:.2}13%{opacity:1}14%{opacity:.3}15%{opacity:1}}
+  @keyframes door{0%,40%,100%{transform:scaleX(1)}50%,80%{transform:scaleX(.35)}}
+  @keyframes barsRoll{0%,100%{opacity:.18}47%{opacity:0}49%{opacity:.18}}
+  html.calm .feed svg *,html.calm .feed .bars{animation:none!important}
+  .hint{margin:10px 0 0;font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;color:var(--muted)}
+
+  /* ---------- top bar ---------- */
+  .who{font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .who b{color:var(--text);text-transform:none;letter-spacing:0}
+  .admin-chip{display:none;font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--night);background:var(--glow);padding:.35em .8em;text-decoration:none}
+  .admin-chip.show{display:inline-block}
+  .acct{font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text);
+    border:1.5px solid var(--line);padding:.3em .8em;text-decoration:none;white-space:nowrap}
+  .acct:hover,.acct:focus-visible{border-color:var(--glow);color:var(--glow)}
+  .notice .acct{display:inline-block;margin-left:8px;vertical-align:middle}
+
+  .notice{margin:8px 0 0;padding:12px 16px;background:color-mix(in srgb,var(--glow) 10%,transparent);border:1.5px solid var(--glow);
+    font-family:var(--mono);font-size:.82rem}
+  .notice.warn{background:color-mix(in srgb,var(--danger) 12%,transparent);border-color:var(--danger)}
+
+  /* ---------- hero: a case file under surveillance ---------- */
+  .hero{padding:44px 0 24px;display:grid;grid-template-columns:1.25fr .9fr;gap:40px;align-items:start}
+  .rec{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--muted);margin:0 0 18px}
+  .rec .dot{display:inline-flex;align-items:center;gap:6px;color:var(--danger);font-weight:700}
+  .rec .dot::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--danger);animation:rec 1.2s steps(1) infinite}
+  @keyframes rec{50%{opacity:0}}
+  .rec time{color:var(--text);font-variant-numeric:tabular-nums}
+  h1{margin:.1em 0 .25em;font-family:var(--display);font-weight:400;text-transform:uppercase;
+    font-size:clamp(3rem,10vw,7.2rem);line-height:.86;letter-spacing:-.01em}
+  h1 .kicker{display:table;margin-bottom:.45em;line-height:1.2;padding:.3em .6em;font-family:var(--kicker);font-weight:700;font-size:max(.16em,.8rem);
+    letter-spacing:.14em;color:var(--night);background:var(--glow);box-shadow:4px 4px 0 var(--blue)}
+  h1 .kicker.shiver{animation:shiver 5s steps(1) infinite}
+  @keyframes shiver{0%,86%,100%{transform:none}88%{transform:translate(-3px,1px)}90%{transform:translate(3px,-1px) skewX(-6deg)}92%{transform:translate(-1px,0)}}
+  h1 .line{display:block}
+  h1 .line em{font-style:normal;color:var(--glow)}
+  .tagline{margin:0 0 14px;font-family:var(--mono);font-weight:700;font-size:clamp(.9rem,2.4vw,1.05rem);letter-spacing:.06em;text-transform:uppercase;color:var(--danger)}
+  .lede{font-size:1.05rem;color:color-mix(in srgb,var(--text) 82%,var(--muted));max-width:34em}
+  .cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:26px}
+  .facts{display:flex;flex-wrap:wrap;gap:6px 18px;margin:14px 0 0;padding:12px 0 0;list-style:none;border-top:1.5px dashed var(--line);
+    font-family:var(--mono);font-size:.76rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .facts li{display:none}
+  .facts li.show{display:block}
+  .facts b{color:var(--text);font-weight:700}
+
+  /* ---------- FAQ as classified files + past campers (hidden once you have a file) ---------- */
+  .intel{margin:56px 0 0}
+  body.applied .intel{display:none}
+  .files{display:grid;gap:10px}
+  .file{border:1.5px solid var(--line);background:var(--night-2);position:relative}
+  .file summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px 16px;min-height:52px}
+  .file summary::-webkit-details-marker{display:none}
+  .file summary:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+  .file .fno{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;color:var(--muted);white-space:nowrap}
+  .file .fq{font-weight:600;min-width:0}
+  .file .stamp{font-family:var(--mono);font-size:.62rem;font-weight:700;letter-spacing:.16em;padding:.25em .6em;border:1.5px solid var(--danger);color:var(--danger);transform:rotate(-3deg);white-space:nowrap}
+  .file[open] .stamp{border-color:var(--glow);color:var(--glow);transform:rotate(0)}
+  .file .fa{padding:0 16px 16px 16px;color:color-mix(in srgb,var(--text) 86%,var(--muted));max-width:62ch;margin:0}
+  .file[open] .fa{animation:declass .32s cubic-bezier(.23,1,.32,1)}
+  .file .fa.todo{color:var(--glow);font-family:var(--mono);font-size:.82rem}
+  @keyframes declass{from{clip-path:inset(0 100% 0 0);opacity:.4}to{clip-path:inset(0 0 0 0);opacity:1}}
+  @media (hover:hover) and (pointer:fine){.file summary:hover .fq{color:var(--glow)}}
+  @media (max-width:560px){.file summary{grid-template-columns:1fr auto}.file .fno{grid-column:1/-1}}
+  .voices{list-style:none;margin:0;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+  .voice{border:1.5px solid var(--line);background:var(--night-2);padding:18px;position:relative;display:flex;flex-direction:column;gap:12px}
+  .voice .tape{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;color:var(--danger);text-transform:uppercase}
+  .voice blockquote{margin:0;font-family:var(--mono);font-size:.88rem;line-height:1.55}
+  .voice blockquote::before{content:"> "}
+  .voice .by{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-top:auto}
+  .voice .sample{position:absolute;right:10px;top:10px;font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.14em;color:var(--night);background:var(--glow);padding:.15em .5em}
+
+  /* countdown: a CCTV readout */
+  .clock{position:relative}
+  .clock h2{margin:.5em 0 .7em;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.5rem;letter-spacing:.01em;line-height:1}
+  .units{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
+  .unit{background:var(--night);padding:12px 4px;text-align:center}
+  .unit b{display:block;font-family:var(--mono);font-weight:700;font-size:clamp(1.5rem,3.6vw,2.3rem);line-height:1;color:var(--danger);font-variant-numeric:tabular-nums}
+  .unit span{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .clock .date{margin:12px 0 0;font-family:var(--mono);font-size:.76rem;letter-spacing:.04em;color:var(--muted)}
+  .clock.closed .units{opacity:.35}
+
+  /* status card: the subject's file */
+  /* status card: a file folder with a tab and an ink stamp */
+  .status{margin-top:36px;display:none;position:relative;border-top-left-radius:0}
+  .status.show{display:block}
+  .status::before{content:attr(data-subject);position:absolute;left:-1.5px;top:-26px;max-width:80%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    background:var(--night-2);border:1.5px solid var(--line);border-bottom:0;padding:4px 14px;
+    font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .status .big{display:inline-block;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:2rem;line-height:1;
+    margin:.45em 0 .35em;padding:.12em .35em;border:3px solid currentColor;transform:rotate(-4deg);opacity:.92;color:var(--muted);
+    mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.7'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.4 1.9'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  .status .big.ok{color:var(--glow)}
+  .status .big.warn{color:var(--danger)}
+  .status .big.typing::after{content:"_";animation:rec .6s steps(1) infinite}
+  .status p{margin:.2em 0;color:var(--muted)}
+  .tracks{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:1px;margin-top:14px;background:var(--line);border:1px solid var(--line)}
+  .track{padding:8px 10px;background:var(--night);min-width:0;overflow-wrap:anywhere}
+  .track span{display:block;font-family:var(--mono);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .track b{font-family:var(--mono);font-size:.8rem;letter-spacing:.04em}
+
+  /* ---------- the ticker: warning tape ---------- */
+  .ticker{position:relative;z-index:2;background:var(--glow);color:var(--night);overflow:hidden;margin:40px 0;transform:rotate(-1deg);
+    border-block:3px solid var(--night);box-shadow:0 0 0 1.5px var(--glow)}
+  .ticker div{display:flex;width:max-content;animation:scroll 40s linear infinite}
+  .ticker span{font-family:var(--mono);font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;padding:10px 20px;white-space:nowrap}
+  .ticker span b{letter-spacing:.1em}
+  .ticker span::after{content:"///";font-weight:700;margin-left:40px}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+
+  /* ---------- hub ---------- */
+  .hub-head h2{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:clamp(2rem,5.4vw,3.4rem);line-height:.92;margin:.15em 0 .25em}
+  .hub-head p{margin:0;color:var(--muted)}
+  .hub-head p:empty{display:none}
+
+  .path{display:none;grid-template-columns:repeat(5,1fr);margin:26px 0 6px;padding:0;list-style:none}
+  .path.show{display:grid}
+  /* the Dashboard (Dashboard.html) takes over these when it renders */
+  body.has-dash #statusCard,body.has-dash #path{display:none!important}
+  .path li{position:relative;text-align:center;font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-top:28px}
+  .path li::before{content:"";position:absolute;top:6px;left:50%;width:14px;height:14px;margin-left:-7px;
+    border:2px solid var(--line);background:var(--night);z-index:1}
+  .path li::after{content:"";position:absolute;top:12px;left:-50%;width:100%;height:2px;background:var(--line)}
+  .path li:first-child::after{display:none}
+  .path li.done{color:var(--text)}
+  .path li.done::before{background:var(--text);border-color:var(--text)}
+  .path li.done::after,.path li.now::after{background:var(--text)}
+  .path li.now{color:var(--glow)}
+  .path li.now::before{border-color:var(--glow);background:var(--glow);box-shadow:0 0 0 4px color-mix(in srgb,var(--glow) 25%,transparent)}
+  .path li.stopped{color:var(--danger)}
+  .path li.stopped::before{border-color:var(--danger)}
+
+  /* cards: case files. As many 220px+ columns as fit (3 on tablet and up, 1 on phones) */
+  .mods{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:24px 0 0;padding:0;list-style:none}
+  /* officers see 4 cards: 4 across on wide screens, 2x2 on tablets, so none sits alone */
+  .mods.with-admin{grid-template-columns:repeat(2,minmax(0,1fr))}
+  @media (min-width:1000px){.mods.with-admin{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  /* two columns (tablets, narrow laptop windows): three cards would leave a hole, so the third spans the full row */
+  @media (max-width:759px){.mods:not(.with-admin) .mod[data-key="pay"]{grid-column:1/-1}}
+  .mod{display:flex;flex-direction:column;gap:10px;position:relative;min-width:0;transition:border-color .2s ease}
+  .mod.is-action{border-color:var(--glow);box-shadow:5px 5px 0 var(--glow)}
+  .mod.is-locked,.mod.is-stopped{opacity:.55}
+  .mod[data-key="sheet"]{display:none;border-style:dashed}
+  .mod[data-key="sheet"].show{display:flex}
+  .mod .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .mod .n{font-family:var(--mono);font-weight:700;font-size:.74rem;letter-spacing:.12em;color:var(--muted)}
+  .mod .n::before{content:"FILE "}
+  .mod h3{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.7rem;line-height:.95;margin:0}
+  .mod .fix{margin:0;font-size:.92rem;color:var(--fix-text)}
+  .mod .go{margin-top:auto;padding-top:6px}
+  .mod .go .btn{font-size:.82rem;padding:.75em 1.1em;width:100%;justify-content:center}
+  .mod .why{margin:0;font-family:var(--mono);font-size:.72rem;color:var(--muted);min-height:1.2em}
+
+  /* ---------- footer ---------- */
+  footer{margin:46px 0 30px;padding-top:20px;border-top:1.5px solid var(--line);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    font-family:var(--mono);font-size:.74rem;letter-spacing:.04em;color:var(--muted)}
+
+  @media (max-width:1080px){
+    .hero{gap:28px}
+  }
+  @media (max-width:860px){
+    .hero{grid-template-columns:1fr;padding-top:24px}
+    .hero > div{min-width:0}
+  }
+  @media (max-width:560px){
+    /* phones: eyes only peek in from the edges so they never sit on top of text or buttons */
+    .watcher{display:none}
+    .watcher.peek-l,.watcher.peek-r{display:block;--o:.4}
+    .watcher.peek-l{top:auto!important;bottom:14%!important;left:-22px!important;right:auto!important;--s:58px!important}
+    .watcher.peek-r{top:34%!important;right:-20px!important;left:auto!important;bottom:auto!important;--s:52px!important}
+    /* top bar: logo, then who you are, then the three small buttons in one row */
+    .top{gap:10px;padding:12px 0}
+    .logo{font-size:1.35rem}
+    .who{width:100%;gap:8px;font-size:.62rem}
+    .who > span:first-child{flex-basis:100%;overflow-wrap:anywhere}
+    .who b{font-size:.74rem}
+    .who .acct,.who .lights,.who .report-btn{flex:1 1 0;min-height:40px;padding:.4em .5em;font-size:.64rem;letter-spacing:.06em;text-align:center;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+    .rec{font-size:.62rem;gap:4px 12px;margin-bottom:14px}
+    h1{font-size:clamp(2.6rem,13vw,3.4rem);line-height:.9}
+    h1 .kicker{font-size:.72rem;margin-bottom:.6em}
+    .tagline{font-size:.82rem;line-height:1.4}
+    .lede{font-size:1rem;line-height:1.6}
+    .hint{font-size:.7rem;line-height:1.5;padding-right:72px}
+    .hero{padding:16px 0 8px}
+    /* cards: tighter, and locked ones drop the dead button (the reason line says why) */
+    .mods{gap:10px;margin-top:16px}
+    .mod{padding:16px;gap:8px}
+    .mod h3{font-size:1.45rem}
+    .mod .fix{font-size:.9rem;line-height:1.5}
+    .mod.is-locked .go .btn,.mod.is-stopped .go .btn{display:none}
+    .mod.is-locked .go,.mod.is-stopped .go{padding-top:0}
+    .intel{margin-top:40px}
+    .file summary{padding:12px 14px;gap:6px 12px}
+    footer{flex-direction:column;gap:10px;margin:32px 0 calc(90px + env(safe-area-inset-bottom,0px))}
+    .ticker{margin:32px 0}
+    .watcher.hide-sm{display:none}
+    .cta .btn{width:100%;justify-content:center;min-height:56px;font-size:.95rem}
+    .mods.with-admin{grid-template-columns:1fr}
+    .unit{padding:10px 2px}
+    /* the three tracks become slim label/value rows */
+    .tracks{grid-template-columns:1fr}
+    .track{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+    /* progress steps turn into a vertical list so the labels never squash */
+    .path.show{display:flex;flex-direction:column;gap:0;margin:20px 0 4px}
+    .path li{text-align:left;padding:0 0 14px 30px;font-size:.74rem}
+    .path li::before{top:1px;left:0;margin-left:0}
+    .path li::after{top:-13px;left:6px;width:2px;height:16px}
+    footer{flex-direction:column;gap:8px}
+  }
+</style>
+</head>
+<body data-base="<?= baseUrl ?>" data-loader-wait>
+<?!= include('Loader') ?>
+<?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
+<div class="dark" id="dark" aria-hidden="true"></div>
+<? if (BRAND.effects.eyes) { ?>
+<!-- eyes in the dark that follow the pointer (decorative) -->
+<div class="watcher peek-l" style="--s:74px;top:13%;left:2%;--d:-1s" aria-hidden="true"><i></i></div>
+<div class="watcher red hide-sm" style="--s:48px;top:58%;left:1.5%;--d:-3s" aria-hidden="true"><i></i></div>
+<div class="watcher peek-r" style="--s:44px;top:7%;right:30%;--d:-4.5s;--o:.55" aria-hidden="true"><i></i></div>
+<div class="watcher hide-sm" style="--s:84px;bottom:30%;right:2%;--d:-2s" aria-hidden="true"><i></i></div>
+<div class="watcher red" style="--s:40px;bottom:22%;right:44%;--d:-5s;--o:.5" aria-hidden="true"><i></i></div>
+<div class="watcher hide-sm" style="--s:56px;top:44%;right:48%;--d:-.5s;--o:.3" aria-hidden="true"><i></i></div>
+<? } ?>
+
+<div class="interrupt" id="interrupt" aria-hidden="true"><p class="int-meta" id="intCam">Feed interrupted // CAM 01</p><p class="int-msg" id="intMsg"></p><p class="int-meta" id="intTime"></p></div>
+
+<div class="wrap">
+  <header class="top">
+    <a class="logo" href="<?= baseUrl ?>" target="_top"><?= BRAND.logoText ?><span><?= BRAND.logoAccent ?></span></a>
+    <div class="who"><span id="who">checking who you are...</span>
+      <a class="admin-chip" id="adminChip" target="_blank" rel="noopener">Open the Sheet</a>
+      <a class="acct" id="acctBtn" target="_top" hidden></a>
+      <button type="button" class="lights" data-lights data-on="<?= BRAND.horror.lightsOn ?>" data-off="<?= BRAND.horror.lightsOff ?>" aria-pressed="false"><?= BRAND.horror.lightsOn ?></button></div>
+  </header>
+
+  <? if (notice) { ?><p class="notice" role="status"><?= notice ?></p><? } ?>
+  <p class="notice warn" id="acctWarn" role="alert" hidden></p>
+
+  <section class="hero">
+    <div>
+      <p class="rec" aria-hidden="true"><span class="dot">REC</span><span>CAM 01</span><time id="recClock">--:--:--</time><span class="seen" id="seen"></span></p>
+      <h1 class="rgb"><span class="kicker<?= BRAND.effects.shiver ? ' shiver' : '' ?>"><?= BRAND.hero.kicker ?></span><span class="line"><?= BRAND.hero.headline ?></span></h1>
+      <p class="tagline"><?= BRAND.hero.tagline ?></p>
+      <p class="lede"><?= BRAND.hero.lede ?></p>
+      <div class="cta">
+        <a class="btn" id="mainBtn" href="<?= baseUrl ?>?page=apply" target="_top"><?= BRAND.buttons.apply ?></a>
+      </div>
+      <p class="hint" id="hint" hidden><?= BRAND.hero.hint ?></p>
+    </div>
+
+    <div>
+      <div class="card clock" id="clock">
+        <span class="pill" id="openPill">loading</span>
+        <h2 id="clockTitle"><?= BRAND.countdown.title ?></h2>
+        <div class="units" aria-live="off">
+          <div class="unit"><b id="d">--</b><span>days</span></div>
+          <div class="unit"><b id="h">--</b><span>hrs</span></div>
+          <div class="unit"><b id="m">--</b><span>min</span></div>
+          <div class="unit"><b id="s">--</b><span>sec</span></div>
+        </div>
+        <p class="date" id="deadlineText"></p>
+        <ul class="facts" id="facts">
+          <li data-fact="dates">When <b></b></li>
+          <li data-fact="venue">Where <b></b></li>
+          <li data-fact="fee">Fee <b></b></li>
+          <li data-fact="slots">Slots <b></b></li>
+        </ul>
+      </div>
+      <div class="card status" id="statusCard" aria-live="polite">
+        <span class="pill" id="statusPill">your application</span>
+        <p class="big" id="statusBig"></p>
+        <p id="statusMsg"></p>
+        <div class="tracks">
+          <div class="track"><span>Decision</span><b id="trStatus">-</b></div>
+          <div class="track"><span>Requirements</span><b id="trReq">-</b></div>
+          <div class="track"><span>Payment</span><b id="trPay">-</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CCTV wall (decorative) -->
+  <div class="feeds" aria-hidden="true">
+    <div class="feed"><b>CAM 01 // LOBBY</b><svg viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice">
+      <path class="ln2" d="M0 62 L40 46 L120 46 L160 62 M40 46 L40 8 M120 46 L120 8 M40 8 L120 8"/>
+      <path class="ln2" d="M10 90 L46 56 M150 90 L114 56 M80 90 L80 56"/>
+      <rect x="52" y="26" width="20" height="20" fill="#000"/><rect class="door" x="52" y="26" width="20" height="20" style="fill:#1b1b1b"/>
+      <path class="ln" d="M52 26 h20 v20"/>
+      <rect x="84" y="38" width="30" height="10" fill="#181818"/><path class="ln" d="M84 38 h30 v10 M86 48 v6 M112 48 v6"/>
+      <rect x="94" y="32" width="10" height="6" fill="#222"/>
+      <path class="fig" d="M60 30 a2.6 2.6 0 1 1 .01 0 Z M57.5 33 h5 l1.4 13 h-7.8 Z"/>
+      <rect class="lamp" x="66" y="9" width="28" height="1.6"/>
+    </svg><time data-feedtime></time></div>
+    <div class="feed"><b>CAM 02 // HALLWAY</b><svg viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice">
+      <path class="ln2" d="M0 0 L64 34 L96 34 L160 0 M0 90 L64 56 L96 56 L160 90 M64 34 V56 M96 34 V56"/>
+      <path class="ln" d="M14 14 V83 M28 21 V75 M40 27 V69 M146 14 V83 M132 21 V75 M120 27 V69"/>
+      <path class="ln2" d="M14 30 L28 33 M146 30 L132 33"/>
+      <rect class="lamp" x="70" y="17" width="20" height="1.5"/><rect class="lamp b" x="74" y="27" width="12" height="1"/>
+      <rect x="64" y="34" width="32" height="22" fill="#070707"/>
+      <path class="fig2" d="M80 41 a1.5 1.5 0 1 1 .01 0 Z M78.6 43 h2.8 l.8 9 h-4.4 Z"/>
+    </svg><time data-feedtime></time></div>
+    <div class="feed" id="camYou"><b>CAM 03 // YOU</b><svg viewBox="0 0 160 90" preserveAspectRatio="none">
+      <path class="ln2" d="M0 30 H160 M0 60 H160 M40 0 V90 M80 0 V90 M120 0 V90"/>
+      <path class="ln2" d="M78 45 h4 M80 43 v4"/>
+    </svg><span class="box" id="youBox"></span><span class="dot" id="youDot"></span><time data-feedtime></time></div>
+    <div class="feed"><b>CAM 04 // ARCHIVE</b><span class="bars"></span><span class="nosig">NO SIGNAL</span><time data-feedtime></time></div>
+  </div>
+
+  <!-- applicant dashboard: lives in Dashboard.html + DashboardApi.gs (its own owner). Empty if the file is missing. -->
+  <?!= includeOptional_('Dashboard', { BRAND: BRAND, baseUrl: baseUrl }) ?>
+</div>
+
+<div class="ticker" aria-hidden="true"><div id="tick"></div></div>
+
+<div class="wrap">
+  <section aria-labelledby="hubTitle">
+    <div class="hub-head">
+      <p class="eyebrow"><?= BRAND.hub.eyebrow ?></p>
+      <h2 id="hubTitle" class="rgb"><?= BRAND.hub.title ?></h2>
+      <p id="hubNote"></p>
+    </div>
+
+    <ol class="path" id="path" aria-label="Your progress">
+      <li data-step="apply">Applied</li>
+      <li data-step="review">Accepted</li>
+      <li data-step="requirements">Requirements</li>
+      <li data-step="payment">Payment</li>
+      <li data-step="confirmed">Confirmed</li>
+    </ol>
+
+    <ul class="mods" id="mods">
+      <? ['apply', 'req', 'pay', 'sheet'].forEach(function (key) { var m = BRAND.modules[key]; ?>
+      <li class="card mod is-locked" data-key="<?= key ?>">
+        <div class="row"><span class="n"><?= m.n ?></span><span class="pill dim" data-pill>…</span></div>
+        <h3><?= m.title ?></h3>
+        <p class="fix"><?= m.fix ?></p>
+        <div class="go">
+          <p class="why" data-why></p>
+          <? if (key === 'apply') { ?><a class="btn ghost" data-link href="<?= baseUrl ?>?page=apply" target="_top" aria-disabled="true" tabindex="-1">Open</a><? } else { ?><a class="btn ghost" data-link target="_blank" rel="noopener" aria-disabled="true" tabindex="-1">Open</a><? } ?>
+        </div>
+      </li>
+      <? }); ?>
+    </ul>
+  </section>
+
+  <!-- only for people without a file yet: hidden once they've applied, so the Dashboard has room -->
+  <section class="intel" id="faq" aria-labelledby="faqTitle">
+    <div class="hub-head">
+      <p class="eyebrow"><?= BRAND.faq.eyebrow ?></p>
+      <h2 id="faqTitle"><?= BRAND.faq.title ?></h2>
+      <p><?= BRAND.faq.note ?></p>
+    </div>
+    <div class="files" id="faqList"></div>
+  </section>
+
+  <section class="intel" id="voices" aria-labelledby="voicesTitle">
+    <div class="hub-head">
+      <p class="eyebrow"><?= BRAND.testimonials.eyebrow ?></p>
+      <h2 id="voicesTitle"><?= BRAND.testimonials.title ?></h2>
+    </div>
+    <ul class="voices" id="voiceList"></ul>
+  </section>
+
+  <footer>
+    <span id="contact" hidden></span>
+    <span><?= BRAND.footer.privacy ?></span>
+  </footer>
+</div>
+
+<script>
+  const BRAND = <?!= brand_json() ?>;
+  const $ = id => document.getElementById(id);
+
+  /* ---------- searchlight + watching eyes follow the pointer; REC clock ticks ---------- */
+  (function () {
+    const dark = $('dark');
+    const eyes = [...document.querySelectorAll('.watcher')];
+    let x = innerWidth / 2, y = innerHeight / 3, queued = false;
+    function draw() {
+      queued = false;
+      if (BRAND.effects.searchlight) { dark.style.setProperty('--x', x + 'px'); dark.style.setProperty('--y', y + 'px'); }
+      eyes.forEach(e => {
+        const r = e.getBoundingClientRect();
+        const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
+        const d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 260);
+        e.style.setProperty('--px', (dx / d * k * r.width * 0.22).toFixed(1) + 'px');
+        e.style.setProperty('--py', (dy / d * k * r.height * 0.12).toFixed(1) + 'px');
+      });
+    }
+    let idle = null;
+    function move(nx, ny) {
+      x = nx; y = ny; if (!queued) { queued = true; requestAnimationFrame(draw); }
+      document.body.classList.remove('still');
+      clearTimeout(idle); idle = setTimeout(() => document.body.classList.add('still'), 6000);   // stop moving: they stare
+    }
+    window.addEventListener('pointermove', e => move(e.clientX, e.clientY), { passive: true });
+    window.addEventListener('touchstart', e => { const t = e.touches[0]; move(t.clientX, t.clientY); }, { passive: true });
+    draw();
+
+    const youDot = $('youDot'), cam = $('camYou');
+    const placeDot = () => { if (!cam) return; youDot.style.left = (x / innerWidth * 100).toFixed(1) + '%'; youDot.style.top = (y / innerHeight * 100).toFixed(1) + '%'; const bx = $('youBox'); if (bx) { bx.style.left = youDot.style.left; bx.style.top = youDot.style.top; } };
+    window.addEventListener('pointermove', placeDot, { passive: true });
+    placeDot();
+
+    // "last seen": visits counted in this browser only (nothing is sent anywhere)
+    try {
+      const n = Number(localStorage.getItem('leads-visits') || 0) + 1, last = localStorage.getItem('leads-last');
+      localStorage.setItem('leads-visits', String(n)); localStorage.setItem('leads-last', new Date().toISOString());
+      const t = last ? new Date(last).toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+      $('seen').textContent = n === 1 ? 'First visit.' : 'Visit ' + String(n).padStart(2, '0') + ' · last seen ' + t;
+    } catch (e) { /* storage blocked: skip */ }
+
+    const rc = $('recClock');
+    const pad = n => String(n).padStart(2, '0');
+    (function tick() {
+      const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+      const lost = Math.random() < .04;                  // now and then the clock loses the signal
+      rc.textContent = lost ? '??:??:??' : pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+      rc.classList.toggle('lost', lost);
+      document.querySelectorAll('[data-feedtime]').forEach(el => { el.textContent = rc.textContent; });
+      setTimeout(tick, 1000);
+    })();
+  })();
+
+  /* ---------- analog horror: rare "signal interrupted" cutaways + the tagline whispers ----------
+     Skipped for reduced motion, while the tab is hidden, or while the loader is up. One slow flash, never strobing. */
+  window.__creep = { name: '' };   // render() fills in the first name
+  if (BRAND.effects.interrupts && BRAND.horror) (function () {
+    const H = BRAND.horror;
+    const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (calm) return;
+    const pick = a => a[Math.floor(Math.random() * a.length)];
+    const wait = () => 1000 * ((H.every || [30, 60])[0] + Math.random() * (((H.every || [30, 60])[1]) - (H.every || [30, 60])[0]));
+    let turn = 0;
+    function interrupt() {
+      const lines = (H.interrupts || []).filter(l => l.indexOf('{name}') < 0 || window.__creep.name);
+      if (!lines.length) return;
+      const box = $('interrupt');
+      $('intMsg').textContent = pick(lines).replace('{name}', window.__creep.name.toUpperCase());
+      $('intTime').textContent = new Date().toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour12: false });
+      $('intCam').textContent = 'Feed interrupted // CAM 0' + (1 + Math.floor(Math.random() * 4));
+      box.classList.remove('on'); void box.offsetWidth; box.classList.add('on');
+      setTimeout(() => box.classList.remove('on'), 950);
+    }
+    function whisper() {
+      const t = document.querySelector('.tagline');
+      if (!t || !(H.whispers || []).length) return;
+      const was = t.textContent;
+      t.textContent = pick(H.whispers); t.classList.add('whisper');
+      setTimeout(() => { t.textContent = was; t.classList.remove('whisper'); }, 3200);
+    }
+    (function loop() {
+      setTimeout(() => {
+        const busy = document.hidden || document.getElementById('ld').classList.contains('on') || document.documentElement.classList.contains('calm');
+        if (!busy) { (turn++ % 2 ? interrupt : whisper)(); if (window.Kuya && turn % 3 === 0) window.Kuya.say(['scared', 'Did you see that too?'], 4000); }
+        loop();
+      }, wait());
+    })();
+  })();
+
+  /* ---------- redacted words in the lede: black bars until hovered, focused or tapped ---------- */
+  (function () {
+    const lede = document.querySelector('.lede'), words = (BRAND.hero.redact || []).filter(Boolean);
+    if (!lede || !words.length) return;
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const re = new RegExp('\\b(' + words.map(w => w.replace(/[.*+?^$()|[\]\\{}]/g, '\\$&')).join('|') + ')\\b', 'gi');
+    lede.innerHTML = esc(lede.textContent).replace(re, '<span class="redact" tabindex="0">$1</span>');
+    lede.addEventListener('click', e => { const r = e.target.closest('.redact'); if (r) r.classList.toggle('open'); });
+  })();
+
+  /** Types text into an element like a terminal printing a verdict (instant in calm / reduced motion). */
+  function typeOut(el, text) {
+    const calm = document.documentElement.classList.contains('calm') || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    if (calm) { el.textContent = text; return; }
+    let i = 0; el.textContent = ''; el.classList.add('typing');
+    (function step() { el.textContent = text.slice(0, ++i); if (i < text.length) setTimeout(step, 70); else el.classList.remove('typing'); })();
+  }
+
+  /* ---------- fear ticker ---------- */
+  (function () {
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const html = BRAND.ticker.map(f => `<span><b>${esc(f[0])}</b> // ${esc(f[1])}</span>`).join('');
+    $('tick').innerHTML = html + html; // doubled for a seamless loop
+  })();
+
+  /* ---------- account links ----------
+     Apps Script can't sign anyone out itself, so these go through Google:
+     out:    signs out of every Google account in this browser, then comes back to the portal (Google asks you to sign in).
+             Use it when the portal shows the wrong account, or "unable to open the file" (several accounts signed in at once).
+     choose: Google's account picker, then back to the portal. */
+  const ACCOUNT = (function () {
+    const back = document.body.dataset.base;
+    return {
+      out: 'https://accounts.google.com/Logout?continue=' + encodeURIComponent('https://appengine.google.com/_ah/logout?continue=' + back),
+      choose: 'https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(back)
+    };
+  })();
+  function acctLink(kind) {
+    const a = document.createElement('a');
+    a.className = 'acct'; a.target = '_top'; a.href = ACCOUNT[kind];
+    a.textContent = kind === 'out' ? BRAND.buttons.switchAccount : BRAND.buttons.signIn;
+    return a;
+  }
+
+  /* ---------- helpers ---------- */
+  const disable = (el, why) => { el.setAttribute('aria-disabled', 'true'); el.setAttribute('tabindex', '-1'); if (why) el.title = why; };
+  const enable = el => { el.removeAttribute('aria-disabled'); el.removeAttribute('tabindex'); el.removeAttribute('title'); };
+  const PILL_CLASS = { open: 'ok', done: 'ok', action: 'wait', waiting: '', locked: 'dim', stopped: 'warn' };
+  const TONE = { CONFIRMED: 'ok', ACCEPTED: 'ok', APPROVED: 'ok', VERIFIED: 'ok', REJECTED: 'warn', RETURNED: 'warn', WITHDRAWN: 'warn' };
+
+  /** Sets one hub card: state pill, why-line, button (href: where it goes; external cards need one). */
+  function setModule(key, state, why, label, href) {
+    const card = document.querySelector('.mod[data-key="' + key + '"]');
+    const pill = card.querySelector('[data-pill]');
+    const link = card.querySelector('[data-link]');
+    card.className = 'card mod is-' + state + (card.classList.contains('show') ? ' show' : '');
+    pill.textContent = BRAND.stateLabels[state] || state;
+    pill.className = 'pill ' + (PILL_CLASS[state] || '');
+    card.querySelector('[data-why]').textContent = why || '';
+    link.textContent = label || 'Open';
+    link.classList.toggle('ghost', state !== 'action' && state !== 'open');
+    if (href) link.href = href;
+    const usable = state !== 'locked' && state !== 'stopped' && (href || link.getAttribute('href'));
+    if (usable) enable(link); else disable(link, why);
+  }
+
+  /** After applying, the big button scrolls to the Dashboard if it's there, else to the status card. */
+  function scrollToStatus() {
+    const dash = document.getElementById('dash');
+    const target = document.body.classList.contains('has-dash') && dash ? dash : $('statusCard');
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target.setAttribute('tabindex', '-1'); target.focus({ preventScroll: true });
+  }
+  $('mainBtn').addEventListener('click', e => {
+    if ($('mainBtn').dataset.scroll) { e.preventDefault(); scrollToStatus(); } // same page: no reload, no loader
+  });
+
+  /** What the big button should do for this person right now. */
+  function nextMove(ctx) {
+    const p = ctx.progress, base = document.body.dataset.base;
+    if (!ctx.applicant) return ctx.isOpen && ctx.allowedDomain ? { href: base + '?page=apply', text: BRAND.buttons.apply } : null;
+    if (p.requirements.state === 'action' && ctx.forms.requirements) return { href: ctx.forms.requirements, text: BRAND.buttons.upload, external: true };
+    if (p.payment.state === 'action' && ctx.forms.payment) return { href: ctx.forms.payment, text: BRAND.buttons.pay, external: true };
+    return { scroll: true, text: BRAND.buttons.status };
+  }
+
+  /* ---------- render ---------- */
+  /** Tells the Dashboard (and anything else included) what the hub loaded. */
+  function announce(type, detail) {
+    window.HUB = { type: type, detail: detail };                       // for listeners added later
+    document.dispatchEvent(new CustomEvent('hub:' + type, { detail: detail }));
+  }
+
+  function render(ctx) {
+    Loader.hide();
+    try { announce('context', ctx); } catch (e) { console.error(e); } // a widget error must not stop the hub
+    const p = ctx.progress, a = ctx.applicant;
+    $('who').innerHTML = ctx.signedIn ? 'Logged in as <b></b>' : 'Not signed in';
+    if (ctx.signedIn) $('who').querySelector('b').textContent = ctx.email;
+    window.__creep.name = (a && a.firstName) || '';
+    $('hint').hidden = !(ctx.signedIn && !a && ctx.isOpen && ctx.allowedDomain);
+    if (ctx.contact) $('contact').textContent = 'Portal issues? Email ' + ctx.contact;
+    if (ctx.isAdmin && ctx.sheetUrl) {
+      $('adminChip').href = ctx.sheetUrl;
+      $('adminChip').classList.add('show');
+      document.querySelector('.mod[data-key="sheet"]').classList.add('show');
+      $('mods').classList.add('with-admin');
+    }
+
+    // event facts (hidden when blank or TBA-free)
+    const facts = { dates: ctx.event.dates, venue: ctx.event.venue,
+      fee: ctx.event.fee ? '₱' + Number(ctx.event.fee).toLocaleString('en-PH') : '', slots: ctx.event.slots };
+    Object.keys(facts).forEach(k => {
+      const li = document.querySelector('[data-fact="' + k + '"]');
+      if (facts[k]) { li.querySelector('b').textContent = facts[k]; li.classList.add('show'); }
+    });
+
+    // account problems
+    const warn = $('acctWarn');
+    if (!ctx.signedIn) { warn.hidden = false; warn.textContent = BRAND.messages.notSignedIn; warn.appendChild(acctLink('choose')); }
+    else if (!ctx.allowedDomain && !a) { warn.hidden = false; warn.textContent = BRAND.messages.wrongDomain + ctx.email + '.'; warn.appendChild(acctLink('out')); }
+    if (!warn.hidden && window.SignInHelp) {   // wrong or missing account: offer the step-by-step pop-up (opens by itself once per session)
+      warn.append(' ', SignInHelp.trigger(BRAND.signInHelp, document.body.dataset.base));
+      SignInHelp.show(BRAND.signInHelp, document.body.dataset.base, { auto: true });
+    }
+    // top bar: signed in -> Sign out (then Google asks which account); not signed in -> Sign in
+    const ab = $('acctBtn');
+    ab.textContent = ctx.signedIn ? BRAND.buttons.signOut : BRAND.buttons.signIn;
+    ab.href = ctx.signedIn ? ACCOUNT.out : ACCOUNT.choose;
+    if (ctx.signedIn) ab.title = 'Signs you out of Google in this browser, then back here to sign in with your Ateneo account.';
+    ab.hidden = false;
+
+    // main buttons
+    const move = nextMove(ctx), main = $('mainBtn');
+    if (move) {
+      main.textContent = move.text;
+      if (move.scroll) main.dataset.scroll = '1';
+      else {
+        main.href = move.href;
+        if (move.external) { main.target = '_blank'; main.rel = 'noopener'; }
+      }
+    } else disable(main, ctx.signedIn ? BRAND.countdown.closed : 'Sign in first');
+
+    // hub cards
+    const L = BRAND.lockedWhy;
+    if (!ctx.signedIn) {
+      ['apply', 'req', 'pay'].forEach(k => setModule(k, 'locked', ''));
+      $('hubNote').textContent = BRAND.hub.guestNote;
+    } else {
+      if (a) setModule('apply', 'done', BRAND.buttons.applied, 'View');
+      else if (!ctx.allowedDomain) setModule('apply', 'locked', 'Use your Ateneo account.');
+      else setModule('apply', p.apply.state, p.apply.unlocked ? 'Open until the deadline above.' : L.apply, 'Start');
+
+      // forms: locked until unlocked; "your move"/"in review" with the pre-filled Google Form link
+      const reqWhy = p.requirements.state === 'locked' ? L.req
+        : (p.requirements.unlocked && !ctx.forms.requirements ? L.noForm : 'Requirements: ' + a.requirements);
+      const label = st => st === 'done' ? 'Done' : (st === 'waiting' ? 'Send again' : 'Open form');
+      setModule('req', p.requirements.state, reqWhy, label(p.requirements.state), ctx.forms.requirements);
+
+      const payWhy = p.payment.state === 'locked' ? (ctx.paymentStage === 'ANYTIME' ? L.payAnytime : L.pay)
+        : (p.payment.unlocked && !ctx.forms.payment ? L.noForm : 'Payment: ' + (a ? a.payment : 'NONE'));
+      setModule('pay', p.payment.state, payWhy, label(p.payment.state), ctx.forms.payment);
+    }
+    if (ctx.isAdmin && ctx.sheetUrl) setModule('sheet', 'open', '', BRAND.buttons.admin, ctx.sheetUrl);
+
+    // progress path + status card
+    if (a) {
+      $('path').classList.add('show');
+      let nowSet = false;
+      ['apply', 'review', 'requirements', 'payment', 'confirmed'].forEach(step => {
+        const li = document.querySelector('[data-step="' + step + '"]');
+        const st = p[step].state;
+        li.className = st === 'done' ? 'done' : (st === 'stopped' ? 'stopped' : '');
+        if (!nowSet && st !== 'done' && st !== 'stopped') { li.classList.add('now'); li.setAttribute('aria-current', 'step'); nowSet = true; }
+      });
+      if (p.review.state === 'stopped') document.querySelector('[data-step="review"]').textContent = a.status === 'WITHDRAWN' ? 'Withdrawn' : 'Not accepted';
+      if (a.status === 'WAITLISTED') document.querySelector('[data-step="review"]').textContent = 'Waitlisted';
+
+      $('statusCard').classList.add('show');
+      $('statusPill').textContent = a.id;
+      const STAMP = { ACCEPTED: 'ok', CONFIRMED: 'ok', REJECTED: 'warn', WITHDRAWN: 'warn' };
+      $('statusBig').className = 'big ' + (STAMP[a.status] || '');
+      $('statusCard').dataset.subject = 'Subject: ' + (a.firstName || a.id) + ' // ' + a.id;
+      typeOut($('statusBig'), a.status);
+      $('statusMsg').textContent = (a.firstName ? 'Hi ' + a.firstName + '. ' : '') + (BRAND.statusCopy[a.status] || '');
+      [['trStatus', a.status], ['trReq', a.requirements], ['trPay', a.payment]].forEach(([id, v]) => {
+        $(id).textContent = v;
+        $(id).style.color = TONE[v] === 'ok' ? 'var(--ok)' : (TONE[v] === 'warn' ? 'var(--danger)' : '');
+      });
+    }
+
+    // FAQ + testimonials: only for people without a file yet
+    document.body.classList.toggle('applied', !!a);
+    if (!a) renderIntel(ctx);
+
+    // countdown
+    const pill = $('openPill');
+    // confirmed campers count down to camp instead of the application deadline
+    if (a && a.status === 'CONFIRMED' && ctx.campStart) {
+      ctx = Object.assign({}, ctx, { deadline: ctx.campStart, isOpen: true, camp: true });
+    }
+    pill.textContent = ctx.isOpen ? 'applications open' : 'applications closed';
+    pill.className = 'pill ' + (ctx.isOpen ? 'ok' : 'warn');
+    if (!ctx.deadline) { $('deadlineText').textContent = BRAND.countdown.tba; return; }
+    const end = new Date(ctx.deadline);
+    $('deadlineText').textContent = (ctx.camp ? BRAND.countdown.campLabel : 'Deadline: ') + end.toLocaleString('en-PH', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Manila' });
+    if (ctx.camp) pill.textContent = 'confirmed camper';
+    const pad = n => String(n).padStart(2, '0');
+    function tick() {
+      let ms = end - new Date();
+      if (ms <= 0 || !ctx.isOpen) {
+        $('clock').classList.add('closed');
+        $('clockTitle').textContent = BRAND.countdown.closed;
+        ['d', 'h', 'm', 's'].forEach(k => $(k).textContent = '00');
+        return;
+      }
+      const d = Math.floor(ms / 864e5); ms -= d * 864e5;
+      const h = Math.floor(ms / 36e5); ms -= h * 36e5;
+      const m = Math.floor(ms / 6e4); ms -= m * 6e4;
+      $('d').textContent = pad(d); $('h').textContent = pad(h); $('m').textContent = pad(m); $('s').textContent = pad(Math.floor(ms / 1e3));
+      $('clockTitle').textContent = ctx.camp ? BRAND.countdown.campTitle : (d < 2 ? BRAND.countdown.soon : BRAND.countdown.title);
+      setTimeout(tick, 1000);
+    }
+    tick();
+  }
+
+  /** FAQ "classified files" + past-camper quotes. Text only (textContent), filled from Settings. */
+  function renderIntel(ctx) {
+    const ev = ctx.event || {};
+    const vals = { fee: ev.fee ? Number(ev.fee).toLocaleString('en-PH') : '', dates: ev.dates, venue: ev.venue || 'a venue to be announced', contact: ctx.contact };
+    const list = $('faqList');
+    list.textContent = '';
+    let fileNo = 0;
+    (BRAND.faq.items || []).forEach(it => {
+      if (it.todo && !ctx.isAdmin) return;                  // unanswered: only officers see the TODO
+      const d = document.createElement('details'); d.className = 'file';
+      const s = document.createElement('summary');
+      const no = document.createElement('span'); no.className = 'fno'; no.textContent = 'FILE ' + String(++fileNo).padStart(2, '0') + '-A';
+      const q = document.createElement('span'); q.className = 'fq'; q.textContent = it.q;
+      const st = document.createElement('span'); st.className = 'stamp'; st.textContent = 'CLASSIFIED';
+      s.append(no, q, st);
+      const p = document.createElement('p'); p.className = 'fa' + (it.todo ? ' todo' : '');
+      p.textContent = it.needs && !vals[it.needs] ? it.fallback : String(it.a).replace(/\{(\w+)\}/g, (_, k) => vals[k] || '');
+      d.append(s, p);
+      d.addEventListener('toggle', () => { st.textContent = d.open ? 'DECLASSIFIED' : 'CLASSIFIED'; });
+      list.append(d);
+    });
+    $('faq').hidden = !list.children.length;
+
+    const vl = $('voiceList');
+    vl.textContent = '';
+    (BRAND.testimonials.items || []).forEach(t => {
+      const li = document.createElement('li'); li.className = 'voice';
+      const tape = document.createElement('span'); tape.className = 'tape'; tape.textContent = 'Transcript // ' + (t.meta || 'LEADS');
+      const bq = document.createElement('blockquote'); bq.textContent = t.quote;
+      const by = document.createElement('span'); by.className = 'by'; by.textContent = t.who || '';
+      li.append(tape, bq, by);
+      if (t.sample) { const sm = document.createElement('span'); sm.className = 'sample'; sm.textContent = 'SAMPLE'; li.append(sm); }
+      vl.append(li);
+    });
+    $('voices').hidden = !vl.children.length;
+  }
+
+  function fail(err) {
+    Loader.hide();
+    try { announce('error', { message: (err && err.message) || String(err) }); } catch (e) { console.error(e); }
+    $('who').textContent = '';
+    const warn = $('acctWarn');
+    warn.hidden = false;
+    warn.textContent = BRAND.messages.loadError + (err && err.message ? err.message : err) + '. Try reloading.';
+  }
+
+  google.script.run.withSuccessHandler(render).withFailureHandler(fail).home_getContext();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+<!-- PageTop.html  (shared top bar for every page except Home: logo, back to the hub, sign out)
+     Use inside <body>:  includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) in a force-print scriptlet.
+     Never write a real scriptlet tag in a comment here: Apps Script runs scriptlets even inside comments. -->
+<header class="top">
+  <a class="logo" href="<?= baseUrl ?>" target="_top"><?= BRAND.logoText ?><span><?= BRAND.logoAccent ?></span></a>
+  <nav class="top-links">
+    <a class="back" href="<?= baseUrl ?>" target="_top">← Back to the hub</a>
+    <button type="button" class="lights" data-lights data-on="<?= BRAND.horror.lightsOn ?>" data-off="<?= BRAND.horror.lightsOff ?>" aria-pressed="false"><?= BRAND.horror.lightsOn ?></button>
+    <a class="back" target="_top" title="Signs you out of Google in this browser, then back to the portal to sign in with your Ateneo account."
+       href="https://accounts.google.com/Logout?continue=<?= encodeURIComponent('https://appengine.google.com/_ah/logout?continue=' + baseUrl) ?>"><?= BRAND.buttons.signOut ?></a>
+  </nav>
+</header>

@@ -1,0 +1,622 @@
+<!-- Styles.html  (shared base styles. Every page adds BOTH lines in <head>, as force-print scriptlets:
+       include('Styles')
+       brand_css()      <- colors + fonts from Brand.gs override these defaults)
+     Look: LEADS: Oversight. A surveillance case file on a dark CRT: square corners, photocopy grain,
+     scanlines, condensed headlines, mono labels. Palette: black, white, grey, yellow, blue, red. -->
+<style>
+  :root{
+    --night:#0A0A0A;      /* page background (a switched-off CRT) */
+    --night-2:#141414;    /* cards / file folders */
+    --night-glow:#0010E0;
+    --fear-text:#FF2A2A;
+    --fix-text:#EAEAEA;
+    --blue:#0010E0;       /* CRT blue: shadows, glow */
+    --sky:#7A86FF;        /* readable blue for links on black */
+    --glow:#FFFF00;       /* warning-tape yellow: main button, highlights */
+    --pink:#E00000;
+    --danger:#FF2A2A;     /* alarm red */
+    --ok:#EAEAEA;
+    --text:#EAEAEA;
+    --muted:#8C8C8C;      /* photocopy grey */
+    --line:#2E2E2E;
+    --radius:0px;
+    --display:'Anton','Archivo Narrow','Arial Narrow',sans-serif;
+    --kicker:'JetBrains Mono',ui-monospace,monospace;
+    --body:'Inter','Arimo',system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}   /* so el.hidden = true always wins over classes like .btn */
+  html,body{margin:0;background:var(--night);color:var(--text);font-family:var(--body);line-height:1.5}
+  a{color:var(--sky)}
+  ::selection{background:var(--glow);color:var(--night)}
+
+  /* analog grain + CRT scanlines over everything (decorative, never blocks clicks) */
+  body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9000}
+  body::before{background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+  body::after{opacity:.1;animation:grain .5s steps(4) infinite;inset:-40px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+
+  /* VHS tracking band rolling down the screen + a dark vignette at the edges */
+  html::before{content:"";position:fixed;left:0;right:0;height:16vh;top:-25vh;z-index:9001;pointer-events:none;
+    background:linear-gradient(transparent,rgba(255,255,255,.035) 35%,rgba(255,255,255,.09) 50%,rgba(255,255,255,.035) 65%,transparent);
+    animation:vhsBand 11s linear infinite}
+  html::after{content:"";position:fixed;inset:0;z-index:8999;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 45%,transparent 55%,rgba(0,0,0,.6) 100%);animation:flicker 7s steps(1) infinite}
+  @keyframes vhsBand{0%{top:-25vh}100%{top:115vh}}
+  @keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(-12px,8px)}50%{transform:translate(9px,-14px)}75%{transform:translate(-6px,-5px)}100%{transform:translate(14px,6px)}}
+  @keyframes flicker{0%,100%{opacity:1}41%{opacity:.75}42%{opacity:1}78%{opacity:.85}79%{opacity:1}}
+  /* chromatic aberration: the red/blue misregistration of a worn tape */
+  .rgb{text-shadow:-2px 0 rgba(255,42,42,.55),2px 0 rgba(0,16,224,.75);animation:rgbJitter 6s steps(1) infinite}
+  @keyframes rgbJitter{0%,100%{text-shadow:-2px 0 rgba(255,42,42,.55),2px 0 rgba(0,16,224,.75)}
+    62%{text-shadow:-6px 1px rgba(255,42,42,.7),5px -1px rgba(0,16,224,.85);transform:translateX(2px)}
+    63%{text-shadow:-2px 0 rgba(255,42,42,.55),2px 0 rgba(0,16,224,.75);transform:none}}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px;position:relative;z-index:2}
+  .mono{font-family:var(--mono)}
+  .eyebrow{font-family:var(--mono);font-size:.74rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .btn{display:inline-flex;align-items:center;gap:.5em;font-family:var(--mono);font-weight:700;font-size:.9rem;letter-spacing:.08em;text-transform:uppercase;
+    text-decoration:none;border:2px solid var(--glow);border-radius:0;padding:.85em 1.4em;min-height:44px;cursor:pointer;
+    transition:transform .12s steps(2),box-shadow .12s steps(2),background .15s ease;color:var(--night);background:var(--glow);
+    box-shadow:4px 4px 0 var(--blue)}
+  @media (hover:hover){.btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--blue)}}
+  .btn:focus-visible{outline:3px solid var(--text);outline-offset:3px}
+  .btn.ghost{background:transparent;color:var(--text);border-color:var(--text);box-shadow:4px 4px 0 var(--line)}
+  .btn[aria-disabled="true"],.btn:disabled{opacity:.4;pointer-events:none;filter:grayscale(1)}
+  .card{background:var(--night-2);border:1.5px solid var(--line);border-radius:0;padding:20px 22px}
+  .pill{display:inline-block;font-family:var(--mono);font-size:.7rem;font-weight:700;letter-spacing:.12em;
+    padding:.3em .7em;border-radius:0;background:transparent;border:1.5px solid var(--muted);color:var(--muted);text-transform:uppercase}
+  .pill.warn{border-color:var(--danger);color:var(--danger)}
+  .pill.ok{border-color:var(--text);background:var(--text);color:var(--night)}
+  .pill.wait{border-color:var(--glow);color:var(--glow)}
+  .pill.dim{border-color:var(--line);color:var(--muted)}
+  .field-error{color:var(--danger);font-family:var(--mono);font-size:.78rem;margin-top:.3rem}
+
+  /* ---------- shared page frame (PageTop.html) ---------- */
+  body{min-height:100vh;background:radial-gradient(1100px 520px at 50% -12%,color-mix(in srgb,var(--blue) 22%,transparent) 0%,transparent 62%),var(--night)}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 0;border-bottom:1.5px solid var(--line)}
+  .logo{font-family:var(--display);font-size:1.6rem;letter-spacing:.02em;color:var(--text);text-decoration:none;text-transform:uppercase;line-height:1}
+  .logo span{color:var(--glow)}
+  .back{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text);text-decoration:none}
+  .back:hover{color:var(--glow)}
+  .top-links{display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+  .page-head{padding:36px 0 18px}
+  .page-head h1{text-shadow:-2px 0 rgba(255,42,42,.55),2px 0 rgba(0,16,224,.75);font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:clamp(2.6rem,8vw,5rem);line-height:.88;margin:.2em 0 .3em}
+  .page-head p{color:var(--muted);max-width:40em;margin:0}
+  .todo{margin:18px 0}
+  .todo h2{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.4rem;margin:.6em 0 .4em}
+  .todo ul{margin:.3em 0 0;padding-left:1.2em;color:color-mix(in srgb,var(--text) 85%,var(--muted))}
+  .todo li{margin:.3em 0}
+  .todo code{font-family:var(--mono);font-size:.85em;color:var(--glow)}
+  /* phones: the shared top bar becomes a tidy 2x2 grid of equal buttons */
+  @media (max-width:560px){
+    .top{padding:12px 0;gap:10px}
+    .logo{font-size:1.35rem}
+    .top-links{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .top-links > *{display:inline-flex;align-items:center;justify-content:center;text-align:center;min-height:40px;padding:.4em .5em;
+      font-size:.64rem;letter-spacing:.06em;border:1.5px solid var(--line);white-space:nowrap}
+    .top-links .report-btn{border-color:color-mix(in srgb,var(--danger) 60%,transparent)}
+    .page-head{padding:24px 0 12px}
+    .page-head h1{font-size:clamp(2.4rem,12vw,3.2rem)}
+  }
+  .page-foot{margin:40px 0 30px;padding-top:18px;border-top:1.5px solid var(--line);font-family:var(--mono);font-size:.74rem;color:var(--muted)}
+  /* "lights on": a quieter mode without grain, VHS band, flicker or glitches (toggle in the top bar, remembered per browser) */
+  html.calm::before,html.calm::after,html.calm body::before,html.calm body::after{display:none}
+  html.calm .rgb,html.calm .page-head h1{animation:none;text-shadow:none}
+  .lights{font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+    background:none;border:1.5px solid var(--line);padding:.3em .8em;cursor:pointer;min-height:32px}
+  .lights:hover,.lights:focus-visible{color:var(--glow);border-color:var(--glow)}
+
+  /* redacted words: black bars until hovered, focused or tapped */
+  .redact{background:#000;color:transparent;padding:0 .15em;cursor:help;transition:color .2s,background .2s;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+  .redact:hover,.redact:focus-visible,.redact.open{background:transparent;color:inherit;outline:1px dashed var(--muted)}
+
+  /* forms as an official file: numbered questions + a CCTV-timeline progress bar (Apply uses these) */
+  .q-num{display:block;font-family:var(--mono);font-size:.7rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--glow)}
+  .tape-progress{position:relative;height:14px;border:1.5px solid var(--line);background:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px 10%)}
+  .tape-progress span{position:absolute;inset:0 auto 0 0;width:var(--p,0%);background:var(--glow);transition:width .3s ease}
+  /* the "04 / 09" counter sits under the bar's right end, so it never collides with a heading above */
+  .tape-progress{margin-bottom:1.6em}
+  .tape-progress::after{content:attr(data-label);position:absolute;right:0;top:calc(100% + 6px);font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;color:var(--muted);line-height:1}
+  /* themed dropdowns (CustomSelect below): a button + listbox drawn over a hidden native <select> */
+  .cs{position:relative;width:100%}
+  .cs select{position:absolute;inset:0;opacity:0;pointer-events:none;width:100%;height:100%}
+  .cs-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;cursor:pointer;
+    font:inherit;font-size:16px;color:var(--text);background:rgba(7,18,43,.7);border:1.5px solid var(--line);border-radius:0;
+    padding:.75em .9em;min-height:44px;transition:border-color .15s ease,background .15s ease}
+  .cs-btn .cs-val{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cs-btn.placeholder .cs-val{color:var(--muted)}
+  .cs-btn .cs-arrow{flex:none;width:10px;height:10px;border-right:2px solid var(--glow);border-bottom:2px solid var(--glow);transform:translateY(-3px) rotate(45deg);transition:transform .18s cubic-bezier(.23,1,.32,1)}
+  .cs.open .cs-arrow{transform:translateY(2px) rotate(-135deg)}
+  @media (hover:hover) and (pointer:fine){.cs-btn:hover{border-color:var(--muted)}}
+  .cs-btn:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+  .cs.open .cs-btn{border-color:var(--glow)}
+  .has-error .cs-btn{border-color:var(--danger);background:rgba(255,42,42,.08)}
+  .cs-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:70;margin:0;padding:4px 0;list-style:none;
+    background:var(--night);border:1.5px solid var(--glow);box-shadow:4px 4px 0 var(--blue);max-height:min(280px,50vh);overflow:auto;
+    transform-origin:top center;opacity:0;transform:scale(.97) translateY(-4px);visibility:hidden;
+    transition:opacity .15s ease,transform .18s cubic-bezier(.23,1,.32,1),visibility 0s linear .18s}
+  .cs.up .cs-list{top:auto;bottom:calc(100% + 4px);transform-origin:bottom center}
+  .cs.open .cs-list{opacity:1;transform:none;visibility:visible;transition:opacity .15s ease,transform .18s cubic-bezier(.23,1,.32,1),visibility 0s}
+  .cs-opt{padding:.6em .9em;cursor:pointer;font-size:.95rem;display:flex;align-items:center;gap:10px}
+  .cs-opt::before{content:"";width:6px;height:6px;flex:none;background:transparent}
+  .cs-opt[aria-selected="true"]::before{background:var(--glow)}
+  .cs-opt.active{background:color-mix(in srgb,var(--blue) 45%,transparent);color:#fff}
+  .cs-opt[data-empty]{color:var(--muted);font-family:var(--mono);font-size:.78rem;letter-spacing:.06em}
+
+  /* "wrong account" help pop-up (SignInHelp below). Styled as a security notice. */
+  .sih{border:2px solid var(--glow);background:var(--night);color:var(--text);padding:0;max-width:min(560px,calc(100vw - 32px));width:100%;
+    box-shadow:6px 6px 0 var(--blue);border-radius:0;max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain}
+  .sih::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(2px)}
+  .sih[open]{animation:sihIn .22s cubic-bezier(.23,1,.32,1)}
+  @keyframes sihIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+  .sih-tape{background:repeating-linear-gradient(-45deg,var(--glow) 0 14px,#0A0A0A 14px 28px);height:10px}
+  .sih-body{padding:20px 22px 22px;display:grid;gap:14px}
+  .sih h2{margin:0;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.7rem;line-height:1;color:var(--danger)}
+  .sih p{margin:0;color:color-mix(in srgb,var(--text) 88%,var(--muted))}
+  .sih ol{margin:0;padding-left:1.3em;display:grid;gap:8px}
+  .sih li::marker{font-family:var(--mono);color:var(--glow)}
+  .sih-link{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+  .sih-link a{flex:1 1 220px}
+  .sih-url{font-family:var(--mono);font-size:.7rem;color:var(--muted);overflow-wrap:anywhere;user-select:all}
+  .sih-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-family:var(--mono);font-size:.74rem;color:var(--muted)}
+  .sih-trigger{background:none;border:0;padding:0;font:inherit;color:var(--sky);text-decoration:underline;cursor:pointer}
+  /* report an issue: the button (top bars + footers) and its form, in the same pop-up shell */
+  .report-btn{font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--danger);
+    background:none;border:1.5px solid color-mix(in srgb,var(--danger) 60%,transparent);padding:.3em .8em;cursor:pointer;min-height:32px}
+  .report-btn::before{content:"\25CF";margin-right:.55em}
+  .report-btn:hover,.report-btn:focus-visible{border-color:var(--danger);background:rgba(255,42,42,.08)}
+  .rpt{max-width:min(620px,calc(100vw - 32px))}
+  .rpt form{display:grid;gap:14px}
+  .rpt .f{display:grid;gap:6px;min-width:0}
+  .rpt label,.rpt legend{font-family:var(--mono);font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text);padding:0}
+  .rpt .hint{font-size:.8rem;color:var(--muted);margin:0}
+  .rpt input[type=text],.rpt input[type=email],.rpt textarea{width:100%;font:inherit;font-size:16px;color:var(--text);background:rgba(7,18,43,.7);border:1.5px solid var(--line);border-radius:0;padding:.65em .8em;min-height:44px}
+  .rpt textarea{min-height:6.5em;resize:vertical;line-height:1.5}
+  .rpt input:focus-visible,.rpt textarea:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+  .rpt .two{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+  @media (max-width:560px){.rpt .two{grid-template-columns:1fr}}
+  .rpt fieldset{border:0;margin:0;padding:0;display:grid;gap:6px}
+  .rpt .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .rpt .chips label{font-family:var(--body);font-size:.85rem;font-weight:500;letter-spacing:0;text-transform:none;border:1.5px solid var(--line);padding:.45em .7em;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+  .rpt .chips input{accent-color:var(--glow)}
+  .rpt .chips label:has(input:checked){border-color:var(--glow);color:var(--glow)}
+  .rpt .err{color:var(--danger);font-family:var(--mono);font-size:.78rem;margin:0}
+  .rpt .auto{font-family:var(--mono);font-size:.7rem;color:var(--muted);border:1px dashed var(--line);padding:8px 10px;overflow-wrap:anywhere}
+  .rpt .status{font-family:var(--mono);font-size:.82rem;margin:0}
+  .rpt .shot{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .rpt .shot input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+  .rpt .shot .pick{min-height:40px;padding:.45em .9em;font-size:.72rem}
+  .rpt .shot .name{font-family:var(--mono);font-size:.74rem;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+  .rpt .shot .name:empty{display:none}
+  .rpt .shot img{width:56px;height:40px;object-fit:cover;border:1.5px solid var(--line)}
+  .rpt .shot .rm{background:none;border:1.5px solid var(--danger);color:var(--danger);font-family:var(--mono);font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.4em .7em;min-height:36px;cursor:pointer}
+  .rpt .status.ok{color:var(--glow)} .rpt .status.bad{color:var(--danger)}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<script>
+  /* lights on/off: set before the page paints so there's no flash; any button with data-lights toggles it */
+  (function () {
+    try { if (localStorage.getItem('leads-lights') === 'on') document.documentElement.classList.add('calm'); } catch (e) { /* storage blocked */ }
+    // Apps Script's template escaping can wrap attribute text in quotes ('Lights on'); strip them
+    const lbl = (b, on) => String((on ? b.dataset.off : b.dataset.on) || '').replace(/^['"]+|['"]+$/g, '');
+    window.Lights = {
+      on: () => document.documentElement.classList.contains('calm'),
+      toggle: function () {
+        const on = document.documentElement.classList.toggle('calm');
+        try { localStorage.setItem('leads-lights', on ? 'on' : 'off'); } catch (e) { /* fine */ }
+        document.querySelectorAll('[data-lights]').forEach(b => { b.textContent = lbl(b, on); b.setAttribute('aria-pressed', String(on)); });
+      }
+    };
+    document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-lights]'); if (b) Lights.toggle(); });
+    document.addEventListener('DOMContentLoaded', () => document.querySelectorAll('[data-lights]').forEach(b => {
+      b.textContent = lbl(b, Lights.on()); b.setAttribute('aria-pressed', String(Lights.on())); }));
+  })();
+
+  /* CustomSelect.enhance(select): replaces the browser's dropdown with a themed one, keeping the real <select>
+     underneath for the value, form submit and validation. Keyboard: Enter/Space/Down opens, arrows move, Enter picks,
+     Esc closes, typing jumps to a match. Options added later and values set from code (el.value = …) stay in sync.
+     CustomSelect.enhanceAll(root) does every select inside root. */
+  window.CustomSelect = (function () {
+    let uid = 0;
+    const desc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+    function enhance(sel) {
+      if (!sel || sel.dataset.cs) return;
+      sel.dataset.cs = '1';
+      const id = 'cs' + (++uid);
+      const wrap = document.createElement('div'); wrap.className = 'cs';
+      sel.parentNode.insertBefore(wrap, sel); wrap.append(sel);
+      sel.tabIndex = -1; sel.setAttribute('aria-hidden', 'true');
+      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'cs-btn';
+      btn.setAttribute('aria-haspopup', 'listbox'); btn.setAttribute('aria-expanded', 'false'); btn.setAttribute('aria-controls', id);
+      const lbl = sel.id && document.querySelector('label[for="' + sel.id + '"]');
+      if (lbl) { if (!lbl.id) lbl.id = id + 'l'; btn.setAttribute('aria-labelledby', lbl.id + ' ' + id + 'v'); lbl.htmlFor = ''; lbl.addEventListener('click', () => btn.focus()); }
+      const val = document.createElement('span'); val.className = 'cs-val'; val.id = id + 'v';
+      const arrow = document.createElement('span'); arrow.className = 'cs-arrow'; arrow.setAttribute('aria-hidden', 'true');
+      btn.append(val, arrow);
+      const list = document.createElement('ul'); list.className = 'cs-list'; list.id = id; list.setAttribute('role', 'listbox'); list.tabIndex = -1;
+      wrap.append(btn, list);
+      let active = -1, typed = '', typedAt = 0;
+      const opts = () => [...list.children];
+      function render() {
+        list.textContent = '';
+        [...sel.options].forEach((o, i) => {
+          const li = document.createElement('li'); li.className = 'cs-opt'; li.id = id + 'o' + i; li.setAttribute('role', 'option');
+          li.textContent = o.text; li.dataset.value = o.value; if (!o.value) li.dataset.empty = '';
+          li.setAttribute('aria-selected', String(o.selected && !!o.value));
+          li.addEventListener('mousedown', e => e.preventDefault());
+          li.addEventListener('click', () => { choose(i); close(true); });
+          li.addEventListener('mousemove', () => setActive(i));
+          list.append(li);
+        });
+        sync();
+      }
+      function sync() {
+        const o = sel.options[sel.selectedIndex];
+        val.textContent = o ? o.text : '';
+        btn.classList.toggle('placeholder', !o || !o.value);
+        opts().forEach((li, i) => li.setAttribute('aria-selected', String(i === sel.selectedIndex && !!sel.options[i].value)));
+      }
+      function setActive(i) {
+        const all = opts(); if (!all.length) return;
+        active = Math.max(0, Math.min(all.length - 1, i));
+        all.forEach((li, j) => li.classList.toggle('active', j === active));
+        btn.setAttribute('aria-activedescendant', all[active].id);
+        all[active].scrollIntoView({ block: 'nearest' });
+      }
+      function choose(i) {
+        if (sel.selectedIndex === i) return;
+        sel.selectedIndex = i; sync();
+        sel.dispatchEvent(new Event('input', { bubbles: true }));
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      function open() {
+        if (wrap.classList.contains('open')) return;
+        const r = btn.getBoundingClientRect();
+        wrap.classList.toggle('up', innerHeight - r.bottom < 240 && r.top > innerHeight - r.bottom);
+        wrap.classList.add('open'); btn.setAttribute('aria-expanded', 'true');
+        setActive(Math.max(0, sel.selectedIndex));
+      }
+      function close(focus) {
+        if (!wrap.classList.contains('open')) return;
+        wrap.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); btn.removeAttribute('aria-activedescendant');
+        sel.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));   // lets the page react as if they left the field
+        if (focus) btn.focus();
+      }
+      btn.addEventListener('click', () => wrap.classList.contains('open') ? close(true) : open());
+      btn.addEventListener('keydown', e => {
+        const isOpen = wrap.classList.contains('open');
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (!isOpen) return open(); setActive(active + (e.key === 'ArrowDown' ? 1 : -1)); }
+        else if (e.key === 'Home' && isOpen) { e.preventDefault(); setActive(0); }
+        else if (e.key === 'End' && isOpen) { e.preventDefault(); setActive(opts().length - 1); }
+        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!isOpen) return open(); choose(active); close(true); }
+        else if (e.key === 'Escape' && isOpen) { e.preventDefault(); close(true); }
+        else if (e.key === 'Tab' && isOpen) { close(false); }
+        else if (e.key.length === 1 && /\S/.test(e.key)) {          // type to jump
+          const now = Date.now(); typed = (now - typedAt < 700 ? typed : '') + e.key.toLowerCase(); typedAt = now;
+          const i = [...sel.options].findIndex(o => o.value && o.text.toLowerCase().startsWith(typed));
+          if (i >= 0) { if (isOpen) setActive(i); else choose(i); }
+        }
+      });
+      btn.addEventListener('blur', () => setTimeout(() => { if (!wrap.contains(document.activeElement)) close(false); }, 0));
+      document.addEventListener('pointerdown', e => { if (!wrap.contains(e.target)) close(false); });
+      sel.addEventListener('focus', () => btn.focus());   // e.g. "jump to the first error" focuses the real select
+      sel.addEventListener('change', sync);
+      new MutationObserver(render).observe(sel, { childList: true, subtree: true, characterData: true });
+      // code that sets sel.value / selectedIndex updates the themed button too
+      Object.defineProperty(sel, 'value', { configurable: true, get() { return desc.get.call(this); }, set(v) { desc.set.call(this, v); sync(); } });
+      const idx = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'selectedIndex');
+      Object.defineProperty(sel, 'selectedIndex', { configurable: true, get() { return idx.get.call(this); }, set(v) { idx.set.call(this, v); sync(); } });
+      sel.form && sel.form.addEventListener('reset', () => setTimeout(sync, 0));
+      render();
+    }
+    return { enhance: enhance, enhanceAll: root => (root || document).querySelectorAll('select').forEach(enhance) };
+  })();
+  document.addEventListener('DOMContentLoaded', () => CustomSelect.enhanceAll());   // every page: all dropdowns are themed
+
+  /* SignInHelp.show(copy, url, opts): themed pop-up for people stuck on the wrong Google account.
+     copy = BRAND.signInHelp, url = the portal link pinned to the school account (baseUrl).
+     opts.auto = true shows it at most once per browser session. Text only (textContent), no HTML from copy. */
+  window.SignInHelp = (function () {
+    let dlg = null;
+    function build(c, url) {
+      dlg = document.createElement('dialog'); dlg.className = 'sih'; dlg.setAttribute('aria-labelledby', 'sihTitle');
+      const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+      const tape = el('div', 'sih-tape'); tape.setAttribute('aria-hidden', 'true');
+      const body = el('div', 'sih-body');
+      const h = el('h2', '', c.title); h.id = 'sihTitle';
+      const linkRow = el('div', 'sih-link');
+      const a = el('a', 'btn', c.linkLabel); a.href = url; a.target = '_top';
+      const copyBtn = el('button', 'btn ghost', 'Copy link'); copyBtn.type = 'button';
+      copyBtn.addEventListener('click', () => {
+        const done = () => { copyBtn.textContent = 'Copied'; setTimeout(() => copyBtn.textContent = 'Copy link', 1600); };
+        try { navigator.clipboard.writeText(url).then(done, () => { urlText.focus(); }); } catch (e) { urlText.focus(); }
+      });
+      linkRow.append(a, copyBtn);
+      const urlText = el('p', 'sih-url', url); urlText.tabIndex = 0;
+      const ol = el('ol'); (c.steps || []).forEach(s => ol.append(el('li', '', s)));
+      const foot = el('div', 'sih-foot');
+      const close = el('button', 'btn', c.close || 'Got it'); close.type = 'button';
+      close.addEventListener('click', () => dlg.close());
+      const rep = el('button', 'report-btn', 'Report an issue'); rep.type = 'button'; rep.dataset.report = '';
+      foot.append(rep, close);
+      body.append(h, el('p', '', c.lead), linkRow, urlText, ol, foot);
+      dlg.append(tape, body);
+      dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });   // click outside closes
+      document.body.append(dlg);
+    }
+    function show(c, url, opts) {
+      if (!c) return;
+      opts = opts || {};
+      if (opts.auto) {
+        try { if (sessionStorage.getItem('leads-signin-help') === '1') return; sessionStorage.setItem('leads-signin-help', '1'); } catch (e) { /* fine */ }
+      }
+      if (!dlg) build(c, url);
+      if (dlg.open) return;
+      if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+    }
+    /** A small "Trouble signing in?" button that opens the pop-up. */
+    function trigger(c, url) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'sih-trigger'; b.textContent = c.trigger || 'Trouble signing in?';
+      b.addEventListener('click', () => show(c, url));
+      return b;
+    }
+    return { show: show, trigger: trigger };
+  })();
+
+  /* ReportIssue: "Report an issue" pop-up on every page. Any element with [data-report] opens it, and a button is
+     added to the top bar (.top-links / .who) and the footer automatically. Copy: BRAND.report. Sends through
+     report_issue (Utils.gs), which emails the core team a detailed case file. Technical details are attached for them. */
+  window.ReportIssue = (function () {
+    let dlg = null;
+    const R = () => (typeof BRAND !== 'undefined' && BRAND.report) || null;
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+    const pageName = () => (location.search.match(/[?&]page=([^&]+)/) || [])[1] || 'home';
+    function inApp() {
+      const ua = navigator.userAgent;
+      return /FBAN|FBAV|FB_IAB|Messenger/i.test(ua) ? 'Facebook / Messenger' : /Instagram/i.test(ua) ? 'Instagram' : /Line\//i.test(ua) ? 'LINE' : /; wv\)/.test(ua) ? 'Android WebView' : '';
+    }
+    function field(id, label, hint, input) {
+      const f = el('div', 'f'); const l = el('label', '', label); l.htmlFor = id; input.id = id;
+      f.append(l); if (hint) f.append(el('p', 'hint', hint)); f.append(input); return f;
+    }
+    function chips(name, legend, options, required) {
+      const fs = el('fieldset'); fs.append(el('legend', '', legend));
+      const row = el('div', 'chips');
+      options.forEach((o, i) => { const lab = el('label'); const r = el('input'); r.type = 'radio'; r.name = name; r.value = o; if (required && !i) r.required = true; lab.append(r, document.createTextNode(o)); row.append(lab); });
+      fs.append(row); return fs;
+    }
+    function build() {
+      const c = R(); if (!c) return;
+      const L = c.labels;
+      dlg = el('dialog', 'sih rpt'); dlg.setAttribute('aria-labelledby', 'rptTitle');
+      const tape = el('div', 'sih-tape'); tape.setAttribute('aria-hidden', 'true');
+      const body = el('div', 'sih-body');
+      const h = el('h2', '', c.title); h.id = 'rptTitle';
+      const form = el('form'); form.noValidate = true;
+      const cat = el('select'); [''].concat(c.categories).forEach(o => { const op = el('option', '', o || '-- Pick one --'); op.value = o; cat.append(op); });
+      const what = el('textarea'); what.maxLength = 4000; what.required = true;
+      const doing = el('input'); doing.type = 'text'; doing.maxLength = 300;
+      const steps = el('textarea'); steps.maxLength = 2000; steps.style.minHeight = '4.5em';
+      const contact = el('input'); contact.type = 'email'; contact.maxLength = 120; contact.autocomplete = 'email';
+      const known = (document.getElementById('who') && (document.getElementById('who').querySelector('b') || {}).textContent) || (document.getElementById('userEmailDisplay') || {}).textContent || '';
+      if (known && /@/.test(known)) contact.value = known.trim();
+      // screenshot picker: themed button, preview, Remove. Big images are shrunk to max 1600px JPEG in the browser.
+      const shot = el('input'); shot.type = 'file'; shot.accept = 'image/*'; shot.tabIndex = -1;
+      const shotBox = el('div', 'shot');
+      const pick = el('button', 'btn ghost pick', 'Choose image'); pick.type = 'button';
+      const thumb = el('img'); thumb.alt = ''; thumb.hidden = true;
+      const fname = el('span', 'name');
+      const rm = el('button', 'rm', 'Remove'); rm.type = 'button'; rm.hidden = true;
+      let shotData = null;   // { name, type, data(base64) }
+      const clearShot = () => { shotData = null; shot.value = ''; thumb.hidden = true; thumb.removeAttribute('src'); fname.textContent = ''; rm.hidden = true; pick.textContent = 'Choose image'; };
+      pick.addEventListener('click', () => shot.click());
+      rm.addEventListener('click', () => { clearShot(); pick.focus(); });
+      shot.addEventListener('change', () => {
+        const f = shot.files && shot.files[0];
+        if (!f) return;
+        if (!/^image\//.test(f.type)) { clearShot(); fname.textContent = 'That file isn\'t an image.'; return; }
+        fname.textContent = 'Preparing ' + f.name + '…';
+        const img = new Image(), url = URL.createObjectURL(f);
+        img.onload = () => {
+          const max = 1600, k = Math.min(1, max / Math.max(img.width, img.height));
+          let dataUrl;
+          if (k === 1 && f.size <= 1.5 * 1024 * 1024) {
+            const fr = new FileReader();
+            fr.onload = () => done(String(fr.result), f.type, f.name);
+            fr.readAsDataURL(f); URL.revokeObjectURL(url); return;
+          }
+          const cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          dataUrl = cv.toDataURL('image/jpeg', 0.82);
+          URL.revokeObjectURL(url);
+          done(dataUrl, 'image/jpeg', f.name.replace(/\.[^.]+$/, '') + '.jpg');
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); clearShot(); fname.textContent = 'Couldn\'t read that image.'; };
+        img.src = url;
+        function done(dataUrl, type, name) {
+          const b64 = dataUrl.split(',')[1] || '';
+          if (b64.length > 4e6) { clearShot(); fname.textContent = 'Still too big after shrinking. Try a smaller image.'; return; }
+          shotData = { name: name, type: type, data: b64 };
+          thumb.src = dataUrl; thumb.hidden = false;
+          fname.textContent = name + ' (' + Math.round(b64.length * 0.75 / 1024) + ' KB)';
+          rm.hidden = false; pick.textContent = 'Change';
+        }
+      });
+      shotBox.append(pick, thumb, fname, rm, shot);
+      const auto = el('p', 'auto');
+      const err = el('p', 'err'); err.setAttribute('role', 'alert');
+      const status = el('p', 'status'); status.setAttribute('aria-live', 'polite');
+      const two = el('div', 'two');
+      two.append(chips('when', L.when, c.whenOptions, false), chips('blocking', L.blocking, c.blockingOptions, false));
+      const row = el('div', 'sih-link');
+      const send = el('button', 'btn', c.send); send.type = 'submit';
+      const cancel = el('button', 'btn ghost', c.cancel); cancel.type = 'button';
+      cancel.addEventListener('click', () => dlg.close());
+      row.append(send, cancel);
+      form.append(field('rptCat', L.category, '', cat), field('rptWhat', L.what, L.whatHint, what), field('rptDoing', L.doing, L.doingHint, doing),
+        field('rptSteps', L.steps, L.stepsHint, steps), two, field('rptContact', L.contact, L.contactHint, contact), field('rptShot', L.shot, L.shotHint || '', shotBox), auto, err, row, status);
+      body.append(h, el('p', '', c.lead), form);
+      dlg.append(tape, body);
+      dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+      document.body.append(dlg);
+      if (window.CustomSelect) CustomSelect.enhance(cat);
+      dlg._refreshAuto = () => {
+        auto.textContent = 'Attached automatically: page "' + pageName() + '", ' + (navigator.userAgent.match(/(Chrome|Firefox|Safari|Edg|OPR)\/[\d.]+/) || ['your browser'])[0] +
+          ', screen ' + screen.width + 'x' + screen.height + ', your account and application status, and ' + (window.__portalErrors || []).length + ' error(s) caught on this page.';
+      };
+      form.addEventListener('submit', function (e) {
+        e.preventDefault(); err.textContent = ''; status.textContent = ''; status.className = 'status';
+        const pick = n => (form.querySelector('input[name="' + n + '"]:checked') || {}).value || '';
+        if (!cat.value) { err.textContent = 'Pick what kind of problem it is.'; return; }
+        if (what.value.trim().length < 10) { err.textContent = 'Tell us a bit more about what happened (at least a sentence).'; what.focus(); return; }
+        if (!/^\S+@\S+\.\S+$/.test(contact.value.trim())) { err.textContent = 'Add an email we can reply to.'; contact.focus(); return; }
+        send.disabled = true; send.textContent = c.sending;
+        const payload = {
+          category: cat.value, what: what.value, doing: doing.value, steps: steps.value, when: pick('when'), blocking: pick('blocking'),
+          contact: contact.value.trim(), page: pageName(),
+          client: { page: pageName(), url: (document.referrer || location.href).split('#')[0], title: document.title, localTime: new Date().toString(),
+            ua: navigator.userAgent, screen: screen.width + 'x' + screen.height + ' @' + (window.devicePixelRatio || 1) + 'x, window ' + innerWidth + 'x' + innerHeight,
+            lang: navigator.language, online: navigator.onLine, inApp: inApp(), calm: document.documentElement.classList.contains('calm'), errors: window.__portalErrors || [] }
+        };
+        const go = () => google.script.run.withSuccessHandler(res => {
+          send.disabled = false; send.textContent = c.send;
+          if (res && res.ok) {
+            status.className = 'status ok'; status.textContent = c.sent.replace('{id}', res.id).replace('{email}', res.email || payload.contact);
+            form.reset(); clearShot(); if (window.Iris) Iris.say(['happy', 'Report filed. Someone from the core team will look at it.']);
+            setTimeout(() => dlg.open && dlg.close(), 4500);
+          } else {
+            status.className = 'status bad';
+            status.textContent = (res && res.reason === 'rate' ? c.tooMany : c.failed).replace('{to}', (res && res.to) || c.to);
+          }
+        }).withFailureHandler(() => {
+          send.disabled = false; send.textContent = c.send; status.className = 'status bad'; status.textContent = c.failed.replace('{to}', c.to);
+        }).report_issue(payload);
+        if (shotData) payload.shot = shotData;
+        go();
+      });
+    }
+    function open(prefill) {
+      if (!R()) return;
+      if (!dlg) build();
+      dlg._refreshAuto();
+      if (prefill) {   // e.g. from the error prompt: pick the category and start the description with the error
+        const sel = dlg.querySelector('select'), what = dlg.querySelector('#rptWhat');
+        if (prefill.category && sel) { const i = [...sel.options].findIndex(o => o.value === prefill.category); if (i >= 0) sel.selectedIndex = i; }
+        if (prefill.what && what && !what.value) what.value = prefill.what;
+      }
+      document.querySelectorAll('dialog[open]').forEach(d => d !== dlg && d.close());
+      if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+      setTimeout(() => { const b = dlg.querySelector('.cs-btn, select'); b && b.focus(); }, 40);
+    }
+    function button() { const b = el('button', 'report-btn', (R() || {}).button || 'Report an issue'); b.type = 'button'; b.dataset.report = ''; return b; }
+    document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-report]')) { e.preventDefault(); open(); } });
+    // add the button to every page's top bar and footer
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!R()) return;
+      const bar = document.querySelector('.top-links, .top .who');
+      if (bar && !bar.querySelector('[data-report]')) bar.append(button());
+      document.querySelectorAll('footer').forEach(f => { if (!f.querySelector('[data-report]')) f.prepend(button()); });
+    });
+    /* When something breaks (a failed server call or a script error), ask once per page load whether to report it. */
+    let asked = false, ask = null;
+    function prompt(msg) {
+      const c = R(); if (!c || asked) return;
+      if (/ResizeObserver loop|Script error\.?$/i.test(String(msg))) return;   // browser noise, not a real problem
+      asked = true;
+      setTimeout(() => {
+        if (document.querySelector('dialog[open]')) { asked = false; return; }   // don't stack on another pop-up
+        if (!ask) {
+          ask = el('dialog', 'sih'); ask.setAttribute('aria-labelledby', 'errAskTitle');
+          const tape = el('div', 'sih-tape'); tape.setAttribute('aria-hidden', 'true');
+          const body = el('div', 'sih-body');
+          const h = el('h2', '', c.errorTitle); h.id = 'errAskTitle';
+          const detail = el('p', 'sih-url'); detail.id = 'errAskDetail';
+          const row = el('div', 'sih-link');
+          const yes = el('button', 'btn', c.errorYes); yes.type = 'button';
+          const no = el('button', 'btn ghost', c.errorNo); no.type = 'button';
+          yes.addEventListener('click', () => { ask.close(); open({ category: c.categories[4] || c.categories[0], what: 'I hit an error on this page: ' + ask.dataset.msg + '\n\n' }); });
+          no.addEventListener('click', () => ask.close());
+          row.append(yes, no);
+          body.append(h, el('p', '', c.errorLead), detail, row);
+          ask.append(tape, body);
+          document.body.append(ask);
+        }
+        ask.dataset.msg = String(msg).slice(0, 300);
+        ask.querySelector('#errAskDetail').textContent = 'Error: ' + ask.dataset.msg;
+        if (ask.showModal) ask.showModal(); else ask.setAttribute('open', '');
+        setTimeout(() => ask.querySelector('.btn').focus(), 30);
+      }, 2500);   // give I.R.I.S. and the page's own error message a moment first
+    }
+    document.addEventListener('portal:error', e => { const d = e.detail || {}; prompt(d.message || d); });
+    document.addEventListener('hub:error', e => { const d = e.detail || {}; prompt(d.message || d); });   // Home couldn't load your info
+    window.addEventListener('error', e => prompt(e.message));
+    window.addEventListener('unhandledrejection', e => prompt(e.reason && (e.reason.message || e.reason)));
+
+    return { open: open, promptError: prompt };
+  })();
+
+  /* Sign-out confirmation: Google's logout signs you out of EVERY account in the browser, so any link to
+     accounts.google.com/Logout (top-bar Sign out, Switch account) asks first, and offers the account-fix guide instead.
+     Copy: BRAND.signOutConfirm. Uses the same pop-up styling as SignInHelp. */
+  (function () {
+    let dlg = null, pending = '';
+    const copy = () => (typeof BRAND !== 'undefined' && BRAND.signOutConfirm) || {
+      title: 'Sign out of everything?', lead: 'This signs you out of every Google account in this browser.', tip: '',
+      confirm: 'Sign out anyway', help: 'Fix my account instead', cancel: 'Cancel' };
+    const portal = () => document.body.dataset.base || (typeof BASE !== 'undefined' ? BASE : location.href);
+    function build() {
+      const c = copy();
+      const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+      dlg = el('dialog', 'sih'); dlg.setAttribute('aria-labelledby', 'socTitle');
+      const tape = el('div', 'sih-tape'); tape.setAttribute('aria-hidden', 'true');
+      const body = el('div', 'sih-body');
+      const h = el('h2', '', c.title); h.id = 'socTitle';
+      const row = el('div', 'sih-link');
+      const go = el('a', 'btn ghost', c.confirm); go.target = '_top'; go.dataset.confirmed = '1';
+      go.addEventListener('click', () => { go.href = pending; });
+      const help = el('button', 'btn', c.help); help.type = 'button';
+      help.addEventListener('click', () => {
+        dlg.close();
+        if (window.SignInHelp && typeof BRAND !== 'undefined') SignInHelp.show(BRAND.signInHelp, portal());
+      });
+      row.append(help, go);
+      const foot = el('div', 'sih-foot');
+      const cancel = el('button', 'sih-trigger', c.cancel); cancel.type = 'button';
+      cancel.addEventListener('click', () => dlg.close());
+      foot.append(el('span', '', ''), cancel);
+      body.append(h, el('p', '', c.lead), c.tip ? el('p', '', c.tip) : '', row, foot);
+      dlg.append(tape, body);
+      dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+      document.body.append(dlg);
+    }
+    document.addEventListener('click', function (e) {
+      const a = e.target.closest && e.target.closest('a[href]');
+      if (!a || a.dataset.confirmed || !/^https:\/\/accounts\.google\.com\/Logout/i.test(a.href)) return;
+      e.preventDefault(); e.stopPropagation();
+      pending = a.href;
+      if (!dlg) build();
+      if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+      setTimeout(() => { const f = dlg.querySelector('.btn'); f && f.focus(); }, 30);   // focus the safe option first
+    }, true);
+  })();
+
+  /* errors in the visitor's browser go to the Sheet's Activity tab (log_client in Utils.gs).
+     At most 5 per page load, so a loop of errors can't flood the Sheet.
+     Server-call failures are logged on the server already (traced_ in Utils.gs). */
+  (function () {
+    let sent = 0;
+    const page = (location.search.match(/[?&]page=([^&]+)/) || [])[1] || 'home';
+    function report(kind, message, where) {
+      if (sent >= 5 || !(window.google && google.script && google.script.run)) return;
+      if (/ResizeObserver loop/.test(String(message))) return;   // harmless browser warning, not a bug
+      sent++;
+      try { google.script.run.withFailureHandler(function () {}).log_client({ kind: kind, message: String(message || ''), where: String(where || ''), page: page, ua: navigator.userAgent }); }
+      catch (e) { /* never break the page */ }
+    }
+    window.__portalErrors = [];   // the last few errors on this page, attached to "Report an issue"
+    const keep = m => { window.__portalErrors.push(new Date().toLocaleTimeString() + ' ' + m); if (window.__portalErrors.length > 8) window.__portalErrors.shift(); };
+    document.addEventListener('portal:error', e => { const d = e.detail || {}; keep('server: ' + (d.message || d)); });
+    window.addEventListener('error', e => { keep(e.message + ' @ ' + (e.filename || '').split('/').pop() + ':' + (e.lineno || '')); report('js_error', e.message, (e.filename || '') + ':' + (e.lineno || '')); });
+    window.addEventListener('unhandledrejection', e => report('promise', e.reason && (e.reason.message || e.reason)));
+  })();
+</script>
