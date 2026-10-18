@@ -86,3 +86,28 @@ Every page view, server call, application, validation failure and error lands in
 
 1. **Sheet** (`setup_applyValidation` + `AdminMenu.gs`): regex/list/range rules on every Applicants column, and order checks on the three track columns, so bad hand edits get rejected or undone.
 2. **Code** (`Utils.gs`): script writes are *also* checked by the Sheet rules, and a bad value throws that rule's help text, which users would see as a confusing error. So the server checks everything first (`RULES`, `validateApplication_`), strips control characters, and blocks formula injection (`safeCell_`). The Apply page fetches the same rules with `utils_getFormRules()`.
+
+## Working on the code (GitHub + clasp)
+
+Repo: https://github.com/Koala3353/leads-applicant-portal · Apps Script project "LEADS App Portal Sample".
+
+One-time setup (you need edit access to the Apps Script project):
+
+```bash
+npm install -g @google/clasp
+clasp login                      # sign in with the account that can edit the project
+git clone https://github.com/Koala3353/leads-applicant-portal.git && cd leads-applicant-portal
+printf '{"scriptId":"1PNYSoaJXNKVgqW4TGj5cbaPQn3rBvcNLUuPglIbjSlo2OOtf-p0G7nTT","rootDir":".","fileExtension":"gs","scriptExtensions":[".gs"],"htmlExtensions":[".html"],"jsonExtensions":[".json"]}\n' > .clasp.json
+```
+
+If `clasp` says the Apps Script API is off, turn it on at https://script.google.com/home/usersettings.
+
+Every time:
+
+1. `git pull` then `clasp pull` (get everyone's latest, including edits made in the browser editor).
+2. Edit locally.
+3. `clasp push` (updates the editor / test deployment only, NOT what applicants see).
+4. `git add -A && git commit -m "what you changed" && git push`.
+5. Publishing to applicants is still manual: Deploy → Manage deployments → Edit → New version. Ask Keene first.
+
+If you edit in the browser editor instead, run `clasp pull` and commit afterwards so GitHub doesn't fall behind.
