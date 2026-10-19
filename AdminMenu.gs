@@ -26,8 +26,8 @@ function onOpen() {
       .addItem('Got everything (SUBMITTED)', 'menu_reqSubmitted')
       .addItem('Approve (APPROVED)', 'menu_reqApproved')
       .addItem('Needs fixing (RETURNED)', 'menu_reqReturned'))
-    .addSubMenu(ui.createMenu('Payment (from the form)')
-      .addItem('Got proof (SUBMITTED)', 'menu_paySubmitted')
+    .addSubMenu(ui.createMenu('Payment (uploaded proof)')
+      .addItem('Proof received (SUBMITTED)', 'menu_paySubmitted')
       .addItem('Verify (VERIFIED)', 'menu_payVerified')
       .addItem('Reject proof (REJECTED)', 'menu_payRejected'))
     .addSeparator()
@@ -86,13 +86,13 @@ function applyToSelection_(field, value) {
     (failed.length ? '\n\nSkipped:\n' + failed.slice(0, 20).join('\n') + (failed.length > 20 ? '\n…' : '') : ''));
 }
 
-/** ApplicantIDs (column A) of every selected row, no duplicates, header skipped. */
+/** ApplicantIDs of every selected row, no duplicates, header skipped. */
 function selectedIds_(sh) {
   const list = sh.getActiveRangeList();
   const ranges = list ? list.getRanges() : [sh.getActiveRange()];
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return [];
-  const colA = sh.getRange(1, 1, lastRow, 1).getValues().map(r => String(r[0]).trim());
+  const colA = sh.getRange(1, col_('ApplicantID') + 1, lastRow, 1).getValues().map(r => String(r[0]).trim());
   const ids = [];
   ranges.forEach(r => {
     for (let row = Math.max(2, r.getRow()); row <= Math.min(r.getLastRow(), lastRow); row++) {
@@ -109,14 +109,14 @@ function selectedIds_(sh) {
 function onEdit(e) {
   try { guardTrackEdit_(e); } catch (err) { console.error('onEdit: ' + (err && err.message)); }
   // config tabs are cached for 2 minutes (Utils.gs cachedTab_): an edit clears the cache right away
-  try { const n = e && e.range && e.range.getSheet().getName(); if ([SHEET.SETTINGS, SHEET.LISTS, SHEET.ADMINS].indexOf(n) >= 0) clearConfigCache_(); } catch (err) { /* fine */ }
+  try { const n = e && e.range && e.range.getSheet().getName(); if ([SHEET.SETTINGS, SHEET.LISTS, SHEET.ADMINS, SHEET.REQUIREMENTS].indexOf(n) >= 0) clearConfigCache_(); } catch (err) { /* fine */ }
 }
 
 function guardTrackEdit_(e) {
   if (!e || !e.range) return;
   const r = e.range, sh = r.getSheet();
   if (sh.getName() !== SHEET.APPLICANTS || r.getLastRow() < 2) return;
-  const trackCols = TRACK_COLS.map(c => COLS.indexOf(c) + 1);
+  const trackCols = TRACK_COLS.map(c => col_(c) + 1);
   if (!trackCols.some(c => c >= r.getColumn() && c <= r.getLastColumn())) return;
 
   const who = String((e.user && e.user.getEmail && e.user.getEmail()) || currentEmail_() || '').toLowerCase();
@@ -130,16 +130,16 @@ function guardTrackEdit_(e) {
   }
 
   const row = r.getRow();
-  const field = COLS[r.getColumn() - 1];
-  const values = sh.getRange(row, 1, 1, COLS.length).getValues()[0];
-  const get = name => String(values[COLS.indexOf(name)] || '');
+  const field = cols_()[r.getColumn() - 1];
+  const values = sh.getRange(row, 1, 1, cols_().length).getValues()[0];
+  const get = name => String(values[col_(name)] || '');
   const id = get('ApplicantID');
   const from = e.oldValue === undefined ? '' : String(e.oldValue);
   const to = e.value === undefined ? '' : String(e.value);
   if (from === to) return;
 
   let problem = '';
-  if (!isAdmin_(who)) problem = 'Only officers in the Admins tab can change ' + field + '.';
+  if (!isAdmin_(who)) problem = 'Only core team members in the Admins tab can change ' + field + '.';
   else if (field === 'Status') {
     if (from && (NEXT_STATUS[from] || []).indexOf(to) < 0) problem = 'Can\'t go from ' + from + ' to ' + (to || 'blank') + '.';
     else if (to === 'CONFIRMED' && !(get('Requirements') === 'APPROVED' && get('Payment') === 'VERIFIED')) {
@@ -156,15 +156,15 @@ function guardTrackEdit_(e) {
     return;
   }
 
-  sh.getRange(row, COLS.indexOf('LastUpdated') + 1).setValue(new Date());
-  sh.getRange(row, COLS.indexOf('ReviewedBy') + 1).setValue(who);
+  sh.getRange(row, col_('LastUpdated') + 1).setValue(new Date());
+  sh.getRange(row, col_('ReviewedBy') + 1).setValue(who);
   logChange_(id, field.toLowerCase() + ' (by hand)', from, to, who);
 
   // auto-confirm, same rule as the menu
   const now = { Status: get('Status'), Requirements: get('Requirements'), Payment: get('Payment') };
   now[field] = to;
   if (now.Status === 'ACCEPTED' && now.Requirements === 'APPROVED' && now.Payment === 'VERIFIED') {
-    sh.getRange(row, COLS.indexOf('Status') + 1).setValue('CONFIRMED');
+    sh.getRange(row, col_('Status') + 1).setValue('CONFIRMED');
     logChange_(id, 'status', 'ACCEPTED', 'CONFIRMED', 'system');
     ss.toast(id + ' is now CONFIRMED.', 'LEADS', 5);
   }

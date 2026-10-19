@@ -25,7 +25,7 @@ If `clasp pull` changed files, someone edited in the browser. Commit those first
 ## While working
 - Only edit the files the human owns (CONTEXT.md ownership table). For shared files (`Utils.gs`, `Styles.html`,
   `Brand.gs`, `Mascot.html`, `Loader.html`, `Code.gs`) write an **"Ask Keene"** note instead of editing.
-- Keep `.gs` as `.gs`; never create `.js` copies. Never rename or reorder sheet columns.
+- Keep `.gs` as `.gs`; never create `.js` copies. Never rename sheet headers (the code finds Applicants columns by header name, `col_()` in Utils.gs; never by position).
 - New Apply question = `RULES` + `COLS` (append at the END) in Utils.gs, `FIELDS` + HTML in Apply.html,
   the draft field list in ApplyApi.gs, and a `judge` line + `LABEL` for I.R.I.S. (CONTEXT.md §9.1).
 - User-facing copy says "core team", never "officers".

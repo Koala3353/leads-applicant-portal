@@ -42,6 +42,7 @@ const BRAND = {
     applied: 'You already applied',
     upload: 'Send requirements',
     pay: 'Send proof of payment',
+    room: 'Book your room',
     admin: 'Open the Sheet',
     signOut: 'Sign out',                  // signs out of Google in this browser, then back to the portal
     signIn: 'Sign in',
@@ -64,7 +65,7 @@ const BRAND = {
     title: 'Classified files',
     note: 'Open a file. We already read it.',
     items: [
-      { q: 'How much does camp cost?', a: 'The camp fee is ₱{fee}. Once you are accepted, you pay first through the payment form on this page. The requirements form opens after your payment is verified.', needs: 'fee', fallback: "The fee hasn't been announced yet. It'll show up here first." },
+      { q: 'How much does camp cost?', a: 'Once you are accepted, the Proof of payment page on this portal shows the fee and how to pay. You pay first, then upload your proof. Requirements open after your payment is verified.' },
       { q: 'When and where is it?', a: '{dates}, at {venue}.', needs: 'dates', fallback: 'Dates and venue are still being finalized.' },
       { q: 'Who can apply? Can freshmen join?', a: 'TODO: core team, write the eligibility rule here (year levels, courses, MEA membership).', todo: true },
       { q: 'What should I bring?', a: 'TODO: core team, write the packing list here.', todo: true },
@@ -108,26 +109,56 @@ const BRAND = {
   },
   modules: {
     apply:   { n: '01', title: 'Apply',            fix: 'A short form and two questions. One of them is about a fear you want to face.' },
-    pay:     { n: '02', title: 'Proof of payment', fix: 'Once accepted, pay first and send your receipt through our form. This page says VERIFIED once the core team checks it.' },
-    req:     { n: '03', title: 'Requirements',     fix: 'After your payment is verified, send your signed PDFs and camp info through our form.' },
+    pay:     { n: '02', title: 'Proof of payment', fix: 'Once accepted: scan the QR, pay, and upload your proof here. It says VERIFIED once the core team checks it.' },
+    req:     { n: '03', title: 'Requirements',     fix: 'After your payment is verified: the forms to fill in, with what each one needs.' },
+    ga:      { n: '04', title: '1st GA',           fix: 'Your first general assembly. Add it to your calendar once the date is set.' },
+    room:    { n: '05', title: 'Room booking',     fix: 'Where you sleep at camp. Opens after your requirements are approved.' },
     sheet:   { n: '00', title: 'Core team',        fix: 'Review applicants in the Sheet. Use the LEADS menu to accept, verify and confirm.' }
+  },
+  /* ---------- Steps.html: the pages after acceptance (?page=pay | reqs | ga | room) ---------- */
+  steps: {
+    pay:  { n: '02', file: 'PAYMENT.EXE', title: 'Proof of payment',
+            lead: 'Scan a code, pay the fee, then upload your proof. The core team checks it and marks it VERIFIED.',
+            how: 'How to pay', qrTitle: 'Scan to pay', upTitle: 'Upload your proof',
+            upHint: 'A screenshot or photo of the receipt that shows the amount, the date and the reference number. PNG, JPG or PDF, up to 8 MB.',
+            states: { NONE: 'No proof on file yet.', SUBMITTED: 'Proof received. The core team is checking it. Upload again only if you sent the wrong file.',
+                      VERIFIED: 'Verified. Your payment is on record. Requirements are next.', REJECTED: 'Your proof was not accepted. Check the details and upload a new one.' },
+            sent: 'Proof received. It is in your file now.' },
+    reqs: { n: '03', file: 'REQUIREMENTS.EXE', title: 'Requirements',
+            lead: 'Fill in every form below. Each one says what it needs. The core team marks your file APPROVED once everything is in.',
+            empty: 'The forms are not posted yet. Check back here.',
+            states: { NONE: 'Nothing received yet.', PARTIAL: 'Some of your forms are in. Finish the rest.', SUBMITTED: 'Everything is in. The core team is checking it.',
+                      RETURNED: 'Something needs fixing. Check your email, then send it again.', APPROVED: 'Approved. Your requirements are complete.' } },
+    ga:   { n: '04', file: 'ASSEMBLY.EXE', title: '1st GA',
+            lead: 'Your first general assembly with the other campers. Attendance is noted.',
+            button: 'Add to Google Calendar' },
+    room: { n: '05', file: 'ROOMS.EXE', title: 'Room booking',
+            lead: 'Where you will sleep at camp.',
+            placeholder: 'Room booking is being set up. The core team will post the details here.' },
+    locked: 'Access denied',
+    guest: 'Sign in with your Ateneo account to open this file.',
+    noFile: 'You have not applied yet. Start your application from the hub.',
+    stopped: 'This file is closed.'
   },
   stateLabels: {                           // pill text on each hub card
     open: 'open', locked: 'locked', waiting: 'in review', action: 'your move', done: 'done', stopped: 'closed'
   },
-  lockedWhy: {                             // shown on locked cards
+  lockedWhy: {                             // shown on locked cards: lockedWhy[card + '_' + reason] first, then lockedWhy[reason]
     apply: 'Applications are closed.',
-    req: 'Opens once your payment is verified.',
-    pay: "Opens once you're accepted.",
-    payAnytime: 'Opens once you apply.',
-    noForm: 'Link coming soon. Check back here.'
+    accept: "Opens once you're accepted.",
+    closed: 'Not open yet. Check back here.',
+    pay: 'Opens once your payment is verified.',
+    req: 'Opens once your requirements are approved.',
+    link: 'Date not set yet. Check back here.',
+    gaOpen: 'Date is set. Add it to your calendar.',
+    roomOpen: 'Open now.'
   },
 
   statusCopy: {
     'SUBMITTED':    'We got your application. Someone from the core team will read it soon.',
     'UNDER REVIEW': 'The core team is reading your file now. Honestly, the waiting is the worst part.',
     'WAITLISTED':   "You're on the waitlist. Slots open up more often than you think.",
-    'ACCEPTED':     "You're accepted. Next: pay and send your receipt. The requirements form opens once payment is verified.",
+    'ACCEPTED':     "You're accepted. Next: pay and upload your proof of payment. Requirements open once your payment is verified.",
     'REJECTED':     'Not this time. Applying still took guts, and we hope you try again next year.',
     'CONFIRMED':    "You're in. See you at camp.",
     'WITHDRAWN':    'You withdrew your application. Message the core team if that was a mistake.'
@@ -239,12 +270,17 @@ const BRAND = {
     pageFace: {                            // resting face on each page (key = ?page= value)
       home: 'nervous',
       apply: 'thinking',
-      game: 'nervous'
+      game: 'nervous',
+      pay: 'thinking', reqs: 'thinking', ga: 'happy', room: 'nervous'
     },
     hello: {                               // first line on each page
       home:  ['nervous', 'Camera 01 is on. You are being observed. Please continue as normal.'],
       apply: ['thinking', 'This is your intake file. Answer honestly. I am only taking notes.'],
-      game:  ['nervous', 'Three feeds. Two of them are empty. Choose a camera when you are ready.']
+      game:  ['nervous', 'Three feeds. Two of them are empty. Choose a camera when you are ready.'],
+      pay:   ['thinking', 'Scan the code. Pay. Upload the proof. I will keep a copy in your file.'],
+      reqs:  ['thinking', 'These are the forms we need from you. Fill in each one. Take your time. I will wait.'],
+      ga:    ['happy', 'Your first assembly. Put it on your calendar. We will be counting heads.'],
+      room:  ['nervous', 'Rooms are being arranged. You will not be sleeping alone.']
     },
     guest: ['thinking', "I can't see who you are. Sign in with your Ateneo account and I can find your file."],
     admin: ['wink', 'Core team detected. The Sheet is in the top bar.'],

@@ -2,11 +2,13 @@
  * Code.gs  (integrator owns this file)
  * The project's entry point and the ONLY doGet. Opens a page based on ?page= in the link.
  *
- * The portal has two pages:
+ * The portal's pages:
  *   .../exec               -> Home.html   the hub (Keene). Shows the Dashboard inside it and links to everything.
- *   .../exec?page=apply    -> Apply.html  the application form (Member A)
+ *   .../exec?page=apply    -> Apply.html  the application form (Member A), then ?page=game (Game.html) submits it
+ *   .../exec?page=pay | reqs | ga | room -> Steps.html (StepsApi.gs): proof of payment, requirements, 1st GA,
+ *                             room booking. Each is locked until its Settings switch is on (see progress_ in Utils.gs).
  * Inside Home: Dashboard.html + DashboardApi.gs (Member B), pulled in with includeOptional_.
- * Requirements + payment: two Google Forms (links in Settings). Officers: the Sheet (AdminMenu.gs).
+ * The core team: the Sheet (AdminMenu.gs).
  *
  * FILE NAMES: Apps Script won't let a .gs and an .html share a name (Home.gs + Home.html = error),
  * so server code is HomeApi.gs, ApplyApi.gs, DashboardApi.gs.
@@ -16,7 +18,11 @@
 const PAGES = {
   home:  'Home',
   apply: 'Apply',
-  game:  'Game'     // Section 2 mini-game; submits the application at the end
+  game:  'Game',    // Section 2 mini-game; submits the application at the end
+  pay:   'Steps',   // 02 proof of payment
+  reqs:  'Steps',   // 03 requirements
+  ga:    'Steps',   // 04 1st GA
+  room:  'Steps'    // 05 room booking
 };
 
 function doGet(e) {

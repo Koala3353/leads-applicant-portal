@@ -25,13 +25,10 @@ function home_getContext_() {
     campStart: campStart_(s),   // ISO or null; Home counts down to it once the applicant is CONFIRMED
     contact: String(s.ContactEmail || ''),
     isAdmin: isAdmin_(email),
-    paymentStage: paymentStage_(),
     event: {
       name: String(s.EventName || ''),
       dates: String(s.EventDates || ''),
-      venue: String(s.EventVenue || ''),
-      fee: s.CampFee === '' || s.CampFee === undefined ? '' : String(s.CampFee),
-      slots: s.Slots === '' || s.Slots === undefined ? '' : String(s.Slots)
+      venue: String(s.EventVenue || '')
     },
     applicant: a ? {
       id: a.ApplicantID,
@@ -41,12 +38,6 @@ function home_getContext_() {
       payment: a.Payment || 'NONE'
     } : null,
     progress: p,
-    // Google Form links pre-filled with this applicant's ID. Only handed out once that step is
-    // unlocked, so nobody can send payment/requirements early. '' if locked or not set up.
-    forms: {
-      requirements: p.requirements.unlocked ? formLink_('RequirementsFormURL', a.ApplicantID) : '',
-      payment: p.payment.unlocked ? formLink_('PaymentFormURL', a.ApplicantID) : ''
-    },
     sheetUrl: isAdmin_(email) ? ss_().getUrl() : ''   // officers get a link to the Sheet
   };
 }

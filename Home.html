@@ -380,13 +380,11 @@
   .path li.stopped{color:var(--danger)}
   .path li.stopped::before{border-color:var(--danger)}
 
-  /* cards: case files. As many 220px+ columns as fit (3 on tablet and up, 1 on phones) */
-  .mods{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:24px 0 0;padding:0;list-style:none}
-  /* officers see 4 cards: 4 across on wide screens, 2x2 on tablets, so none sits alone */
-  .mods.with-admin{grid-template-columns:repeat(2,minmax(0,1fr))}
-  @media (min-width:1000px){.mods.with-admin{grid-template-columns:repeat(4,minmax(0,1fr))}}
-  /* two columns (tablets, narrow laptop windows): three cards would leave a hole, so the third spans the full row */
-  @media (max-width:759px){.mods:not(.with-admin) .mod[data-key="req"]{grid-column:1/-1}}
+  /* cards: case files, one per step (5; the core team sees a 6th). 1 column on phones, 2 on tablets, 3 wide.
+     Without the core-team card the last card (room) stretches so no row has a hole. */
+  .mods{display:grid;grid-template-columns:1fr;gap:16px;margin:24px 0 0;padding:0;list-style:none}
+  @media (min-width:560px){.mods{grid-template-columns:repeat(2,minmax(0,1fr))}.mods:not(.with-admin) .mod[data-key="room"]{grid-column:1/-1}}
+  @media (min-width:1000px){.mods{grid-template-columns:repeat(3,minmax(0,1fr))}.mods:not(.with-admin) .mod[data-key="room"]{grid-column:span 2}}
   .mod{display:flex;flex-direction:column;gap:10px;position:relative;min-width:0;--py:20px;--px:22px}
   .mod.is-action{box-shadow:var(--bevel-dark),6px 6px 0 var(--glow)}
   .mod.is-action .winbar{background:linear-gradient(90deg,#6b6b00,#c8c800);color:#000}
@@ -459,7 +457,6 @@
     .ticker{margin:32px 0}
     .watcher.hide-sm{display:none}
     .cta .btn{width:100%;justify-content:center;min-height:56px;font-size:1.4rem}
-    .mods.with-admin{grid-template-columns:1fr}
     .unit{padding:10px 2px}
     /* the three tracks become slim label/value rows */
     .tracks{grid-template-columns:1fr}
@@ -544,8 +541,6 @@
         <ul class="facts" id="facts">
           <li data-fact="dates">When <b></b></li>
           <li data-fact="venue">Where <b></b></li>
-          <li data-fact="fee">Fee <b></b></li>
-          <li data-fact="slots">Slots <b></b></li>
         </ul>
       </div>
       <p class="scrap hint-note" aria-hidden="true">After the form, they show you three cameras.<br>Only two of them are empty.<span>pick carefully</span></p>
@@ -639,7 +634,7 @@
     </ol>
 
     <ul class="mods" id="mods">
-      <? ['apply', 'pay', 'req', 'sheet'].forEach(function (key) { var m = BRAND.modules[key]; ?>
+      <? ['apply', 'pay', 'req', 'ga', 'room', 'sheet'].forEach(function (key) { var m = BRAND.modules[key]; var pg = { apply: 'apply', pay: 'pay', req: 'reqs', ga: 'ga', room: 'room' }[key]; ?>
       <li class="card mod is-locked" data-key="<?= key ?>">
         <div class="winbar"><span>FILE_<?= m.n ?>.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
         <div class="row"><span class="n"><?= m.n ?></span><span class="pill dim" data-pill>…</span></div>
@@ -647,7 +642,7 @@
         <p class="fix"><?= m.fix ?></p>
         <div class="go">
           <p class="why" data-why></p>
-          <? if (key === 'apply') { ?><a class="btn ghost" data-link href="<?= baseUrl ?>?page=apply" target="_top" aria-disabled="true" tabindex="-1">Open</a><? } else { ?><a class="btn ghost" data-link target="_blank" rel="noopener" aria-disabled="true" tabindex="-1">Open</a><? } ?>
+          <? if (pg) { ?><a class="btn ghost" data-link href="<?= baseUrl ?>?page=<?= pg ?>" target="_top" aria-disabled="true" tabindex="-1">Open</a><? } else { ?><a class="btn ghost" data-link target="_blank" rel="noopener" aria-disabled="true" tabindex="-1">Open</a><? } ?>
         </div>
       </li>
       <? }); ?>
@@ -1131,8 +1126,9 @@
   function nextMove(ctx) {
     const p = ctx.progress, base = document.body.dataset.base;
     if (!ctx.applicant) return ctx.isOpen && ctx.allowedDomain ? { href: base + '?page=apply', text: BRAND.buttons.apply } : null;
-    if (p.payment.state === 'action' && ctx.forms.payment) return { href: ctx.forms.payment, text: BRAND.buttons.pay, external: true };   // pay first
-    if (p.requirements.state === 'action' && ctx.forms.requirements) return { href: ctx.forms.requirements, text: BRAND.buttons.upload, external: true };
+    if (p.payment.state === 'action') return { href: base + '?page=pay', text: BRAND.buttons.pay };   // pay first
+    if (p.requirements.state === 'action') return { href: base + '?page=reqs', text: BRAND.buttons.upload };
+    if (p.room.state === 'open') return { href: base + '?page=room', text: BRAND.buttons.room };
     return { scroll: true, text: BRAND.buttons.status };
   }
 
@@ -1186,8 +1182,7 @@
     }
 
     // event facts (hidden when blank or TBA-free)
-    const facts = { dates: ctx.event.dates, venue: ctx.event.venue,
-      fee: ctx.event.fee ? '₱' + Number(ctx.event.fee).toLocaleString('en-PH') : '', slots: ctx.event.slots };
+    const facts = { dates: ctx.event.dates, venue: ctx.event.venue };
     Object.keys(facts).forEach(k => {
       const li = document.querySelector('[data-fact="' + k + '"]');
       if (facts[k]) { li.querySelector('b').textContent = facts[k]; li.classList.add('show'); }
@@ -1222,22 +1217,21 @@
     // hub cards
     const L = BRAND.lockedWhy;
     if (!ctx.signedIn) {
-      ['apply', 'req', 'pay'].forEach(k => setModule(k, 'locked', ''));
+      ['apply', 'pay', 'req', 'ga', 'room'].forEach(k => setModule(k, 'locked', ''));
       $('hubNote').textContent = BRAND.hub.guestNote;
     } else {
       if (a) setModule('apply', 'done', BRAND.buttons.applied, 'View');
       else if (!ctx.allowedDomain) setModule('apply', 'locked', 'Use your Ateneo account.');
       else setModule('apply', p.apply.state, p.apply.unlocked ? 'Open until the deadline above.' : L.apply, 'Start');
 
-      // forms: locked until unlocked; "your move"/"in review" with the pre-filled Google Form link
-      const reqWhy = p.requirements.state === 'locked' ? L.req
-        : (p.requirements.unlocked && !ctx.forms.requirements ? L.noForm : 'Requirements: ' + a.requirements);
-      const label = st => st === 'done' ? 'Done' : (st === 'waiting' ? 'Send again' : 'Open form');
-      setModule('req', p.requirements.state, reqWhy, label(p.requirements.state), ctx.forms.requirements);
-
-      const payWhy = p.payment.state === 'locked' ? (ctx.paymentStage === 'ANYTIME' ? L.payAnytime : L.pay)
-        : (p.payment.unlocked && !ctx.forms.payment ? L.noForm : 'Payment: ' + (a ? a.payment : 'NONE'));
-      setModule('pay', p.payment.state, payWhy, label(p.payment.state), ctx.forms.payment);
+      // the steps after acceptance: each opens its own page once progress_ (Utils.gs) unlocks it.
+      // Locked cards say what they're waiting for (BRAND.lockedWhy[key + '_' + why], then lockedWhy[why]).
+      const now = { pay: a ? 'Payment: ' + a.payment : '', req: a ? 'Requirements: ' + a.requirements : '', ga: L.gaOpen, room: L.roomOpen };
+      [['pay', 'payment'], ['req', 'requirements'], ['ga', 'ga'], ['room', 'room']].forEach(([key, step]) => {
+        const st = p[step];
+        const why = st.state === 'locked' ? (L[key + '_' + st.why] || L[st.why] || '') : (st.state === 'stopped' ? '' : now[key]);
+        setModule(key, st.state, why, st.state === 'done' ? 'View' : 'Open');
+      });
     }
     if (ctx.isAdmin && ctx.sheetUrl) setModule('sheet', 'open', '', BRAND.buttons.admin, ctx.sheetUrl);
 

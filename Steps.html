@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<?!= include('Styles') ?>
+<?!= brand_css() ?>
+<!-- Steps.html  (integrator owns this file) The steps after acceptance, one page with four views:
+     ?page=pay (02 proof of payment), reqs (03 requirements), ga (04 1st GA), room (05 room booking).
+     Server: StepsApi.gs (steps_get, steps_uploadProof). Copy: BRAND.steps. What's unlocked: progress_ in Utils.gs.
+     Never write a real scriptlet tag in a comment: Apps Script runs scriptlets even inside comments. -->
+<style>
+  .state{display:none}
+  .state.show{display:block}
+  .s-msg{min-height:1.4em;margin:0 0 14px;font-family:var(--mono);font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);overflow-wrap:anywhere}
+  .s-msg.bad{color:var(--danger)}
+  .s-msg.good{color:var(--glow)}
+
+  /* tabs: the five steps as a strip of file tabs, so people can see where they are */
+  .s-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 22px;padding:0;list-style:none}
+  .s-tabs a{display:block;font-family:var(--os);font-size:1.15rem;line-height:1;letter-spacing:.04em;color:#000;text-decoration:none;background:var(--win);
+    padding:7px 11px 6px;box-shadow:var(--bevel-out)}
+  .s-tabs a[aria-current="page"]{background:var(--glow);box-shadow:var(--bevel-in)}
+  .s-tabs a.is-locked{color:var(--win-sh);text-shadow:1px 1px 0 var(--win-hi)}
+  .s-tabs a.is-done::after{content:" \2713"}
+
+  .s-grid{display:grid;gap:22px;grid-template-columns:minmax(0,1fr)}
+  @media (min-width:860px){.s-grid.two{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);align-items:start}}
+  .s-card{--py:20px;--px:22px}
+  .s-card h2{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.5rem;margin:0 0 .5em;letter-spacing:.02em}
+  .s-text{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;line-height:1.55}
+  .s-due{font-family:var(--mono);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--glow);margin:12px 0 0}
+  .s-status{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0 0 22px;padding:12px 16px;border:1.5px dashed var(--line)}
+  .s-status p{margin:0;min-width:0;flex:1 1 16em;overflow-wrap:anywhere}
+
+  /* QR codes: taped to the page like evidence photos */
+  .qrs{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));margin:6px 0 0}
+  .qr{position:relative;margin:0;padding:12px 12px 10px;background:#f4f1ea;color:#1b1b1b;box-shadow:4px 4px 0 #000;transform:rotate(var(--r,-1deg))}
+  .qr:nth-child(2n){--r:1.2deg}
+  .qr::before{content:"";position:absolute;left:50%;top:-10px;width:64px;height:20px;margin-left:-32px;background:rgba(255,255,160,.55);transform:rotate(-3deg)}
+  .qr img{display:block;width:100%;aspect-ratio:1;object-fit:contain;background:#fff;image-rendering:pixelated}
+  /* the CRT scanlines + grain sit over the whole page; they switch off while a QR code is on screen so it scans cleanly */
+  html.qr-clean::after,html.qr-clean body::before,html.qr-clean body::after{display:none}
+  .qr figcaption{font-family:var(--type);font-size:1rem;margin-top:8px;text-align:center;overflow-wrap:anywhere}
+
+  /* upload */
+  .drop{position:relative;display:grid;place-items:center;gap:8px;min-height:170px;padding:18px;text-align:center;border:2px dashed var(--line);background:rgba(0,0,0,.25);cursor:pointer}
+  .drop:hover,.drop.over{border-color:var(--glow)}
+  .drop:focus-within{outline:2px dotted var(--glow);outline-offset:3px}
+  .drop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+  .drop b{font-family:var(--os);font-size:1.4rem;font-weight:400;letter-spacing:.04em}
+  .drop small{color:var(--muted);max-width:30em}
+  .drop img{max-width:100%;max-height:220px;box-shadow:4px 4px 0 #000}
+  .drop .fname{font-family:var(--mono);font-size:.85rem;overflow-wrap:anywhere}
+  .s-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
+
+  /* requirement forms: manila case folders */
+  .forms{display:grid;gap:26px;margin:0;padding:0;list-style:none;counter-reset:f}
+  .form{position:relative;padding:22px clamp(14px,3vw,26px) 20px;background:#d9c08a;color:#1b1b1b;box-shadow:5px 5px 0 #000;counter-increment:f}
+  .form::before{content:"FORM " counter(f, decimal-leading-zero);position:absolute;top:-18px;left:16px;padding:3px 12px 2px;background:#d9c08a;font-family:var(--type);font-size:.85rem;letter-spacing:.12em}
+  .form h3{font-family:var(--type);font-size:1.3rem;font-weight:400;margin:0 0 8px;overflow-wrap:anywhere}
+  .form p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
+  .form .s-due{color:#8b0000}
+  .form .s-actions .btn.ghost{background:#efe3c4}
+  .form iframe{display:block;width:100%;height:min(70vh,640px);margin-top:16px;border:0;background:#fff;box-shadow:inset 0 0 0 2px #1b1b1b}
+
+  .ga-big{font-family:var(--display);text-transform:uppercase;font-size:clamp(1.6rem,5vw,2.6rem);line-height:1;margin:0 0 14px}
+  .locked-win p{margin:0 0 14px}
+  .stamp-ink.big{font-size:1.6rem;transform:rotate(-6deg);margin:6px 0 14px}
+  @media (max-width:560px){
+    .s-tabs a{font-size:1rem;padding:6px 8px 5px}
+    .s-actions .btn{flex:1 1 100%;justify-content:center}
+  }
+</style>
+</head>
+<body data-loader-wait>
+<?!= include('Loader') ?>
+<?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
+<div class="wrap">
+  <?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
+  <? var S = BRAND.steps[page] || BRAND.steps.pay; ?>
+  <section class="page-head">
+    <p class="eyebrow">FILE <?= S.n ?> // <?= S.title ?></p>
+    <h1 class="rgb"><?= S.title ?></h1>
+    <p><?= S.lead ?></p>
+  </section>
+
+  <ul class="s-tabs" id="tabs" aria-label="Steps">
+    <li><a data-tab="pay" href="<?= baseUrl ?>?page=pay">02 Payment</a></li>
+    <li><a data-tab="reqs" href="<?= baseUrl ?>?page=reqs">03 Requirements</a></li>
+    <li><a data-tab="ga" href="<?= baseUrl ?>?page=ga">04 1st GA</a></li>
+    <li><a data-tab="room" href="<?= baseUrl ?>?page=room">05 Rooms</a></li>
+  </ul>
+  <p class="s-msg" id="msg" role="status" aria-live="polite"></p>
+
+  <div class="card s-card state show" id="state-loading" role="status"><p class="mono">[REC] Opening your file…</p></div>
+
+  <div class="card s-card state" id="state-error" role="alert">
+    <div class="winbar red"><span>ERROR.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+    <p id="errorMsg"></p>
+    <div class="s-actions"><button class="btn ghost" type="button" id="retry">Try again</button></div>
+  </div>
+
+  <div class="card s-card state locked-win" id="state-locked">
+    <div class="winbar off"><span><?= S.file ?></span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+    <p class="stamp-ink big"><?= BRAND.steps.locked ?></p>
+    <p id="lockedMsg"></p>
+    <div class="s-actions"><a class="btn ghost" href="<?= baseUrl ?>">Back to the hub</a></div>
+  </div>
+
+  <!-- 02 proof of payment -->
+  <div class="state" id="state-pay">
+    <div class="s-status"><span class="pill" id="payPill"></span><p id="payState"></p></div>
+    <div class="s-grid two">
+      <div class="card s-card">
+        <div class="winbar"><span><?= S.file ?></span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+        <h2><?= BRAND.steps.pay.how ?></h2>
+        <p class="s-text" id="payDetails"></p>
+        <p class="s-due" id="payDue" hidden></p>
+        <div id="qrWrap" hidden>
+          <h2 style="margin-top:22px"><?= BRAND.steps.pay.qrTitle ?></h2>
+          <div class="qrs" id="qrs"></div>
+        </div>
+      </div>
+      <form class="card s-card" id="upForm" hidden>
+        <div class="winbar"><span>UPLOAD.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+        <h2><?= BRAND.steps.pay.upTitle ?></h2>
+        <label class="drop" id="drop">
+          <input type="file" id="proof" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" aria-describedby="upHint">
+          <span id="dropInner"><b>Choose a file</b><br><small id="upHint"><?= BRAND.steps.pay.upHint ?></small></span>
+        </label>
+        <div class="s-actions"><button class="btn" type="submit" id="upBtn" disabled>Send proof</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 03 requirements -->
+  <div class="state" id="state-reqs">
+    <div class="s-status"><span class="pill" id="reqPill"></span><p id="reqState"></p></div>
+    <div class="card s-card" id="reqNoteCard" hidden style="margin-bottom:34px">
+      <div class="winbar"><span><?= BRAND.steps.reqs.file ?></span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+      <p class="s-text" id="reqNote"></p>
+      <p class="s-due" id="reqDue" hidden></p>
+    </div>
+    <ol class="forms" id="forms"></ol>
+    <p class="mono" id="formsEmpty" hidden><?= BRAND.steps.reqs.empty ?></p>
+  </div>
+
+  <!-- 04 1st GA -->
+  <div class="card s-card state" id="state-ga">
+    <div class="winbar"><span><?= BRAND.steps.ga.file ?></span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+    <p class="ga-big"><?= BRAND.steps.ga.title ?></p>
+    <p class="s-text" id="gaDetails"></p>
+    <div class="s-actions"><a class="btn" id="gaLink" target="_blank" rel="noopener"><?= BRAND.steps.ga.button ?></a></div>
+  </div>
+
+  <!-- 05 room booking (placeholder) -->
+  <div class="card s-card state" id="state-room">
+    <div class="winbar"><span><?= BRAND.steps.room.file ?></span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+    <p class="s-text" id="roomNote"></p>
+  </div>
+</div>
+
+<script>
+  const BRAND = <?!= brand_json() ?>;
+  const PAGE = <?!= JSON.stringify(String(page || 'pay')).replace(/</g, '\\u003c') ?>;
+  const T = BRAND.steps;
+  const $ = id => document.getElementById(id);
+  const call = (fn, ...args) => window.runServer(fn, ...args);
+  const PILL = { VERIFIED: 'ok', APPROVED: 'ok', SUBMITTED: 'wait', PARTIAL: 'wait', REJECTED: 'warn', RETURNED: 'warn' };
+  const fmtDate = iso => new Date(iso).toLocaleString('en-PH', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const kuya = (face, text) => { try { window.Iris && window.Iris.say([face, text]); } catch (e) {} };
+
+  function show(name) {
+    document.querySelectorAll('.state').forEach(el => el.classList.toggle('show', el.id === 'state-' + name));
+    if (window.Loader) Loader.hide();
+  }
+  function msg(text, tone) { $('msg').textContent = text || ''; $('msg').className = 's-msg' + (tone ? ' ' + tone : ''); }
+
+  /* tabs: mark the current page, and which steps are locked / done */
+  function paintTabs(progress) {
+    const map = { pay: 'payment', reqs: 'requirements', ga: 'ga', room: 'room' };
+    document.querySelectorAll('[data-tab]').forEach(a => {
+      const k = a.dataset.tab, st = progress ? progress[map[k]] : '';
+      if (k === PAGE) a.setAttribute('aria-current', 'page');
+      a.classList.toggle('is-locked', st === 'locked' || st === 'stopped');
+      a.classList.toggle('is-done', st === 'done');
+    });
+  }
+
+  function load() {
+    show('loading'); msg('');
+    call('steps_get', PAGE).then(render).catch(err => {
+      $('errorMsg').textContent = (err && err.message) || 'The file did not open. Try again.';
+      show('error');
+    });
+  }
+  $('retry').addEventListener('click', load);
+
+  function render(d) {
+    paintTabs(d.progress);
+    const L = BRAND.lockedWhy, key = { pay: 'pay', reqs: 'req', ga: 'ga', room: 'room' }[d.page];
+    if (!d.signedIn) return locked(T.guest);
+    if (!d.applicant) return locked(T.noFile);
+    if (d.step.state === 'stopped') return locked(T.stopped);
+    if (!d.content) return locked(L[key + '_' + d.step.why] || L[d.step.why] || L.closed);
+    ({ pay: renderPay, reqs: renderReqs, ga: renderGa, room: renderRoom })[d.page](d);
+  }
+  function locked(text) { $('lockedMsg').textContent = text; show('locked'); }
+
+  /* ---------- 02 proof of payment ---------- */
+  function renderPay(d) {
+    const c = d.content, v = d.applicant.payment;
+    $('payPill').textContent = 'Payment: ' + v; $('payPill').className = 'pill ' + (PILL[v] || 'dim');
+    $('payState').textContent = T.pay.states[v] || '';
+    $('payDetails').textContent = c.details || 'The core team will post the amount and payment details here.';
+    if (c.deadline) { $('payDue').hidden = false; $('payDue').textContent = 'Send it by ' + fmtDate(c.deadline); }
+    const box = $('qrs'); box.textContent = '';
+    (c.qrs || []).forEach(q => {
+      const f = document.createElement('figure'); f.className = 'qr';
+      const img = new Image(); img.src = q.src; img.alt = 'QR code' + (q.label ? ' for ' + q.label : ''); img.loading = 'lazy';
+      f.appendChild(img);
+      if (q.label) { const cap = document.createElement('figcaption'); cap.textContent = q.label; f.appendChild(cap); }
+      box.appendChild(f);
+    });
+    $('qrWrap').hidden = !(c.qrs || []).length;
+    if (window.IntersectionObserver && !$('qrWrap').hidden) {
+      new IntersectionObserver(es => document.documentElement.classList.toggle('qr-clean', es.some(x => x.isIntersecting)), { threshold: .25 })
+        .observe($('qrs'));
+    }
+    $('upForm').hidden = !d.step.unlocked;   // verified: nothing left to upload
+    if (v === 'VERIFIED') kuya('love', T.pay.states.VERIFIED);
+    show('pay');
+  }
+
+  // Large photos are shrunk in the browser first (phones take 5+ MB pictures): faster upload, well under the limit.
+  let picked = null;
+  $('proof').addEventListener('change', () => pick($('proof').files[0]));
+  ['dragenter', 'dragover'].forEach(t => $('drop').addEventListener(t, e => { e.preventDefault(); $('drop').classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => $('drop').addEventListener(t, () => $('drop').classList.remove('over')));
+  $('drop').addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) pick(e.dataTransfer.files[0]); });
+
+  function pick(file) {
+    picked = null; $('upBtn').disabled = true; msg('');
+    if (!file) return;
+    const okType = /^image\/(png|jpe?g|webp|heic|heif)$/.test(file.type) || file.type === 'application/pdf';
+    if (!okType) return msg('Upload a photo (PNG, JPG, WEBP, HEIC) or a PDF.', 'bad');
+    const inner = $('dropInner'); inner.textContent = '';
+    const done = f => {
+      if (f.size > 8 * 1024 * 1024) return msg('That file is over 8 MB. Send a smaller photo or a screenshot.', 'bad');
+      picked = f; $('upBtn').disabled = false;
+      if (/^image\//.test(f.type) && !/hei[cf]/.test(f.type)) { const img = new Image(); img.src = URL.createObjectURL(f); img.alt = 'Your proof of payment'; inner.appendChild(img); }
+      const n = document.createElement('div'); n.className = 'fname'; n.textContent = file.name + ' (' + Math.ceil(f.size / 1024) + ' KB)'; inner.appendChild(n);
+    };
+    if (/^image\/(png|jpe?g|webp)$/.test(file.type) && file.size > 1.5 * 1024 * 1024) shrink(file).then(done).catch(() => done(file));
+    else done(file);
+  }
+  function shrink(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, 2000 / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        cv.toBlob(b => b ? resolve(new File([b], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' })) : reject(), 'image/jpeg', .85);
+      };
+      img.onerror = reject; img.src = URL.createObjectURL(file);
+    });
+  }
+  $('upForm').addEventListener('submit', e => {
+    e.preventDefault();
+    if (!picked) return;
+    $('upBtn').disabled = true; msg('Uploading…');
+    if (window.Loader) Loader.show('Filing your proof…');
+    const reader = new FileReader();
+    reader.onload = () => {
+      const data = String(reader.result).split(',')[1] || '';
+      call('steps_uploadProof', { name: picked.name, type: picked.type, data: data }).then(r => {
+        if (window.Loader) Loader.hide();
+        if (!r || !r.ok) { $('upBtn').disabled = false; return msg((r && r.error) || 'That did not go through. Try again.', 'bad'); }
+        kuya('happy', T.pay.sent);
+        picked = null; $('proof').value = ''; $('dropInner').innerHTML = '<b>Choose a file</b>';
+        load();
+        setTimeout(() => msg(T.pay.sent, 'good'), 900);
+      }).catch(err => { if (window.Loader) Loader.hide(); $('upBtn').disabled = false; msg((err && err.message) || 'That did not go through. Try again.', 'bad'); });
+    };
+    reader.onerror = () => { if (window.Loader) Loader.hide(); $('upBtn').disabled = false; msg('That file could not be read. Try another one.', 'bad'); };
+    reader.readAsDataURL(picked);
+  });
+
+  /* ---------- 03 requirements ---------- */
+  function renderReqs(d) {
+    const c = d.content, v = d.applicant.requirements;
+    $('reqPill').textContent = 'Requirements: ' + v; $('reqPill').className = 'pill ' + (PILL[v] || 'dim');
+    $('reqState').textContent = T.reqs.states[v] || '';
+    $('reqNoteCard').hidden = !(c.note || c.deadline);
+    $('reqNote').textContent = c.note || '';
+    if (c.deadline) { $('reqDue').hidden = false; $('reqDue').textContent = 'Everything is due ' + fmtDate(c.deadline); }
+    const list = $('forms'); list.textContent = '';
+    (c.forms || []).forEach(f => {
+      const li = document.createElement('li'); li.className = 'form';
+      const h = document.createElement('h3'); h.textContent = f.title; li.appendChild(h);
+      if (f.what) { const p = document.createElement('p'); p.textContent = f.what; li.appendChild(p); }
+      if (f.due) { const p = document.createElement('p'); p.className = 's-due'; p.textContent = 'Due ' + (/^\d{4}-/.test(f.due) ? fmtDate(f.due) : f.due); li.appendChild(p); }
+      const act = document.createElement('div'); act.className = 's-actions';
+      if (f.link) {
+        const a = document.createElement('a'); a.className = 'btn'; a.href = f.link; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Open form'; act.appendChild(a);
+      }
+      if (f.embed) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ghost'; b.textContent = 'Preview here';
+        b.setAttribute('aria-expanded', 'false');
+        b.addEventListener('click', () => {
+          let fr = li.querySelector('iframe');
+          if (fr) { fr.remove(); b.textContent = 'Preview here'; b.setAttribute('aria-expanded', 'false'); return; }
+          fr = document.createElement('iframe'); fr.src = f.embed; fr.title = f.title; fr.loading = 'lazy'; li.appendChild(fr);
+          b.textContent = 'Close preview'; b.setAttribute('aria-expanded', 'true');
+        });
+        act.appendChild(b);
+      }
+      if (act.children.length) li.appendChild(act);
+      list.appendChild(li);
+    });
+    $('formsEmpty').hidden = !!(c.forms || []).length;
+    show('reqs');
+  }
+
+  /* ---------- 04 1st GA ---------- */
+  function renderGa(d) {
+    $('gaDetails').textContent = d.content.details || '';
+    $('gaDetails').hidden = !d.content.details;
+    $('gaLink').href = d.content.link;
+    show('ga');
+  }
+
+  /* ---------- 05 room booking (placeholder) ---------- */
+  function renderRoom(d) {
+    $('roomNote').textContent = d.content.note || T.room.placeholder;
+    show('room');
+  }
+
+  paintTabs(null);
+  load();
+</script>
+</body>
+</html>

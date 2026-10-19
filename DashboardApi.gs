@@ -31,16 +31,9 @@ function dash_get_() {
       lastUpdated: a.LastUpdated || null
     },
     progress: p,
-    requirements: [],   // no checklist: the requirements Google Form says what to send
-    // pre-filled Google Form links, only once that step is unlocked ('' otherwise or if not set up)
-    forms: {
-      requirements: p.requirements.unlocked ? formLink_('RequirementsFormURL', a.ApplicantID) : '',
-      payment: p.payment.unlocked ? formLink_('PaymentFormURL', a.ApplicantID) : ''
-    },
-    payment: {
-      fee: s.CampFee === '' || s.CampFee === undefined ? null : Number(s.CampFee),
-      instructions: String(s.PaymentInstructions || '')
-    },
+    // each step has its own page (Steps.html): ?page=pay, reqs, ga, room. progress says which are open.
+    pages: { payment: 'pay', requirements: 'reqs', ga: 'ga', room: 'room' },
+    payment: { details: String(s.PaymentDetails || '') },
     deadlines: { requirements: iso(s.RequirementsDeadline), payment: iso(s.PaymentDeadline) },
     event: { name: String(s.EventName || ''), dates: String(s.EventDates || ''), venue: String(s.EventVenue || '') }
   };

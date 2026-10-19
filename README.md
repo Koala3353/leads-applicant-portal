@@ -2,32 +2,41 @@
 
 LEADS is MEA's off-site leadership camp. Theme: **LEADS: Oversight** (fear of being watched, of being boxed in, of failing). "You are being watched. Good. Apply anyway."
 
-One Google Sheet (the database) + one small Apps Script web app + two Google Forms.
+One Google Sheet (the database) + one small Apps Script web app + the requirement Google Forms.
 
 | Part | What it is | Owner |
 |---|---|---|
 | **Home** (`.../exec`) | The hub: countdown, the applicant's progress, next step, links to everything. The Dashboard sits inside it. | Keene (done) |
 | **Dashboard** | The applicant's own area, inside Home: status, what to prepare, Form buttons when it's their turn | Member B |
 | **Apply** (`.../exec?page=apply`) | The application form | Member A |
-| **Requirements form**, **Payment form** | Google Forms that collect the PDFs, camp info and proof of payment | officers |
+| **Steps** (`?page=pay`, `reqs`, `ga`, `room`) | Proof of payment (upload), requirements (links to the Google Forms), 1st GA, room booking | Keene |
+| **Requirement forms** | Google Forms listed in the Requirements tab: PDFs and camp info | the core team |
 | **Officer side** | The Sheet itself, with a **LEADS** menu | Keene (done) |
 
 The team works from [CONTEXT.md](CONTEXT.md): paste it into your AI first.
 
 ## How an applicant moves through LEADS
 
-Three separate tracks, so payment can come before *or* after acceptance:
+Five steps, each with its own page. Steps 02 to 05 are only for **ACCEPTED** applicants, open **in order**, and stay locked until the core team switches them on in **Settings**:
+
+| Step | Page | Opens when |
+|---|---|---|
+| 01 Apply (+ the Game) | `?page=apply` | `ApplicationsOpen` and before `Deadline` |
+| 02 Proof of payment: payment details, QR codes, upload (saved to Drive, linked in `PaymentProof`) | `?page=pay` | `PaymentOpen` = TRUE |
+| 03 Requirements: the forms in the **Requirements** tab, with instructions and a preview | `?page=reqs` | `RequirementsOpen` = TRUE **and** Payment VERIFIED |
+| 04 1st GA: "Add to Google Calendar" | `?page=ga` | `GACalendarLink` is filled in |
+| 05 Room booking (placeholder for now) | `?page=room` | `RoomBookingOpen` = TRUE **and** Requirements APPROVED |
+
+Three tracks record where each applicant is:
 
 | Track | Values | Who moves it |
 |---|---|---|
-| **Status** (the decision) | SUBMITTED → UNDER REVIEW → ACCEPTED / WAITLISTED / REJECTED → CONFIRMED (WITHDRAWN any time) | officers |
-| **Requirements** (Form) | NONE → PARTIAL → SUBMITTED → APPROVED (RETURNED = fix and resend) | officers, after checking Form responses |
-| **Payment** (Form) | NONE → SUBMITTED → VERIFIED (REJECTED = resend) | officers, after checking Form responses |
+| **Status** (the decision) | SUBMITTED → UNDER REVIEW → ACCEPTED / WAITLISTED / REJECTED → CONFIRMED (WITHDRAWN any time) | the core team |
+| **Payment** (upload) | NONE → SUBMITTED → VERIFIED (REJECTED = upload again) | the upload sets SUBMITTED; the core team verifies |
+| **Requirements** (Forms) | NONE → PARTIAL → SUBMITTED → APPROVED (RETURNED = fix and resend) | the core team, after checking Form responses |
 
-- **Pay first.** The payment Form link appears once **ACCEPTED**, or right after applying when Settings › `PaymentStage` = `ANYTIME`.
-- The requirements Form link appears once **ACCEPTED and Payment is VERIFIED**.
 - ACCEPTED + APPROVED + VERIFIED → **CONFIRMED** automatically.
-- `progress_()` in Utils.gs is the one place these unlock rules live. The hub and Dashboard both use it.
+- `progress_()` in Utils.gs is the one place these unlock rules live. The hub, the Dashboard and the Steps page all use it.
 
 ## How officers work (in the Sheet)
 
@@ -40,11 +49,12 @@ Three separate tracks, so payment can come before *or* after acceptance:
 
 | File | Owner | What it does |
 |---|---|---|
-| `Code.gs` | Keene | The only `doGet`. Home, or `?page=apply`. Anything else → Home |
-| `Utils.gs` | Keene | Settings, lookups, **server-side validation**, status rules, Form links, `progress_()`, the Log and the **Activity** tab |
+| `Code.gs` | Keene | The only `doGet`. Home, `?page=apply`, `game`, `pay`, `reqs`, `ga`, `room`. Anything else → Home |
+| `Utils.gs` | Keene | Settings, lookups, **server-side validation**, status rules, `progress_()`, the **Activity** tab (incl. CHANGE rows for every status/track change). Columns are found by header name |
 | `AdminMenu.gs` | Keene | The LEADS menu and the hand-edit check (`onOpen`, `onEdit`) |
 | `Brand.gs` | anyone | All copy, colors, fonts. Edit this to re-theme |
-| `Setup.gs` | Keene | Sheet validation, colors, Log protection. Safe to re-run |
+| `Setup.gs` | Keene | Sheet validation, colors, Activity protection. Safe to re-run. `setup_cleanupAfterDeploy` = the one-time Oct 2026 clean-up |
+| `StepsApi.gs` + `Steps.html` | Keene | Steps 02 to 05: payment upload, requirements, 1st GA, room booking |
 | `HomeApi.gs` + `Home.html` | Keene | The hub |
 | `Styles.html`, `PageTop.html`, `Loader.html`, `Mascot.html` | shared | Base theme; top bar with "Back to the hub"; SVG loading overlay; I.R.I.S. the mascot, a pocket CRT television (lines, faces and LED colors in `BRAND.mascot`, turn off with `show: false`) |
 | `Apply.html` (+ `ApplyApi.gs`, to create) | Member A | Placeholder: the application form |
@@ -56,17 +66,13 @@ Apps Script won't let a `.gs` and an `.html` share a name, which is why server c
 
 1. **Open the Sheet** (owned by MEA's Ateneo account) → Extensions → Apps Script. Name the project "LEADS Applicant Portal".
 2. **Paste the files.** Every `.gs` above as a Script (`+ → Script`, no `.gs` in the name), every `.html` as HTML. Replace `appsscript.json` via Project Settings → "Show appsscript.json". If the project still has `Status`, `Upload`, `Payment` or `Admin` files from earlier, delete them.
-3. **Sheet tabs.** The Sheet needs `Applicants`, `Settings`, `Lists`, `Admins` and `Log` (already set up; the one-time `Migrate.gs` that built them was deleted on 2026-10-15). Run `setup_applyValidation` once after any column change. The `Activity` tab makes itself the first time the portal logs something.
-4. **Make the two Google Forms** (from the same Ateneo account):
-   - Turn on *Collect email addresses* (Verified) and *Restrict to users in Ateneo*.
-   - Add a short-answer question **"Applicant ID"** (required) as the first question.
-   - Requirements form: file-upload questions for each required document, plus camp info (emergency contact + number, dietary, medical, shirt size). Payment form: amount, reference number, the receipt upload.
-   - For each form: ⋮ → **Get pre-filled link** → type `APP-0000` in Applicant ID → Get link → Copy. Paste it into Settings › `RequirementsFormURL` / `PaymentFormURL`. The portal swaps in each applicant's own ID.
-   - Link each form's responses to a Sheet (Responses → Link to Sheets) so officers can match them by Applicant ID.
-5. **Fill the yellow cells.** Settings (event, fee, slots, deadlines, `PaymentStage`, `PaymentInstructions`, `ContactEmail`), Lists (Courses, MEAInvolvement), Admins (officer emails). Delete the EXAMPLE applicant rows.
-6. **Reload the Sheet** so the LEADS menu appears.
-7. **Test:** Deploy → Test deployments → open the `/dev` link.
-8. **Go live:** Deploy → New deployment → Web app. Execute as **Me**, access **Anyone within Ateneo**. Share the `/exec` link. After later changes: Manage deployments → edit → Version: New version.
+3. **Sheet tabs.** `Applicants`, `Settings`, `Requirements`, `Lists`, `Admins`, `MemData`, plus `Activity` and the hidden `Drafts` (both made automatically). Run `setup_applyValidation` once after any column change.
+4. **Drive permission (once).** Run `steps_authorizeDrive` from the editor and allow Drive. It makes the proof-of-payment folder and saves its link in Settings › `PaymentFolder`; share that folder with the core team.
+5. **Requirement forms** (from the same Ateneo account): turn on *Collect email addresses* (Verified) and *Restrict to users in Ateneo*, and add a short-answer **"Applicant ID"** question first. ⋮ → **Get pre-filled link** → type `APP-0000` → copy. Add one row per form to the **Requirements** tab (`Form | Link | What to do | Due`). The portal swaps in each applicant's own ID.
+6. **Fill Settings** (each row says what it does): event details, deadlines, `PaymentDetails`, `PaymentQRCodes` (`Label | Drive link`, one per line), `ContactEmail`. Turn steps on with `PaymentOpen`, `RequirementsOpen`, `RoomBookingOpen`; the 1st GA opens when `GACalendarLink` is filled in. Lists (Courses, MEAInvolvement), Admins (core team emails).
+7. **Reload the Sheet** so the LEADS menu appears.
+8. **Test:** Deploy → Test deployments → open the `/dev` link.
+9. **Go live:** Deploy → New deployment → Web app. Execute as **Me**, access **Anyone within Ateneo**. Share the `/exec` link. After later changes: Manage deployments → edit → Version: New version.
 
 > **Deploy from an Ateneo account.** If the owner is in a different Google Workspace (e.g. a personal or company account), Google hides applicants' emails and everyone shows as "not signed in". `setup_applyValidation` logs a warning when this is the case. If `student.ateneo.edu` and `ateneo.edu` are separate Workspaces, deploy from the one applicants use (and keep `AllowedEmailDomains` in sync).
 

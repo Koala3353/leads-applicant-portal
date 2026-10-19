@@ -51,7 +51,7 @@ Member B: your file is **not a page**; `Home.html` pulls it in. Read §9.2 first
 3. **Payment (first):** proof of payment through the **payment Google Form**, after acceptance or any time after applying (a setting); officers mark Payment.
 4. **Requirements (after payment):** once Payment is **VERIFIED**, accepted applicants send PDFs + camp info through the **requirements Google Form**; officers check and mark Requirements.
 5. **Confirmed:** ACCEPTED + Requirements APPROVED + Payment VERIFIED → automatically **CONFIRMED**.
-6. **Home + Dashboard:** where each person sees where they are, what's next and the right Form links. Member B builds the Dashboard.
+6. **Home + Dashboard:** where each person sees where they are and what's next; each step after acceptance has its own page (Steps.html). Member B builds the Dashboard.
 
 **Theme: LEADS: Oversight.** "Oversight" means (1) watchful supervision and (2) an inadvertent error. The fears are being watched, feeling boxed in, and failing; the third reading is oversight as leadership. Brand-book concept: **"I Can See You / Do You See Yourself?"**: it starts unsettling and ends introspective; the applicant feels watched, then realizes the observer is a mirror (tone and voice in §7.5). Tagline "Someone is already watching. Apply anyway." The mood is **1984-style surveillance and analog horror, eerie, with scripted jump scares allowed, but never gory**: CCTV, case files, REC timestamps, watching eyes, warning tape, photocopy grain, CRT scanlines. No blood, skulls, ghosts or horror fonts. The mascot is **I.R.I.S.** (Inspection, Reconnaissance & Identification System: the portal's Big Brother), a pocket CRT television whose screen shows a real-looking eye that follows you; its power light, on-screen word and antennas change with its emotion (§7.2). Home has a CCTV wall of four custom SVG feeds (CAM 01 Lobby with a figure in the doorway, CAM 02 Hallway with flickering lights and a figure that steps closer, CAM 03 You with red tracking brackets on the pointer, CAM 04 Archive with colour bars and NO SIGNAL); it is Home-only, so don't copy it. Copy can be ominous in headings and labels; instructions and errors stay **clear first, creepy second**.
 
@@ -60,8 +60,8 @@ Member B: your file is **not a page**; `Home.html` pulls it in. Read §9.2 first
 ### 2.2 How it's built
 
 - Apps Script (V8) web app, deployed **Execute as: Me** (MEA's Ateneo account) and **Access: Anyone within Ateneo**. All server code runs with the owner's permissions, and **any visitor can call any public function**, so each one checks who's calling (§3.2).
-- **One** `doGet` (Code.gs): no `?page=` → Home, `?page=apply` → Apply, anything else → Home. Pages are HTML templates (`<?= ?>` scriptlets).
-- Pages talk to the server only through `google.script.run` (async). The Sheet is the database. **Files never touch our code**: the Google Forms collect them.
+- **One** `doGet` (Code.gs): no `?page=` → Home, `?page=apply` → Apply, `?page=game` → Game, `?page=pay | reqs | ga | room` → Steps, anything else → Home. Pages are HTML templates (`<?= ?>` scriptlets).
+- Pages talk to the server only through `google.script.run` (async). The Sheet is the database. The only file the portal handles is the **proof of payment**: `steps_uploadProof` saves it to the Drive folder in Settings › `PaymentFolder` and links it in `PaymentProof`. Requirement files go through the Google Forms.
 - Plain HTML/CSS/JS and Apps Script. **No React, Vue, Tailwind, jQuery, npm, CDNs.**
 
 | File | What it does |
@@ -71,16 +71,17 @@ Member B: your file is **not a page**; `Home.html` pulls it in. Read §9.2 first
 | `Brand.gs` | `BRAND`: all copy, colors, fonts, I.R.I.S.'s lines/faces/colors. `brand_css()`, `brand_json()`. |
 | `AdminMenu.gs` | The LEADS menu, and the check that logs/undoes hand edits to the three track columns. |
 | `Setup.gs` | `setup_applyValidation()`: Sheet validation rules (owner runs it). |
-| `HomeApi.gs` + `Home.html` | The hub (done): progress, next step, Form links, the Dashboard slot. |
+| `HomeApi.gs` + `Home.html` | The hub (done): progress, next step, one card per step, the Dashboard slot. |
+| `StepsApi.gs` + `Steps.html` | The steps after acceptance, one page with four views: `?page=pay` (02 proof of payment: details, QR codes, upload), `reqs` (03 requirements: the forms from the Requirements tab, with an inline preview), `ga` (04 1st GA: calendar button), `room` (05 room booking: placeholder). Copy in `BRAND.steps`. |
 | `Styles.html` · `PageTop.html` · `Loader.html` · `Mascot.html` | Shared CSS · top bar (logo, "← Back to the hub", **Sign out**) · full-screen loading overlay with a bouncing I.R.I.S. · **I.R.I.S.** in the bottom-right corner (§7.2). |
 | `Apply.html` + `ApplyApi.gs` | **Member A.** Placeholder now; you create `ApplyApi.gs`. |
 | `Dashboard.html` + `DashboardApi.gs` | **Member B.** Placeholder inside the hub; `dash_get()` already returns the applicant's own data. |
 
 ### 2.3 The Sheet
 
-Navy headers: **never rename or reorder** (code finds columns by name). Yellow cells: officers edit.
+Navy headers: **never rename** them. The code finds every Applicants column by its **header name** (`cols_()` / `col_(name)` in Utils.gs), so moving a column or deleting one the portal doesn't use is safe. Yellow cells: the core team edits.
 
-**`Applicants`** (column order = `COLS` in Utils.gs):
+**`Applicants`** (`COLS` in Utils.gs lists the columns the portal needs; a missing one is added at the end automatically):
 
 | Column | Format | Set by / notes |
 |---|---|---|
@@ -93,7 +94,6 @@ Navy headers: **never rename or reorder** (code finds columns by name). Yellow c
 | `Course` / `MEAInvolvement` | from Lists | Apply |
 | `YearLevel` | integer 1–5 | Apply |
 | `Mobile` | `09` + 9 digits, **text** (leading zero!) | Apply. `+63 917…`, `0917-…`, `917…` are cleaned to `09…` by `normalizeMobile_()` (server) / `normalizePhone()` (page) |
-| `WhyLEADS` / `FearEssay` | (retired) | Replaced by the 5 essays below. Kept in `COLS` so older columns don't shift; left blank for new rows. |
 | `Status` / `Requirements` / `Payment` | §2.4 | Apply creates `SUBMITTED`/`NONE`/`NONE`; then core team only |
 | `ReviewedBy`, `LastUpdated` | email, Date | automatic |
 | `Notes` | text | **core team only, never shown to applicants** |
@@ -104,41 +104,53 @@ Navy headers: **never rename or reorder** (code finds columns by name). Yellow c
 | `DataConsent` | `Y` (must be Y to submit) | Apply (RA 10173) |
 | `WhyParticipant` / `FirstImpression` / `Rumors` / `TakesLeadership` / `FearLeadership` | 50–1000 chars each, multiline, required | Apply (the 5 essays) |
 | `GameAnswers` | JSON text (≤5000 chars) | Game page: the choices made in the 3 CCTV rooms |
+| `PaymentProof` | Drive link | Steps page upload (`steps_uploadProof`). A new upload replaces the link; old files stay in the folder. |
 
-The last six columns were added Oct 2026 at the **end** of `COLS` so older rows still line up. `ensureApplicantHeaders_()` writes any missing header cells on the next submit.
+`WhyLEADS` / `FearEssay` were retired (replaced by the 5 essays) and are deleted by `setup_cleanupAfterDeploy()` (Setup.gs). `ensureApplicantHeaders_()` adds any missing `COLS` header at the end.
 
-Camp info (emergency contact, dietary, medical, shirt size) and all files live in the **Form responses**, not here.
+Camp info (emergency contact, dietary, medical, shirt size) and requirement files live in the **Form responses**, not here.
 
-**`Settings`** (Key | Value; any may be **blank**, so hide the line or show "TBA" / "link coming soon"): `EventName`, `EventDates`, `EventVenue`, `CampFee` (number), `Slots` (number), `ApplicationsOpen` (checkbox), `Deadline`, `RequirementsFormURL`, `RequirementsDeadline`, `PaymentStage` (`AFTER_ACCEPTANCE` | `ANYTIME`), `PaymentDeadline`, `PaymentFormURL`, `PaymentInstructions`, `AllowedEmailDomains` (comma list), `ContactEmail`.
-- Dates may come back as a `Date` **or** text: always `parseDate_()`. Deadlines are **display-only** (officers close the Forms).
-- Form URLs are pre-filled links with `APP-0000` as the Applicant ID. **Never read them directly**: `formLink_()` swaps in the ID and only accepts real Google Forms links.
+**`Settings`** (Key | Value | What it does; any may be **blank**, so hide the line or show "TBA" / "check back here"):
+- Event: `EventName`, `EventDates`, `EventVenue`, `ApplicationsOpen` (TRUE/FALSE), `Deadline`, `AllowedEmailDomains` (comma list), `ContactEmail`.
+- 02 Payment: `PaymentOpen` (TRUE/FALSE switch), `PaymentDetails` (amount + how to pay, line breaks kept), `PaymentQRCodes` (one per line: `Label | link`; a Drive file link is read by the script as the owner, so it needn't be shared), `PaymentDeadline`, `PaymentFolder` (made on the first upload).
+- 03 Requirements: `RequirementsOpen` (switch), `RequirementsNote`, `RequirementsDeadline`. The forms are rows in the **`Requirements`** tab: `Form | Link | What to do | Due`.
+- 04 1st GA: `GACalendarLink` (the step stays locked until it's filled in), `GADetails`.
+- 05 Room booking: `RoomBookingOpen` (switch), `RoomBookingNote`.
+- Dates may come back as a `Date` **or** text: always `parseDate_()`. Deadlines are **display-only**.
+- Requirement form links can be pre-filled links with `APP-0000` as the Applicant ID: `formLink_(link, id)` swaps in the real ID.
 
-**Other tabs.** The Sheet has `Applicants`, `Settings`, `Lists`, `Admins`, `Log`, plus **`Activity`** (made automatically; the portal's debug/tracking log, see §4 `activity_`). A hidden **`Drafts`** tab (`Email | SavedAt | Data`) holds each applicant's unsent Apply draft, so it follows their account across browsers; `apply_saveDraft` writes only the signed-in person's row; rows are **never deleted or moved** (a cleared draft is a blank Data cell), so saving needs no script lock except the one-time append of a new row. Submitting/discarding clears the cell. Don't add code that deletes Drafts rows. (Requirements, Uploads, Summary and README were removed on 2026-10-15. This portal is for participants only, not core-team applications. The requirements Google Form itself says what to send, so don't build a requirements checklist or add those tabs back.) `Lists`: dropdown options (Statuses, RequirementStates, PaymentStates, PaymentStages, Courses, MEAInvolvement, YearLevels) via `getList_()`. `Admins`: `Email | Name | Role` (LEADS menu, can edit tracks, see "Open the Sheet" on Home). `Log`: `When | Who | ApplicantID | Action | From | To`, written only by `logChange_()`.
+**Other tabs.** The Sheet has `Applicants`, `Settings`, `Requirements`, `Lists`, `Admins`, `MemData` (member list for Apply autofill), plus **`Activity`** (the portal's debug/tracking log, see §4 `activity_`; status/track changes are its **CHANGE** rows, which are never skipped or trimmed. This replaced the old `Log` tab). A hidden **`Drafts`** tab (`Email | SavedAt | Data`) holds each applicant's unsent Apply draft, so it follows their account across browsers; `apply_saveDraft` writes only the signed-in person's row; rows are **never deleted or moved** (a cleared draft is a blank Data cell), so saving needs no script lock except the one-time append of a new row. Submitting/discarding clears the cell. Don't add code that deletes Drafts rows. This portal is for participants only, not core-team applications. `Lists`: dropdown options (Statuses, RequirementStates, PaymentStates, Courses, MEAInvolvement) via `getList_()`. `Admins`: `Email | Name | Role` (LEADS menu, can edit tracks, see "Open the Sheet" on Home).
 
 ### 2.4 The three tracks
 
 | Track | Values | Who changes it |
 |---|---|---|
 | **Status** | `SUBMITTED` → `UNDER REVIEW` → `ACCEPTED` / `WAITLISTED` / `REJECTED` → `CONFIRMED`; `WITHDRAWN` | Apply creates SUBMITTED; officers (menu or by hand, both checked); system auto-sets CONFIRMED |
-| **Requirements** | `NONE` → `PARTIAL` → `SUBMITTED` → `APPROVED`; `RETURNED` = fix and resend | officers |
-| **Payment** | `NONE` → `SUBMITTED` → `VERIFIED`; `REJECTED` = resend | officers |
+| **Payment** | `NONE` → `SUBMITTED` → `VERIFIED`; `REJECTED` = upload again | the upload sets SUBMITTED; the core team verifies/rejects |
+| **Requirements** | `NONE` → `PARTIAL` → `SUBMITTED` → `APPROVED`; `RETURNED` = fix and resend | the core team |
 
-**Your code never changes these.** Allowed status moves (`NEXT_STATUS`): SUBMITTED → UNDER REVIEW, REJECTED, WITHDRAWN · UNDER REVIEW → ACCEPTED, WAITLISTED, REJECTED, WITHDRAWN · WAITLISTED → ACCEPTED, REJECTED, WITHDRAWN · ACCEPTED → CONFIRMED (only if APPROVED **and** VERIFIED), WITHDRAWN · CONFIRMED → WITHDRAWN · REJECTED, WITHDRAWN → final.
+**Your code never changes these** (the proof upload's SUBMITTED goes through `setTrack_`). Allowed status moves (`NEXT_STATUS`): SUBMITTED → UNDER REVIEW, REJECTED, WITHDRAWN · UNDER REVIEW → ACCEPTED, WAITLISTED, REJECTED, WITHDRAWN · WAITLISTED → ACCEPTED, REJECTED, WITHDRAWN · ACCEPTED → CONFIRMED (only if APPROVED **and** VERIFIED), WITHDRAWN · CONFIRMED → WITHDRAWN · REJECTED, WITHDRAWN → final.
 
 **Unlock rules live only in `progress_(applicantData)`. Never re-implement them.**
-- **Pay first.** Requirements Form: unlocked when Status is ACCEPTED/CONFIRMED **and Payment is VERIFIED**, until Requirements is APPROVED (state `locked` while payment isn't verified).
-- Payment Form: unlocked when ACCEPTED/CONFIRMED, **or** `PaymentStage` = ANYTIME and they've applied and aren't REJECTED/WITHDRAWN. Locks again once VERIFIED.
-- REJECTED/WITHDRAWN still **see** their status, but get no Form links.
+Every step after the decision needs Status **ACCEPTED/CONFIRMED** and opens **in order**, each only once the core team switches it on:
+1. **Apply** (+ the Game).
+2. **Proof of payment**: `PaymentOpen` = TRUE. Locks again once VERIFIED.
+3. **Requirements**: `RequirementsOpen` = TRUE **and Payment VERIFIED** (pay first).
+4. **1st GA**: opens as soon as `GACalendarLink` has a link.
+5. **Room booking**: `RoomBookingOpen` = TRUE **and Requirements APPROVED**.
+- REJECTED/WITHDRAWN still **see** their status, but every step shows as closed.
 
 ```js
 progress_(a) → {
   status: 'ACCEPTED',
   apply: { state, unlocked }, review: { state, unlocked },
-  requirements: { state, unlocked, value },   // value = Requirements column
-  payment:      { state, unlocked, value },   // value = Payment column
+  payment:      { state, unlocked, value, why },   // value = Payment column
+  requirements: { state, unlocked, value, why },   // value = Requirements column
+  ga:   { state, unlocked, why },  room: { state, unlocked, why },
   confirmed: { state, unlocked }
 }
-// state: 'open' | 'locked' | 'waiting' (on officers) | 'action' (applicant must send the Form) | 'done' | 'stopped' (rejected/withdrawn)
+// state: 'open' | 'locked' | 'waiting' (on the core team) | 'action' (applicant's move) | 'done' | 'stopped' (rejected/withdrawn)
+// why (when locked): 'accept' | 'closed' (switch off) | 'pay' | 'req' | 'link' (no GA link). Locked-card text: BRAND.lockedWhy.
 ```
 
 ---
@@ -203,12 +215,13 @@ Functions ending in `_` are server-only. Public shared functions: `home_getConte
 
 | Helper | Returns / does |
 |---|---|
-| **Constants** | `SHEET` (tab names: `APPLICANTS, SETTINGS, ADMINS, LOG, LISTS, ACTIVITY`), `COLS` (Applicants column order), `TRACK_COLS` (`['Status','Requirements','Payment']`), `STATUSES`, `REQUIREMENT_STATES`, `PAYMENT_STATES`, `NEXT_STATUS`, `RULES` (Apply field rules: `{ stage, required, requiredIfFreshman, requiredMsg, pattern, list, options, min, max, idMin, idMax, rangeMsg, phone, minLen, maxLen, multiline, msg }`; the page's `fieldError()` mirrors `validateApplication_()` from the same rules, so add new fields here, not as one-off checks), `BRAND` (copy, colors, `statusCopy`, `messages`, `buttons`, `modules`, `mascot`) |
+| **Constants** | `SHEET` (tab names: `APPLICANTS, SETTINGS, ADMINS, LISTS, REQUIREMENTS, ACTIVITY, DRAFTS`), `COLS` (the Applicants columns the portal needs; find them with `col_(name)`, never by position), `TRACK_COLS` (`['Status','Requirements','Payment']`), `STATUSES`, `REQUIREMENT_STATES`, `PAYMENT_STATES`, `NEXT_STATUS`, `RULES` (Apply field rules: `{ stage, required, requiredIfFreshman, requiredMsg, pattern, list, options, min, max, idMin, idMax, rangeMsg, phone, minLen, maxLen, multiline, msg }`; the page's `fieldError()` mirrors `validateApplication_()` from the same rules, so add new fields here, not as one-off checks), `BRAND` (copy, colors, `statusCopy`, `messages`, `buttons`, `modules`, `mascot`) |
 | `getSettings_()` / `getSetting_(key)` | Settings as `{ Key: value }` (cached per execution; values may be `Date`, number, boolean, `''`) / one value |
 | `isTrue_(v)` · `parseDate_(v)` | `true` for `true`/`"TRUE"` · `Date` or `null` (text like `2026-10-24 23:59` read as Manila time) |
 | `getList_(name)` | non-blank strings from a Lists column; throws if the column doesn't exist |
-| `isOpen_()` · `paymentStage_()` | applications open (switch **and** deadline) · `'ANYTIME'` or `'AFTER_ACCEPTANCE'` |
-| `formLink_(settingKey, applicantId)` | `'RequirementsFormURL'`/`'PaymentFormURL'` → Form link with the applicant's ID, or `''`. **Only after `progress_()` says that step is unlocked.** |
+| `isOpen_()` · `stepOpen_(key)` · `gaLink_()` | applications open (switch **and** deadline) · a Settings step switch (`PaymentOpen`, `RequirementsOpen`, `RoomBookingOpen`) is TRUE · the 1st GA calendar link or `''` |
+| `cols_()` · `col_(name)` | the Applicants header row as it is now · 0-based position of a header (throws if missing) |
+| `formLink_(link, applicantId)` | a Google Form link (from the Requirements tab) with `APP-0000` swapped for the applicant's ID, or `''`. **Only after `progress_()` says that step is unlocked.** |
 | `currentEmail_()` | logged-in email (lowercase) or `''` (not signed in / Google hides it) |
 | `isAllowedDomain_(email)` · `isAdmin_(email)` | domain in AllowedEmailDomains · email in Admins |
 | `requireAdmin_()` · `requireApplicant_()` | admin email or throws `'Admins only.'` · `{ row, data }` or throws (`'Sign in…'` / `'You have not applied yet.'`) |
@@ -220,14 +233,15 @@ Functions ending in `_` are server-only. Public shared functions: `home_getConte
 | `safeCell_(v)` | prefixes `'` to text starting with `= + - @` |
 | `validateApplication_(input, 'apply')` | `{ ok, errors: { Field: msg }, clean: { Field: value } }`. Trims, strips control chars, collapses spaces (not essays), checks pattern/list/range/length; `YearLevel` → number. Does **not** check IDNumber uniqueness. |
 | `utils_getFormRules()` *(public)* | `{ rules: RULES, lists: { Courses, MEAInvolvement }, isOpen }` so the page shows the same messages as the server |
-| `logChange_(id, action, from, to, by)` | appends to Log (`by` defaults to current email or `'system'`) and mirrors it to Activity. Member A uses it once: `logChange_(id, 'status', '', 'SUBMITTED', 'system')`. |
+| `logChange_(id, action, from, to, by)` | writes a CHANGE row to Activity (`by` defaults to current email or `'system'`). Member A uses it once: `logChange_(id, 'status', '', 'SUBMITTED', 'system')`. |
 | `traced_(event, page, fn, summarize?)` | **Wrap every public server function in it** (see `apply_submit` / `dash_get`): logs OK + ms, `{ ok:false }` as WARN, and throws as ERROR with the stack, to the Activity tab. Pattern: `function x_get() { return traced_('x_get', 'x', x_get_, r => 'short summary'); }` with the real code in `x_get_()`. |
 | `activity_(event, details, { level, page, ms })` | one row in the **Activity** tab (`When | Level | Who | Page | Event | Details | ms`); level `INFO`/`WARN`/`ERROR`. Never throws. **Never log essays, ID numbers, phone numbers or other private answers**, just IDs, statuses and field names. |
 | `log_client(evt)` *(public)* | Styles.html calls it for browser errors (max 5 per page load). Don't call it yourself. |
 | `setStatus_` / `setStatusLocked_` / `setTrack_` | officers only (LEADS menu). **Not for your code.** |
 | `progress_(dataOrNull)` | unlock states (§2.4). The only source of truth. |
-| `home_getContext()` *(public)* | `{ email, signedIn, allowedDomain, isOpen, deadline, contact, isAdmin, paymentStage, event:{name,dates,venue,fee,slots}, applicant:{id,firstName,status,requirements,payment}\|null, progress, forms:{requirements,payment}, sheetUrl }`. `forms` already gated and pre-filled. |
-| `dash_get()` *(public, Member B owns it)* | `{ applicant:{id,nickname,status,requirements,payment,appliedAt,lastUpdated}, progress, requirements:[…], forms:{requirements,payment}, payment:{fee,instructions}, deadlines:{requirements,payment}, event:{name,dates,venue} }` or `{ applicant: null }` |
+| `home_getContext()` *(public)* | `{ email, signedIn, allowedDomain, isOpen, deadline, campStart, contact, isAdmin, event:{name,dates,venue}, applicant:{id,firstName,status,requirements,payment}\|null, progress, sheetUrl }`. Each step's page is `baseUrl + '?page=pay'` (`reqs`, `ga`, `room`). |
+| `dash_get()` *(public, Member B owns it)* | `{ applicant:{id,nickname,status,requirements,payment,appliedAt,lastUpdated}, progress, pages:{payment:'pay',requirements:'reqs',ga:'ga',room:'room'}, payment:{details}, deadlines:{requirements,payment}, event:{name,dates,venue} }` or `{ applicant: null }` |
+| `steps_get(page)` · `steps_uploadProof(file)` *(public, StepsApi.gs)* | the Steps page's data for `pay`/`reqs`/`ga`/`room` (content only once unlocked) · saves the proof of payment, links it in `PaymentProof`, sets Payment SUBMITTED |
 
 **In templates and pages**
 - Template variables: `BRAND`, `baseUrl` (the `/exec` or `/dev` URL, pinned to the school domain by `portalUrl_()`: `https://script.google.com/a/macros/student.ateneo.edu/s/<id>/exec`), `notice`, `page`. Always build links from `baseUrl`, never from `ScriptApp.getService().getUrl()`: the plain `/macros/s/...` link shows Google's "file not found" page to anyone signed in to several Google accounts.
@@ -714,19 +728,18 @@ apply_submit(form) → { ok:false, errors } | { ok:true, id }
 |---|---|
 | Guest / wrong account | nothing (Home explains sign-in) |
 | Signed in, not applied | nothing, or one small "Apply now" nudge only if `ctx.isOpen` (don't duplicate the hub's big button) |
-| SUBMITTED / UNDER REVIEW / WAITLISTED | greeting (`nickname`), status + `BRAND.statusCopy`, what happens next, payment card if `forms.payment` is set (ANYTIME) |
-| ACCEPTED | **one** clear next action, "Open the requirements form", payment card (fee, `instructions` with line breaks, "Open the payment form"), nearest deadline with days left |
-| Requirements / Payment `SUBMITTED` | "Received, an officer is checking"; button becomes "Send again" |
-| Requirements `RETURNED` / Payment `REJECTED` | "Something needs fixing: check your email or message an officer, then send it again" + the Form button |
-| REJECTED / WITHDRAWN | kind message only; no Form buttons |
+| SUBMITTED / UNDER REVIEW / WAITLISTED | greeting (`nickname`), status + `BRAND.statusCopy`, what happens next |
+| ACCEPTED | **one** clear next action linking to the step's page (`?page=pay`, then `reqs`), nearest deadline with days left |
+| Requirements / Payment `SUBMITTED` | "Received, the core team is checking" |
+| Requirements `RETURNED` / Payment `REJECTED` | "Something needs fixing: check your email or message the core team" + a link to that step's page |
+| REJECTED / WITHDRAWN | kind message only; no step links |
 | CONFIRMED | celebratory "You're in" + event dates/venue |
 | Officer who also applied | same as an applicant |
 
 **Edge cases**
 - `hub:error` → hide `#dash`. `dash_get()` fails → inline error + Retry, `has-dash` stays off.
-- No requirements checklist (`requirements` is always `[]`; the Form lists what to send). Step unlocked but link `''` → "Link coming soon", no dead button.
-- Form links open in a **new tab**; say so ("opens Google Forms") and remind them to use the same Ateneo account and not change the pre-filled Applicant ID.
-- `PaymentStage` ANYTIME and not yet accepted → payment can be "your move" first. Next action uses `progress` (requirements `action` first, then payment `action`), like the hub's main button.
+- Payment, requirements, the 1st GA and room booking each have their own page (Steps.html); the Dashboard links there and never repeats their content. A locked step says why (`progress[step].why` → `BRAND.lockedWhy`).
+- Next action uses `progress` (payment `action` first, then requirements `action`), like the hub's main button.
 - Deadlines blank/passed → hide / "passed" (never "Invalid Date", "NaN days"). Long nickname/email wraps.
 - Responsive: one column on phones; 2–3 columns from 860px, never wider than its parent `.wrap`. Use `.card`, `.pill`, `.btn`, CSS variables; no new fonts.
 - I.R.I.S.: no Mascot include; optional guarded `I.R.I.S..say` for actions inside the Dashboard only.
@@ -739,7 +752,7 @@ apply_submit(form) → { ok:false, errors } | { ok:true, id }
 
 - **Who:** not signed in (`''`) · wrong/non-Ateneo account · signed in but not applied · officer who also applied · someone calling your public functions from the console with wrong/missing/malicious arguments (`null`, `{}`, huge strings, other people's IDs, `=FORMULA`).
 - **When:** closed / deadline passed / reopened · state changed between page load and click · Settings blank, text instead of a date, number stored as text.
-- **What:** every Status, Requirements and Payment value · `PaymentStage` both ways · zero active requirements, blank fee, blank Form links · long text, line breaks, emojis, ñ/accents, extra spaces · leading-zero numbers stay strings.
+- **What:** every Status, Requirements and Payment value · each step switch on and off · an empty Requirements tab, blank PaymentDetails/QR codes, no GA link · long text, line breaks, emojis, ñ/accents, extra spaces · leading-zero numbers stay strings.
 - **Shared pieces (§3.4):** Styles/brand_css, Loader, I.R.I.S., PageTop exactly as §6.2 (Dashboard: none) · `call()` fires `portal:error`; `Loader.hide()` on success and error · I.R.I.S. reacts to success and validation errors, guarded, with the same message on the page · Sign in / Switch account buttons · bottom-right corner free · no Halloween visuals or wording.
 - **Layout:** every §8 rule at every test width (report per §8.4).
 - **How:** loading state within 100ms, never blank · server error → readable message + retry, nothing half-saved · double click / two tabs → no duplicates · slow or dropped connection while submitting · keyboard-only and screen reader · no `Date` from the server; "undefined", "null", "NaN", "Invalid Date" never on screen · user text via `textContent` · no personal data in `console.log`.
@@ -751,13 +764,13 @@ apply_submit(form) → { ok:false, errors } | { ok:true, id }
 You can't make fake Google accounts, so **fake states with your own row**:
 1. Apply once with your account on `/dev` (or, until Apply works, add a row by hand in `Applicants` with **your** email, a unique `APP-9xxx` ID, `Notes` = `TEST - delete`).
 2. Change your row's `Status` / `Requirements` / `Payment` and reload. You must be in `Admins` (non-officer edits are undone on purpose), or ask Keene to use the LEADS menu. Illegal jumps (SUBMITTED → CONFIRMED) are blocked: follow §2.4.
-3. Flip Settings: `ApplicationsOpen`, clear `Deadline`, switch `PaymentStage`, blank `CampFee`, clear a Form URL. **Put them back after.**
+3. Flip Settings: `ApplicationsOpen`, clear `Deadline`, flip `PaymentOpen` / `RequirementsOpen` / `RoomBookingOpen`, clear `GACalendarLink`. **Put them back after.**
 4. Not signed in: open `/dev` signed into a personal Gmail only (you may get a Google error page since `/dev` needs edit access; test the real path on `/exec` after Keene deploys).
 5. Officer vs not: add/remove your email in `Admins`.
 6. I.R.I.S.: check the hello line, a success/validation reaction, and an error (temporarily throw in your server function). Click "Hide I.R.I.S." and confirm the page still works, then open a new tab to get it back.
 7. Phone: open `/dev` in mobile Chrome/Safari with your Ateneo account; portrait and landscape; type in every field; tap the Form buttons.
 8. Laptop: Inspect → device toolbar (Ctrl/Cmd+Shift+M) → Responsive → 320, 360, 390, 768, 1024, 1440; scroll sideways at each; run the §8.4 snippet; try 200% zoom.
-9. **Clean up:** delete your TEST row and test Form responses (Log rows stay).
+9. **Clean up:** delete your TEST row and test Form responses (its Activity CHANGE rows stay).
 
 Server-only: `function test_mine() { console.log(JSON.stringify(dash_get(), null, 2)); }` → Run → read the log → delete it.
 

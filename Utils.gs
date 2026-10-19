@@ -6,36 +6,56 @@
  * a value that breaks a rule throws an error showing that rule's help text. So validate
  * with validateApplication_() / safeCell_() first, to give users a clear message instead.
  *
- * The portal: Home (the hub, with the Dashboard inside it) + Apply. Requirement PDFs and proof of
- * payment come in through two Google Forms (links in Settings). Officers work in the Sheet itself:
- * the LEADS menu (AdminMenu.gs) and hand edits on the three track columns, which are checked + logged.
+ * The portal: Home (the hub, with the Dashboard inside it), Apply + Game, and the Steps page (StepsApi.gs):
+ * proof of payment (upload, saved to Drive), requirements (Google Forms listed in the Requirements tab),
+ * the 1st GA (calendar link) and room booking. The core team works in the Sheet itself: the LEADS menu
+ * (AdminMenu.gs) and hand edits on the three track columns, which are checked + logged.
  *
  * How an applicant moves through LEADS (three tracks, not one line):
  *   Status        the decision      SUBMITTED → UNDER REVIEW → ACCEPTED / WAITLISTED / REJECTED → CONFIRMED
- *   Requirements  the PDFs (Form)   NONE → PARTIAL → SUBMITTED → APPROVED   (RETURNED = fix and resend)
- *   Payment       proof (Form)      NONE → SUBMITTED → VERIFIED             (REJECTED = resend)
- * Officers set Requirements/Payment after checking the Form responses. The requirements form opens
- * once ACCEPTED; the payment form once ACCEPTED, or right after applying when Settings > PaymentStage
- * is ANYTIME. ACCEPTED + APPROVED + VERIFIED = CONFIRMED (automatic).
+ *   Payment       proof (upload)    NONE → SUBMITTED → VERIFIED             (REJECTED = upload again)
+ *   Requirements  the Forms         NONE → PARTIAL → SUBMITTED → APPROVED   (RETURNED = fix and resend)
+ * Steps open in order, each only for ACCEPTED applicants and only once its Settings switch is on:
+ *   Payment (PaymentOpen) → Requirements (RequirementsOpen, after Payment VERIFIED) → Room booking
+ *   (RoomBookingOpen, after Requirements APPROVED). The 1st GA opens once Settings > GACalendarLink is filled in.
+ * ACCEPTED + APPROVED + VERIFIED = CONFIRMED (automatic).
  */
 
 const SHEET = {
-  APPLICANTS: 'Applicants', SETTINGS: 'Settings', ADMINS: 'Admins', LOG: 'Log', LISTS: 'Lists',
-  ACTIVITY: 'Activity',  // made automatically by activity_() the first time something is logged
+  APPLICANTS: 'Applicants', SETTINGS: 'Settings', ADMINS: 'Admins', LISTS: 'Lists',
+  REQUIREMENTS: 'Requirements',   // one row per requirement Google Form: Form | Link | What to do | Due
+  ACTIVITY: 'Activity',  // made automatically by activity_(); status/track changes are its CHANGE rows (the old Log tab)
   DRAFTS: 'Drafts'       // hidden; Apply drafts per account, made automatically (ApplyApi.gs)
 };
 
-// Column order of the Applicants tab. Change the Sheet AND this list together.
+// The Applicants columns the portal uses. The code finds each one by its HEADER NAME (cols_()), so columns can be
+// moved, and unused ones deleted, without breaking anything. Never rename a header. A name missing from the Sheet
+// is added at the end automatically (ensureApplicantHeaders_). This order is only the layout for a brand-new Sheet.
 const COLS = [
   'ApplicantID', 'Timestamp', 'Email', 'FullName', 'Nickname', 'IDNumber', 'Course', 'YearLevel',
-  'Mobile', 'MEAInvolvement', 'WhyLEADS', 'FearEssay',                  // initial application
+  'Mobile', 'MEAInvolvement',
   'Status', 'Requirements', 'Payment',                                    // the three tracks
   'ReviewedBy', 'LastUpdated', 'Notes',                                   // core team
-  'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability', 'DataConsent',   // added Oct 2026 (kept last so old rows line up)
-  'WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership',     // added 5-essay prompt update
-  'GameAnswers'                                                                            // Game page choices (JSON)
+  'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability', 'DataConsent',
+  'WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership',
+  'GameAnswers',                                                          // Game page choices (JSON)
+  'PaymentProof'                                                          // Drive link to the uploaded proof of payment
 ];
-// WhyLEADS / FearEssay are retired (replaced by the 5 essays) but stay in COLS so older rows and columns don't shift.
+
+/** The Applicants header row as it is in the Sheet right now (read once per run). Falls back to COLS on an empty tab. */
+function cols_() {
+  if (cols_.memo) return cols_.memo;
+  const sh = sheet_(SHEET.APPLICANTS), n = sh.getLastColumn();
+  const head = n ? sh.getRange(1, 1, 1, n).getValues()[0].map(h => String(h).trim()) : [];
+  while (head.length && head[head.length - 1] === '') head.pop();
+  return (cols_.memo = head.length ? head : COLS.slice());
+}
+/** 0-based position of a header in the Applicants tab. Throws if it isn't there. */
+function col_(name) {
+  const i = cols_().indexOf(name);
+  if (i < 0) throw new Error('The Applicants tab has no "' + name + '" column.');
+  return i;
+}
 // The three columns officers change (LEADS menu or by hand). Everything else is written by the portal.
 const TRACK_COLS = ['Status', 'Requirements', 'Payment'];
 
@@ -93,15 +113,18 @@ function isFreshman_(input) {
   return String(input.IDNumber || '').trim().indexOf('26') === 0 || String(input.YearLevel || '').trim() === '1';
 }
 
-/** Fills in any missing header cells on the Applicants tab (e.g. after new COLS were added). Never renames existing ones. */
+/** Adds a header at the end of the Applicants tab for every COLS name it doesn't have yet. Never renames or moves existing ones. */
 function ensureApplicantHeaders_() {
   const sh = sheet_(SHEET.APPLICANTS);
-  if (sh.getMaxColumns() < COLS.length) sh.insertColumnsAfter(sh.getMaxColumns(), COLS.length - sh.getMaxColumns());
-  const range = sh.getRange(1, 1, 1, COLS.length);
-  const head = range.getValues()[0];
-  let changed = false;
-  COLS.forEach((c, i) => { if (String(head[i]).trim() === '') { head[i] = c; changed = true; } });
-  if (changed) range.setValues([head]);
+  cols_.memo = null;
+  const have = cols_().slice();
+  const missing = COLS.filter(c => have.indexOf(c) < 0);
+  if (!missing.length) return;
+  const start = (sh.getLastColumn() && have.length) ? have.length + 1 : 1;
+  const need = start - 1 + missing.length;
+  if (sh.getMaxColumns() < need) sh.insertColumnsAfter(sh.getMaxColumns(), need - sh.getMaxColumns());
+  sh.getRange(1, start, 1, missing.length).setValues([missing]);
+  cols_.memo = null;
 }
 
 /* ---------------- settings + lists ---------------- */
@@ -134,7 +157,7 @@ function cachedTab_(name) {
   return rows;
 }
 function clearConfigCache_() {
-  try { CacheService.getScriptCache().removeAll(['tab:' + SHEET.SETTINGS, 'tab:' + SHEET.LISTS, 'tab:' + SHEET.ADMINS]); } catch (e) { /* fine */ }
+  try { CacheService.getScriptCache().removeAll(['tab:' + SHEET.SETTINGS, 'tab:' + SHEET.LISTS, 'tab:' + SHEET.ADMINS, 'tab:' + SHEET.REQUIREMENTS]); } catch (e) { /* fine */ }
 }
 
 function getSettings_() {
@@ -182,10 +205,8 @@ function isOpen_() {
   return isTrue_(s.ApplicationsOpen) && (!deadline || new Date() <= deadline);
 }
 
-/** 'ANYTIME' = applicants can pay right after applying. 'AFTER_ACCEPTANCE' = only once accepted. */
-function paymentStage_() {
-  return String(getSetting_('PaymentStage') || '').trim().toUpperCase() === 'ANYTIME' ? 'ANYTIME' : 'AFTER_ACCEPTANCE';
-}
+/** The core team's switches in Settings: PaymentOpen, RequirementsOpen, RoomBookingOpen (TRUE/FALSE). */
+function stepOpen_(key) { return isTrue_(getSetting_(key)); }
 
 /* ---------------- who is this ---------------- */
 
@@ -247,23 +268,24 @@ function getApplicantByEmail_(email) {
   // apply_submit_ still does a full trimmed scan inside its lock before filing anything.
   const sh = sheet_(SHEET.APPLICANTS), last = sh.getLastRow();
   if (last < 2) return null;
-  const hit = sh.getRange(2, COLS.indexOf('Email') + 1, last - 1, 1).createTextFinder(email).matchEntireCell(true).matchCase(false).findNext();
+  const hit = sh.getRange(2, col_('Email') + 1, last - 1, 1).createTextFinder(email).matchEntireCell(true).matchCase(false).findNext();
   if (!hit) return null;
   const row = hit.getRow();
-  return { row: row, data: toObject_(sh.getRange(row, 1, 1, COLS.length).getValues()[0]) };
+  return { row: row, data: toObject_(sh.getRange(row, 1, 1, cols_().length).getValues()[0]) };
 }
 
 function getApplicantById_(applicantId) {
-  const values = sheet_(SHEET.APPLICANTS).getDataRange().getValues();
+  const values = sheet_(SHEET.APPLICANTS).getDataRange().getValues(), c = col_('ApplicantID');
   for (let i = 1; i < values.length; i++) {
-    if (String(values[i][0]).trim() === applicantId) return { row: i + 1, data: toObject_(values[i]) };
+    if (String(values[i][c]).trim() === applicantId) return { row: i + 1, data: toObject_(values[i]) };
   }
   return null;
 }
 
 function toObject_(rowValues, cols) {
   const o = {};
-  (cols || COLS).forEach((c, i) => { o[c] = rowValues[i] instanceof Date ? rowValues[i].toISOString() : rowValues[i]; });
+  (cols || cols_()).forEach((c, i) => { if (c) o[c] = rowValues[i] instanceof Date ? rowValues[i].toISOString() : rowValues[i]; });
+  COLS.forEach(c => { if (!(c in o)) o[c] = ''; });   // a column not in the Sheet yet reads as blank
   return o;
 }
 
@@ -274,7 +296,8 @@ function nextApplicantId_() {
 
 function nextId_(sheetName, prefix) {
   const sh = sheet_(sheetName);
-  const ids = sh.getRange(2, 1, Math.max(sh.getLastRow() - 1, 1), 1).getValues().flat();
+  const c = sheetName === SHEET.APPLICANTS ? col_('ApplicantID') + 1 : 1;
+  const ids = sh.getRange(2, c, Math.max(sh.getLastRow() - 1, 1), 1).getValues().flat();
   const max = ids.reduce((m, id) => {
     const n = parseInt(String(id).replace(prefix, ''), 10);
     return isNaN(n) ? m : Math.max(m, n);
@@ -285,14 +308,11 @@ function nextId_(sheetName, prefix) {
 /** Writes some fields of one Applicants row (by header name). Call inside a lock. */
 function updateApplicant_(row, fields) {
   const sh = sheet_(SHEET.APPLICANTS);
-  const range = sh.getRange(row, 1, 1, COLS.length);
+  if (Object.keys(fields).some(k => cols_().indexOf(k) < 0)) ensureApplicantHeaders_();
+  const range = sh.getRange(row, 1, 1, cols_().length);
   const values = range.getValues()[0];
-  Object.keys(fields).forEach(k => {
-    const i = COLS.indexOf(k);
-    if (i < 0) throw new Error('Applicants has no column ' + k);
-    values[i] = safeCell_(fields[k]);
-  });
-  values[COLS.indexOf('LastUpdated')] = new Date();
+  Object.keys(fields).forEach(k => { values[col_(k)] = safeCell_(fields[k]); });
+  values[col_('LastUpdated')] = new Date();
   range.setValues([values]);
 }
 
@@ -402,12 +422,10 @@ function setStatusLocked_(applicantId, newStatus, by) {
   return newStatus;
 }
 
-/** Adds one row to the Log tab. */
+/** Records a status/track change as a CHANGE row in Activity (never skipped in a rush, never trimmed). */
 function logChange_(applicantId, action, from, to, by) {
-  sheet_(SHEET.LOG).appendRow([
-    new Date(), by || currentEmail_() || 'system', applicantId, action, from || '', to || ''
-  ].map(safeCell_));
-  activity_('change_' + action, applicantId + ': ' + (from || '(none)') + ' → ' + (to || '(none)') + (by ? ' by ' + by : ''));
+  activity_('change_' + action, applicantId + ': ' + (from || '(none)') + ' → ' + (to || '(none)') + ' by ' + (by || currentEmail_() || 'system'),
+    { level: 'CHANGE' });
 }
 
 /* ---------------- officer changes to Requirements / Payment ---------------- */
@@ -453,12 +471,12 @@ function autoConfirmLocked_(applicantId) {
 }
 
 /**
- * This applicant's link to a Google Form. settingKey = 'RequirementsFormURL' | 'PaymentFormURL'.
- * In Settings, paste the form's PRE-FILLED link with APP-0000 typed as the Applicant ID answer;
- * the real ID is swapped in so officers can match responses. Returns '' if not set up.
+ * This applicant's link to a Google Form (from the Requirements tab). Paste the form's PRE-FILLED link with
+ * APP-0000 typed as the Applicant ID answer; the real ID is swapped in so the core team can match responses.
+ * Returns '' if it isn't a Google Form link.
  */
-function formLink_(settingKey, applicantId) {
-  const url = String(getSetting_(settingKey) || '').trim();
+function formLink_(link, applicantId) {
+  const url = String(link || '').trim();
   if (!/^https:\/\/(docs\.google\.com\/forms\/|forms\.gle\/)/.test(url)) return '';
   return applicantId ? url.replace(/APP-0000/g, encodeURIComponent(applicantId)) : url;
 }
@@ -466,15 +484,17 @@ function formLink_(settingKey, applicantId) {
 /* ---------------- progress (what's unlocked for this applicant) ---------------- */
 
 /**
- * The one place that decides what an applicant can do next. The hub and the Dashboard
- * both use this, so the rules never drift apart.
- * Each stage: { state: 'locked' | 'open' | 'waiting' | 'action' | 'done' | 'stopped', unlocked }
+ * The one place that decides what an applicant can do next. The hub, the Dashboard and the Steps page
+ * all use this, so the rules never drift apart.
+ * Each stage: { state: 'locked' | 'open' | 'waiting' | 'action' | 'done' | 'stopped', unlocked, why }
+ * why (locked only) says what it's waiting for: 'accept' | 'closed' (Settings switch off) | 'pay' | 'req' | 'link'.
  */
 function progress_(a) {
   const status = a ? String(a.Status || '') : '';
-  const out = { status: status, apply: {}, review: {}, requirements: {}, payment: {}, confirmed: {} };
+  const out = { status: status, apply: {}, review: {}, payment: {}, requirements: {}, ga: {}, room: {}, confirmed: {} };
   const ended = status === 'REJECTED' || status === 'WITHDRAWN';
   const accepted = status === 'ACCEPTED' || status === 'CONFIRMED';
+  const lock = why => ({ state: ended ? 'stopped' : 'locked', unlocked: false, why: why });
 
   out.apply = { state: a ? 'done' : (isOpen_() ? 'open' : 'locked'), unlocked: !a && isOpen_() };
 
@@ -484,26 +504,44 @@ function progress_(a) {
   else if (ended) out.review.state = 'stopped';
   else out.review.state = 'waiting'; // SUBMITTED, UNDER REVIEW, WAITLISTED
 
-  // Pay first: the requirements Form opens only after acceptance AND the core team marks Payment VERIFIED.
+  // 02 Proof of payment: accepted + Settings > PaymentOpen
   const pay = a ? String(a.Payment || 'NONE') : 'NONE';
   const paid = pay === 'VERIFIED';
-  const req = a ? String(a.Requirements || 'NONE') : 'NONE';
-  out.requirements = { unlocked: accepted && paid && req !== 'APPROVED', value: req };
-  if (!accepted) out.requirements.state = ended ? 'stopped' : 'locked';
-  else if (req === 'APPROVED') out.requirements.state = 'done';
-  else if (!paid) out.requirements.state = 'locked';
-  else if (req === 'SUBMITTED') out.requirements.state = 'waiting';
-  else out.requirements.state = 'action'; // NONE, PARTIAL, RETURNED
+  if (paid) out.payment = { state: 'done', unlocked: false };
+  else if (!accepted) out.payment = lock('accept');
+  else if (!stepOpen_('PaymentOpen')) out.payment = lock('closed');
+  else out.payment = { state: pay === 'SUBMITTED' ? 'waiting' : 'action', unlocked: true };   // NONE / REJECTED = upload
+  out.payment.value = pay;
 
-  const payOpen = !!a && !ended && (accepted || paymentStage_() === 'ANYTIME');
-  out.payment = { unlocked: payOpen && pay !== 'VERIFIED', value: pay };
-  if (pay === 'VERIFIED') out.payment.state = 'done';
-  else if (!payOpen) out.payment.state = ended ? 'stopped' : 'locked';
-  else if (pay === 'SUBMITTED') out.payment.state = 'waiting';
-  else out.payment.state = 'action'; // NONE, REJECTED
+  // 03 Requirements: payment verified + Settings > RequirementsOpen
+  const req = a ? String(a.Requirements || 'NONE') : 'NONE';
+  const reqDone = req === 'APPROVED';
+  if (reqDone) out.requirements = { state: 'done', unlocked: true };
+  else if (!accepted) out.requirements = lock('accept');
+  else if (!paid) out.requirements = lock('pay');
+  else if (!stepOpen_('RequirementsOpen')) out.requirements = lock('closed');
+  else out.requirements = { state: req === 'SUBMITTED' ? 'waiting' : 'action', unlocked: true };   // NONE, PARTIAL, RETURNED
+  out.requirements.value = req;
+
+  // 04 1st GA: accepted + a calendar link in Settings > GACalendarLink
+  if (!accepted) out.ga = lock('accept');
+  else if (!gaLink_()) out.ga = lock('link');
+  else out.ga = { state: 'open', unlocked: true };
+
+  // 05 Room booking: requirements approved + Settings > RoomBookingOpen
+  if (!accepted) out.room = lock('accept');
+  else if (!reqDone) out.room = lock('req');
+  else if (!stepOpen_('RoomBookingOpen')) out.room = lock('closed');
+  else out.room = { state: 'open', unlocked: true };
 
   out.confirmed = { unlocked: false, state: status === 'CONFIRMED' ? 'done' : (ended ? 'stopped' : 'locked') };
   return out;
+}
+
+/** Settings > GACalendarLink if it's a real link, else ''. */
+function gaLink_() {
+  const url = String(getSetting_('GACalendarLink') || '').trim();
+  return /^https:\/\//.test(url) ? url : '';
 }
 
 /* ---------------- Activity tab: what the portal is doing (debugging + tracking) ----------------
@@ -526,7 +564,7 @@ function activitySheet_() {
   sh.setFrozenRows(1);
   [160, 60, 220, 70, 170, 520, 60].forEach((w, i) => sh.setColumnWidth(i + 1, w));
   sh.getRange('A:A').setNumberFormat('yyyy-mm-dd hh:mm:ss');
-  const rules = [['ERROR', '#F4CCCC'], ['WARN', '#FFF2CC']].map(([lvl, color]) =>
+  const rules = [['ERROR', '#F4CCCC'], ['WARN', '#FFF2CC'], ['CHANGE', '#D9EAD3']].map(([lvl, color]) =>
     SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$B1="' + lvl + '"')
       .setBackground(color).setRanges([sh.getRange('A:G')]).build());
   sh.setConditionalFormatRules(rules);
@@ -535,7 +573,7 @@ function activitySheet_() {
 
 /**
  * activity_('apply_submit', 'APP-0012 submitted', { level: 'INFO', page: 'apply', ms: 840 })
- * level: 'INFO' (default) | 'WARN' | 'ERROR'. details can be a string or any object (stored as JSON).
+ * level: 'INFO' (default) | 'WARN' | 'ERROR' | 'CHANGE' (status/track changes). details can be a string or any object (stored as JSON).
  */
 /** True once 40 routine (INFO) rows have been written this minute: during a rush they're skipped to keep calls fast.
  *  WARN and ERROR rows are always written. */
@@ -550,7 +588,7 @@ function activityBusy_() {
 
 function activity_(event, details, opts) {
   opts = opts || {};
-  if ((opts.level || 'INFO') === 'INFO' && activityBusy_()) return;
+  if ((opts.level || 'INFO') === 'INFO' && activityBusy_()) return;   // WARN, ERROR and CHANGE are always written
   try {
     let who = '';
     try { who = currentEmail_() || 'guest'; } catch (e) { who = 'unknown'; }
@@ -558,10 +596,18 @@ function activity_(event, details, opts) {
     const sh = activitySheet_();
     sh.appendRow([new Date(), opts.level || 'INFO', who, opts.page || '', event,
       String(text).slice(0, 5000), opts.ms === undefined ? '' : opts.ms].map(safeCell_));
-    if (sh.getLastRow() > ACTIVITY_MAX_ROWS) sh.deleteRows(2, 5000);
+    if (sh.getLastRow() > ACTIVITY_MAX_ROWS) trimActivity_(sh);
   } catch (err) {
     console.error('activity_ could not write: ' + err + ' | ' + event);
   }
+}
+
+/** Drops the oldest 5000 rows, but keeps the CHANGE rows among them (the record of every status/track change). */
+function trimActivity_(sh) {
+  const old = sh.getRange(2, 1, 5000, ACTIVITY_HEAD.length).getValues();
+  const keep = old.filter(r => r[1] === 'CHANGE');
+  sh.deleteRows(2, 5000);
+  if (keep.length) { sh.insertRowsBefore(2, keep.length); sh.getRange(2, 1, keep.length, ACTIVITY_HEAD.length).setValues(keep); }
 }
 
 /**

@@ -95,7 +95,8 @@ function apply_submit_(form) {
       throw new Error('Applications just closed.');
     }
 
-    const idCol = COLS.indexOf('IDNumber'), emailCol = COLS.indexOf('Email');
+    ensureApplicantHeaders_();   // adds headers for any new COLS the first time
+    const idCol = col_('IDNumber'), emailCol = col_('Email');
     const values = sheet_(SHEET.APPLICANTS).getDataRange().getValues();
     for (let i = 1; i < values.length; i++) {
       // Re-verify applicant has not already applied inside lock
@@ -117,7 +118,7 @@ function apply_submit_(form) {
     nextId = nextApplicantId_();
     const now = new Date();
 
-    // Build row adhering strictly to COLS order
+    // Each value goes under its header, wherever that column is in the Sheet
     const rowMap = {
       ApplicantID: nextId,
       Timestamp: now,
@@ -149,8 +150,7 @@ function apply_submit_(form) {
       Notes: ''
     };
 
-    ensureApplicantHeaders_();   // adds headers for any new COLS the first time
-    const row = COLS.map(col => safeCell_(rowMap[col] !== undefined ? rowMap[col] : ''));
+    const row = cols_().map(col => safeCell_(rowMap[col] !== undefined ? rowMap[col] : ''));
     sheet_(SHEET.APPLICANTS).appendRow(row);
     SpreadsheetApp.flush();   // the row is written before the next submit reads the sheet
   } finally {
