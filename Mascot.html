@@ -149,8 +149,9 @@
     background:linear-gradient(90deg,var(--title-a,#000080),var(--title-b,#1084d0));color:#fff;font:400 1rem/1.15 var(--os,monospace);letter-spacing:.05em;text-transform:uppercase}
   .kuya-bubble b::after{content:"\25CF REC";font-size:.85rem;color:#ff6b6b}
   .kuya-bubble > span,.kuya-bubble > button{background:#0a0a0a}
-  #kuyaText{display:block;padding:9px 11px 4px;background:#0a0a0a;min-height:1.4em}
+  .kuya-line{display:block;padding:9px 11px 4px;min-height:1.4em}   /* text + typing cursor share one line, so nothing pops in below */
   .kuya-cursor{display:inline-block;width:6px;height:1em;background:var(--glow,#FFFF00);vertical-align:-2px;margin-left:2px;animation:kuyaCursor .6s steps(1) infinite}
+  .kuya-cursor[hidden]{display:none}
   @keyframes kuyaCursor{50%{opacity:0}}
   .kuya-hide{display:block;width:100%;margin:0;padding:4px 11px 9px;border:0;font:inherit;font-size:.68rem;letter-spacing:.08em;text-align:left;
     text-transform:uppercase;color:#8C8C8C;text-decoration:underline;cursor:pointer}
@@ -174,7 +175,7 @@
 <button type="button" class="kuya-recall" id="kuyaRecall" hidden></button>
 <div class="kuya" id="kuya" data-mood="nervous" hidden>
   <div class="kuya-bubble" id="kuyaBubble" role="status" aria-live="polite" hidden>
-    <b id="kuyaName"></b><span id="kuyaText"></span><span class="kuya-cursor" id="kuyaCursor" hidden></span>
+    <b id="kuyaName"></b><span class="kuya-line"><span id="kuyaText"></span><span class="kuya-cursor" id="kuyaCursor" hidden></span></span>
     <button type="button" class="kuya-hide" id="kuyaHide"></button>
   </div>
   <button type="button" class="kuya-btn" id="kuyaBtn">
