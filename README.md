@@ -53,7 +53,7 @@ Three tracks record where each applicant is:
 | `AdminMenu.gs` | Keene | The LEADS menu and the hand-edit check (`onOpen`, `onEdit`) |
 | `Brand.gs` | anyone | All copy, colors, fonts. Edit this to re-theme |
 | `Setup.gs` | Keene | Sheet validation, colors, Activity protection. Safe to re-run. `setup_cleanupAfterDeploy` = the one-time Oct 2026 clean-up |
-| `StepsApi.gs` + `Steps.html` | Keene | Steps 02 to 05: payment upload, requirements, 1st GA, room booking |
+| `StepsApi.gs` + `Steps.html` | Member B (payment view `?page=pay`), shared with Keene | Steps 02 to 05: payment upload, requirements, 1st GA, room booking |
 | `HomeApi.gs` + `Home.html` | Keene | The hub |
 | `Styles.html`, `PageTop.html`, `Loader.html`, `Mascot.html` | shared | Base theme; top bar with "Back to the hub"; SVG loading overlay; I.R.I.S. the mascot, a pocket CRT television (lines, faces and LED colors in `BRAND.mascot`, turn off with `show: false`) |
 | `Apply.html` (+ `ApplyApi.gs`, to create) | Member A | Placeholder: the application form |

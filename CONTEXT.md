@@ -25,7 +25,7 @@
 | Requirements + proof of payment | two **Google Forms** (not code); links shown on Home | Forms, links in Settings | officers |
 | Officer side | **the Sheet itself**, with a **LEADS** menu | `AdminMenu.gs` | Keene (done) |
 
-Member B: you edit `Home.html` + `HomeApi.gs` directly (shared with Keene; pull before you start). Read §9.2 first. Everything else is **shared: don't edit it** (`Code.gs`, `Utils.gs`, `Brand.gs`, `Referrals.gs`, `Setup.gs`, `AdminMenu.gs`, `Styles.html`, `PageTop.html`, `Loader.html`, `Mascot.html`). Need a change there? Message Keene with *what*, *why*, and the exact function signature you want. Don't edit it even if your AI suggests it.
+Member B: you edit `Home.html` + `HomeApi.gs` and the payment view of `Steps.html` + `StepsApi.gs` directly (all shared with Keene; pull before you start). Read §9.2 first. Everything else is **shared: don't edit it** (`Code.gs`, `Utils.gs`, `Brand.gs`, `Referrals.gs`, `Setup.gs`, `AdminMenu.gs`, `Styles.html`, `PageTop.html`, `Loader.html`, `Mascot.html`). Need a change there? Message Keene with *what*, *why*, and the exact function signature you want. Don't edit it even if your AI suggests it.
 
 **Making your files.** Editor → **+** next to Files → **Script** → name it **without** `.gs` (e.g. `ApplyApi`) → delete the empty `myFunction` → paste → Save. `Apply.html` / `Home.html` / `HomeApi.gs` already exist; open and replace their contents. A `.gs` and an `.html` **can't share a name**, hence `Apply.html` + `ApplyApi.gs`.
 
@@ -51,7 +51,7 @@ Member B: you edit `Home.html` + `HomeApi.gs` directly (shared with Keene; pull 
 3. **Payment (first):** proof of payment through the **payment Google Form**, after acceptance or any time after applying (a setting); officers mark Payment.
 4. **Requirements (after payment):** once Payment is **VERIFIED**, accepted applicants send PDFs + camp info through the **requirements Google Form**; officers check and mark Requirements.
 5. **Confirmed:** ACCEPTED + Requirements APPROVED + Payment VERIFIED → automatically **CONFIRMED**.
-6. **Home:** where each person sees where they are and what's next; each step after acceptance has its own page (Steps.html). Member B works on Home.
+6. **Home:** where each person sees where they are and what's next; each step after acceptance has its own page (Steps.html). Member B works on Home and the payment page.
 
 **Theme: LEADS: Oversight.** "Oversight" means (1) watchful supervision and (2) an inadvertent error. The fears are being watched, feeling boxed in, and failing; the third reading is oversight as leadership. Brand-book concept: **"I Can See You / Do You See Yourself?"**: it starts unsettling and ends introspective; the applicant feels watched, then realizes the observer is a mirror (tone and voice in §7.5). Tagline "Someone is already watching. Apply anyway." The mood is **1984-style surveillance and analog horror, eerie, with scripted jump scares allowed, but never gory**: CCTV, case files, REC timestamps, watching eyes, warning tape, photocopy grain, CRT scanlines. No blood, skulls, ghosts or horror fonts. The mascot is **I.R.I.S.** (Inspection, Reconnaissance & Identification System: the portal's Big Brother), a pocket CRT television whose screen shows a real-looking eye that follows you; its power light, on-screen word and antennas change with its emotion (§7.2). Home has a CCTV wall of four custom SVG feeds (CAM 01 Lobby with a figure in the doorway, CAM 02 Hallway with flickering lights and a figure that steps closer, CAM 03 You with red tracking brackets on the pointer, CAM 04 Archive with colour bars and NO SIGNAL); it is Home-only, so don't copy it. Copy can be ominous in headings and labels; instructions and errors stay **clear first, creepy second**.
 
@@ -72,7 +72,7 @@ Member B: you edit `Home.html` + `HomeApi.gs` directly (shared with Keene; pull 
 | `AdminMenu.gs` | The LEADS menu, and the check that logs/undoes hand edits to the three track columns. |
 | `Setup.gs` | `setup_applyValidation()`: Sheet validation rules (owner runs it). |
 | `HomeApi.gs` + `Home.html` | **Member B, shared with Keene.** The hub: status card, next step, one card per step, referral card, FAQ/testimonials for non-applicants. |
-| `StepsApi.gs` + `Steps.html` | The steps after acceptance, one page with four views: `?page=pay` (02 proof of payment: details, QR codes, upload), `reqs` (03 requirements: the forms from the Requirements tab, with an inline preview), `ga` (04 1st GA: calendar button), `room` (05 room booking: placeholder). Copy in `BRAND.steps`. |
+| `StepsApi.gs` + `Steps.html` | **Member B works on the payment view (`?page=pay`), shared with Keene.** The steps after acceptance, one page with four views: `?page=pay` (02 proof of payment: details, QR codes, upload), `reqs` (03 requirements: the forms from the Requirements tab, with an inline preview), `ga` (04 1st GA: calendar button), `room` (05 room booking: placeholder). Copy in `BRAND.steps`. |
 | `Styles.html` · `PageTop.html` · `Loader.html` · `Mascot.html` | Shared CSS · top bar (logo, "← Back to the hub", **Sign out**) · full-screen loading overlay with a bouncing I.R.I.S. · **I.R.I.S.** in the bottom-right corner (§7.2). |
 | `Apply.html` + `ApplyApi.gs` | **Member A.** Placeholder now; you create `ApplyApi.gs`. |
 
@@ -160,7 +160,7 @@ progress_(a) → {
 ## 3. Rules for the AI (follow strictly)
 
 ### 3.1 Scope
-1. Only write the user's **own two files** (A: `Apply.html`, `ApplyApi.gs` · B: `Home.html`, `HomeApi.gs`, shared with Keene). Never output edits to shared files (§1). If a shared change is truly needed, add a labeled **"Ask Keene"** note with the exact function wanted; never duplicate shared code into the user's file.
+1. Only write the user's **own two files** (A: `Apply.html`, `ApplyApi.gs` · B: `Home.html`, `HomeApi.gs`, and the payment view of `Steps.html` / `StepsApi.gs`, all shared with Keene). Never output edits to shared files (§1). If a shared change is truly needed, add a labeled **"Ask Keene"** note with the exact function wanted; never duplicate shared code into the user's file.
 2. Don't build what the portal deliberately doesn't do: **no uploads** (Forms collect files), **no admin pages** (officers use the Sheet), **no new `?page=` routes, no emails, no code that changes Status/Requirements/Payment.**
 3. Reuse §4 helpers; don't re-implement validation, lookups, Form links, status or unlock logic, and don't invent helpers that aren't listed. Need one? Put it in the user's `.gs` with the page prefix and a trailing `_` (e.g. `apply_isIdTaken_()`).
 4. Plain HTML/CSS/vanilla JS + Apps Script. No frameworks, no CDNs, no `fetch` to other sites.
@@ -665,6 +665,7 @@ The Dashboard files were removed (Oct 2026): everything an applicant sees about 
 - **What each person sees:** guest / wrong account → sign-in help only · signed in, not applied → apply button, FAQ, testimonials · applied → status card (`BRAND.statusCopy`), the step cards (locked steps say why: `progress[step].why` → `BRAND.lockedWhy`), the referral card · CONFIRMED → camp countdown.
 - **Next action** comes from `progress` (`nextMove()`), never re-derived. Each step's content stays on its own page (Steps.html); Home only links.
 - **Don't break:** `hub:context` / `hub:error` events (the report button reads them), `data-base` / `data-ref` on `<body>`, the I.R.I.S. include, `Loader.hide()` on success and error, the bottom-right corner (I.R.I.S.).
+- **Payment page** (`?page=pay`, also Member B): `steps_get('pay')` gives the details, QR codes (Settings › `PaymentQRCodes`, Drive files) and deadline once Payment is unlocked; `steps_uploadProof(file)` saves the proof to the Drive folder in Settings › `PaymentFolder`, writes the link to `PaymentProof` and sets Payment SUBMITTED. Steps.html also runs `reqs`, `ga` and `room`: keep payment changes inside the `pay` view and its functions so the other steps keep working, and test all four views on /dev before pushing. Copy lives in `BRAND.steps` (Brand.gs is shared: ask Keene).
 - **Edge cases:** deadlines blank/passed (never "Invalid Date"), long names/emails wrap, one column on phones (§8), no `//` inside backtick strings (§5).
 
 ## 10. Edge-case checklist (go through it; say which apply and how)
@@ -737,7 +738,7 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 ## 13. Prompts (fill in, paste after this file)
 
 **Build my page**
-> I'm Member **[A/B]**. I own **[Apply.html + ApplyApi.gs / Home.html + HomeApi.gs (shared with Keene)]**. Using the context file above, build both files completely, following §3 (including every §3.4 must-have: Loader, I.R.I.S., PageTop, `call()`, account buttons), my spec in §9 and the §10 checklist. Current files: [paste]. Give full files, install steps, edge cases handled, the must-haves, the §8.4 responsive check, and a test plan.
+> I'm Member **[A/B]**. I own **[Apply.html + ApplyApi.gs / Home.html + HomeApi.gs + the payment view of Steps.html + StepsApi.gs (shared with Keene)]**. Using the context file above, build both files completely, following §3 (including every §3.4 must-have: Loader, I.R.I.S., PageTop, `call()`, account buttons), my spec in §9 and the §10 checklist. Current files: [paste]. Give full files, install steps, edge cases handled, the must-haves, the §8.4 responsive check, and a test plan.
 
 **Fix a bug**
 > I'm Member **[X]** on **[file]**. Expected: **[…]**. Actual: **[…]**. Error from Console/Executions: **[exact text]**. Files: [paste]. Explain the cause in 2–3 sentences and give the full fixed files. Don't touch shared files.
