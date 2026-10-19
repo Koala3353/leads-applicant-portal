@@ -55,8 +55,7 @@ function setup_applyValidation() {
   };
   const dropdown = (name, header) => range(name).setDataValidation(
     B().requireValueInRange(listCol(header), true).setAllowInvalid(false).build());
-  dropdown('Course', 'Courses');
-  dropdown('MEAInvolvement', 'MEAInvolvement');
+  ['Course', 'MEAInvolvement'].forEach(name => { if (cols_().indexOf(name) >= 0) range(name).clearDataValidations(); });   // Course is free text now; MEAInvolvement was removed
   dropdown('Status', 'Statuses');
   dropdown('Requirements', 'RequirementStates');
   dropdown('Payment', 'PaymentStates');

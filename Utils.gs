@@ -33,7 +33,7 @@ const SHEET = {
 // is added at the end automatically (ensureApplicantHeaders_). This order is only the layout for a brand-new Sheet.
 const COLS = [
   'ApplicantID', 'Timestamp', 'Email', 'FullName', 'Nickname', 'IDNumber', 'Course', 'YearLevel',
-  'Mobile', 'MEAInvolvement',
+  'Mobile',
   'Status', 'Requirements', 'Payment',                                    // the three tracks
   'ReviewedBy', 'LastUpdated', 'Notes',                                   // core team
   'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability', 'DataConsent',
@@ -81,13 +81,12 @@ const RULES = {
   Nickname:         { stage: 'apply', required: true, pattern: "^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ .'-]{0,29}$", msg: 'What we should call you at camp (up to 30 letters).' },
   IDNumber:         { stage: 'apply', required: true, pattern: '^\\d{6}$', msg: 'Your 6-digit Ateneo ID number, e.g. 241234.',
                       idMin: 200000, idMax: 280000, rangeMsg: 'Invalid ID number.' },   // range kept vague on purpose
-  Course:           { stage: 'apply', required: true, list: 'Courses', msg: 'Pick your course from the list.' },
+  Course:           { stage: 'apply', required: true, pattern: "^[A-Za-zÀ-ÿÑñ0-9][A-Za-zÀ-ÿÑñ0-9 .,&()/'-]{1,59}$", msg: 'Your degree program, e.g. BS Management Engineering (up to 60 characters).' },
   YearLevel:        { stage: 'apply', required: true, min: 1, max: 5, msg: 'Year level must be 1 to 5.' },
   Block:            { stage: 'apply', requiredIfFreshman: true, pattern: "^[A-Za-z0-9][A-Za-z0-9 -]{0,29}$",
                       msg: 'Letters and numbers only, e.g. 21A.', requiredMsg: 'Block is required for first years (ID 26xxxx or Year 1).' },
   Mobile:           { stage: 'apply', required: true, phone: true, pattern: '^09\\d{9}$', msg: '11 digits starting with 09, e.g. 09171234567.' },
   MBTI:             { stage: 'apply', pattern: '^[EI][NS][TF][JP]$', msg: 'Pick one of the 16 types (or leave it blank).' },
-  MEAInvolvement:   { stage: 'apply', required: true, list: 'MEAInvolvement', msg: 'Pick how you are involved in MEA.' },
   PastOrgs:         { stage: 'apply', maxLen: 500, multiline: true, msg: 'Keep it under 500 characters.' },
   FirstOvernight:   { stage: 'apply', required: true, options: ['Yes', 'No'], msg: 'Pick Yes or No.' },
   OffsiteAvailability: { stage: 'apply', required: true, options: ['Yes', 'No'], msg: 'Pick Yes or No.' },
@@ -322,10 +321,7 @@ function updateApplicant_(row, fields) {
 function utils_getFormRules() {
   return {
     rules: RULES,
-    lists: {
-      Courses: getList_('Courses'),
-      MEAInvolvement: getList_('MEAInvolvement')
-    },
+    lists: {},   // no Apply question uses a Lists dropdown any more (Course is free text, autofilled from MemData)
     isOpen: isOpen_()
   };
 }

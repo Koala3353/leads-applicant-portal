@@ -315,7 +315,6 @@ const BRAND = {
       YearLevel:      { '1': ['excited', 'First year, applying early. That is worth noting.'], '4': ['thinking', 'Fourth year. One last camp. Noted.'], other: ['thinking', 'Year {v}. Noted.'] },
       Mobile:         [['thinking', 'Number recorded. It is only used for camp.']],
       MobileBad:      ['scared', 'That number looks off. It should be 11 digits starting with 09.'],
-      MEAInvolvement: [['thinking', 'Involvement recorded. Context helps.']],
       Block:          [['thinking', 'Block {v}. Recorded.']],
       MBTI:           { I: ['thinking', '{v}. You notice more than you say. So do I.'],
                         E: ['happy', '{v}. You fill rooms. Camp has room.'],

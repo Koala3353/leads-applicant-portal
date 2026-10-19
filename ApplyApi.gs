@@ -129,7 +129,6 @@ function apply_submit_(form) {
       Course: v.clean.Course,
       YearLevel: Number(v.clean.YearLevel),
       Mobile: String(v.clean.Mobile),
-      MEAInvolvement: v.clean.MEAInvolvement,
       DataConsent: v.clean.DataConsent,
       Block: v.clean.Block,
       MBTI: v.clean.MBTI,
@@ -254,7 +253,7 @@ function apply_saveDraft(data) {
   const clean = {};
   const fields = [
     'DataConsent', 'IDNumber', 'FullName', 'Nickname', 'Course', 'YearLevel', 'Mobile',
-    'MEAInvolvement', 'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability',
+    'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability',
     'WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership', 'GameAnswers'
   ];
   fields.forEach(f => {
@@ -366,9 +365,9 @@ function apply_memberFor_(email, idNumber, lists) {
     if (mobile.length === 10 && mobile[0] === '9') mobile = '0' + mobile;
     if (mobile.length === 12 && mobile.indexOf('639') === 0) mobile = '0' + mobile.slice(2);
     
-    const courses = (lists && lists.Courses) || [];
-    const key = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
-    const course = courses.find(x => key(x) === key(cell(row, c.course))) || '';
+    // Course is free text: take the member list's value as written (trimmed to what RULES.Course accepts)
+    let course = cell(row, c.course).replace(/[^A-Za-zÀ-ÿÑñ0-9 .,&()\/'-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!new RegExp(RULES.Course.pattern).test(course)) course = '';
     const year = (cell(row, c.year).match(/\d/) || [''])[0];
 
     const foundId = cell(row, c.id).replace(/\D/g, '');

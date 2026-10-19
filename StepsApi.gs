@@ -165,7 +165,10 @@ function steps_proofFolder_() {
     clearConfigCache_(); getSettings_.cache = null;
     const again = (String(getSetting_('PaymentFolder') || '').match(/folders\/([\w-]{20,})/) || [])[1];
     if (again && again !== id) return DriveApp.getFolderById(again);
-    const folder = DriveApp.createFolder((getSetting_('EventName') || 'LEADS') + ' - Proof of Payment');
+    // reuse a folder made by an earlier run (e.g. one whose link couldn't be saved) instead of making a second one
+    const name = (getSetting_('EventName') || 'LEADS') + ' - Proof of Payment';
+    const same = DriveApp.getFoldersByName(name);
+    const folder = same.hasNext() ? same.next() : DriveApp.createFolder(name);
     steps_writeSetting_('PaymentFolder', folder.getUrl(), 'Drive folder where uploaded proofs of payment are saved. Made automatically; share it with the core team.');
     return folder;
   } finally { lock.releaseLock(); }
