@@ -68,7 +68,7 @@ function game_submitFinal(answers) {
     // Safe to retry: if this account already has a file (e.g. the first attempt went through but the answer was lost
     // on a bad connection, and the browser retried), report success with the existing ID instead of an error.
     const existing = getApplicantByEmail_(email);
-    if (existing) { apply_deleteDraft_(email); return { ok: true, id: existing.data.ApplicantID, already: true }; }
+    if (existing) { apply_deleteDraft_(email); return { ok: true, id: existing.data.ApplicantID, referralCode: existing.data.ReferralCode || '', already: true }; }
 
     const draft = apply_getDraft_(email);
     if (!draft || !draft.data) {

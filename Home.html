@@ -21,6 +21,14 @@
   body.still .watcher{opacity:calc(var(--o,.7) + .15)}
 
   /* ---------- observation protocol: the log, shy eyes, the idle broadcast, "subject reacquired" ---------- */
+  /* referral card (Referrals.gs): own code, copy/share, count. Shown once you've applied. */
+  .refcard{margin-top:20px;--py:14px;--px:16px;padding:14px 16px 16px;transform:rotate(.6deg)}
+  .refcard .code{font:700 clamp(1.6rem,6vw,2.2rem)/1 var(--os);letter-spacing:.08em;color:var(--glow);margin:6px 0 10px;user-select:all}
+  .refcard .reflink{width:100%;min-width:0;font:400 .85rem/1.3 var(--mono,monospace);background:#050505;color:var(--text);border:1px solid #333;padding:8px;margin:0 0 10px}
+  .refcard .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .refcard .count{margin:12px 0 0;font:400 1rem/1.3 var(--os)}
+  .refcard .count b{color:var(--glow);font-size:1.4em}
+  @media (max-width:560px){.refcard{transform:none}.refcard .row .btn{flex:1 1 auto;text-align:center}}
   .obslog{margin-top:20px;--py:12px;--px:14px;padding:12px 14px 14px;transform:rotate(-1deg)}
   .obslog ol{list-style:none;margin:0;padding:0;display:grid;gap:4px;min-height:6.2em}
   .obslog li{font:400 1.02rem/1.25 var(--os);letter-spacing:.03em;color:#a9f0a9;overflow-wrap:anywhere}
@@ -470,7 +478,7 @@
   }
 </style>
 </head>
-<body data-base="<?= baseUrl ?>" data-loader-wait>
+<body data-base="<?= baseUrl ?>" data-ref="<?= ref ?>" data-loader-wait>
 <?!= include('Loader') ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 <div class="dark" id="dark" aria-hidden="true"></div>
@@ -558,6 +566,17 @@
           <div class="track"><span>Payment</span><b id="trPay">-</b></div>
           <div class="track"><span>Requirements</span><b id="trReq">-</b></div>
         </div>
+      </div>
+      <div class="card refcard" id="refCard" hidden>
+        <div class="winbar"><span><?= BRAND.referral.cardTitle ?></span><i><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+        <p id="refLead"><?= BRAND.referral.cardLead ?></p>
+        <p class="code" id="refCode"></p>
+        <input class="reflink" id="refLink" readonly aria-label="Your referral link">
+        <div class="row">
+          <button class="btn" type="button" id="refCopy"><?= BRAND.referral.copy ?></button>
+          <button class="btn ghost" type="button" id="refShare" hidden><?= BRAND.referral.share ?></button>
+        </div>
+        <p class="count" id="refCount"></p>
       </div>
     </div>
   </section>
@@ -1122,10 +1141,40 @@
     if ($('mainBtn').dataset.scroll) { e.preventDefault(); scrollToStatus(); } // same page: no reload, no loader
   });
 
+  /* Referral link (?ref=CODE): remembered in this browser so it survives sign-in hops, and carried to Apply */
+  function refCode() {
+    let c = document.body.dataset.ref || '';
+    try { if (c) localStorage.setItem('leads-ref', c); else c = localStorage.getItem('leads-ref') || ''; } catch (e) { /* ignore */ }
+    return c;
+  }
+  function refParam() { const c = refCode(); return c ? '&ref=' + encodeURIComponent(c) : ''; }
+
+  function renderReferral(r) {
+    const card = $('refCard');
+    if (!r || !r.code) { card.hidden = true; return; }
+    card.hidden = false;
+    $('refCode').textContent = r.code;
+    $('refLink').value = r.link;
+    const n = r.counts.applied;
+    $('refCount').innerHTML = '<b></b> ' + BRAND.referral.applied;
+    $('refCount').querySelector('b').textContent = n;
+    if (!r.open) { $('refLead').textContent = BRAND.referral.closed; $('refCopy').hidden = true; $('refShare').hidden = true; return; }
+    const text = BRAND.referral.shareText.replace('{code}', r.code).replace('{link}', r.link);
+    $('refCopy').onclick = () => {
+      const done = () => { $('refCopy').textContent = BRAND.referral.copied; setTimeout(() => { $('refCopy').textContent = BRAND.referral.copy; }, 2000); };
+      const fallback = () => { const el = $('refLink'); el.focus(); el.select(); try { document.execCommand('copy'); done(); } catch (e) { /* user can copy by hand */ } };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(r.link).then(done, fallback); else fallback();
+    };
+    if (navigator.share) {
+      $('refShare').hidden = false;
+      $('refShare').onclick = () => navigator.share({ text: text }).catch(() => {});
+    }
+  }
+
   /** What the big button should do for this person right now. */
   function nextMove(ctx) {
     const p = ctx.progress, base = document.body.dataset.base;
-    if (!ctx.applicant) return ctx.isOpen && ctx.allowedDomain ? { href: base + '?page=apply', text: BRAND.buttons.apply } : null;
+    if (!ctx.applicant) return ctx.isOpen && ctx.allowedDomain ? { href: base + '?page=apply' + refParam(), text: BRAND.buttons.apply } : null;
     if (p.payment.state === 'action') return { href: base + '?page=pay', text: BRAND.buttons.pay };   // pay first
     if (p.requirements.state === 'action') return { href: base + '?page=reqs', text: BRAND.buttons.upload };
     if (p.room.state === 'open') return { href: base + '?page=room', text: BRAND.buttons.room };
@@ -1260,6 +1309,8 @@
         $(id).style.color = TONE[v] === 'ok' ? 'var(--ok)' : (TONE[v] === 'warn' ? 'var(--danger)' : '');
       });
     }
+
+    try { renderReferral(ctx.referral); } catch (e) { console.error(e); }
 
     // FAQ + testimonials: only for people without a file yet
     document.body.classList.toggle('applied', !!a);

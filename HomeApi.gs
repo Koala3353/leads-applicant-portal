@@ -38,6 +38,7 @@ function home_getContext_() {
       payment: a.Payment || 'NONE'
     } : null,
     progress: p,
+    referral: found ? referralInfo_(found) : null,   // own code + counts (never names); Referrals.gs
     sheetUrl: isAdmin_(email) ? ss_().getUrl() : ''   // officers get a link to the Sheet
   };
 }

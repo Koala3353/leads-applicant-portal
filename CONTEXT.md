@@ -105,6 +105,9 @@ Navy headers: **never rename** them. The code finds every Applicants column by i
 | `WhyParticipant` / `FirstImpression` / `Rumors` / `TakesLeadership` / `FearLeadership` | 50–1000 chars each, multiline, required | Apply (the 5 essays) |
 | `GameAnswers` | JSON text (≤5000 chars) | Game page: the choices made in the 3 CCTV rooms |
 | `PaymentProof` | Drive link | Steps page upload (`steps_uploadProof`). A new upload replaces the link; old files stay in the folder. |
+| `ReferralCode` | e.g. `BEA-7K2Q` | Made on submit (`makeReferralCode_`): first 4 letters of the nickname + 4 random characters (no 0/O/1/I/L). Applicants from before referrals get one the first time they open the hub. |
+| `ReferredBy` | a code, or blank | The code they applied with (optional field on Apply, pre-filled from `?ref=`). Checked and **locked on submit**. |
+| `ReferrerID` | ApplicantID or blank | Who that code belongs to, filled in by the server. Filter/sort by it to see who invited whom. |
 
 `WhyLEADS` / `FearEssay` were retired (replaced by the 5 essays) and are deleted by `setup_cleanupAfterDeploy()` (Setup.gs). `ensureApplicantHeaders_()` adds any missing `COLS` header at the end.
 
@@ -707,6 +710,16 @@ apply_submit(form) → { ok:false, errors } | { ok:true, id }
 - ID outside 200000–280000 → "Invalid ID number." (no range shown, on the page or by I.R.I.S.).
 - Consent "No" → can't submit; I.R.I.S. explains why.
 - MemData MBTI like `INTJ-A` → autofilled as `INTJ`; anything unrecognisable → left blank.
+
+### 9.1b Referrals (`Referrals.gs`, shared)
+
+- **Purpose:** referrals earn an advantage at camp, and the core team uses them to **separate friend groups**.
+- **Code:** every applicant gets one when they submit (shown on the Game "file received" screen and in the hub's REFERRALS.EXE card, with copy/share). Link form: `.../exec?ref=CODE`. Home remembers the code in `localStorage['leads-ref']` and passes it to Apply, where it pre-fills the optional "Referral code" field (it's outside `FIELDS`, so it doesn't count toward the progress tape; it is in the draft).
+- **Checks on submit** (`checkReferral_`, inside the submit lock): the code must exist, can't be your own, and its owner can't be WITHDRAWN. Bad codes come back as a `ReferredBy` field error. Valid → `ReferredBy` + `ReferrerID` saved, an Activity `referral` row written. Only the core team can change it after (by editing the Sheet).
+- **Counting:** a referral counts once the referred person **applies** (not WITHDRAWN). `referralInfo_` counts with a TextFinder on `ReferrerID`. Referrers see **counts only, never names** (RA 10173).
+- **Closed applications:** the card says the count is final and hides the share buttons; the server already refuses all submits when closed.
+- **Referrals tab (core team):** LEADS menu › *Rebuild Referrals tab* (`referrals_setupTab`). Live formulas over Applicants: ReferrerID, name, code, who invited *them*, how many they brought in, and the list of people they referred (name, ID, status). Safe to rebuild any time; never type in it.
+- **Copy** lives in `BRAND.referral`.
 
 ### 9.2 Dashboard inside the hub (`Dashboard.html` + `DashboardApi.gs`), Member B
 

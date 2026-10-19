@@ -813,6 +813,15 @@
           <div class="char-counter" id="count-FearLeadership">0 / 1000 (need 50+)</div>
           <div class="field-error" id="err-FearLeadership" role="alert" aria-live="polite"></div>
         </div>
+
+        <!-- Referral (optional, not counted in the progress tape). Checked on submit by checkReferral_ (Referrals.gs). -->
+        <div class="field full" id="wrap-ReferredBy">
+          <span class="q-num">OPTIONAL</span>
+          <label for="f-ReferredBy"><?= BRAND.referral.label ?> <span style="color:var(--muted)"><?= BRAND.referral.tag ?></span></label>
+          <p class="field-hint" id="refHint"><?= BRAND.referral.hint ?></p>
+          <input type="text" id="f-ReferredBy" name="ReferredBy" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. BEA-7K2Q">
+          <div class="field-error" id="err-ReferredBy" role="alert" aria-live="polite"></div>
+        </div>
       </div>
 
       <div class="actions">
@@ -845,6 +854,8 @@
 <script>
   const BRAND = <?!= brand_json() ?>;
   const BASE = <?!= JSON.stringify(String(baseUrl)) ?>;
+  const REF = <?!= JSON.stringify(String(ref || '')) ?>;   // from ...exec?ref=CODE (already cleaned on the server)
+  try { if (REF) localStorage.setItem('leads-ref', REF); } catch (e) { /* ignore */ }
   const $ = id => document.getElementById(id);
 
   // Server calls go through runServer (Styles.html): retries when Google is busy, fires portal:error on final failure
@@ -986,6 +997,7 @@
       const el = $('f-' + f);
       data[f] = el ? el.value : '';
     });
+    data.ReferredBy = $('f-ReferredBy') ? $('f-ReferredBy').value.trim().toUpperCase() : '';   // optional, outside FIELDS
     return data;
   }
 
@@ -998,6 +1010,7 @@
       }
     });
     if ($('c-DataConsent')) $('c-DataConsent').checked = $('f-DataConsent').value === 'Y';
+    if (data.ReferredBy && $('f-ReferredBy')) $('f-ReferredBy').value = data.ReferredBy;
     validateMobileField(true);
   }
 
@@ -1079,7 +1092,7 @@
   function clearErrors() {
     $('errorSummaryBox').hidden = true;
     $('errorSummaryList').innerHTML = '';
-    FIELDS.forEach(f => {
+    FIELDS.concat('ReferredBy').forEach(f => {
       const wrap = $('wrap-' + f);
       const err = $('err-' + f);
       const input = $('f-' + f);
@@ -1147,6 +1160,7 @@
     let v = String(raw ?? '').trim();
     if (!r.multiline) v = v.replace(/\s+/g, ' ');
     if (r.phone) v = normalizePhone(v);
+    if (r.upper) v = v.toUpperCase().replace(/\s+/g, '');
     if (!v) {
       if (r.required) return 'Required.';
       if (r.requiredIfFreshman && isFreshman(data)) return r.requiredMsg || 'Required.';
@@ -1217,6 +1231,8 @@
 
       if (e) errors[f] = e;
     });
+    const refErr = fieldError('ReferredBy', data.ReferredBy, data);   // optional referral code
+    if (refErr) errors.ReferredBy = refErr;
     return { ok: Object.keys(errors).length === 0, errors };
   }
 
@@ -1356,6 +1372,14 @@
       $('draftBanner').hidden = false;
     }
     if (data.member) prefillMember(data.member, false);
+    // Referral link: fill the code in if the draft didn't already have one
+    const refEl = $('f-ReferredBy');
+    let refCode = REF;
+    try { refCode = refCode || localStorage.getItem('leads-ref') || ''; } catch (e) { /* ignore */ }
+    if (refEl && !refEl.value && refCode) {
+      refEl.value = refCode; refEl.classList.add('prefilled');
+      $('refHint').textContent = BRAND.referral.prefilled;
+    }
 
     updateCounters();
     $('ihDate').textContent = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
@@ -1625,6 +1649,7 @@
   $('f-Mobile').addEventListener('input', () => {
     validateMobileField(false);
   });
+  $('f-ReferredBy').addEventListener('focusout', e => { e.target.value = e.target.value.trim().toUpperCase().replace(/\s+/g, ''); });
   $('f-Mobile').addEventListener('focusout', () => {
     validateMobileField(true);
   });

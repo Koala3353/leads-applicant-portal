@@ -241,6 +241,26 @@ const BRAND = {
     loadError: "Something went wrong. The portal couldn't load your info: ",
     comingSoon: 'That page is still being built. Check back soon.'
   },
+  /* ---------- referrals (Referrals.gs, Home card, Apply field) ---------- */
+  referral: {
+    label: 'Referral code',
+    tag: '[WHO SENT YOU?]',
+    hint: 'Optional. If someone told you to apply, put their code here (it looks like BEA-7K2Q).',
+    prefilled: 'Filled in from the link you opened. Clear it if that\'s wrong.',
+    unknown: "We couldn't find that referral code. Check it with whoever sent it, or leave it blank.",
+    self: "That's your own code. Leave it blank, or use the code of whoever told you to apply.",
+    inactive: "That referral code isn't active anymore. Leave it blank, or use someone else's.",
+    cardTitle: 'REFERRALS.EXE',
+    cardLead: 'Know someone who should be watched too? Send them your link. Everyone who applies with your code counts toward an advantage at camp.',
+    copy: 'Copy my link',
+    copied: 'Link copied',
+    share: 'Share',
+    shareText: 'Apply to LEADS: Oversight with my code {code}: {link}',
+    applied: 'applied with your code',
+    closed: "Applications are closed, so your code can't bring anyone new in. Your count is final.",
+    gameDone: 'Your referral code is {code}. Send it to whoever should apply next; it counts toward an advantage at camp.'
+  },
+
   footer: {
     contact: 'Portal issues? Message the LEADS core team.',   // replaced by Settings > ContactEmail if set
     privacy: 'We only use your info for LEADS, and only core team can see it (RA 10173).'

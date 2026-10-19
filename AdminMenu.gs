@@ -31,6 +31,7 @@ function onOpen() {
       .addItem('Verify (VERIFIED)', 'menu_payVerified')
       .addItem('Reject proof (REJECTED)', 'menu_payRejected'))
     .addSeparator()
+    .addItem('Rebuild Referrals tab', 'menu_referrals')
     .addItem('Show portal link', 'menu_portalLink')
     .addToUi();
 }
@@ -47,6 +48,11 @@ function menu_reqReturned() { applyToSelection_('Requirements', 'RETURNED'); }
 function menu_paySubmitted(){ applyToSelection_('Payment', 'SUBMITTED'); }
 function menu_payVerified() { applyToSelection_('Payment', 'VERIFIED'); }
 function menu_payRejected() { applyToSelection_('Payment', 'REJECTED'); }
+
+function menu_referrals() {
+  try { SpreadsheetApp.getUi().alert(referrals_setupTab()); }
+  catch (e) { SpreadsheetApp.getUi().alert(String(e && e.message || e)); }
+}
 
 function menu_portalLink() {
   requireAdmin_();

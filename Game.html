@@ -403,6 +403,7 @@
     <p>Your applicant ID:</p>
     <p class="case-id" id="doneId"></p>
     <p>Keep it. You'll need it for the requirements and payment forms. Check the hub for your status.</p>
+    <p class="mono" id="doneRef" hidden></p>
     <div class="actions"><a class="btn" id="hubLink" target="_top">Back to the hub</a></div>
   </div>
 
@@ -943,6 +944,10 @@
       if (res && res.ok) {
         saved = true;
         $('doneId').textContent = res.id;
+        if (res.referralCode) {   // their own code to share (Referrals.gs); the hub shows it too
+          $('doneRef').textContent = BRAND.referral.gameDone.replace('{code}', res.referralCode);
+          $('doneRef').hidden = false;
+        }
         $('hubLink').href = BASE;
         show('done');
         kuya('excited', 'File received. You are now on record as ' + res.id + '.');

@@ -43,6 +43,7 @@ function doGet(e) {
   template.notice = notice;
   template.page = key;
   template.baseUrl = portalUrl_();
+  template.ref = normalizeReferral_(e && e.parameter && e.parameter.ref);   // ...exec?ref=BEA-7K2Q (Referrals.gs); '' if none
   activity_('page_view', notice ? 'unknown page, showed Home' : '', { page: key });
   return template.evaluate()
     .setTitle(BRAND.portalName)

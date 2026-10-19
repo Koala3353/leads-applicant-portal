@@ -39,7 +39,8 @@ const COLS = [
   'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability', 'DataConsent',
   'WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership',
   'GameAnswers',                                                          // Game page choices (JSON)
-  'PaymentProof'                                                          // Drive link to the uploaded proof of payment
+  'PaymentProof',                                                         // Drive link to the uploaded proof of payment
+  'ReferralCode', 'ReferredBy', 'ReferrerID'                              // own code to share / code they used / who that is (Referrals.gs)
 ];
 
 /** The Applicants header row as it is in the Sheet right now (read once per run). Falls back to COLS on an empty tab. */
@@ -95,7 +96,8 @@ const RULES = {
   FirstImpression:  { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
   Rumors:           { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
   TakesLeadership:  { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
-  FearLeadership:   { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' }
+  FearLeadership:   { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
+  ReferredBy:       { stage: 'apply', upper: true, pattern: '^[A-Z]{1,4}-[A-Z0-9]{4}$', msg: 'Referral codes look like BEA-7K2Q. Leave it blank if nobody referred you.' }
 };
 
 /** "+63 917 123 4567", "0917-123-4567", "9171234567" -> "09171234567". Same logic as normalizePhone() in Apply.html. */
@@ -346,6 +348,7 @@ function validateApplication_(input, stage) {
     v = v.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim(); // strip control chars
     if (!rule.multiline) v = v.replace(/\s+/g, ' ');                            // collapse spaces
     if (rule.phone) v = normalizeMobile_(v);
+    if (rule.upper) v = v.toUpperCase().replace(/\s+/g, '');
 
     if (v === '') {
       if (rule.required) errors[field] = 'Required.';

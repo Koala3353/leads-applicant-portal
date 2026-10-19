@@ -88,7 +88,7 @@ function apply_submit_(form) {
   // One read covers both duplicate checks; the Log row and draft clean-up happen after the lock is released.
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);   // a submit is rare and precious: wait longer rather than fail during a rush
-  let nextId;
+  let nextId, referralCode = '', referral = {};
   try {
     // Re-verify applications open status inside lock
     if (!isOpen_()) {
@@ -113,6 +113,12 @@ function apply_submit_(form) {
         };
       }
     }
+
+    // Referral: the code must belong to someone else who applied and hasn't withdrawn (Referrals.gs)
+    const ref = checkReferral_(v.clean.ReferredBy, values, email);
+    if (ref.error) return { ok: false, errors: { ReferredBy: ref.error } };
+    referralCode = makeReferralCode_(v.clean.Nickname, v.clean.FullName, referralCodesIn_(values));
+    referral = ref;
 
     // Generate next sequential ApplicantID
     nextId = nextApplicantId_();
@@ -141,6 +147,9 @@ function apply_submit_(form) {
       TakesLeadership: v.clean.TakesLeadership,
       FearLeadership: v.clean.FearLeadership,
       GameAnswers: String(input.GameAnswers || '').slice(0, 5000),   // JSON of the Game page choices
+      ReferralCode: referralCode,
+      ReferredBy: referral.code || '',
+      ReferrerID: referral.referrerId || '',
       Status: 'SUBMITTED',
       Requirements: 'NONE',
       Payment: 'NONE',
@@ -158,8 +167,9 @@ function apply_submit_(form) {
 
   // Outside the lock: appends and a single-row clear don't need it
   logChange_(nextId, 'status', '', 'SUBMITTED', 'system');
+  if (referral.referrerId) activity_('referral', nextId + ' referred by ' + referral.referrerId + ' (' + referral.code + ')', { page: 'apply' });
   apply_deleteDraft_(email);
-  return { ok: true, id: nextId };
+  return { ok: true, id: nextId, referralCode: referralCode };
 }
 
 /* ---------------- drafts, saved per Google account ----------------
@@ -254,7 +264,7 @@ function apply_saveDraft(data) {
   const fields = [
     'DataConsent', 'IDNumber', 'FullName', 'Nickname', 'Course', 'YearLevel', 'Mobile',
     'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability',
-    'WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership', 'GameAnswers'
+    'WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership', 'GameAnswers', 'ReferredBy'
   ];
   fields.forEach(f => {
     if (data[f] !== undefined && data[f] !== null) {
