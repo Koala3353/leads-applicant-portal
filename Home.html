@@ -373,8 +373,6 @@
 
   .path{display:none;grid-template-columns:repeat(5,1fr);margin:26px 0 6px;padding:0;list-style:none}
   .path.show{display:grid}
-  /* the Dashboard (Dashboard.html) takes over these when it renders */
-  body.has-dash #statusCard,body.has-dash #path{display:none!important}
   .path li{position:relative;text-align:center;font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-top:28px}
   .path li::before{content:"";position:absolute;top:6px;left:50%;width:14px;height:14px;margin-left:-7px;
     border:2px solid var(--line);background:var(--night);z-index:1}
@@ -629,9 +627,6 @@
     </svg><span class="box" id="youBox"></span><span class="dot" id="youDot"></span><time data-feedtime></time></div>
     <div class="feed"><b>CAM 04 // ARCHIVE</b><span class="bars"></span><span class="nosig">NO SIGNAL</span><time data-feedtime></time></div>
   </div>
-
-  <!-- applicant dashboard: lives in Dashboard.html + DashboardApi.gs (its own owner). Empty if the file is missing. -->
-  <?!= includeOptional_('Dashboard', { BRAND: BRAND, baseUrl: baseUrl }) ?>
 </div>
 
 <div class="ticker" aria-hidden="true"><div id="tick"></div></div>
@@ -668,7 +663,7 @@
     </ul>
   </section>
 
-  <!-- only for people without a file yet: hidden once they've applied, so the Dashboard has room -->
+  <!-- only for people without a file yet: hidden once they've applied -->
   <section class="intel" id="faq" aria-labelledby="faqTitle">
     <div class="hub-head">
       <p class="eyebrow"><?= BRAND.faq.eyebrow ?></p>
@@ -1130,10 +1125,9 @@
     if (usable) enable(link); else disable(link, why);
   }
 
-  /** After applying, the big button scrolls to the Dashboard if it's there, else to the status card. */
+  /** After applying, the big button scrolls to the status card. */
   function scrollToStatus() {
-    const dash = document.getElementById('dash');
-    const target = document.body.classList.contains('has-dash') && dash ? dash : $('statusCard');
+    const target = $('statusCard');
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     target.setAttribute('tabindex', '-1'); target.focus({ preventScroll: true });
   }
@@ -1182,7 +1176,7 @@
   }
 
   /* ---------- render ---------- */
-  /** Tells the Dashboard (and anything else included) what the hub loaded. */
+  /** Tells anything included in the page (e.g. the report button) what the hub loaded: 'hub:context' / 'hub:error'. */
   function announce(type, detail) {
     window.HUB = { type: type, detail: detail };                       // for listeners added later
     document.dispatchEvent(new CustomEvent('hub:' + type, { detail: detail }));

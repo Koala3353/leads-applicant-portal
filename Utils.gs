@@ -6,7 +6,7 @@
  * a value that breaks a rule throws an error showing that rule's help text. So validate
  * with validateApplication_() / safeCell_() first, to give users a clear message instead.
  *
- * The portal: Home (the hub, with the Dashboard inside it), Apply + Game, and the Steps page (StepsApi.gs):
+ * The portal: Home (the hub), Apply + Game, and the Steps page (StepsApi.gs):
  * proof of payment (upload, saved to Drive), requirements (Google Forms listed in the Requirements tab),
  * the 1st GA (calendar link) and room booking. The core team works in the Sheet itself: the LEADS menu
  * (AdminMenu.gs) and hand edits on the three track columns, which are checked + logged.
@@ -483,8 +483,8 @@ function formLink_(link, applicantId) {
 /* ---------------- progress (what's unlocked for this applicant) ---------------- */
 
 /**
- * The one place that decides what an applicant can do next. The hub, the Dashboard and the Steps page
- * all use this, so the rules never drift apart.
+ * The one place that decides what an applicant can do next. The hub and the Steps page
+ * both use this, so the rules never drift apart.
  * Each stage: { state: 'locked' | 'open' | 'waiting' | 'action' | 'done' | 'stopped', unlocked, why }
  * why (locked only) says what it's waiting for: 'accept' | 'closed' (Settings switch off) | 'pay' | 'req' | 'link'.
  */

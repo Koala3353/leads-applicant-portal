@@ -6,8 +6,7 @@ One Google Sheet (the database) + one small Apps Script web app + the requiremen
 
 | Part | What it is | Owner |
 |---|---|---|
-| **Home** (`.../exec`) | The hub: countdown, the applicant's progress, next step, links to everything. The Dashboard sits inside it. | Keene (done) |
-| **Dashboard** | The applicant's own area, inside Home: status, what to prepare, Form buttons when it's their turn | Member B |
+| **Home** (`.../exec`) | The hub: countdown, the applicant's status and progress, next step, referral card, links to everything | Member B, shared with Keene |
 | **Apply** (`.../exec?page=apply`) | The application form | Member A |
 | **Steps** (`?page=pay`, `reqs`, `ga`, `room`) | Proof of payment (upload), requirements (links to the Google Forms), 1st GA, room booking | Keene |
 | **Requirement forms** | Google Forms listed in the Requirements tab: PDFs and camp info | the core team |
@@ -36,7 +35,7 @@ Three tracks record where each applicant is:
 | **Requirements** (Forms) | NONE → PARTIAL → SUBMITTED → APPROVED (RETURNED = fix and resend) | the core team, after checking Form responses |
 
 - ACCEPTED + APPROVED + VERIFIED → **CONFIRMED** automatically.
-- `progress_()` in Utils.gs is the one place these unlock rules live. The hub, the Dashboard and the Steps page all use it.
+- `progress_()` in Utils.gs is the one place these unlock rules live. The hub and the Steps page both use it.
 
 ## How officers work (in the Sheet)
 
@@ -58,7 +57,7 @@ Three tracks record where each applicant is:
 | `HomeApi.gs` + `Home.html` | Keene | The hub |
 | `Styles.html`, `PageTop.html`, `Loader.html`, `Mascot.html` | shared | Base theme; top bar with "Back to the hub"; SVG loading overlay; I.R.I.S. the mascot, a pocket CRT television (lines, faces and LED colors in `BRAND.mascot`, turn off with `show: false`) |
 | `Apply.html` (+ `ApplyApi.gs`, to create) | Member A | Placeholder: the application form |
-| `Dashboard.html` + `DashboardApi.gs` | Member B | Placeholder inside Home; `dash_get()` starter already works |
+| `Home.html` + `HomeApi.gs` | Member B, shared with Keene | The hub (the separate Dashboard files were removed) |
 
 Apps Script won't let a `.gs` and an `.html` share a name, which is why server code is `XxxApi.gs`.
 
@@ -82,7 +81,7 @@ Every page view, server call, application, validation failure and error lands in
 
 ## Rules for builders (details in CONTEXT.md)
 
-- Every function a page calls with `google.script.run` must be **public** (no trailing `_`) and prefixed: `apply_` or `dash_`. Everything else ends in `_`.
+- Every function a page calls with `google.script.run` must be **public** (no trailing `_`) and prefixed by page: `apply_`, `home_`, `game_`, `steps_`. Everything else ends in `_`.
 - Look people up with `requireApplicant_()` / `getApplicantByEmail_(currentEmail_())`. Never trust an ID or email sent from the page.
 - Writes go through `validateApplication_(form, 'apply')` → lock → `safeCell_`. Applicant code never changes Status / Requirements / Payment.
 - Form links only through `formLink_()`, and only when `progress_()` says that step is unlocked.

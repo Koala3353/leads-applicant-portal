@@ -23,8 +23,9 @@ If `clasp pull` changed files, someone edited in the browser. Commit those first
 (`git add -A && git commit -m "sync from editor" && git push`) before your own work.
 
 ## While working
-- Only edit the files the human owns (CONTEXT.md ownership table). For shared files (`Utils.gs`, `Styles.html`,
-  `Brand.gs`, `Mascot.html`, `Loader.html`, `Code.gs`) write an **"Ask Keene"** note instead of editing.
+- Only edit the files the human owns (CONTEXT.md ownership table). `Home.html` + `HomeApi.gs` are shared between
+  Member B and Keene: both may edit, so pull first and keep commits small. For the other shared files (`Utils.gs`,
+  `Styles.html`, `Brand.gs`, `Referrals.gs`, `Mascot.html`, `Loader.html`, `Code.gs`) write an **"Ask Keene"** note instead of editing.
 - Keep `.gs` as `.gs`; never create `.js` copies. Never rename sheet headers (the code finds Applicants columns by header name, `col_()` in Utils.gs; never by position).
 - New Apply question = `RULES` + `COLS` (append at the END) in Utils.gs, `FIELDS` + HTML in Apply.html,
   the draft field list in ApplyApi.gs, and a `judge` line + `LABEL` for I.R.I.S. (CONTEXT.md §9.1).

@@ -4,7 +4,7 @@
 >
 > **AI:** you are helping a beginner on a student team build **one part** of a small Google Apps Script web app. Everything you need is here. Follow §3 strictly. When this file and your general knowledge disagree, this file wins.
 
-**Contents:** 1 Setup · 2 The project · 3 Rules for the AI · 4 Shared helpers · 5 Gotchas · 6 Starter code · 7 Look, I.R.I.S., accessibility · 8 Responsiveness · 9 Specs (Apply, Dashboard) · 10 Edge-case checklist · 11 Testing · 12 Troubleshooting · 13 Prompts
+**Contents:** 1 Setup · 2 The project · 3 Rules for the AI · 4 Shared helpers · 5 Gotchas · 6 Starter code · 7 Look, I.R.I.S., accessibility · 8 Responsiveness · 9 Specs (Apply, Referrals, Home) · 10 Edge-case checklist · 11 Testing · 12 Troubleshooting · 13 Prompts
 
 ---
 
@@ -21,16 +21,16 @@
 | **Home (the hub)** | plain link `.../exec` | `Home.html`, `HomeApi.gs` | Keene (done) |
 | **Application form** | `.../exec?page=apply` | `Apply.html`, `ApplyApi.gs` | **Member A** |
 | **Threat assessment game** (step 2 of applying) | `.../exec?page=game` | `Game.html`, `GameApi.gs` | **Nathan** |
-| **Applicant dashboard** | **inside Home**, under the top section (no `?page=`) | `Dashboard.html`, `DashboardApi.gs` (starter exists) | **Member B** |
-| Requirements + proof of payment | two **Google Forms** (not code); links shown on Home and the Dashboard | Forms, links in Settings | officers |
+| **Home (the hub)** | `.../exec` | `Home.html`, `HomeApi.gs` | **Member B**, shared with Keene |
+| Requirements + proof of payment | two **Google Forms** (not code); links shown on Home | Forms, links in Settings | officers |
 | Officer side | **the Sheet itself**, with a **LEADS** menu | `AdminMenu.gs` | Keene (done) |
 
-Member B: your file is **not a page**; `Home.html` pulls it in. Read §9.2 first. Everything else is **shared: don't edit it** (`Code.gs`, `Utils.gs`, `Brand.gs`, `Setup.gs`, `AdminMenu.gs`, `HomeApi.gs`, `Home.html`, `Styles.html`, `PageTop.html`, `Loader.html`, `Mascot.html`). Need a change there? Message Keene with *what*, *why*, and the exact function signature you want. Don't edit it even if your AI suggests it.
+Member B: you edit `Home.html` + `HomeApi.gs` directly (shared with Keene; pull before you start). Read §9.2 first. Everything else is **shared: don't edit it** (`Code.gs`, `Utils.gs`, `Brand.gs`, `Referrals.gs`, `Setup.gs`, `AdminMenu.gs`, `Styles.html`, `PageTop.html`, `Loader.html`, `Mascot.html`). Need a change there? Message Keene with *what*, *why*, and the exact function signature you want. Don't edit it even if your AI suggests it.
 
-**Making your files.** Editor → **+** next to Files → **Script** → name it **without** `.gs` (e.g. `ApplyApi`) → delete the empty `myFunction` → paste → Save. `Apply.html` / `Dashboard.html` / `DashboardApi.gs` already exist; open and replace their contents. A `.gs` and an `.html` **can't share a name**, hence `Apply.html` + `ApplyApi.gs`.
+**Making your files.** Editor → **+** next to Files → **Script** → name it **without** `.gs` (e.g. `ApplyApi`) → delete the empty `myFunction` → paste → Save. `Apply.html` / `Home.html` / `HomeApi.gs` already exist; open and replace their contents. A `.gs` and an `.html` **can't share a name**, hence `Apply.html` + `ApplyApi.gs`.
 
 **Testing.**
-- **Deploy → Test deployments** → copy the Web app URL (ends `/dev`). Member A: add `?page=apply`. Member B: the plain link. After each change: Save, reload. No redeploy needed for `/dev` (editors only; applicants use `/exec`, which Keene deploys).
+- **Deploy → Test deployments** → copy the Web app URL (ends `/dev`). Member A: add `?page=apply`. Member B: the plain link (Home). After each change: Save, reload. No redeploy needed for `/dev` (editors only; applicants use `/exec`, which Keene deploys).
 - Run server code by hand: pick a function in the toolbar → **Run**. First time: **Review permissions → your account → Advanced → Go to LEADS Applicant Portal (unsafe) → Allow** (normal for internal scripts). Output in the **Execution log**. For functions with arguments, write a throwaway `function test_x() { console.log(apply_submit({ FullName: 'Test' })); }`, run it, **delete it**.
 - Errors: browser → right-click → Inspect → **Console**. Server → editor's **Executions** (☰ icon): every call with its error and `console.log` output.
 
@@ -51,7 +51,7 @@ Member B: your file is **not a page**; `Home.html` pulls it in. Read §9.2 first
 3. **Payment (first):** proof of payment through the **payment Google Form**, after acceptance or any time after applying (a setting); officers mark Payment.
 4. **Requirements (after payment):** once Payment is **VERIFIED**, accepted applicants send PDFs + camp info through the **requirements Google Form**; officers check and mark Requirements.
 5. **Confirmed:** ACCEPTED + Requirements APPROVED + Payment VERIFIED → automatically **CONFIRMED**.
-6. **Home + Dashboard:** where each person sees where they are and what's next; each step after acceptance has its own page (Steps.html). Member B builds the Dashboard.
+6. **Home:** where each person sees where they are and what's next; each step after acceptance has its own page (Steps.html). Member B works on Home.
 
 **Theme: LEADS: Oversight.** "Oversight" means (1) watchful supervision and (2) an inadvertent error. The fears are being watched, feeling boxed in, and failing; the third reading is oversight as leadership. Brand-book concept: **"I Can See You / Do You See Yourself?"**: it starts unsettling and ends introspective; the applicant feels watched, then realizes the observer is a mirror (tone and voice in §7.5). Tagline "Someone is already watching. Apply anyway." The mood is **1984-style surveillance and analog horror, eerie, with scripted jump scares allowed, but never gory**: CCTV, case files, REC timestamps, watching eyes, warning tape, photocopy grain, CRT scanlines. No blood, skulls, ghosts or horror fonts. The mascot is **I.R.I.S.** (Inspection, Reconnaissance & Identification System: the portal's Big Brother), a pocket CRT television whose screen shows a real-looking eye that follows you; its power light, on-screen word and antennas change with its emotion (§7.2). Home has a CCTV wall of four custom SVG feeds (CAM 01 Lobby with a figure in the doorway, CAM 02 Hallway with flickering lights and a figure that steps closer, CAM 03 You with red tracking brackets on the pointer, CAM 04 Archive with colour bars and NO SIGNAL); it is Home-only, so don't copy it. Copy can be ominous in headings and labels; instructions and errors stay **clear first, creepy second**.
 
@@ -71,11 +71,10 @@ Member B: your file is **not a page**; `Home.html` pulls it in. Read §9.2 first
 | `Brand.gs` | `BRAND`: all copy, colors, fonts, I.R.I.S.'s lines/faces/colors. `brand_css()`, `brand_json()`. |
 | `AdminMenu.gs` | The LEADS menu, and the check that logs/undoes hand edits to the three track columns. |
 | `Setup.gs` | `setup_applyValidation()`: Sheet validation rules (owner runs it). |
-| `HomeApi.gs` + `Home.html` | The hub (done): progress, next step, one card per step, the Dashboard slot. |
+| `HomeApi.gs` + `Home.html` | **Member B, shared with Keene.** The hub: status card, next step, one card per step, referral card, FAQ/testimonials for non-applicants. |
 | `StepsApi.gs` + `Steps.html` | The steps after acceptance, one page with four views: `?page=pay` (02 proof of payment: details, QR codes, upload), `reqs` (03 requirements: the forms from the Requirements tab, with an inline preview), `ga` (04 1st GA: calendar button), `room` (05 room booking: placeholder). Copy in `BRAND.steps`. |
 | `Styles.html` · `PageTop.html` · `Loader.html` · `Mascot.html` | Shared CSS · top bar (logo, "← Back to the hub", **Sign out**) · full-screen loading overlay with a bouncing I.R.I.S. · **I.R.I.S.** in the bottom-right corner (§7.2). |
 | `Apply.html` + `ApplyApi.gs` | **Member A.** Placeholder now; you create `ApplyApi.gs`. |
-| `Dashboard.html` + `DashboardApi.gs` | **Member B.** Placeholder inside the hub; `dash_get()` already returns the applicant's own data. |
 
 ### 2.3 The Sheet
 
@@ -161,13 +160,13 @@ progress_(a) → {
 ## 3. Rules for the AI (follow strictly)
 
 ### 3.1 Scope
-1. Only write the user's **own two files** (A: `Apply.html`, `ApplyApi.gs` · B: `Dashboard.html`, `DashboardApi.gs`). Never output edits to shared files (§1). If a shared change is truly needed, add a labeled **"Ask Keene"** note with the exact function wanted; never duplicate shared code into the user's file.
+1. Only write the user's **own two files** (A: `Apply.html`, `ApplyApi.gs` · B: `Home.html`, `HomeApi.gs`, shared with Keene). Never output edits to shared files (§1). If a shared change is truly needed, add a labeled **"Ask Keene"** note with the exact function wanted; never duplicate shared code into the user's file.
 2. Don't build what the portal deliberately doesn't do: **no uploads** (Forms collect files), **no admin pages** (officers use the Sheet), **no new `?page=` routes, no emails, no code that changes Status/Requirements/Payment.**
 3. Reuse §4 helpers; don't re-implement validation, lookups, Form links, status or unlock logic, and don't invent helpers that aren't listed. Need one? Put it in the user's `.gs` with the page prefix and a trailing `_` (e.g. `apply_isIdTaken_()`).
 4. Plain HTML/CSS/vanilla JS + Apps Script. No frameworks, no CDNs, no `fetch` to other sites.
 
 ### 3.2 Security (non-negotiable)
-1. **Any public server function (no trailing `_`) can be called by any visitor with any arguments.** Public = only what the page calls, prefixed `apply_` or `dash_`. Everything else ends in `_`.
+1. **Any public server function (no trailing `_`) can be called by any visitor with any arguments.** Public = only what the page calls, prefixed by page (`apply_`, `home_`, `game_`, `steps_`). Everything else ends in `_`.
 2. Identify the user with `requireApplicant_()` / `currentEmail_()`. **Never** accept an email, ApplicantID or row number from the page to decide whose data to read or change.
 3. **Validate on the server** even if the page did (`validateApplication_`); whitelist fields, ignore unknown keys. Every Sheet write goes through `safeCell_()` (blocks `=IMPORTXML(...)` etc.; `updateApplicant_()` already does).
 4. **Return only what the page needs.** Never `Notes`, `ReviewedBy`, other applicants, the Admins list, or a Form link `progress_()` says is locked. Sensitive data never in template scriptlets; load it with `google.script.run` from a guarded function.
@@ -199,11 +198,9 @@ Shared pieces are **included, never copied or redrawn**, so when Keene changes I
 9. Buttons disable while working (no double submits). Keyboard and screen-reader friendly.
 10. Nothing fixed in the bottom-right corner (I.R.I.S.'s spot). Responsive per §8 at every width; this is a hard requirement, not polish.
 
-**The Dashboard (fragment inside Home):** items 4, 5, 7 (Home already shows the account warnings, so the Dashboard shows nothing for guests), 8, 9, 10 apply. **Don't** include Styles, Loader, Mascot or PageTop: Home has them (a second I.R.I.S. would appear).
-
 ### 3.5 Output format (every answer)
 1. **Complete files**, never snippets or "…rest unchanged…": both files, each in its own code block with the filename above.
-2. **How to install:** which file, paste, save, reload `/dev?page=apply` (or plain `/dev` for the Dashboard).
+2. **How to install:** which file, paste, save, reload `/dev?page=apply` (or plain `/dev` for Home).
 3. **Edge cases handled:** map to §10 and the page's list in §9; say what's not handled and why.
 4. **Must-haves:** confirm each §3.4 item.
 5. **Responsive check** (§8.4): one line per width (320, 360, 390, 768, 1024, 1440) and confirm every §8 rule. If one fails, fix the code first; don't just report it.
@@ -214,7 +211,7 @@ Shared pieces are **included, never copied or redrawn**, so when Keene changes I
 
 ## 4. Shared helpers (already exist; just call them)
 
-Functions ending in `_` are server-only. Public shared functions: `home_getContext()`, `utils_getFormRules()`, `dash_get()` (Dashboard starter), `include()`, `includeTemplate()`, `brand_css()`, `brand_json()`, `doGet()`, plus the officers' `menu_…`/`onOpen`/`onEdit` (never call those).
+Functions ending in `_` are server-only. Public shared functions: `home_getContext()`, `utils_getFormRules()` `include()`, `includeTemplate()`, `brand_css()`, `brand_json()`, `doGet()`, plus the officers' `menu_…`/`onOpen`/`onEdit` (never call those).
 
 | Helper | Returns / does |
 |---|---|
@@ -237,19 +234,18 @@ Functions ending in `_` are server-only. Public shared functions: `home_getConte
 | `validateApplication_(input, 'apply')` | `{ ok, errors: { Field: msg }, clean: { Field: value } }`. Trims, strips control chars, collapses spaces (not essays), checks pattern/list/range/length; `YearLevel` → number. Does **not** check IDNumber uniqueness. |
 | `utils_getFormRules()` *(public)* | `{ rules: RULES, lists: {}, isOpen }` (no Apply question uses a Lists dropdown now) so the page shows the same messages as the server |
 | `logChange_(id, action, from, to, by)` | writes a CHANGE row to Activity (`by` defaults to current email or `'system'`). Member A uses it once: `logChange_(id, 'status', '', 'SUBMITTED', 'system')`. |
-| `traced_(event, page, fn, summarize?)` | **Wrap every public server function in it** (see `apply_submit` / `dash_get`): logs OK + ms, `{ ok:false }` as WARN, and throws as ERROR with the stack, to the Activity tab. Pattern: `function x_get() { return traced_('x_get', 'x', x_get_, r => 'short summary'); }` with the real code in `x_get_()`. |
+| `traced_(event, page, fn, summarize?)` | **Wrap every public server function in it** (see `apply_submit` / `home_getContext`): logs OK + ms, `{ ok:false }` as WARN, and throws as ERROR with the stack, to the Activity tab. Pattern: `function x_get() { return traced_('x_get', 'x', x_get_, r => 'short summary'); }` with the real code in `x_get_()`. |
 | `activity_(event, details, { level, page, ms })` | one row in the **Activity** tab (`When | Level | Who | Page | Event | Details | ms`); level `INFO`/`WARN`/`ERROR`. Never throws. **Never log essays, ID numbers, phone numbers or other private answers**, just IDs, statuses and field names. |
 | `log_client(evt)` *(public)* | Styles.html calls it for browser errors (max 5 per page load). Don't call it yourself. |
 | `setStatus_` / `setStatusLocked_` / `setTrack_` | officers only (LEADS menu). **Not for your code.** |
 | `progress_(dataOrNull)` | unlock states (§2.4). The only source of truth. |
 | `home_getContext()` *(public)* | `{ email, signedIn, allowedDomain, isOpen, deadline, campStart, contact, isAdmin, event:{name,dates,venue}, applicant:{id,firstName,status,requirements,payment}\|null, progress, sheetUrl }`. Each step's page is `baseUrl + '?page=pay'` (`reqs`, `ga`, `room`). |
-| `dash_get()` *(public, Member B owns it)* | `{ applicant:{id,nickname,status,requirements,payment,appliedAt,lastUpdated}, progress, pages:{payment:'pay',requirements:'reqs',ga:'ga',room:'room'}, payment:{details}, deadlines:{requirements,payment}, event:{name,dates,venue} }` or `{ applicant: null }` |
 | `steps_get(page)` · `steps_uploadProof(file)` *(public, StepsApi.gs)* | the Steps page's data for `pay`/`reqs`/`ga`/`room` (content only once unlocked) · saves the proof of payment, links it in `PaymentProof`, sets Payment SUBMITTED |
 
 **In templates and pages**
 - Template variables: `BRAND`, `baseUrl` (the `/exec` or `/dev` URL, pinned to the school domain by `portalUrl_()`: `https://script.google.com/a/macros/student.ateneo.edu/s/<id>/exec`), `notice`, `page`. Always build links from `baseUrl`, never from `ScriptApp.getService().getUrl()`: the plain `/macros/s/...` link shows Google's "file not found" page to anyone signed in to several Google accounts.
-- `includeOptional_(name, vars)`: like `includeTemplate` but returns `''` if the file is missing or throws, so an optional piece can't break the page (Home uses it for the Dashboard and I.R.I.S.).
-- **Hub events:** after `home_getContext()` returns, Home fires `document` event **`hub:context`** (`detail` = that object) and sets `window.HUB = { type: 'context', detail }`. On failure: **`hub:error`** (`detail.message`). If the Dashboard adds `has-dash` to `<body>`, Home hides its own status card and progress path.
+- `includeOptional_(name, vars)`: like `includeTemplate` but returns `''` if the file is missing or throws, so an optional piece can't break the page (Home uses it for I.R.I.S.).
+- **Hub events:** after `home_getContext()` returns, Home fires `document` event **`hub:context`** (`detail` = that object) and sets `window.HUB = { type: 'context', detail }`. On failure: **`hub:error`** (`detail.message`).
 - **Loader:** `Loader.show('Sending…')` / `Loader.hide()`. With `data-loader-wait` on `<body>` it stays up until you call `hide()`; auto-hides after 20s as a last resort. It also shows automatically on clicks to other portal pages.
 - **I.R.I.S.:** `window.Iris.say([face, text], ms?)`, `window.Iris.error()`, and the `portal:error` event (§7.2). Always guard with `if (window.Iris)`.
 
@@ -309,7 +305,7 @@ function apply_getForm() {
 
 **Return shapes:** validation problems → **return** `{ ok: false, errors: { Field: 'message' } }`; success → `{ ok: true, ...data }`; anything else (not allowed, closed, not signed in, unexpected) → **throw** `new Error('friendly message')`.
 
-### 6.2 Page skeleton (Apply; the Dashboard uses §6.4)
+### 6.2 Page skeleton (Apply)
 
 ```html
 <!DOCTYPE html>
@@ -412,66 +408,6 @@ async function onSubmit(e) {
 }
 ```
 
-### 6.4 Dashboard fragment (`Dashboard.html`, Member B)
-
-No `<!DOCTYPE>`/`<html>`/`<head>`/`<body>`, Styles, Loader, Mascot or PageTop: Home has them. Just `<style>`, `<section id="dash">`, `<script>`. Everything scoped to `#dash`.
-
-```html
-<style>
-  #dash{display:none;margin:8px 0 6px}
-  #dash.show{display:block}
-  #dash .dash-grid{display:grid;gap:14px;grid-template-columns:1fr}
-  @media (min-width:860px){#dash .dash-grid{grid-template-columns:1.2fr 1fr}}
-</style>
-
-<section id="dash" aria-label="Your dashboard">
-  <div class="card" id="dash-loading" role="status">Loading your dashboard…</div>
-  <div class="card" id="dash-error" role="alert" hidden><p id="dash-errorMsg"></p>
-    <button class="btn ghost" type="button" id="dash-retry">Try again</button></div>
-  <div class="dash-grid" id="dash-content" hidden><!-- your cards --></div>
-</section>
-
-<script>
-  (function () {
-    const root = document.getElementById('dash');
-    const $ = id => document.getElementById(id);   // local, not a global
-    const call = (fn, ...args) => new Promise((ok, no) =>
-      google.script.run.withSuccessHandler(ok).withFailureHandler(err => {
-        document.dispatchEvent(new CustomEvent('portal:error', { detail: err }));   // I.R.I.S. reacts
-        no(err);
-      })[fn](...args));
-
-    async function load() {
-      $('dash-error').hidden = true; $('dash-loading').hidden = false; $('dash-content').hidden = true;
-      try {
-        const data = await call('dash_get');
-        if (!data.applicant) { root.classList.remove('show'); return; }   // not applied: show nothing
-        render(data);
-        $('dash-loading').hidden = true; $('dash-content').hidden = false;
-        document.body.classList.add('has-dash');   // only now: the hub hides its own status card
-      } catch (err) {
-        $('dash-loading').hidden = true;
-        $('dash-errorMsg').textContent = (err && err.message) || String(err);
-        $('dash-error').hidden = false;             // has-dash stays off: hub's status card still works
-      }
-    }
-    function render(data) { /* textContent only; Form links: target="_blank" rel="noopener" */ }
-
-    function onContext(ctx) {
-      if (!ctx || !ctx.applicant) return;          // guests and non-applicants: nothing
-      root.classList.add('show');
-      load();
-    }
-    $('dash-retry').addEventListener('click', load);
-    document.addEventListener('hub:context', e => { try { onContext(e.detail); } catch (err) { console.error(err); } });
-    document.addEventListener('hub:error', () => root.classList.remove('show'));
-    if (window.HUB && window.HUB.type === 'context') { try { onContext(window.HUB.detail); } catch (err) { console.error(err); } }
-  })();
-</script>
-```
-
----
-
 ## 7. Look, I.R.I.S., accessibility
 
 ### 7.1 Look and classes
@@ -514,7 +450,7 @@ document.dispatchEvent(new CustomEvent('portal:error'));              // same as
 1. **Always guard** (`if (window.Iris)`, or the `kuya()` helper): I.R.I.S. can be hidden, off (`BRAND.mascot.show = false`) or fail to load; the page must work without it.
 2. **Never redraw, copy, restyle or move I.R.I.S.**; never style `.kuya*` classes or `#kuya*` ids. Keep the bottom-right corner free; the body already has bottom padding for it.
 3. **I.R.I.S. is extra, not the UI**: everything it says must also be on the page.
-4. **Big moments only.** Apply: submit success (`excited`), validation errors (`thinking`), closed (`sad`), already applied (`happy`). Dashboard: only actions taken inside it (e.g. `['happy', 'Opening the requirements form in a new tab.']`); Home already comments on the status. Server errors are automatic.
+4. **Big moments only.** Apply: submit success (`excited`), validation errors (`thinking`), closed (`sad`), already applied (`happy`). Home: status changes and the referral card only. Server errors are automatic.
 5. Lines: one or two short sentences, first person, watchful and a little ominous but on the applicant's side ("File received. You are now on record."), plain text, no gore.
 6. New face, color or shared line → it's Brand.gs: ask Keene.
 
@@ -522,7 +458,7 @@ document.dispatchEvent(new CustomEvent('portal:error'));              // same as
 PageTop always has **Sign out**. "Not signed in" state → **Sign in** button (`ACCOUNT.choose`, Google's account picker). "Wrong account" → **Switch account** (`ACCOUNT.out`). Both are plain links (`<a class="btn" href="…" target="_top">`), never `window.open`. Sign out signs out of **every** Google account in that browser; say so in a `title` or small note.
 
 ### 7.4 Forms and accessibility
-- **Home extras for non-applicants:** an FAQ of "classified files" (`BRAND.faq`, `{fee} {dates} {venue}` filled from Settings; `todo: true` answers only show to admins) and past-camper quotes (`BRAND.testimonials`; `sample: true` shows a SAMPLE stamp). Both hide once the person has a file (`body.applied`), so the Dashboard has room. Confirmed campers' countdown switches to camp start (Settings › `CampStart`, else the first date in `EventDates`).
+- **Home extras for non-applicants:** an FAQ of "classified files" (`BRAND.faq`, `{fee} {dates} {venue}` filled from Settings; `todo: true` answers only show to admins) and past-camper quotes (`BRAND.testimonials`; `sample: true` shows a SAMPLE stamp). Both hide once the person has a file (`body.applied`). Confirmed campers' countdown switches to camp start (Settings › `CampStart`, else the first date in `EventDates`).
 - **Dropdowns are themed** (`CustomSelect` in Styles.html): every `<select>` on every page is replaced by a styled button + listbox on load, with the real select kept underneath for the value and validation. Use plain `<select>` in your markup; setting `el.value` from code updates the themed one too. Don't style native selects yourself.
 - **Report an issue** (`ReportIssue` in Styles.html, `report_issue` in Utils.gs, copy in `BRAND.report`): a red "Report an issue" button is added to every page's top bar and footer automatically (any `[data-report]` element opens it too). The form asks for the category, what happened, what they were doing, steps, when, how bad and a reply email (+ optional screenshot). It attaches the page, browser, screen, in-app browser, recent page errors, their account, applicant ID/status and last Activity rows, then emails a themed case file to Settings › `IssueEmail` (or `BRAND.report.to`). Max 3 reports per person per 10 minutes. The owner must run `report_authorize` once so Google allows sending email.
 - **Wording: say "core team", never "officers"**, in anything applicants see. The footer reads "Portal issues? …".
@@ -721,52 +657,22 @@ apply_submit(form) → { ok:false, errors } | { ok:true, id }
 - **Referrals tab (core team):** LEADS menu › *Rebuild Referrals tab* (`referrals_setupTab`). Live formulas over Applicants: ReferrerID, name, code, who invited *them*, how many they brought in, and the list of people they referred (name, ID, status). Safe to rebuild any time; never type in it.
 - **Copy** lives in `BRAND.referral`.
 
-### 9.2 Dashboard inside the hub (`Dashboard.html` + `DashboardApi.gs`), Member B
+### 9.2 Home, the hub (`Home.html` + `HomeApi.gs`), Member B, shared with Keene
 
-**Purpose:** the applicant's personal area **on the home page**. There's no separate status page: this is where they see where they are, what's next, what to prepare, and the Form links when it's their turn.
+The Dashboard files were removed (Oct 2026): everything an applicant sees about their own file lives directly in Home. Edit `Home.html` / `HomeApi.gs`; Keene edits them too, so **`git pull` + `clasp pull` before every session** and commit often (AGENTS.md).
 
-**Wiring (done; don't change Home.html).** Home includes your file with `includeOptional_('Dashboard', { BRAND, baseUrl })` right after the hero; if it's missing or throws, Home renders without it (Executions shows `includeOptional_(Dashboard) skipped:`). Your file is a fragment (§6.4). Decide whether to show anything from the `hub:context` data **before** calling the server; extra data comes from `dash_get()` (extend it in your own file, following §3).
-
-**Isolation (must; everyone shares the hub)**
-1. Everything inside `<section id="dash">`; all CSS selectors start with `#dash`, all ids with `dash-`. Never style bare tags, `body`, `.wrap` or hub classes; never reuse hub ids (`statusCard`, `path`, `mods`, `who`…).
-2. All JS in **one IIFE**; no globals (the hub defines `$`, `BRAND`, `render`, `fail`, `announce`). Reading `BRAND`, `Loader`, `window.HUB`, `window.Iris` is fine.
-3. The only effect on the hub: `document.body.classList.add('has-dash')`, **only after your dashboard rendered for an applicant**.
-4. Never throw out of listeners (try/catch); on error show an inline message in `#dash` (or hide it) and leave `has-dash` off.
-5. Don't use the full-screen Loader: show an inline skeleton the same height as the final card.
-6. Handle both `hub:context` **and** `window.HUB` already being set.
-
-**Who sees what**
-
-| Who | Dashboard shows |
-|---|---|
-| Guest / wrong account | nothing (Home explains sign-in) |
-| Signed in, not applied | nothing, or one small "Apply now" nudge only if `ctx.isOpen` (don't duplicate the hub's big button) |
-| SUBMITTED / UNDER REVIEW / WAITLISTED | greeting (`nickname`), status + `BRAND.statusCopy`, what happens next |
-| ACCEPTED | **one** clear next action linking to the step's page (`?page=pay`, then `reqs`), nearest deadline with days left |
-| Requirements / Payment `SUBMITTED` | "Received, the core team is checking" |
-| Requirements `RETURNED` / Payment `REJECTED` | "Something needs fixing: check your email or message the core team" + a link to that step's page |
-| REJECTED / WITHDRAWN | kind message only; no step links |
-| CONFIRMED | celebratory "You're in" + event dates/venue |
-| Officer who also applied | same as an applicant |
-
-**Edge cases**
-- `hub:error` → hide `#dash`. `dash_get()` fails → inline error + Retry, `has-dash` stays off.
-- Payment, requirements, the 1st GA and room booking each have their own page (Steps.html); the Dashboard links there and never repeats their content. A locked step says why (`progress[step].why` → `BRAND.lockedWhy`).
-- Next action uses `progress` (payment `action` first, then requirements `action`), like the hub's main button.
-- Deadlines blank/passed → hide / "passed" (never "Invalid Date", "NaN days"). Long nickname/email wraps.
-- Responsive: one column on phones; 2–3 columns from 860px, never wider than its parent `.wrap`. Use `.card`, `.pill`, `.btn`, CSS variables; no new fonts.
-- I.R.I.S.: no Mascot include; optional guarded `I.R.I.S..say` for actions inside the Dashboard only.
-
-**Placeholder now:** only admins see a dashed "being built" note; applicants see nothing.
-
----
+- **Data:** one call, `home_getContext()` → `{ email, signedIn, allowedDomain, isOpen, deadline, campStart, contact, isAdmin, event, applicant:{id,firstName,status,requirements,payment}|null, progress, referral:{code,link,counts,open}|null, sheetUrl }`. Add fields there (in `home_getContext_`) rather than adding a second call; keep it cheap (TextFinder lookups, no full-sheet reads per visitor).
+- **What each person sees:** guest / wrong account → sign-in help only · signed in, not applied → apply button, FAQ, testimonials · applied → status card (`BRAND.statusCopy`), the step cards (locked steps say why: `progress[step].why` → `BRAND.lockedWhy`), the referral card · CONFIRMED → camp countdown.
+- **Next action** comes from `progress` (`nextMove()`), never re-derived. Each step's content stays on its own page (Steps.html); Home only links.
+- **Don't break:** `hub:context` / `hub:error` events (the report button reads them), `data-base` / `data-ref` on `<body>`, the I.R.I.S. include, `Loader.hide()` on success and error, the bottom-right corner (I.R.I.S.).
+- **Edge cases:** deadlines blank/passed (never "Invalid Date"), long names/emails wrap, one column on phones (§8), no `//` inside backtick strings (§5).
 
 ## 10. Edge-case checklist (go through it; say which apply and how)
 
 - **Who:** not signed in (`''`) · wrong/non-Ateneo account · signed in but not applied · officer who also applied · someone calling your public functions from the console with wrong/missing/malicious arguments (`null`, `{}`, huge strings, other people's IDs, `=FORMULA`).
 - **When:** closed / deadline passed / reopened · state changed between page load and click · Settings blank, text instead of a date, number stored as text.
 - **What:** every Status, Requirements and Payment value · each step switch on and off · an empty Requirements tab, blank PaymentDetails/QR codes, no GA link · long text, line breaks, emojis, ñ/accents, extra spaces · leading-zero numbers stay strings.
-- **Shared pieces (§3.4):** Styles/brand_css, Loader, I.R.I.S., PageTop exactly as §6.2 (Dashboard: none) · `call()` fires `portal:error`; `Loader.hide()` on success and error · I.R.I.S. reacts to success and validation errors, guarded, with the same message on the page · Sign in / Switch account buttons · bottom-right corner free · no Halloween visuals or wording.
+- **Shared pieces (§3.4):** Styles/brand_css, Loader, I.R.I.S., PageTop exactly as §6.2 · `call()` fires `portal:error`; `Loader.hide()` on success and error · I.R.I.S. reacts to success and validation errors, guarded, with the same message on the page · Sign in / Switch account buttons · bottom-right corner free · no Halloween visuals or wording.
 - **Layout:** every §8 rule at every test width (report per §8.4).
 - **How:** loading state within 100ms, never blank · server error → readable message + retry, nothing half-saved · double click / two tabs → no duplicates · slow or dropped connection while submitting · keyboard-only and screen reader · no `Date` from the server; "undefined", "null", "NaN", "Invalid Date" never on screen · user text via `textContent` · no personal data in `console.log`.
 
@@ -785,7 +691,7 @@ You can't make fake Google accounts, so **fake states with your own row**:
 8. Laptop: Inspect → device toolbar (Ctrl/Cmd+Shift+M) → Responsive → 320, 360, 390, 768, 1024, 1440; scroll sideways at each; run the §8.4 snippet; try 200% zoom.
 9. **Clean up:** delete your TEST row and test Form responses (its Activity CHANGE rows stay).
 
-Server-only: `function test_mine() { console.log(JSON.stringify(dash_get(), null, 2)); }` → Run → read the log → delete it.
+Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(), null, 2)); }` → Run → read the log → delete it.
 
 ---
 
@@ -800,15 +706,12 @@ Server-only: `function test_mine() { console.log(JSON.stringify(dash_get(), null
 | `Script function not found: doGet` | Saved with errors, or Code.gs edited: fix red marks, don't touch Code.gs |
 | `?page=apply` shows the hub | `Apply.html` missing or misnamed |
 | `No HTML file named PageTop` | Shared file missing: ask Keene |
-| Dashboard doesn't appear | It threw while rendering: Executions → `includeOptional_(Dashboard) skipped:` |
-| Hub looks broken after adding the Dashboard | CSS not scoped to `#dash`, or a reused hub id/global (§9.2) |
 | Page shows raw `<?= ?>` | Used `include()` on a file with scriptlets: use `includeTemplate()` |
 | Infinite loading / "Maximum call stack" | A scriptlet tag inside an HTML comment |
 | Loader stuck (vanishes after 20s) | `data-loader-wait` without `Loader.hide()`, often missing in the error path |
 | `Loader is not defined` | `include('Loader')` missing or not first in `<body>` |
 | I.R.I.S. missing | Mascot include missing, or "Hide I.R.I.S." was clicked (open a new tab) |
 | `I.R.I.S. is not defined` / page breaks when I.R.I.S. is hidden | Use the guarded `kuya()` helper |
-| Two I.R.I.S. mascots on Home | The Dashboard included Mascot: remove it |
 | I.R.I.S. covers my button | Something is in the bottom-right corner: move it |
 | I.R.I.S. doesn't react to errors | A raw `google.script.run` without `portal:error`: use `call()` |
 | Wrong email / "unable to open the file" | Several Google accounts: **Sign out**, then sign in with only the Ateneo account |
@@ -834,7 +737,7 @@ Server-only: `function test_mine() { console.log(JSON.stringify(dash_get(), null
 ## 13. Prompts (fill in, paste after this file)
 
 **Build my page**
-> I'm Member **[A/B]**. I own **[Apply.html + ApplyApi.gs / Dashboard.html + DashboardApi.gs]**. Using the context file above, build both files completely, following §3 (including every §3.4 must-have: Loader, I.R.I.S., PageTop, `call()`, account buttons), my spec in §9 (and the §6.4 skeleton if I'm the Dashboard), and the §10 checklist. Current files: [paste]. Give full files, install steps, edge cases handled, the must-haves, the §8.4 responsive check, and a test plan.
+> I'm Member **[A/B]**. I own **[Apply.html + ApplyApi.gs / Home.html + HomeApi.gs (shared with Keene)]**. Using the context file above, build both files completely, following §3 (including every §3.4 must-have: Loader, I.R.I.S., PageTop, `call()`, account buttons), my spec in §9 and the §10 checklist. Current files: [paste]. Give full files, install steps, edge cases handled, the must-haves, the §8.4 responsive check, and a test plan.
 
 **Fix a bug**
 > I'm Member **[X]** on **[file]**. Expected: **[…]**. Actual: **[…]**. Error from Console/Executions: **[exact text]**. Files: [paste]. Explain the cause in 2–3 sentences and give the full fixed files. Don't touch shared files.

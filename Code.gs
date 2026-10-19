@@ -3,16 +3,15 @@
  * The project's entry point and the ONLY doGet. Opens a page based on ?page= in the link.
  *
  * The portal's pages:
- *   .../exec               -> Home.html   the hub (Keene). Shows the Dashboard inside it and links to everything.
+ *   .../exec               -> Home.html   the hub (Home.html + HomeApi.gs: Member B, shared with Keene). Status, steps, referrals.
  *   .../exec?page=apply    -> Apply.html  the application form (Member A), then ?page=game (Game.html) submits it
  *   .../exec?page=pay | reqs | ga | room -> Steps.html (StepsApi.gs): proof of payment, requirements, 1st GA,
  *                             room booking. Each is locked until its Settings switch is on (see progress_ in Utils.gs).
- * Inside Home: Dashboard.html + DashboardApi.gs (Member B), pulled in with includeOptional_.
  * The core team: the Sheet (AdminMenu.gs).
  *
  * FILE NAMES: Apps Script won't let a .gs and an .html share a name (Home.gs + Home.html = error),
- * so server code is HomeApi.gs, ApplyApi.gs, DashboardApi.gs.
- * Shared: Code.gs (this), Utils.gs, Brand.gs, Setup.gs, AdminMenu.gs, Styles.html, PageTop.html, Loader.html.
+ * so server code is HomeApi.gs, ApplyApi.gs, GameApi.gs, StepsApi.gs.
+ * Shared: Code.gs (this), Utils.gs, Brand.gs, Referrals.gs, Setup.gs, AdminMenu.gs, Styles.html, PageTop.html, Loader.html, Mascot.html.
  * Any other ?page= value shows Home.
  */
 const PAGES = {
@@ -82,7 +81,7 @@ function includeTemplate(name, vars) {
 }
 
 /**
- * For optional pieces inside a page (e.g. the Dashboard inside Home). Returns '' when the file
+ * For optional pieces inside a page (e.g. I.R.I.S., Mascot.html). Returns '' when the file
  * doesn't exist or its template throws, so one broken widget can never take down the hub.
  * Private (trailing _): scriptlets can call it, the browser can't.
  */
