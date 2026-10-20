@@ -338,6 +338,38 @@
   .clock .date{margin:12px 0 0;font-family:var(--mono);font-size:.76rem;letter-spacing:.04em;color:var(--muted)}
   .clock.closed .units{opacity:.35}
 
+  /* secondary deadline block inside COUNTDOWN.EXE */
+  .clock-next{margin-top:14px;padding:10px 12px;background:rgba(0,0,0,.55);border:1px dashed var(--line);border-left:3px solid var(--sky)}
+  .clock-next .cn-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+  .clock-next .cn-tag{font:700 .62rem/1 var(--mono);letter-spacing:.14em;color:var(--sky);text-transform:uppercase}
+  .clock-next .cn-title{font:700 .78rem/1.2 var(--mono);color:var(--text);text-transform:uppercase;letter-spacing:.04em}
+  .clock-next .cn-body{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .clock-next .cn-timer{font:700 .95rem/1 var(--mono);color:var(--glow);font-variant-numeric:tabular-nums;letter-spacing:.06em}
+  .clock-next .cn-date{font:.72rem/1 var(--mono);color:var(--muted);letter-spacing:.02em}
+
+  /* panic alert state: when time is close to diminishing (< 24 hours) */
+  body.panic-alert .dark{
+    background:radial-gradient(circle 320px at var(--x,50%) var(--y,30%),rgba(255,42,42,.26),transparent 70%),
+               radial-gradient(1100px 520px at 50% -12%,rgba(180,0,0,.42) 0%,transparent 62%),#080202;
+  }
+  body.panic-alert .clock{box-shadow:var(--bevel-out),0 0 24px rgba(255,42,42,.55);border-color:var(--danger)}
+  body.panic-alert .clock .winbar{background:linear-gradient(90deg,#990000,#ff2a2a);color:#fff}
+  body.panic-alert .clock.urgent .unit b{color:#ff3333;text-shadow:0 0 10px rgba(255,51,51,.7)}
+  body.panic-alert .watcher{opacity:.95}
+  body.panic-alert .watcher.red .reye{filter:grayscale(.1) contrast(1.5) sepia(1) hue-rotate(-50deg) saturate(5) brightness(.9)}
+  body.panic-alert .reye{--pupil:6%;filter:contrast(1.25) brightness(.92) drop-shadow(0 0 8px rgba(255,42,42,.4))}
+  body.panic-alert .reye .reye-ball{animation:eyePanic .18s steps(2) infinite}
+  @keyframes eyePanic{
+    0%{transform:translate(0,0)}
+    25%{transform:translate(-2.5px,1.5px)}
+    50%{transform:translate(2px,-1.5px)}
+    75%{transform:translate(-1.5px,-1px)}
+    100%{transform:translate(1px,2px)}
+  }
+  body.panic-alert .tv-scr{box-shadow:inset 0 0 22px rgba(255,42,42,.85),0 0 0 3px #900}
+  body.panic-alert .tv b{color:#ff2a2a}
+  html.calm body.panic-alert .reye .reye-ball{animation:none!important}
+
   /* status card: the subject's file */
   /* status card: a file folder with a tab and an ink stamp */
   .status{margin-top:36px;display:none;position:relative;border-top-left-radius:0}
@@ -544,6 +576,16 @@
           <div class="unit"><b id="s">--</b><span>sec</span></div>
         </div>
         <p class="date" id="deadlineText"></p>
+        <div class="clock-next" id="clockNext" hidden>
+          <div class="cn-head">
+            <span class="cn-tag">NEXT IN LINE</span>
+            <span class="cn-title" id="nextTitle"></span>
+          </div>
+          <div class="cn-body">
+            <span class="cn-timer" id="nextTimer">--d --h --m --s</span>
+            <span class="cn-date" id="nextDate"></span>
+          </div>
+        </div>
         <ul class="facts" id="facts">
           <li data-fact="dates">When <b></b></li>
           <li data-fact="venue">Where <b></b></li>
@@ -1310,35 +1352,157 @@
     document.body.classList.toggle('applied', !!a);
     if (!a) renderIntel(ctx);
 
-    // countdown
+    // countdown: Requirements Timer (2 nearest deadlines + panic alert)
     const pill = $('openPill');
-    // confirmed campers count down to camp instead of the application deadline
-    if (a && a.status === 'CONFIRMED' && ctx.campStart) {
-      ctx = Object.assign({}, ctx, { deadline: ctx.campStart, isOpen: true, camp: true });
+    const dls = ctx.deadlines || {};
+    const nextBox = $('clockNext');
+
+    // Define all milestone tasks with completion conditions
+    const allMilestones = [
+      {
+        id: 'apply',
+        title: BRAND.countdown?.title || 'Application Deadline',
+        kicker: '01 · APPLICATION',
+        deadline: dls.apply || ctx.deadline,
+        isDone: !!a, // Complete once user has an application file
+        isOpen: ctx.isOpen,
+        badge: ctx.isOpen ? 'open' : 'closed'
+      },
+      {
+        id: 'pay',
+        title: 'Proof of Payment',
+        kicker: '02 · PAYMENT',
+        deadline: dls.payment,
+        isDone: a && (a.payment === 'SUBMITTED' || a.payment === 'VERIFIED'),
+        isOpen: p && p.payment ? p.payment.unlocked : false,
+        badge: a ? 'payment ' + a.payment.toLowerCase() : 'locked'
+      },
+      {
+        id: 'reqs',
+        title: 'Requirement Forms',
+        kicker: '03 · REQUIREMENTS',
+        deadline: dls.requirements,
+        isDone: a && (a.requirements === 'SUBMITTED' || a.requirements === 'APPROVED'),
+        isOpen: p && p.requirements ? p.requirements.unlocked : false,
+        badge: a ? 'requirements ' + a.requirements.toLowerCase() : 'locked'
+      },
+      {
+        id: 'camp',
+        title: BRAND.countdown?.campTitle || 'Camp Commencement',
+        kicker: '04 · CAMP COMMENCEMENT',
+        deadline: dls.camp || ctx.campStart,
+        isDone: false,
+        isOpen: a && a.status === 'CONFIRMED',
+        badge: 'confirmed camper'
+      }
+    ];
+
+    // Filter out completed tasks and invalid dates
+    const pendingTasks = allMilestones.filter(t => !t.isDone && t.deadline && !isNaN(new Date(t.deadline).getTime()));
+    pendingTasks.sort((x, y) => new Date(x.deadline) - new Date(y.deadline));
+
+    // Exclude tasks that passed more than 2 hours ago unless it's the only task
+    const curNow = new Date().getTime();
+    const activeTasks = pendingTasks.filter(t => (new Date(t.deadline).getTime() - curNow) > -72e5);
+    const queue = activeTasks.length ? activeTasks : pendingTasks;
+
+    const primary = queue[0] || null;
+    const secondary = queue[1] || null;
+
+    if (!primary) {
+      if (a && a.status === 'CONFIRMED') {
+        $('clockTitle').textContent = 'ALL STEPS CLEARED';
+        pill.textContent = 'confirmed camper';
+        pill.className = 'pill ok';
+        $('deadlineText').textContent = 'Your file is complete. Awaiting camp briefing.';
+      } else {
+        $('clockTitle').textContent = BRAND.countdown.title;
+        pill.textContent = ctx.isOpen ? 'applications open' : 'applications closed';
+        pill.className = 'pill ' + (ctx.isOpen ? 'ok' : 'warn');
+        $('deadlineText').textContent = BRAND.countdown.tba;
+      }
+      if (nextBox) nextBox.hidden = true;
+      ['d', 'h', 'm', 's'].forEach(k => $(k).textContent = '--');
+      document.body.classList.remove('panic-alert');
+      $('clock').classList.remove('urgent');
+      return;
     }
-    pill.textContent = ctx.isOpen ? 'applications open' : 'applications closed';
-    pill.className = 'pill ' + (ctx.isOpen ? 'ok' : 'warn');
-    if (!ctx.deadline) { $('deadlineText').textContent = BRAND.countdown.tba; return; }
-    const end = new Date(ctx.deadline);
-    $('deadlineText').textContent = (ctx.camp ? BRAND.countdown.campLabel : 'Deadline: ') + end.toLocaleString('en-PH', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Manila' });
-    if (ctx.camp) pill.textContent = 'confirmed camper';
+
+    const endPrimary = new Date(primary.deadline);
+    $('clockTitle').textContent = primary.title;
+    pill.textContent = primary.badge;
+    pill.className = 'pill ' + (primary.isOpen ? 'ok' : 'dim');
+    $('deadlineText').textContent = 'Deadline: ' + endPrimary.toLocaleString('en-PH', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Manila' });
+
+    if (secondary && nextBox) {
+      nextBox.hidden = false;
+      $('nextTitle').textContent = secondary.kicker + ' // ' + secondary.title;
+      $('nextDate').textContent = 'Due ' + new Date(secondary.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', timeZone: 'Asia/Manila' });
+    } else if (nextBox) {
+      nextBox.hidden = true;
+    }
+
     const pad = n => String(n).padStart(2, '0');
+    let hasAlertedPanic = false;
+
     function tick() {
-      let ms = end - new Date();
-      if (ms <= 0 || !ctx.isOpen) {
+      const nowMs = new Date().getTime();
+      let ms = endPrimary.getTime() - nowMs;
+
+      if (secondary && nextBox) {
+        let secMs = new Date(secondary.deadline).getTime() - nowMs;
+        if (secMs > 0) {
+          const sd = Math.floor(secMs / 864e5); secMs -= sd * 864e5;
+          const sh = Math.floor(secMs / 36e5); secMs -= sh * 36e5;
+          const sm = Math.floor(secMs / 6e4); secMs -= sm * 6e4;
+          const ss = Math.floor(secMs / 1e3);
+          $('nextTimer').textContent = sd + 'd ' + pad(sh) + 'h ' + pad(sm) + 'm ' + pad(ss) + 's';
+        } else {
+          $('nextTimer').textContent = 'PASSED';
+        }
+      }
+
+      if (ms <= 0) {
         $('clock').classList.add('closed');
-        $('clockTitle').textContent = BRAND.countdown.closed;
+        $('clock').classList.remove('urgent');
+        document.body.classList.remove('panic-alert');
+        $('clockTitle').textContent = primary.title + ' (CLOSED)';
+        pill.textContent = 'closed';
+        pill.className = 'pill warn';
         ['d', 'h', 'm', 's'].forEach(k => $(k).textContent = '00');
         return;
       }
+
       const d = Math.floor(ms / 864e5); ms -= d * 864e5;
       const h = Math.floor(ms / 36e5); ms -= h * 36e5;
       const m = Math.floor(ms / 6e4); ms -= m * 6e4;
-      $('d').textContent = pad(d); $('h').textContent = pad(h); $('m').textContent = pad(m); $('s').textContent = pad(Math.floor(ms / 1e3));
-      $('clockTitle').textContent = ctx.camp ? BRAND.countdown.campTitle : (d < 2 ? BRAND.countdown.soon : BRAND.countdown.title);
+      const s = Math.floor(ms / 1e3);
+
+      $('d').textContent = pad(d);
+      $('h').textContent = pad(h);
+      $('m').textContent = pad(m);
+      $('s').textContent = pad(s);
+
+      // Panic check: < 24 hours remaining for nearest deadline
+      const totalHoursLeft = ms / 36e5;
+      if (totalHoursLeft > 0 && totalHoursLeft < 24) {
+        document.body.classList.add('panic-alert');
+        $('clock').classList.add('urgent');
+        pill.textContent = 'URGENT // CLOSING';
+        pill.className = 'pill warn';
+        if (!hasAlertedPanic) {
+          hasAlertedPanic = true;
+          kuya('scared', 'Deadline critical: ' + primary.title + ' closes in under 24 hours.');
+        }
+      } else {
+        document.body.classList.remove('panic-alert');
+        $('clock').classList.remove('urgent');
+      }
+
       setTimeout(tick, 1000);
     }
     tick();
+
   }
 
   /** FAQ "classified files" + past-camper quotes. Text only (textContent), filled from Settings. */

@@ -12,6 +12,9 @@ function home_getContext_() {
   const email = currentEmail_();
   const s = getSettings_();
   const deadline = parseDate_(s.Deadline);
+  const payDeadline = parseDate_(s.PaymentDeadline);
+  const reqsDeadline = parseDate_(s.RequirementsDeadline);
+  const camp = campStart_(s);
   const found = email ? getApplicantByEmail_(email) : null;
   const a = found ? found.data : null;
   const p = progress_(a);
@@ -22,7 +25,13 @@ function home_getContext_() {
     allowedDomain: email ? isAllowedDomain_(email) : false,
     isOpen: isOpen_(),
     deadline: deadline ? deadline.toISOString() : null,
-    campStart: campStart_(s),   // ISO or null; Home counts down to it once the applicant is CONFIRMED
+    deadlines: {
+      apply: deadline ? deadline.toISOString() : null,
+      payment: payDeadline ? payDeadline.toISOString() : null,
+      requirements: reqsDeadline ? reqsDeadline.toISOString() : null,
+      camp: camp
+    },
+    campStart: camp,   // ISO or null; Home counts down to it once the applicant is CONFIRMED
     contact: String(s.ContactEmail || ''),
     isAdmin: isAdmin_(email),
     event: {
