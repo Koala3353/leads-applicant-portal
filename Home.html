@@ -732,6 +732,8 @@
 <script>
   const BRAND = <?!= brand_json() ?>;
   const $ = id => document.getElementById(id);
+  /** I.R.I.S., the mascot (§7.2). Guarded: I.R.I.S. can be hidden or turned off. */
+  const kuya = (face, text) => { try { if (window.Iris) window.Iris.say([face, text]); } catch (e) { /* never break the page */ } };
 
   /* ---------- searchlight + watching eyes follow the pointer; REC clock ticks ---------- */
   (function () {
