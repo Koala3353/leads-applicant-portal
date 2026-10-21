@@ -161,6 +161,9 @@
     body{padding-bottom:88px}
     .kuya{right:calc(6px + env(safe-area-inset-right,0px));bottom:calc(6px + env(safe-area-inset-bottom,0px))}
     .kuya-btn{width:72px;height:69px}
+    /* phones: a smaller speech window, so it doesn't sit on top of the text people are reading */
+    .kuya-bubble{max-width:min(220px,68vw);font-size:.86em}
+    .kuya-hide{padding:8px 11px 10px;min-height:32px}
   }
   /* after "Hide I.R.I.S.": a small 90s button in the same corner brings it back */
   .kuya-recall{position:fixed;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60;

@@ -145,3 +145,70 @@ function setup_dailyMaintenance() {
   return 'Daily clean-up installed (3 AM Manila).';
 }
 
+/**
+ * Tidies the Sheet so the core team can read it (safe to run again; it only changes formatting and ADDS missing
+ * Settings rows, never edits values or deletes anything). Run from the editor as the owner.
+ *  - Applicants: header row wraps and is frozen; ApplicantID..FullName stay frozen while scrolling right; sensible
+ *    column widths; long answers stay on one line (click a cell to read it) so rows don't balloon.
+ *  - Settings: everything top-aligned, keys bold, dates shown left-aligned like text, and rows added (blank) for
+ *    newer settings with a description, so people can find them.
+ *  - Activity / Drafts / PreLeads: frozen header, readable widths, one-line rows.
+ */
+function setup_formatSheets() {
+  ownerOnly_();
+  const ss = ss_(), out = [];
+  const head = (sh, n) => sh.getRange(1, 1, 1, n).setFontWeight('bold').setWrap(true).setVerticalAlignment('middle');
+  const oneLine = (sh, rows, cols) => { if (rows > 0) sh.getRange(2, 1, rows, cols).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP).setVerticalAlignment('top'); };
+
+  // Applicants
+  const ap = sheet_(SHEET.APPLICANTS), cols = cols_(), n = cols.length;
+  head(ap, n); ap.setRowHeight(1, 40); ap.setFrozenRows(1);
+  const nameCol = cols.indexOf('FullName');
+  ap.setFrozenColumns(nameCol >= 0 && nameCol < 6 ? nameCol + 1 : 1);
+  const W = { ApplicantID: 92, Timestamp: 130, Email: 210, FullName: 170, Nickname: 100, IDNumber: 82, Course: 90, YearLevel: 70,
+    Mobile: 110, Status: 130, Requirements: 120, Payment: 110, ReviewedBy: 170, LastUpdated: 130, Notes: 200, Block: 70, MBTI: 70,
+    PastOrgs: 220, FirstOvernight: 90, OffsiteAvailability: 100, DataConsent: 80, GameAnswers: 160, PaymentProof: 160,
+    ReferralCode: 110, ReferredBy: 110, ReferrerID: 100 };
+  cols.forEach((c, i) => ap.setColumnWidth(i + 1, W[c] || 240));   // the essays (not listed) get 240
+  oneLine(ap, Math.max(ap.getMaxRows() - 1, 1), n);
+  out.push('Applicants formatted');
+
+  // Settings
+  const st = sheet_(SHEET.SETTINGS);
+  const NEW = [
+    ['ApplicantIdStart', '', 'Applicant IDs start above this number (default 2300) and skip ahead randomly, so IDs never show how many applied.'],
+    ['CampStart', '', 'Optional. When camp starts (for the countdown), e.g. 2027-01-29 08:00. Blank = the first date in EventDates.'],
+    ['IssueEmail', '', 'Optional. Where "Report an issue" emails go. Blank = the default in Brand.gs.'],
+    ['PreLeadsOpen', '', 'Untick / FALSE to close Pre-LEADS registration right away. Blank = open.'],
+    ['PreLeadsDeadline', '', 'When Pre-LEADS registration closes, e.g. 2026-11-05 17:00. Blank = Nov 5, 2026, 5 PM.'],
+    ['PreLeadsDate', '', 'Shown on the Pre-LEADS page. Blank = November 5, 2026.'],
+    ['PreLeadsTime', '', 'Shown on the Pre-LEADS page. Blank = 5:00 PM – 7:30 PM.'],
+    ['PreLeadsVenue', '', 'Shown on the Pre-LEADS page. Blank = Onsite (Ateneo de Manila University).']
+  ];
+  const keys = st.getRange(1, 1, Math.max(st.getLastRow(), 1), 1).getValues().map(r => String(r[0]).trim());
+  const add = NEW.filter(r => keys.indexOf(r[0]) < 0);
+  if (add.length) { st.getRange(st.getLastRow() + 1, 1, add.length, 3).setValues(add); out.push('Settings: added ' + add.map(r => r[0]).join(', ')); }
+  const sr = st.getLastRow();
+  st.getRange(1, 1, sr, 3).setVerticalAlignment('top').setWrap(true);
+  st.getRange(2, 1, Math.max(sr - 1, 1), 1).setFontWeight('bold');
+  st.getRange(2, 2, Math.max(sr - 1, 1), 1).setHorizontalAlignment('left');
+  st.setFrozenRows(1); st.setColumnWidth(1, 190); st.setColumnWidth(2, 260); st.setColumnWidth(3, 460);
+  clearConfigCache_();
+  out.push('Settings formatted');
+
+  // Activity, Drafts, PreLeads
+  [[SHEET.ACTIVITY, [150, 70, 210, 80, 150, 520, 60]], ['Drafts', [220, 150, 520]], ['PreLeads', null]].forEach(([name, widths]) => {
+    const sh = ss.getSheetByName(name);
+    if (!sh || !sh.getLastColumn()) return;
+    const c = sh.getLastColumn();
+    head(sh, c); sh.setFrozenRows(1);
+    if (widths) widths.forEach((w, i) => { if (i < c) sh.setColumnWidth(i + 1, w); });
+    else for (let i = 1; i <= c; i++) sh.setColumnWidth(i, i <= 4 ? 170 : 220);
+    oneLine(sh, Math.max(sh.getMaxRows() - 1, 1), c);
+    out.push(name + ' formatted');
+  });
+  SpreadsheetApp.flush();
+  console.log(out.join('\n'));
+  return out;
+}
+
