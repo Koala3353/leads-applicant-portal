@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+  <body>
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pre-LEADS: Oversight Preview</title>
+<?!= include('Styles') ?>
+<?!= brand_css() ?>
+<style>
+  /* Page state management */
+  .state { display: none; }
+  .state.show { display: block; }
+
+  /* Surveillance badges */
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  .user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.08em;
+    padding: 6px 12px;
+    border: 1.5px solid var(--line);
+    background: rgba(0, 16, 224, 0.12);
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+  .user-badge .rec-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--danger);
+    border-radius: 50%;
+    animation: ld-pulse 1.2s steps(1) infinite;
+    flex-shrink: 0;
+  }
+  .event-badge {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    padding: 6px 12px;
+    border: 1.5px solid var(--glow);
+    color: var(--glow);
+    background: rgba(255, 255, 0, 0.05);
+  }
+
+  /* Section heads */
+  .form-section-head {
+    margin: 36px 0 16px;
+    border-bottom: 1.5px solid var(--line);
+    padding-bottom: 8px;
+  }
+  .form-section-head h2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--display);
+    font-weight: 400;
+    text-transform: uppercase;
+    font-size: 1.6rem;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    margin: 0;
+  }
+  .form-section-head p {
+    margin: 6px 0 0;
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* Form Grid */
+  .form-grid {
+    display: grid;
+    gap: 0 16px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 800px) {
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .form-grid .full { grid-column: 1 / -1; }
+  }
+
+  /* Fields */
+  .field {
+    margin-bottom: 22px;
+    position: relative;
+  }
+  .field label:not(.choice-tile):not(.consent-box) {
+    display: block;
+    margin-bottom: 6px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+  .field .field-hint {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin: 0 0 6px;
+    line-height: 1.45;
+  }
+  .field input[type="text"],
+  .field input[type="tel"],
+  .field select,
+  .field textarea {
+    width: 100%;
+    font: inherit;
+    font-size: 16px;
+    color: var(--text);
+    background: #060606;
+    border: 2px inset #7a7a7a;
+    border-radius: 0;
+    padding: 0.75em 0.9em;
+    min-height: 44px;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .field select option {
+    background: #141414;
+    color: #EAEAEA;
+  }
+  .field textarea {
+    min-height: 7em;
+    resize: vertical;
+    line-height: 1.5;
+  }
+  .field :focus-visible {
+    outline: 3px solid var(--sky);
+    outline-offset: 2px;
+  }
+  .field.has-error input,
+  .field.has-error select,
+  .field.has-error textarea,
+  .field.has-error .choice-group,
+  .field.has-error .consent-box {
+    border-color: var(--danger);
+    background: rgba(255, 42, 42, 0.08);
+  }
+  .field .err {
+    display: none;
+    color: var(--danger);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    margin-top: 5px;
+    letter-spacing: 0.03em;
+  }
+  .field.has-error .err {
+    display: block;
+  }
+
+  /* Char counter */
+  .char-counter {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    text-align: right;
+    margin-top: 4px;
+  }
+  .char-counter.error { color: var(--danger); }
+  .char-counter.valid { color: var(--glow); }
+
+  /* Consent Box */
+  .consent-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-height: 52px;
+    padding: 14px 16px;
+    cursor: pointer;
+    background: #060606;
+    border: 2px inset #7a7a7a;
+    font-weight: 400;
+    line-height: 1.45;
+    margin-top: 14px;
+  }
+  .consent-box input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+  .consent-tick {
+    flex: none;
+    position: relative;
+    width: 24px;
+    height: 24px;
+    margin-top: 1px;
+    background: #f4f4f4;
+    box-shadow: var(--bevel-in);
+  }
+  .consent-box input:checked + .consent-tick::after {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 2px;
+    width: 7px;
+    height: 13px;
+    border: solid #000;
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+  }
+  .consent-box input:focus-visible + .consent-tick {
+    outline: 3px solid var(--sky);
+    outline-offset: 3px;
+  }
+  .consent-box:has(input:checked) {
+    border-color: var(--glow);
+  }
+  .consent-box:has(input:checked) .consent-text {
+    color: var(--glow);
+  }
+
+  /* Choice Group: Tiles for Checkbox and Radio */
+  .choice-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  @media (min-width: 600px) {
+    .choice-group.cols-2 {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .choice-tile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #080808;
+    border: 1.5px solid var(--line);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, border-color 0.15s;
+    font-size: 0.92rem;
+    line-height: 1.35;
+  }
+  .choice-tile:hover {
+    background: #121212;
+    border-color: var(--sky);
+  }
+  .choice-tile input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+  .tile-indicator {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    background: #222;
+    border: 1px solid #777;
+    display: grid;
+    place-items: center;
+    box-shadow: var(--bevel-in);
+  }
+  .choice-tile.radio .tile-indicator {
+    border-radius: 50%;
+  }
+  .choice-tile input:checked ~ .tile-indicator {
+    background: var(--glow);
+    border-color: var(--glow);
+  }
+  .choice-tile.radio input:checked ~ .tile-indicator::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: #000;
+    border-radius: 50%;
+  }
+  .choice-tile.checkbox input:checked ~ .tile-indicator::after {
+    content: "";
+    width: 4px;
+    height: 8px;
+    border: solid #000;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-bottom: 2px;
+  }
+  .choice-tile:has(input:checked) {
+    border-color: var(--glow);
+    background: rgba(255, 255, 0, 0.05);
+  }
+  .choice-tile input:focus-visible ~ .tile-indicator {
+    outline: 2px solid var(--sky);
+    outline-offset: 2px;
+  }
+
+  /* Overview Dossier Card */
+  .overview-card {
+    background: rgba(0, 0, 0, 0.65);
+    border: 1.5px dashed var(--line);
+    padding: 18px 20px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+    font-size: 0.94rem;
+  }
+  .overview-card p {
+    margin: 0 0 12px;
+  }
+  .overview-card p:last-child {
+    margin-bottom: 0;
+  }
+  .overview-card strong {
+    color: var(--glow);
+  }
+
+  /* Actions & Error Summary */
+  .error-summary {
+    background: rgba(255, 42, 42, 0.12);
+    border: 1.5px solid var(--danger);
+    color: var(--text);
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+  }
+  .error-summary-title {
+    color: var(--danger);
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 6px;
+  }
+  .error-summary ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+    padding-top: 18px;
+    border-top: 1.5px solid var(--line);
+  }
+  .actions .btn {
+    min-height: 48px;
+    font-size: 1.25rem;
+    padding: 0.5em 1.2em;
+  }
+  @media (max-width: 560px) {
+    .actions .btn { width: 100%; justify-content: center; }
+  }
+
+  /* Success card stamp */
+  .confirm-stamp {
+    display: inline-block;
+    font-family: var(--display);
+    font-size: clamp(2rem, 6vw, 3.4rem);
+    line-height: 1;
+    color: var(--glow);
+    border: 3px solid var(--glow);
+    padding: 8px 18px;
+    margin: 16px 0;
+    transform: rotate(-1.5deg);
+    box-shadow: 4px 4px 0 var(--blue);
+  }
+</style>
+</head>
+<body data-base="<?= baseUrl ?>" data-loader-wait>
+<?!= include('Loader') ?>
+<?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
+<?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
+
+<div class="wrap">
+
+  <!-- State 1: Loading -->
+  <div class="card state show" id="state-loading">
+    <p class="eyebrow">TRANSMISSION DOSSIER</p>
+    <h2>Accessing Pre-LEADS File...</h2>
+    <p>Verifying identity credentials against the observer registry.</p>
+  </div>
+
+  <!-- State 2: Error -->
+  <div class="card state" id="state-error">
+    <p class="eyebrow">TRANSMISSION ERROR</p>
+    <h2>Connection Interrupted</h2>
+    <p id="errorMessage">Unable to fetch transmission dossier. Check your network or try again.</p>
+    <div class="actions">
+      <button class="btn ghost" type="button" id="retryBtn">Try again</button>
+      <a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a>
+    </div>
+  </div>
+
+  <!-- State 3: Guest -->
+  <div class="card state" id="state-guest">
+    <p class="eyebrow">AUTHENTICATION REQUIRED</p>
+    <h2>Identity Unverified</h2>
+    <p>Sign in with your Ateneo student account (@student.ateneo.edu) to access the Pre-LEADS registration form.</p>
+    <div class="actions">
+      <a class="btn" id="guestSignInBtn" href="#" target="_top">Sign in</a>
+      <a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a>
+    </div>
+  </div>
+
+  <!-- State 4: Wrong Domain -->
+  <div class="card state" id="state-wrong-domain">
+    <p class="eyebrow">UNAUTHORIZED DOMAIN</p>
+    <h2>Non-Ateneo Account Detected</h2>
+    <p>You are signed in as <b id="wrongDomainEmail"></b>. Only registered Ateneo accounts are authorized to register for Pre-LEADS.</p>
+    <div class="actions">
+      <a class="btn" id="switchAccountBtn" href="#" target="_top">Switch account</a>
+      <a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a>
+    </div>
+  </div>
+
+  <!-- State 5: Already Submitted -->
+  <div class="card state" id="state-already-submitted">
+    <p class="eyebrow">TRANSMISSION LOGGED</p>
+    <h2>Pre-LEADS Registration on Record</h2>
+    <p>Your responses for Pre-LEADS have already been received and verified under your account:</p>
+    <div><span class="confirm-stamp">TRANSMITTED</span></div>
+    <p>Subject: <strong id="registeredName" style="color:var(--text);"></strong></p>
+    <p>Event Date: <strong style="color:var(--glow);">November 5, 2026 (5:00 PM – 7:30 PM)</strong></p>
+    <p class="field-hint" style="margin-top: 14px;">The Pre-LEADS team will be in touch with activity coordination details. We look forward to seeing you there.</p>
+    <div class="actions">
+      <a class="btn" href="<?= baseUrl ?>" target="_top">Back to the hub</a>
+    </div>
+  </div>
+
+  <!-- State 6: Success (Immediately after submission) -->
+  <div class="card state" id="state-success">
+    <p class="eyebrow">FILE ARCHIVED</p>
+    <h2>Pre-LEADS Registration Received</h2>
+    <p>Your responses have been logged into the Pre-LEADS registry. The observer team has noted your participation.</p>
+    <div><span class="confirm-stamp">CONFIRMED</span></div>
+    <div class="overview-card" style="margin-top: 14px;">
+      <p><strong>Date & Time:</strong> November 5, 2026 · 5:00 PM – 7:30 PM</p>
+      <p><strong>Venue:</strong> Onsite (Ateneo de Manila University)</p>
+      <p>Keep an eye on your Ateneo email inbox for updates and activity instructions prior to the preview session.</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="<?= baseUrl ?>" target="_top">Return to Hub</a>
+    </div>
+  </div>
+
+  <!-- State 7: Active Form -->
+  <div class="state" id="state-form">
+
+    <div class="badge-row">
+      <div class="user-badge">
+        <span class="rec-dot"></span>
+        <span>DOSSIER SUBJECT: <strong id="userEmailDisplay" style="color:var(--text);"></strong></span>
+      </div>
+      <div class="event-badge">
+        <span>PRE-LEADS // NOV 5 · 5:00–7:30 PM</span>
+      </div>
+    </div>
+
+    <div class="error-summary" id="errorSummaryBox" role="alert" hidden>
+      <div class="error-summary-title">Submission Blocked // Verification Incomplete</div>
+      <ul id="errorSummaryList"></ul>
+    </div>
+
+    <form id="preleadsForm" novalidate autocomplete="on">
+
+      <!-- SECTION 1: WHAT IS PRE-LEADS & CONSENT -->
+      <div class="form-section-head" style="margin-top: 12px;">
+        <h2>Section 1 // Overview & Consent Clearance</h2>
+        <p>Review the scope of the Pre-LEADS preview and authorize identity verification.</p>
+      </div>
+
+      <div class="overview-card">
+        <p><strong>What is Pre-LEADS?</strong></p>
+        <p>Pre-LEADS is a one-day, onsite preview of the <strong>Leadership Enhancement and Development Seminar (LEADS)</strong>, MEA's flagship leadership formation project. Happening on <strong>November 5 from 5:00 to 7:30 PM</strong>, Pre-LEADS offers a glimpse into the LEADS experience through fun activities, meaningful discussions, and opportunities for self-reflection.</p>
+        <p>Whether you're still deciding if LEADS is for you or are unable to attend the actual camp, Pre-LEADS gives you the opportunity to experience what LEADS has to offer, challenge your understanding of leadership, and connect with others.</p>
+      </div>
+
+      <div class="field" id="field-Consent">
+        <label>Consent & Authorization</label>
+        <p class="field-hint">
+          By submitting this form, I consent to the collection and use of the information I provide by the Pre-LEADS organizing team for participating registration, activity coordination, and communication regarding Pre-LEADS. My information will be kept confidential and accessed only by authorized organizers and facilitators who need it for these purposes.
+        </p>
+        <label class="consent-box" for="Consent">
+          <input type="checkbox" id="Consent" name="Consent" value="Y" required>
+          <span class="consent-tick"></span>
+          <span class="consent-text">I have read and agree to the collection and use of my information for the purposes stated above.</span>
+        </label>
+        <span class="err" id="err-Consent">You must agree to the data collection consent statement.</span>
+      </div>
+
+      <!-- SECTION 2: GENERAL INFORMATION -->
+      <div class="form-section-head">
+        <h2>Section 2 // General Subject Information</h2>
+        <p>Provide your institutional identity details. Pre-filled data is sourced from MEA records.</p>
+      </div>
+
+      <div class="form-grid">
+        <div class="field" id="field-FullName">
+          <label for="FullName">Name (Last name, First name) *</label>
+          <input type="text" id="FullName" name="FullName" required placeholder="e.g. Dela Cruz, Juan">
+          <span class="err" id="err-FullName">Enter your full name (Last name, First name).</span>
+        </div>
+
+        <div class="field" id="field-Nickname">
+          <label for="Nickname">Nickname *</label>
+          <input type="text" id="Nickname" name="Nickname" required placeholder="What we should call you">
+          <span class="err" id="err-Nickname">Enter your nickname (up to 30 characters).</span>
+        </div>
+
+        <div class="field" id="field-IDNumber">
+          <label for="IDNumber">ID Number *</label>
+          <input type="text" id="IDNumber" name="IDNumber" required pattern="\d{6}" maxlength="6" inputmode="numeric" placeholder="e.g. 241234">
+          <p class="field-hint">Your 6-digit Ateneo student ID number.</p>
+          <span class="err" id="err-IDNumber">Enter a valid 6-digit Ateneo ID number.</span>
+        </div>
+
+        <div class="field" id="field-YearLevel">
+          <label for="YearLevel">Year Level *</label>
+          <select id="YearLevel" name="YearLevel" required>
+            <option value="">Select your year level</option>
+            <option value="1">1st Year</option>
+            <option value="2">2nd Year</option>
+            <option value="3">3rd Year</option>
+            <option value="4">4th Year</option>
+            <option value="5">5th Year</option>
+          </select>
+          <span class="err" id="err-YearLevel">Please select your year level.</span>
+        </div>
+
+        <div class="field" id="field-Course">
+          <label for="Course">Course *</label>
+          <input type="text" id="Course" name="Course" required placeholder="e.g. BS Management Engineering">
+          <span class="err" id="err-Course">Enter your degree program.</span>
+        </div>
+
+        <div class="field" id="field-Block">
+          <label for="Block">Block <span id="blockReqLabel">(Required for 1st Years)</span></label>
+          <input type="text" id="Block" name="Block" placeholder="e.g. 21A">
+          <span class="err" id="err-Block">Block is required for first years.</span>
+        </div>
+
+        <div class="field full" id="field-Mobile">
+          <label for="Mobile">Mobile Number</label>
+          <input type="tel" id="Mobile" name="Mobile" placeholder="09171234567">
+          <p class="field-hint">Used for coordinate messages regarding Pre-LEADS schedule or venue.</p>
+          <span class="err" id="err-Mobile">Enter an 11-digit mobile number starting with 09.</span>
+        </div>
+      </div>
+
+      <!-- SECTION 3: INQUIRIES & INTROSPECTION -->
+      <div class="form-section-head">
+        <h2>Section 3 // Inquiries & Leadership Introspection</h2>
+        <p>Answer honestly. Your reflections help facilitators shape the preview activities.</p>
+      </div>
+
+      <div class="field" id="field-DevelopInLEADS">
+        <label for="DevelopInLEADS">What would you like to learn more about or develop in your LEADS experience? *</label>
+        <p class="field-hint">Answer in 2–3 sentences.</p>
+        <textarea id="DevelopInLEADS" name="DevelopInLEADS" required maxlength="1000" placeholder="Type your response here..."></textarea>
+        <div class="char-counter" id="count-DevelopInLEADS">0 / 1000 characters</div>
+        <span class="err" id="err-DevelopInLEADS">Please answer in 2–3 sentences (at least 20 characters).</span>
+      </div>
+
+      <div class="field" id="field-HopeToGainPreLEADS">
+        <label for="HopeToGainPreLEADS">What do you hope to gain from your Pre-LEADS experience? *</label>
+        <p class="field-hint">Answer in 2–3 sentences.</p>
+        <textarea id="HopeToGainPreLEADS" name="HopeToGainPreLEADS" required maxlength="1000" placeholder="Type your response here..."></textarea>
+        <div class="char-counter" id="count-HopeToGainPreLEADS">0 / 1000 characters</div>
+        <span class="err" id="err-HopeToGainPreLEADS">Please answer in 2–3 sentences (at least 20 characters).</span>
+      </div>
+
+      <div class="field" id="field-LeadershipChallenge">
+        <label for="LeadershipChallenge">Reflecting on your past experiences, what is one challenge you've encountered when working with or leading others? *</label>
+        <p class="field-hint">Answer in 2–3 sentences.</p>
+        <textarea id="LeadershipChallenge" name="LeadershipChallenge" required maxlength="1000" placeholder="Type your response here..."></textarea>
+        <div class="char-counter" id="count-LeadershipChallenge">0 / 1000 characters</div>
+        <span class="err" id="err-LeadershipChallenge">Please answer in 2–3 sentences (at least 20 characters).</span>
+      </div>
+
+      <!-- Daunting Aspects Checkboxes -->
+      <div class="field" id="field-DauntingAspects">
+        <label>When taking on a leadership role, which of the following do you find most challenging or daunting? *</label>
+        <p class="field-hint">Check all that apply.</p>
+        <div class="choice-group cols-2" id="dauntingGroup">
+          <!-- Dynamically populated or rendered -->
+        </div>
+        <span class="err" id="err-DauntingAspects">Please select at least one option.</span>
+      </div>
+
+      <!-- Comfortable Environment Radios -->
+      <div class="field" id="field-ComfortableEnvironment">
+        <label>What kind of environment helps you feel most comfortable participating and sharing your thoughts with others? *</label>
+        <p class="field-hint">Select the option that fits you best.</p>
+        <div class="choice-group" id="environmentGroup">
+          <!-- Dynamically populated or rendered -->
+        </div>
+        <span class="err" id="err-ComfortableEnvironment">Please select one option.</span>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn" id="submitBtn">Transmit File // Register for Pre-LEADS</button>
+        <a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a>
+      </div>
+
+    </form>
+  </div>
+
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const BRAND = <?!= brand_json() ?>;
+
+  const DAUNTING_OPTIONS = [
+    'failing as a leader',
+    'making mistakes',
+    'being judged',
+    'disappointing others',
+    'being disliked',
+    'not being good enough',
+    'losing control',
+    'making the wrong decision',
+    'taking initiative',
+    'stepping outside my comfort zone',
+    'trusting others with important responsibilities'
+  ];
+
+  const ENVIRONMENT_OPTIONS = [
+    'Small-group discussions',
+    'Individual reflection',
+    'Interactive games and team challenges',
+    'Listening to others share their experiences',
+    'Open discussions with the whole group',
+    'No particular preference'
+  ];
+
+  let currentContext = null;
+
+  function showState(id) {
+    document.querySelectorAll('.state').forEach(el => el.classList.remove('show'));
+    const target = $(id);
+    if (target) target.classList.add('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function initOptions() {
+    // Populate Daunting Aspects
+    const dContainer = $('dauntingGroup');
+    dContainer.innerHTML = DAUNTING_OPTIONS.map((opt, idx) => `
+      <label class="choice-tile checkbox" for="daunt_${idx}">
+        <input type="checkbox" name="DauntingAspects" value="${escapeHtml(opt)}" id="daunt_${idx}">
+        <span class="tile-indicator"></span>
+        <span>${escapeHtml(opt)}</span>
+      </label>
+    `).join('');
+
+    // Populate Environment Options
+    const eContainer = $('environmentGroup');
+    eContainer.innerHTML = ENVIRONMENT_OPTIONS.map((opt, idx) => `
+      <label class="choice-tile radio" for="env_${idx}">
+        <input type="radio" name="ComfortableEnvironment" value="${escapeHtml(opt)}" id="env_${idx}" required>
+        <span class="tile-indicator"></span>
+        <span>${escapeHtml(opt)}</span>
+      </label>
+    `).join('');
+  }
+
+  function escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function setupCharCounters() {
+    ['DevelopInLEADS', 'HopeToGainPreLEADS', 'LeadershipChallenge'].forEach(id => {
+      const ta = $(id);
+      const cnt = $('count-' + id);
+      if (!ta || !cnt) return;
+      const update = () => {
+        const len = ta.value.length;
+        cnt.textContent = `${len} / 1000 characters`;
+        if (len < 20 && len > 0) {
+          cnt.className = 'char-counter error';
+        } else if (len >= 20) {
+          cnt.className = 'char-counter valid';
+        } else {
+          cnt.className = 'char-counter';
+        }
+      };
+      ta.addEventListener('input', update);
+      update();
+    });
+  }
+
+  function setupBlockRequirement() {
+    const yrSelect = $('YearLevel');
+    const idInput = $('IDNumber');
+    const blockLabel = $('blockReqLabel');
+
+    const update = () => {
+      const yr = yrSelect.value;
+      const idVal = (idInput.value || '').trim();
+      const isFreshman = yr === '1' || idVal.indexOf('26') === 0;
+      if (isFreshman) {
+        blockLabel.textContent = '(Required for 1st Years)';
+        blockLabel.style.color = 'var(--glow)';
+      } else {
+        blockLabel.textContent = '(Optional)';
+        blockLabel.style.color = 'var(--muted)';
+      }
+    };
+    yrSelect.addEventListener('change', update);
+    idInput.addEventListener('input', update);
+  }
+
+  function normalizePhone(val) {
+    let m = String(val || '').trim().replace(/[\s\-().]/g, '');
+    if (m.startsWith('+63')) m = '0' + m.slice(3);
+    else if (m.startsWith('63')) m = '0' + m.slice(2);
+    else if (m.length === 10 && m[0] === '9') m = '0' + m;
+    return m;
+  }
+
+  function loadForm() {
+    showState('state-loading');
+    google.script.run
+      .withSuccessHandler(handleContext)
+      .withFailureHandler(err => {
+        $('errorMessage').textContent = err && err.message ? err.message : 'Unable to connect to registry.';
+        showState('state-error');
+      })
+      .preleads_getForm();
+  }
+
+  function handleContext(res) {
+    currentContext = res;
+
+    // Check signed in
+    if (!res.signedIn) {
+      const url = $('guestSignInBtn');
+      if (url) url.href = 'https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(window.location.href);
+      showState('state-guest');
+      return;
+    }
+
+    // Check allowed domain
+    if (!res.allowedDomain) {
+      $('wrongDomainEmail').textContent = res.email || 'this account';
+      const switchBtn = $('switchAccountBtn');
+      if (switchBtn) switchBtn.href = 'https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(window.location.href);
+      showState('state-wrong-domain');
+      return;
+    }
+
+    // Check already submitted
+    if (res.alreadySubmitted) {
+      const name = res.existingData && (res.existingData.Nickname || res.existingData.FullName) ?
+        `${res.existingData.FullName} (${res.existingData.Nickname})` : res.email;
+      $('registeredName').textContent = name;
+      showState('state-already-submitted');
+      return;
+    }
+
+    // Active form
+    $('userEmailDisplay').textContent = res.email;
+
+    // Autofill if member data found
+    if (res.member) {
+      if (res.member.FullName && !$('FullName').value) $('FullName').value = res.member.FullName;
+      if (res.member.Nickname && !$('Nickname').value) $('Nickname').value = res.member.Nickname;
+      if (res.member.IDNumber && !$('IDNumber').value) $('IDNumber').value = res.member.IDNumber;
+      if (res.member.Course && !$('Course').value) $('Course').value = res.member.Course;
+      if (res.member.YearLevel && !$('YearLevel').value) $('YearLevel').value = res.member.YearLevel;
+      if (res.member.Block && !$('Block').value) $('Block').value = res.member.Block;
+      if (res.member.Mobile && !$('Mobile').value) $('Mobile').value = res.member.Mobile;
+    }
+
+    showState('state-form');
+    setupBlockRequirement();
+  }
+
+  function validateClient(data) {
+    const errors = {};
+
+    if (!data.Consent) {
+      errors.Consent = 'You must agree to the data collection consent statement.';
+    }
+
+    if (!data.FullName || !/^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ .'-]{1,79}$/.test(data.FullName)) {
+      errors.FullName = 'Letters, spaces, and . \' - only (2 to 80 characters).';
+    }
+
+    if (!data.Nickname || !/^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ .'-]{0,29}$/.test(data.Nickname)) {
+      errors.Nickname = 'Nickname must be letters only (up to 30 characters).';
+    }
+
+    const idNum = Number(data.IDNumber);
+    if (!/^\d{6}$/.test(data.IDNumber) || idNum < 200000 || idNum > 280000) {
+      errors.IDNumber = 'Invalid 6-digit ID number.';
+    }
+
+    const yr = parseInt(data.YearLevel, 10);
+    if (!data.YearLevel || isNaN(yr) || yr < 1 || yr > 5) {
+      errors.YearLevel = 'Select your year level (1 to 5).';
+    }
+
+    if (!data.Course || !/^[A-Za-zÀ-ÿÑñ0-9][A-Za-zÀ-ÿÑñ0-9 .,&()\/'-]{1,59}$/.test(data.Course)) {
+      errors.Course = 'Enter a valid degree program (up to 60 characters).';
+    }
+
+    const isFreshman = yr === 1 || String(data.IDNumber || '').startsWith('26');
+    if (isFreshman && !data.Block) {
+      errors.Block = 'Block is required for first years.';
+    } else if (data.Block && !/^[A-Za-z0-9][A-Za-z0-9 -]{0,29}$/.test(data.Block)) {
+      errors.Block = 'Letters and numbers only, e.g. 21A.';
+    }
+
+    if (data.Mobile) {
+      const normMob = normalizePhone(data.Mobile);
+      if (!/^09\d{9}$/.test(normMob)) {
+        errors.Mobile = '11 digits starting with 09, e.g. 09171234567.';
+      }
+    }
+
+    if (!data.DevelopInLEADS || data.DevelopInLEADS.length < 20) {
+      errors.DevelopInLEADS = 'Please answer in 2–3 sentences (at least 20 characters).';
+    }
+
+    if (!data.HopeToGainPreLEADS || data.HopeToGainPreLEADS.length < 20) {
+      errors.HopeToGainPreLEADS = 'Please answer in 2–3 sentences (at least 20 characters).';
+    }
+
+    if (!data.LeadershipChallenge || data.LeadershipChallenge.length < 20) {
+      errors.LeadershipChallenge = 'Please answer in 2–3 sentences (at least 20 characters).';
+    }
+
+    if (!data.DauntingAspects || data.DauntingAspects.length === 0) {
+      errors.DauntingAspects = 'Please select at least one option.';
+    }
+
+    if (!data.ComfortableEnvironment) {
+      errors.ComfortableEnvironment = 'Please select your preferred environment.';
+    }
+
+    return errors;
+  }
+
+  function displayErrors(errors) {
+    document.querySelectorAll('.field').forEach(f => f.classList.remove('has-error'));
+    const summaryBox = $('errorSummaryBox');
+    const summaryList = $('errorSummaryList');
+    summaryList.innerHTML = '';
+
+    const keys = Object.keys(errors);
+    if (keys.length === 0) {
+      summaryBox.hidden = true;
+      return;
+    }
+
+    summaryBox.hidden = false;
+    let firstField = null;
+
+    keys.forEach(key => {
+      const msg = errors[key];
+      const li = document.createElement('li');
+      li.textContent = msg;
+      summaryList.appendChild(li);
+
+      const fieldEl = $('field-' + key);
+      if (fieldEl) {
+        fieldEl.classList.add('has-error');
+        const errEl = $('err-' + key);
+        if (errEl) errEl.textContent = msg;
+        if (!firstField) firstField = fieldEl;
+      }
+    });
+
+    if (firstField) {
+      firstField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  $('preleadsForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const form = $('preleadsForm');
+    const dauntingChecked = Array.from(form.querySelectorAll('input[name="DauntingAspects"]:checked')).map(cb => cb.value);
+    const envChecked = form.querySelector('input[name="ComfortableEnvironment"]:checked');
+
+    const payload = {
+      Consent: form.querySelector('#Consent').checked ? 'Y' : '',
+      FullName: form.querySelector('#FullName').value.trim(),
+      Nickname: form.querySelector('#Nickname').value.trim(),
+      IDNumber: form.querySelector('#IDNumber').value.trim(),
+      YearLevel: form.querySelector('#YearLevel').value,
+      Course: form.querySelector('#Course').value.trim(),
+      Block: form.querySelector('#Block').value.trim(),
+      Mobile: normalizePhone(form.querySelector('#Mobile').value.trim()),
+      DevelopInLEADS: form.querySelector('#DevelopInLEADS').value.trim(),
+      HopeToGainPreLEADS: form.querySelector('#HopeToGainPreLEADS').value.trim(),
+      LeadershipChallenge: form.querySelector('#LeadershipChallenge').value.trim(),
+      DauntingAspects: dauntingChecked,
+      ComfortableEnvironment: envChecked ? envChecked.value : ''
+    };
+
+    const clientErrors = validateClient(payload);
+    if (Object.keys(clientErrors).length > 0) {
+      displayErrors(clientErrors);
+      return;
+    }
+
+    displayErrors({});
+    const submitBtn = $('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Transmitting File...';
+
+    google.script.run
+      .withSuccessHandler(res => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Transmit File // Register for Pre-LEADS';
+        if (res && res.ok) {
+          showState('state-success');
+        } else if (res && res.errors) {
+          displayErrors(res.errors);
+        } else {
+          displayErrors({ form: 'Transmission failed. Please try again.' });
+        }
+      })
+      .withFailureHandler(err => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Transmit File // Register for Pre-LEADS';
+        displayErrors({ form: err && err.message ? err.message : 'A server error occurred during transmission.' });
+      })
+      .preleads_submit(payload);
+  });
+
+  $('retryBtn').addEventListener('click', loadForm);
+
+  // Initialize
+  initOptions();
+  setupCharCounters();
+  loadForm();
+</script>
+</body>
+</html>
+
+  </body>
+</html>
