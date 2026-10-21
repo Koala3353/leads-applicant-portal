@@ -110,7 +110,7 @@ function referrals_setupTab() {
   sh.getRange(1, 1, 1, 6).setValues([['ReferrerID', 'Referrer', 'Their code', 'Invited by', 'People referred', 'Referred (name, ID, status)']])
     .setFontWeight('bold');
   sh.setFrozenRows(1);
-  sh.getRange('A2').setFormula('=SORT(UNIQUE(FILTER(' + rng('ReferrerID') + ', ' + rng('ReferrerID') + '<>"")))');
+  sh.getRange('A2').setFormula('=IFERROR(SORT(UNIQUE(FILTER(' + rng('ReferrerID') + ', ' + rng('ReferrerID') + '<>""))), "")');   // blank, not #N/A, until the first referral
   sh.getRange('B2').setFormula('=ARRAYFORMULA(IF(A2:A="",, IFERROR(XLOOKUP(A2:A, ' + rng('ApplicantID') + ', ' + rng('FullName') + '))))');
   sh.getRange('C2').setFormula('=ARRAYFORMULA(IF(A2:A="",, IFERROR(XLOOKUP(A2:A, ' + rng('ApplicantID') + ', ' + rng('ReferralCode') + '))))');
   sh.getRange('D2').setFormula('=ARRAYFORMULA(IF(A2:A="",, IFERROR(XLOOKUP(A2:A, ' + rng('ApplicantID') + ', ' + rng('ReferrerID') + '))))');

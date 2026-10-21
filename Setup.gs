@@ -165,10 +165,11 @@ function setup_formatSheets() {
   head(ap, n); ap.setRowHeight(1, 40); ap.setFrozenRows(1);
   const nameCol = cols.indexOf('FullName');
   ap.setFrozenColumns(nameCol >= 0 && nameCol < 6 ? nameCol + 1 : 1);
-  const W = { ApplicantID: 92, Timestamp: 130, Email: 210, FullName: 170, Nickname: 100, IDNumber: 82, Course: 90, YearLevel: 70,
-    Mobile: 110, Status: 130, Requirements: 120, Payment: 110, ReviewedBy: 170, LastUpdated: 130, Notes: 200, Block: 70, MBTI: 70,
-    PastOrgs: 220, FirstOvernight: 90, OffsiteAvailability: 100, DataConsent: 80, GameAnswers: 160, PaymentProof: 160,
-    ReferralCode: 110, ReferredBy: 110, ReferrerID: 100 };
+  // wide enough that each header fits next to its filter button without breaking mid-word
+  const W = { ApplicantID: 120, Timestamp: 140, Email: 210, FullName: 170, Nickname: 115, IDNumber: 115, Course: 100, YearLevel: 110,
+    Mobile: 115, Status: 135, Requirements: 145, Payment: 115, ReviewedBy: 170, LastUpdated: 140, Notes: 200, Block: 85, MBTI: 85,
+    PastOrgs: 220, FirstOvernight: 140, OffsiteAvailability: 170, DataConsent: 130, GameAnswers: 160, PaymentProof: 160,
+    ReferralCode: 130, ReferredBy: 125, ReferrerID: 120 };
   cols.forEach((c, i) => ap.setColumnWidth(i + 1, W[c] || 240));   // the essays (not listed) get 240
   oneLine(ap, Math.max(ap.getMaxRows() - 1, 1), n);
   out.push('Applicants formatted');
