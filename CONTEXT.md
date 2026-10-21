@@ -18,12 +18,12 @@
 
 | Part | Where people see it | Files | Owner |
 |---|---|---|---|
-| **Home (the hub)** | plain link `.../exec` | `Home.html`, `HomeApi.gs` | Keene (done) |
 | **Application form** | `.../exec?page=apply` | `Apply.html`, `ApplyApi.gs` | **Member A** |
 | **Threat assessment game** (step 2 of applying) | `.../exec?page=game` | `Game.html`, `GameApi.gs` | **Nathan** |
 | **Home (the hub)** | `.../exec` | `Home.html`, `HomeApi.gs` | **Member B**, shared with Keene |
-| Requirements + proof of payment | two **Google Forms** (not code); links shown on Home | Forms, links in Settings | officers |
-| Officer side | **the Sheet itself**, with a **LEADS** menu | `AdminMenu.gs` | Keene (done) |
+| Steps after acceptance: proof of payment (upload to Drive), requirements (Google Forms listed in the Requirements tab), 1st GA, room booking | `.../exec?page=pay` · `reqs` · `ga` · `room` | `Steps.html`, `StepsApi.gs` | payment view: **Member B**, rest: Keene |
+| **Pre-LEADS registration** | `.../exec?page=preleads` (or `pre-leads`) | `PreLeads.html`, `PreLeadsServer.gs` (never name it `PreLeadsApi`) | **Selina**, shared with Keene |
+| Core team side | **the Sheet itself**, with a **LEADS** menu | `AdminMenu.gs` | Keene (done) |
 
 Member B: you edit `Home.html` + `HomeApi.gs` and the payment view of `Steps.html` + `StepsApi.gs` directly (all shared with Keene; pull before you start). Read §9.2 first. Everything else is **shared: don't edit it** (`Code.gs`, `Utils.gs`, `Brand.gs`, `Referrals.gs`, `Setup.gs`, `AdminMenu.gs`, `Styles.html`, `PageTop.html`, `Loader.html`, `Mascot.html`). Need a change there? Message Keene with *what*, *why*, and the exact function signature you want. Don't edit it even if your AI suggests it.
 
@@ -47,9 +47,9 @@ Member B: you edit `Home.html` + `HomeApi.gs` and the payment view of `Steps.htm
 **LEADS** is an off-site **leadership camp** by **MEA** (Management Engineering Association, Ateneo) for its members, **MEAns**. The portal takes someone from application to "you're in":
 
 1. **Apply** (Member A): one application per person.
-2. **Review:** officers accept / waitlist / reject **in the Sheet** (LEADS menu).
-3. **Payment (first):** proof of payment through the **payment Google Form**, after acceptance or any time after applying (a setting); officers mark Payment.
-4. **Requirements (after payment):** once Payment is **VERIFIED**, accepted applicants send PDFs + camp info through the **requirements Google Form**; officers check and mark Requirements.
+2. **Review:** the core team accept / waitlist / reject **in the Sheet** (LEADS menu).
+3. **Payment (first):** proof of payment through the **payment Google Form**, after acceptance or any time after applying (a setting); the core team mark Payment.
+4. **Requirements (after payment):** once Payment is **VERIFIED**, accepted applicants send PDFs + camp info through the **requirements Google Form**; the core team check and mark Requirements.
 5. **Confirmed:** ACCEPTED + Requirements APPROVED + Payment VERIFIED → automatically **CONFIRMED**.
 6. **Home:** where each person sees where they are and what's next; each step after acceptance has its own page (Steps.html). Member B works on Home and the payment page.
 
@@ -66,7 +66,7 @@ Member B: you edit `Home.html` + `HomeApi.gs` and the payment view of `Steps.htm
 
 | File | What it does |
 |---|---|
-| `Code.gs` | `doGet` routing; `include(name)`, `includeTemplate(name, vars)`, `includeOptional_(name, vars)`. Passes `BRAND`, `baseUrl`, `notice`, `page` into every template. |
+| `Code.gs` | `doGet` routing; `include(name)`, `includeTemplate_(name, vars)`, `includeOptional_(name, vars)`. Passes `BRAND`, `baseUrl`, `notice`, `page` into every template. |
 | `Utils.gs` | All shared logic: settings, lookups, validation, status rules, Form links, `progress_()`, logging (§4). |
 | `Brand.gs` | `BRAND`: all copy, colors, fonts, I.R.I.S.'s lines/faces/colors. `brand_css()`, `brand_json()`. |
 | `AdminMenu.gs` | The LEADS menu, and the check that logs/undoes hand edits to the three track columns. |
@@ -127,7 +127,7 @@ Camp info (emergency contact, dietary, medical, shirt size) and requirement file
 
 | Track | Values | Who changes it |
 |---|---|---|
-| **Status** | `SUBMITTED` → `UNDER REVIEW` → `ACCEPTED` / `WAITLISTED` / `REJECTED` → `CONFIRMED`; `WITHDRAWN` | Apply creates SUBMITTED; officers (menu or by hand, both checked); system auto-sets CONFIRMED |
+| **Status** | `SUBMITTED` → `UNDER REVIEW` → `ACCEPTED` / `WAITLISTED` / `REJECTED` → `CONFIRMED`; `WITHDRAWN` | Apply creates SUBMITTED; the core team (menu or by hand, both checked); system auto-sets CONFIRMED |
 | **Payment** | `NONE` → `SUBMITTED` → `VERIFIED`; `REJECTED` = upload again | the upload sets SUBMITTED; the core team verifies/rejects |
 | **Requirements** | `NONE` → `PARTIAL` → `SUBMITTED` → `APPROVED`; `RETURNED` = fix and resend | the core team |
 
@@ -161,7 +161,7 @@ progress_(a) → {
 
 ### 3.1 Scope
 1. Only write the user's **own two files** (A: `Apply.html`, `ApplyApi.gs` · B: `Home.html`, `HomeApi.gs`, and the payment view of `Steps.html` / `StepsApi.gs`, all shared with Keene). Never output edits to shared files (§1). If a shared change is truly needed, add a labeled **"Ask Keene"** note with the exact function wanted; never duplicate shared code into the user's file.
-2. Don't build what the portal deliberately doesn't do: **no uploads** (Forms collect files), **no admin pages** (officers use the Sheet), **no new `?page=` routes, no emails, no code that changes Status/Requirements/Payment.**
+2. Don't build what the portal deliberately doesn't do: **no admin pages** (the core team uses the Sheet), **no emails** (only the report form), **no code that changes Status/Requirements/Payment** except the payment upload marking Payment SUBMITTED. Uploads exist only for proof of payment (`steps_uploadProof`). A new `?page=` route needs Keene's OK and a line in Code.gs `PAGES` + this file.
 3. Reuse §4 helpers; don't re-implement validation, lookups, Form links, status or unlock logic, and don't invent helpers that aren't listed. Need one? Put it in the user's `.gs` with the page prefix and a trailing `_` (e.g. `apply_isIdTaken_()`).
 4. Plain HTML/CSS/vanilla JS + Apps Script. No frameworks, no CDNs, no `fetch` to other sites.
 
@@ -187,9 +187,9 @@ progress_(a) → {
 Shared pieces are **included, never copied or redrawn**, so when Keene changes I.R.I.S., the loader or the top bar, every page updates. Confirm each item in your answer.
 
 **A full page (Apply)**, all shown in the §6.2 skeleton:
-1. `<head>`: `<base target="_top">`, `<?!= include('Styles') ?>`, `<?!= brand_css() ?>`. No other fonts; colors only from CSS variables.
-2. `<body data-loader-wait>`; first line `<?!= include('Loader') ?>`; second line `<?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>` (**I.R.I.S.**; pass `page` as-is so I.R.I.S. says this page's hello line).
-3. Inside `.wrap`, first: `<?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>` (logo, back to the hub, **Sign out**).
+1. `<head>`: `<base target="_top">`, `<?!= include_('Styles') ?>`, `<?!= brand_css() ?>`. No other fonts; colors only from CSS variables.
+2. `<body data-loader-wait>`; first line `<?!= include_('Loader') ?>`; second line `<?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>` (**I.R.I.S.**; pass `page` as-is so I.R.I.S. says this page's hello line).
+3. Inside `.wrap`, first: `<?!= includeTemplate_('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>` (logo, back to the hub, **Sign out**).
 4. `const BRAND = <?!= brand_json() ?>;`. Never hard-code text that exists in `BRAND`.
 5. The `call()` wrapper unchanged: its failure path fires `portal:error` so **I.R.I.S. reacts to server errors**. Any raw `google.script.run` failure handler must fire it too.
 6. `Loader.hide()` on success **and** on error.
@@ -211,7 +211,7 @@ Shared pieces are **included, never copied or redrawn**, so when Keene changes I
 
 ## 4. Shared helpers (already exist; just call them)
 
-Functions ending in `_` are server-only. Public shared functions: `home_getContext()`, `utils_getFormRules()` `include()`, `includeTemplate()`, `brand_css()`, `brand_json()`, `doGet()`, plus the officers' `menu_…`/`onOpen`/`onEdit` (never call those).
+Functions ending in `_` are server-only. Public (browser-callable) functions: `home_getContext`, `utils_getFormRules`, `apply_getForm` / `apply_saveDraft` / `apply_discardDraft` / `apply_lookupMember`, `game_getInit` / `game_saveProgress` / `game_submitFinal` / `game_getSounds`, `steps_get` / `steps_uploadProof`, `preleads_getForm` / `preleads_submit`, `log_client`, `report_issue`, `brand_css` / `brand_json`, `doGet`, plus the core team's `menu_…` / `onOpen` / `onEdit` and the owner-only `setup_…` / `report_authorize` / `steps_authorizeDrive` (never call those from a page). Page templates use `include_()` / `includeTemplate_()` / `includeOptional_()` (private: scriptlets can call them, the browser can't).
 
 | Helper | Returns / does |
 |---|---|
@@ -238,7 +238,7 @@ Functions ending in `_` are server-only. Public shared functions: `home_getConte
 | `traced_(event, page, fn, summarize?)` | **Wrap every public server function in it** (see `apply_submit` / `home_getContext`): logs OK + ms, `{ ok:false }` as WARN, and throws as ERROR with the stack, to the Activity tab. Pattern: `function x_get() { return traced_('x_get', 'x', x_get_, r => 'short summary'); }` with the real code in `x_get_()`. |
 | `activity_(event, details, { level, page, ms })` | one row in the **Activity** tab (`When | Level | Who | Page | Event | Details | ms`); level `INFO`/`WARN`/`ERROR`. Never throws. **Never log essays, ID numbers, phone numbers or other private answers**, just IDs, statuses and field names. |
 | `log_client(evt)` *(public)* | Styles.html calls it for browser errors (max 5 per page load). Don't call it yourself. |
-| `setStatus_` / `setStatusLocked_` / `setTrack_` | officers only (LEADS menu). **Not for your code.** |
+| `setStatus_` / `setStatusLocked_` / `setTrack_` | the core team only (LEADS menu). **Not for your code.** |
 | `progress_(dataOrNull)` | unlock states (§2.4). The only source of truth. |
 | `home_getContext()` *(public)* | `{ email, signedIn, allowedDomain, isOpen, deadline, campStart, contact, isAdmin, event:{name,dates,venue}, applicant:{id,firstName,status,requirements,payment}\|null, progress, sheetUrl }`. Each step's page is `baseUrl + '?page=pay'` (`reqs`, `ga`, `room`). |
 | `steps_get(page)` · `steps_uploadProof(file)` *(public, StepsApi.gs)* | the Steps page's data for `pay`/`reqs`/`ga`/`room` (content only once unlocked) · saves the proof of payment, links it in `PaymentProof`, sets Payment SUBMITTED |
@@ -315,7 +315,7 @@ function apply_getForm() {
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<?!= include('Styles') ?>
+<?!= include_('Styles') ?>
 <?!= brand_css() ?>
 <style>
   /* page-only styles; reuse Styles.html classes first */
@@ -324,10 +324,10 @@ function apply_getForm() {
 </style>
 </head>
 <body data-loader-wait>
-<?!= include('Loader') ?>
+<?!= include_('Loader') ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 <div class="wrap">
-  <?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
+  <?!= includeTemplate_('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
 
   <section class="page-head">
     <p class="eyebrow">01 · Apply</p>
@@ -462,7 +462,7 @@ PageTop always has **Sign out**. "Not signed in" state → **Sign in** button (`
 - **Home extras for non-applicants:** an FAQ of "classified files" (`BRAND.faq`, `{fee} {dates} {venue}` filled from Settings; `todo: true` answers only show to admins) and past-camper quotes (`BRAND.testimonials`; `sample: true` shows a SAMPLE stamp). Both hide once the person has a file (`body.applied`). Confirmed campers' countdown switches to camp start (Settings › `CampStart`, else the first date in `EventDates`).
 - **Dropdowns are themed** (`CustomSelect` in Styles.html): every `<select>` on every page is replaced by a styled button + listbox on load, with the real select kept underneath for the value and validation. Use plain `<select>` in your markup; setting `el.value` from code updates the themed one too. Don't style native selects yourself.
 - **Report an issue** (`ReportIssue` in Styles.html, `report_issue` in Utils.gs, copy in `BRAND.report`): a red "Report an issue" button is added to every page's top bar and footer automatically (any `[data-report]` element opens it too). The form asks for the category, what happened, what they were doing, steps, when, how bad and a reply email (+ optional screenshot). It attaches the page, browser, screen, in-app browser, recent page errors, their account, applicant ID/status and last Activity rows, then emails a themed case file to Settings › `IssueEmail` (or `BRAND.report.to`). Max 3 reports per person per 10 minutes. The owner must run `report_authorize` once so Google allows sending email.
-- **Wording: say "core team", never "officers"**, in anything applicants see. The footer reads "Portal issues? …".
+- **Wording: say "core team", never "the core team"**, in anything applicants see. The footer reads "Portal issues? …".
 - **Autofill from MemData** (ApplyApi.gs `apply_memberFor_`): the `MemData` tab (MEA member sign-ups) fills empty Apply fields. Matched ONLY by the signed-in email (Student Email / Email Address), never by ID alone, so nobody can pull someone else's details by guessing IDs. The ID Number is question 1; changing it re-runs the lookup among rows tied to the same email and refills anything autofilled that wasn't edited. Prefilled fields get a yellow edge until edited. Assume every applicant is in MemData, but never block someone who isn't. Autofilled: ID, name, nickname, course, year level, mobile, Block and MBTI (header "MBTI", else column AB; cleaned to the 4 letters). Only the email columns are compared, never other cells.
 - **Wrong-account pop-up** (`SignInHelp` in Styles.html, copy in `BRAND.signInHelp`): opens once per session on Home/Apply when the visitor isn't signed in or is on a non-Ateneo account; a "Trouble signing in?" link reopens it. It gives the school-pinned portal link (`baseUrl`) plus private-window and sign-out steps.
 - **I.R.I.S. judges your answers on Apply** (`judge` in Apply.html, lines in `BRAND.mascot.judge`): it comments after a pause or when you leave a field, at most once every 7s, and calls out invalid IDs/mobiles, short or very long essays, "leadership" clichés, big deletions and long idles. Validation errors use `judge.force()`. Comments are extra; the page's own error messages stay the source of truth.
@@ -604,7 +604,7 @@ apply_submit(form) → { ok:false, errors } | { ok:true, id }
 1. `email = currentEmail_()`; blank → throw "Sign in with your Ateneo account first."
 2. `!isAllowedDomain_(email)` → throw "Use your Ateneo account to apply."
 3. `v = validateApplication_(form, 'apply')` (covers phone cleanup, ID range, Block-for-first-years, consent, Yes/No choices); `!v.ok` → return `{ ok:false, errors: v.errors }`. Build the row from `v.clean`, never raw input.
-4. Take the lock. **Inside it:** `!isOpen_()` → throw "Applications just closed." · `getApplicantByEmail_(email)` → throw "You already applied." · same `IDNumber` on another row → return `{ ok:false, errors:{ IDNumber:'That ID number already has an application. Message an officer if this is wrong.' } }` · `id = nextApplicantId_()` · build the row in **`COLS` order** (every column; `ReviewedBy`/`Notes` blank; `Timestamp`/`LastUpdated` = `new Date()`; `Email` = login; `SUBMITTED`/`NONE`/`NONE`; `IDNumber`/`Mobile` as strings; everything through `safeCell_`) · `sheet_(SHEET.APPLICANTS).appendRow(row)` · `logChange_(id, 'status', '', 'SUBMITTED', 'system')`.
+4. Take the lock. **Inside it:** `!isOpen_()` → throw "Applications just closed." · `getApplicantByEmail_(email)` → throw "You already applied." · same `IDNumber` on another row → return `{ ok:false, errors:{ IDNumber:'That ID number already has an application. Message a core team member if this is wrong.' } }` · `id = nextApplicantId_()` · build the row in **`COLS` order** (every column; `ReviewedBy`/`Notes` blank; `Timestamp`/`LastUpdated` = `new Date()`; `Email` = login; `SUBMITTED`/`NONE`/`NONE`; `IDNumber`/`Mobile` as strings; everything through `safeCell_`) · `sheet_(SHEET.APPLICANTS).appendRow(row)` · `logChange_(id, 'status', '', 'SUBMITTED', 'system')`.
 5. Return `{ ok:true, id }`.
 
 **Page must**
@@ -671,7 +671,7 @@ The Dashboard files were removed (Oct 2026): everything an applicant sees about 
 
 ## 10. Edge-case checklist (go through it; say which apply and how)
 
-- **Who:** not signed in (`''`) · wrong/non-Ateneo account · signed in but not applied · officer who also applied · someone calling your public functions from the console with wrong/missing/malicious arguments (`null`, `{}`, huge strings, other people's IDs, `=FORMULA`).
+- **Who:** not signed in (`''`) · wrong/non-Ateneo account · signed in but not applied · core team member who also applied · someone calling your public functions from the console with wrong/missing/malicious arguments (`null`, `{}`, huge strings, other people's IDs, `=FORMULA`).
 - **When:** closed / deadline passed / reopened · state changed between page load and click · Settings blank, text instead of a date, number stored as text.
 - **What:** every Status, Requirements and Payment value · each step switch on and off · an empty Requirements tab, blank PaymentDetails/QR codes, no GA link · long text, line breaks, emojis, ñ/accents, extra spaces · leading-zero numbers stay strings.
 - **Shared pieces (§3.4):** Styles/brand_css, Loader, I.R.I.S., PageTop exactly as §6.2 · `call()` fires `portal:error`; `Loader.hide()` on success and error · I.R.I.S. reacts to success and validation errors, guarded, with the same message on the page · Sign in / Switch account buttons · bottom-right corner free · no Halloween visuals or wording.
@@ -684,7 +684,7 @@ The Dashboard files were removed (Oct 2026): everything an applicant sees about 
 
 You can't make fake Google accounts, so **fake states with your own row**:
 1. Apply once with your account on `/dev` (or, until Apply works, add a row by hand in `Applicants` with **your** email, a unique `APP-9xxx` ID, `Notes` = `TEST - delete`).
-2. Change your row's `Status` / `Requirements` / `Payment` and reload. You must be in `Admins` (non-officer edits are undone on purpose), or ask Keene to use the LEADS menu. Illegal jumps (SUBMITTED → CONFIRMED) are blocked: follow §2.4.
+2. Change your row's `Status` / `Requirements` / `Payment` and reload. You must be in `Admins` (non-core team member edits are undone on purpose), or ask Keene to use the LEADS menu. Illegal jumps (SUBMITTED → CONFIRMED) are blocked: follow §2.4.
 3. Flip Settings: `ApplicationsOpen`, clear `Deadline`, flip `PaymentOpen` / `RequirementsOpen` / `RoomBookingOpen`, clear `GACalendarLink`. **Put them back after.**
 4. Not signed in: open `/dev` signed into a personal Gmail only (you may get a Google error page since `/dev` needs edit access; test the real path on `/exec` after Keene deploys).
 5. Officer vs not: add/remove your email in `Admins`.
@@ -708,10 +708,10 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 | `Script function not found: doGet` | Saved with errors, or Code.gs edited: fix red marks, don't touch Code.gs |
 | `?page=apply` shows the hub | `Apply.html` missing or misnamed |
 | `No HTML file named PageTop` | Shared file missing: ask Keene |
-| Page shows raw `<?= ?>` | Used `include()` on a file with scriptlets: use `includeTemplate()` |
+| Page shows raw `<?= ?>` | Used `include()` on a file with scriptlets: use `includeTemplate_()` |
 | Infinite loading / "Maximum call stack" | A scriptlet tag inside an HTML comment |
 | Loader stuck (vanishes after 20s) | `data-loader-wait` without `Loader.hide()`, often missing in the error path |
-| `Loader is not defined` | `include('Loader')` missing or not first in `<body>` |
+| `Loader is not defined` | `include_('Loader')` missing or not first in `<body>` |
 | I.R.I.S. missing | Mascot include missing, or "Hide I.R.I.S." was clicked (open a new tab) |
 | `I.R.I.S. is not defined` / page breaks when I.R.I.S. is hidden | Use the guarded `kuya()` helper |
 | I.R.I.S. covers my button | Something is in the bottom-right corner: move it |
@@ -763,4 +763,14 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 - **Home once applied** (`body.applied`): the pitch (tagline, lede), observation log, TV wall and the status card's Decision/Payment/Requirements row are hidden; the signal-light card carries that status. The referral count only shows once it's 1 or more.
 - **No red-pen notes:** Apply's margin notes and Home's "pick carefully" scrap were removed; the Game debrief line is plain typed text.
 - **Copy for these lives in Brand.gs:** `countdown.steps / alarms / pills`, `trackLabels` (never show raw NONE/PARTIAL), `signal`, `rank`, `preleadsBanner` (hidden after its `until` date and for confirmed campers).
+
+## Security and privacy rules (Oct 2026 audit)
+
+- **Never reveal why an ID or referral code can't be used.** Apply and Pre-LEADS give one message for "belongs to another member" and "already used", and the referral check says "unknown" for withdrawn owners too. Failed attempts are limited to 6 per account per hour (`bump_`), so nobody can probe who applied.
+- **Rate limits go through `bump_(key, max, ttl)`** (Utils.gs): check-and-add under a short lock, so parallel calls can't slip past. Used by uploads (5/day), reports (3 per 10 min per person, 150/day signed in, 30/day signed out, no screenshots from signed-out people) and `log_client`.
+- **Referral counts:** the hub gets only how many applied with your code, never their statuses.
+- **Drafts** are only stored once DataConsent is Y; unticking deletes them. `maintenance_daily` blanks drafts untouched for 30 days and deletes routine Activity rows older than 60 days (CHANGE rows are kept). Install it once: run `setup_dailyMaintenance` from the editor (it asks for the trigger permission).
+- **Page views are logged without the email** (`who` = visitor); server calls still log the account so problems can be traced.
+- **Pre-LEADS** has Settings `PreLeadsOpen`, `PreLeadsDeadline` (default Nov 5, 2026, 5 PM), `PreLeadsDate`, `PreLeadsTime`, `PreLeadsVenue`; rows are written by header name; it uses the same MemData ID ownership check as Apply.
+- **Proof-of-payment folder:** only a folder the script owner owns is ever reused. Share it with the core team only, never "anyone with the link".
 

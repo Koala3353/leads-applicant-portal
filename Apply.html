@@ -4,7 +4,7 @@
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<?!= include('Styles') ?>
+<?!= include_('Styles') ?>
 <?!= brand_css() ?>
 <style>
   /* Page state management */
@@ -468,7 +468,7 @@
 </style>
 </head>
 <body data-loader-wait>
-<?!= include('Loader') ?>
+<?!= include_('Loader') ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 
 <div id="irisWakeStage" class="iris-wake-stage" hidden>
@@ -478,7 +478,7 @@
 </div>
 
 <div class="wrap">
-  <?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
+  <?!= includeTemplate_('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
 
   <section class="page-head">
     <p class="eyebrow">FILE 01 // APPLY</p>
@@ -1037,7 +1037,7 @@
       .withSuccessHandler(res => {
         draftSaving = false;
         if (res && res.ok) setDraftState('Draft saved to your account at ' + new Date(res.savedAt).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }) + '.');
-        else setDraftState('Draft saved in this browser only.');
+        else setDraftState(res && res.consent ? 'Saved in this browser only. Tick the data-privacy consent to save it to your account.' : 'Draft saved in this browser only.');
         if (draftDirty) queueDraftSave();
       })
       .withFailureHandler(() => {

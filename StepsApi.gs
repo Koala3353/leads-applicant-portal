@@ -123,8 +123,8 @@ function steps_qrCodes_(text) {
         src = 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes());
         if (src.length < 95000) cache.put(key, src, 21600);
       } catch (e) {
-        activity_('steps_qr', 'Could not read QR file ' + id + ': ' + (e && e.message), { level: 'WARN', page: 'pay' });
-        src = 'https://drive.google.com/thumbnail?id=' + id + '&sz=w600';   // works if the file is shared with the link
+        activity_('steps_qr', 'Could not read a QR file: ' + (e && e.message), { level: 'WARN', page: 'pay' });
+        src = '';   // the page shows "QR unavailable"; never hand out the raw Drive file ID
       }
     }
     return { label: label, src: src };
@@ -152,10 +152,8 @@ function steps_uploadProof_(file) {
   if (!bytes.length) return { ok: false, error: 'That file is empty.' };
   if (bytes.length > PROOF_MAX_BYTES) return { ok: false, error: 'That file is over 8 MB. Send a smaller photo or a screenshot.' };
   if (!steps_looksLike_(bytes, type)) return { ok: false, error: 'That file does not look like a photo or a PDF. Send a screenshot of the receipt.' };
-  const cache = CacheService.getScriptCache(), dayKey = 'proof:' + a.ApplicantID + ':' + Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyyMMdd');
-  const today = Number(cache.get(dayKey) || 0);
-  if (today >= PROOF_PER_DAY) return { ok: false, error: 'That is enough uploads for today. If the wrong file went in, message the core team.' };
-  cache.put(dayKey, String(today + 1), 90000);
+  const dayKey = 'proof:' + a.ApplicantID + ':' + Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyyMMdd');
+  if (!bump_(dayKey, PROOF_PER_DAY, 90000)) return { ok: false, error: 'That is enough uploads for today. If the wrong file went in, message the core team.' };
 
   const ext = PROOF_EXT[type];   // from the checked type, never from the uploaded filename
   const stamp = Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyy-MM-dd HHmm');
@@ -192,7 +190,12 @@ function steps_proofFolder_() {
     const name = (getSetting_('EventName') || 'LEADS') + ' - Proof of Payment';
     const same = DriveApp.getFoldersByName(name);
     let folder = null;
-    while (!folder && same.hasNext()) { const f = same.next(); if (!f.isTrashed()) folder = f; }
+    // only a folder this script's owner owns: a same-named folder someone shared with us must never receive receipts
+    const me = Session.getEffectiveUser().getEmail().toLowerCase();
+    while (!folder && same.hasNext()) {
+      const f = same.next();
+      try { if (!f.isTrashed() && f.getOwner() && f.getOwner().getEmail().toLowerCase() === me) folder = f; } catch (e) { /* skip */ }
+    }
     folder = folder || DriveApp.createFolder(name);
     steps_writeSetting_('PaymentFolder', folder.getUrl(), 'Drive folder where uploaded proofs of payment are saved. Made automatically; share it with the core team.');
     return folder;

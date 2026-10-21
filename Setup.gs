@@ -24,7 +24,7 @@ function setup_applyValidation() {
   const custom = (name, formula, help) => range(name).setDataValidation(
     B().requireFormulaSatisfied(formula).setAllowInvalid(false).setHelpText(help).build());
 
-  custom('ApplicantID', `=REGEXMATCH(TO_TEXT(${r('ApplicantID')}2),"^APP-\\d{4}$")`, 'Made by the script: APP-0001');
+  custom('ApplicantID', `=REGEXMATCH(TO_TEXT(${r('ApplicantID')}2),"^APP-\\d{4,}$")`, 'Made by the script: APP-2317');
   // email domains come from Settings > AllowedEmailDomains, so porting needs no code change
   const domains = String(getSetting_('AllowedEmailDomains') || '').split(',')
     .map(d => d.trim().toLowerCase().replace(/[.]/g, '\\.')).filter(String);
@@ -133,3 +133,15 @@ function setup_cleanupAfterDeploy() {
   console.log(out.join('\n') || 'Nothing to clean up.');
   return out;
 }
+
+/**
+ * Installs the daily clean-up (maintenance_daily in Utils.gs): old drafts blanked after 30 days, routine Activity
+ * rows deleted after 60 days. Run once from the editor as the owner. Safe to run again (it replaces the old trigger).
+ */
+function setup_dailyMaintenance() {
+  ownerOnly_();
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'maintenance_daily').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('maintenance_daily').timeBased().everyDays(1).atHour(3).inTimezone('Asia/Manila').create();
+  return 'Daily clean-up installed (3 AM Manila).';
+}
+

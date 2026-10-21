@@ -37,12 +37,12 @@ Three tracks record where each applicant is:
 - ACCEPTED + APPROVED + VERIFIED → **CONFIRMED** automatically.
 - `progress_()` in Utils.gs is the one place these unlock rules live. The hub and the Steps page both use it.
 
-## How officers work (in the Sheet)
+## How the core team work (in the Sheet)
 
 - **LEADS menu:** select applicant rows in the Applicants tab (any cell in each row; several rows at once is fine) → LEADS → Decision / Requirements / Payment → pick a value. Each row is checked, logged, and auto-confirmed when all three tracks are done. Skipped rows are listed with the reason.
-- **Typing in the cells also works:** a change to Status / Requirements / Payment by someone in the Admins tab is checked and logged; a wrong move (e.g. SUBMITTED → CONFIRMED) or a change by a non-officer is **undone** with a message. Pasting over many cells at once isn't checked (it's logged as a bulk edit), so prefer the menu.
-- Officers must be in the **Admins** tab **and** be editors of the Sheet, using an account in the same Google Workspace as the owner.
-- Officers see an "Open the Sheet" link on the portal's Home page.
+- **Typing in the cells also works:** a change to Status / Requirements / Payment by someone in the Admins tab is checked and logged; a wrong move (e.g. SUBMITTED → CONFIRMED) or a change by a non-core team member is **undone** with a message. Pasting over many cells at once isn't checked (it's logged as a bulk edit), so prefer the menu.
+- The core team must be in the **Admins** tab **and** be editors of the Sheet, using an account in the same Google Workspace as the owner.
+- The core team see an "Open the Sheet" link on the portal's Home page.
 
 ## Files
 

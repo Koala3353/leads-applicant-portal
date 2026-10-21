@@ -41,7 +41,7 @@ function checkReferral_(raw, values, email) {
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][cCode]).trim().toUpperCase() !== code) continue;
     if (String(values[i][cEmail]).trim().toLowerCase() === email) return { error: BRAND.referral.self };
-    if (String(values[i][cStatus]).trim() === 'WITHDRAWN') return { error: BRAND.referral.inactive };
+    if (String(values[i][cStatus]).trim() === 'WITHDRAWN') return { error: BRAND.referral.unknown };   // same words as unknown: a code must not reveal that someone withdrew
     return { code: code, referrerId: String(values[i][cId]).trim() };
   }
   return { error: BRAND.referral.unknown };
@@ -77,19 +77,18 @@ function referralInfo_(found) {
       if (!String(now || '').trim()) updateApplicant_(i + 1, { ReferralCode: code });
     } finally { lock.releaseLock(); }
   }
-  const counts = { applied: 0, accepted: 0, confirmed: 0 };
+  // Only how many applied with the code. Never their statuses: that would tell a referrer whether a friend got in
+  // (RA 10173). One read of the Status column instead of one call per referral.
+  let applied = 0;
   const sh = sheet_(SHEET.APPLICANTS), last = sh.getLastRow(), cRef = cols_().indexOf('ReferrerID');
   if (last >= 2 && cRef >= 0) {
-    const hits = sh.getRange(2, cRef + 1, last - 1, 1).createTextFinder(String(a.ApplicantID)).matchEntireCell(true).findAll();
-    const cStatus = col_('Status') + 1;
-    hits.forEach(h => {
-      const st = String(sh.getRange(h.getRow(), cStatus).getValue()).trim();
-      if (st === 'WITHDRAWN') return;
-      counts.applied++;
-      if (st === 'ACCEPTED' || st === 'CONFIRMED') counts.accepted++;
-      if (st === 'CONFIRMED') counts.confirmed++;
-    });
+    const refs = sh.getRange(2, cRef + 1, last - 1, 1).getValues();
+    const stat = sh.getRange(2, col_('Status') + 1, last - 1, 1).getValues();
+    for (let i = 0; i < refs.length; i++) {
+      if (String(refs[i][0]).trim() === String(a.ApplicantID) && String(stat[i][0]).trim() !== 'WITHDRAWN') applied++;
+    }
   }
+  const counts = { applied: applied };
   return { code: code, link: portalUrl_() + '?ref=' + encodeURIComponent(code), counts: counts, open: isOpen_() };
 }
 

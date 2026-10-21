@@ -4,7 +4,7 @@
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<?!= include('Styles') ?>
+<?!= include_('Styles') ?>
 <?!= brand_css() ?>
 <style>
   body{overflow-x:hidden}
@@ -625,7 +625,7 @@
 </style>
 </head>
 <body data-base="<?= baseUrl ?>" data-ref="<?= ref ?>" data-loader-wait>
-<?!= include('Loader') ?>
+<?!= include_('Loader') ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 <div class="dark" id="dark" aria-hidden="true"></div>
 <? if (BRAND.effects.eyes) { ?>

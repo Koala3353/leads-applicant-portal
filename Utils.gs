@@ -608,7 +608,8 @@ function activity_(event, details, opts) {
   if ((opts.level || 'INFO') === 'INFO' && activityBusy_()) return;   // WARN, ERROR and CHANGE are always written
   try {
     let who = '';
-    try { who = currentEmail_() || 'guest'; } catch (e) { who = 'unknown'; }
+    if (opts.anon) who = 'visitor';   // page views: we don't need to know who looked, only that the page works
+    else { try { who = currentEmail_() || 'guest'; } catch (e) { who = 'unknown'; } }
     const text = typeof details === 'string' ? details : JSON.stringify(details === undefined ? '' : details);
     const sh = activitySheet_();
     sh.appendRow([new Date(), opts.level || 'INFO', who, opts.page || '', event,
@@ -617,6 +618,41 @@ function activity_(event, details, opts) {
   } catch (err) {
     console.error('activity_ could not write: ' + err + ' | ' + event);
   }
+}
+
+/**
+ * Daily clean-up (time trigger, installed once with setup_dailyMaintenance in Setup.gs). RA 10173: don't keep
+ * personal data longer than needed.
+ *  - Drafts: blanks any draft not touched for DRAFT_KEEP_DAYS (the row stays so row numbers never move).
+ *  - Activity: deletes routine rows older than ACTIVITY_KEEP_DAYS. CHANGE rows (the status/track record) are kept.
+ */
+const DRAFT_KEEP_DAYS = 30, ACTIVITY_KEEP_DAYS = 60;
+function maintenance_daily() {
+  const now = Date.now(), day = 864e5;
+  try {
+    const sh = ss_().getSheetByName('Drafts');
+    if (sh && sh.getLastRow() > 1) {
+      const r = sh.getRange(2, 2, sh.getLastRow() - 1, 2), v = r.getValues();
+      let n = 0;
+      v.forEach(x => { const t = x[0] instanceof Date ? x[0].getTime() : Date.parse(x[0]); if (x[1] && t && now - t > DRAFT_KEEP_DAYS * day) { x[0] = ''; x[1] = ''; n++; } });
+      if (n) r.setValues(v);
+      activity_('maintenance', n + ' old drafts cleared', { page: 'admin' });
+    }
+  } catch (e) { activity_('maintenance', 'drafts: ' + (e && e.message), { level: 'WARN', page: 'admin' }); }
+  const lock = LockService.getDocumentLock();   // same lock as trimActivity_, so the two never run together
+  if (!lock.tryLock(30000)) return;
+  try {
+    const sh = activitySheet_(), last = sh.getLastRow();
+    if (last < 2) return;
+    const v = sh.getRange(2, 1, last - 1, ACTIVITY_HEAD.length).getValues();
+    const cut = now - ACTIVITY_KEEP_DAYS * day;
+    let k = 0;   // rows are in time order: count the old ones at the top
+    while (k < v.length && v[k][0] instanceof Date && v[k][0].getTime() < cut) k++;
+    if (!k) return;
+    const keep = v.slice(0, k).filter(r => r[1] === 'CHANGE');
+    sh.deleteRows(2, k);
+    if (keep.length) { sh.insertRowsBefore(2, keep.length); sh.getRange(2, 1, keep.length, ACTIVITY_HEAD.length).setValues(keep); }
+  } finally { lock.releaseLock(); }
 }
 
 /** Drops the oldest 5000 rows, but keeps the CHANGE rows among them (the record of every status/track change). */
@@ -650,20 +686,37 @@ function traced_(event, page, fn, summarize) {
   }
 }
 
+/**
+ * Rate limits that can't be raced: adds 1 to `key` (kept `ttl` seconds) and returns true if the new count is
+ * within `max`, false if it's over (the caller refuses). The read + write happen under a short lock, so 50
+ * calls fired at once can't all read 0. If the lock is busy we refuse rather than risk going over.
+ * peek: true only checks (no +1), for "has this person failed too often?" style checks.
+ */
+function bump_(key, max, ttl, peek) {
+  const cache = CacheService.getScriptCache();
+  if (peek) return Number(cache.get(key) || 0) < max;
+  const lock = LockService.getUserLock();   // not the script lock: never queues behind submits
+  if (!lock.tryLock(3000)) return false;
+  try {
+    const n = Number(cache.get(key) || 0) + 1;
+    if (n > max) return false;
+    cache.put(key, String(n), ttl);
+    return true;
+  } finally { lock.releaseLock(); }
+}
+
 /** Called by every page (Styles.html) when something breaks in the visitor's browser. Public on purpose. */
 function log_client(evt) {
   evt = evt || {};
   // anyone can call this: at most 20 events per person (or 60 for all signed-out visitors together) per 10 minutes
   try {
-    const email = currentEmail_(), c = CacheService.getScriptCache(), k = 'clog:' + (email || 'anon');
-    const n = Number(c.get(k) || 0) + 1;
-    if (n > (email ? 20 : 60)) return false;
-    c.put(k, String(n), 600);
+    const email = currentEmail_();
+    if (!bump_('clog:' + (email || 'anon'), email ? 20 : 60, 600)) return false;
   } catch (e) { /* cache down: still log */ }
   const page = String(evt.page || '').slice(0, 30);
   const details = {
     kind: String(evt.kind || 'error').slice(0, 40),
-    message: String(evt.message || '').slice(0, 1000),
+    message: String(evt.message || '').slice(0, 500),   // browser text: kept short (it's free text anyone can send)
     where: String(evt.where || '').slice(0, 300),
     ua: String(evt.ua || '').slice(0, 200)
   };
@@ -687,14 +740,13 @@ function report_issue_(r) {
   const contact = String(r.contact || '').trim().slice(0, 120) || email;
   // Signed-out reporters share one bucket: keying on the page-supplied contact let anyone dodge the limit
   // by changing it each call. 10 leaves room for real sign-in trouble without flooding the inbox.
-  const cache = CacheService.getScriptCache(), key = email ? 'rep:' + email : 'rep:anon';
-  const count = Number(cache.get(key) || 0);
-  if (count >= (email ? 3 : 10)) return { ok: false, reason: 'rate', to: to };
-  // and a cap for the whole portal per day, so a script can't use up the sending quota
-  const dayKey = 'rep:day:' + Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyyMMdd');
-  const today = Number(cache.get(dayKey) || 0);
-  if (today >= 150) return { ok: false, reason: 'rate', to: to };
-  if (!String(r.what || '').trim()) return { ok: false, reason: 'empty', to: to };
+  if (!String(r.what || '').trim()) return { ok: false, reason: 'empty' };
+  // Limits are reserved BEFORE the (slow) email, under a lock, so firing many at once can't slip past them.
+  // Signed-out reporters get their own small daily pool, so they can't use up the signed-in budget (and vice versa).
+  const day = Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyyMMdd');
+  if (!bump_(email ? 'rep:' + email : 'rep:anon', email ? 3 : 10, 600)) return { ok: false, reason: 'rate' };
+  if (!bump_((email ? 'rep:day:' : 'rep:dayanon:') + day, email ? 150 : 30, 90000)) return { ok: false, reason: 'rate' };
+  if (!email) r.shot = null;   // no attachments from people we can't identify
 
   const id = 'R-' + Utilities.formatDate(new Date(), 'Asia/Manila', 'MMdd-HHmm') + '-' + Math.floor(Math.random() * 900 + 100);
   const clip = (v, n) => String(v === undefined || v === null ? '' : v).slice(0, n || 2000);
@@ -785,8 +837,6 @@ function report_issue_(r) {
     } catch (e) { /* bad image: send without it */ }
   }
   MailApp.sendEmail(opts);
-  cache.put(key, String(count + 1), 600);
-  cache.put(dayKey, String(today + 1), 90000);
   return { ok: true, id: id, email: contact };
 }
 

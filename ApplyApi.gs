@@ -74,6 +74,14 @@ function apply_submit_(form) {
     throw new Error('Use your Ateneo account to apply.');
   }
 
+  // 2b. Someone who keeps getting "that ID can't be used" or "unknown referral code" is probably guessing other
+  // people's IDs or names to learn who applied: after 6 failures in an hour, stop answering for a while.
+  const failKey = 'subfail:' + email;
+  if (!bump_(failKey, 6, 3600, true)) {
+    return { ok: false, errors: { IDNumber: 'Too many attempts. Wait an hour, or message the core team if something is wrong.' } };
+  }
+  const failed = errs => { bump_(failKey, 99, 3600); return { ok: false, errors: errs }; };
+
   // 3. Validate with the shared RULES in Utils.gs (phone cleanup, ID range, Block for first years, consent, choices)
   const input = Object.assign({}, form || {});
   const v = validateApplication_(input, 'apply');
@@ -87,7 +95,8 @@ function apply_submit_(form) {
   // 4. The ID must not belong to another account in the MEA member list (stops anyone filing under a classmate's ID,
   // which would lock the real owner out). IDs not in MemData (e.g. new members) can't be checked and are allowed.
   if (apply_idBelongsToOther_(candidateIdStr, email)) {
-    return { ok: false, errors: { IDNumber: 'That ID number belongs to another account in the MEA member list. Use your own ID, or message the core team.' } };
+    // same words as "already applied" below, so the reply never says WHY (member elsewhere vs. already filed)
+    return failed({ IDNumber: "That ID number can't be used for a new application. If it's yours, message the core team." });
   }
 
   // 5. Data integrity lock and atomic write. Keep the time inside the lock short: every applicant's submit waits on it.
@@ -114,17 +123,13 @@ function apply_submit_(form) {
     // Referral first: the code must belong to someone else who applied and hasn't withdrawn (Referrals.gs).
     // Checked before the ID so a bogus code can't be used to ask "has this ID applied?" without filing anything.
     const ref = checkReferral_(v.clean.ReferredBy, values, email);
-    if (ref.error) return { ok: false, errors: { ReferredBy: ref.error } };
+    if (ref.error) return failed({ ReferredBy: ref.error });
 
     // Check Ateneo IDNumber uniqueness across all applicant rows
     for (let i = 1; i < values.length; i++) {
       if (String(values[i][idCol]).trim() === candidateIdStr) {
-        return {
-          ok: false,
-          errors: {
-            IDNumber: 'That ID number already has an application. Message the core team if this is wrong.'
-          }
-        };
+        activity_('id_conflict', 'submit with an ID already on file (row ' + (i + 1) + ')', { level: 'WARN', page: 'apply' });   // for the core team to check
+        return failed({ IDNumber: "That ID number can't be used for a new application. If it's yours, message the core team." });
       }
     }
     referralCode = makeReferralCode_(v.clean.Nickname, v.clean.FullName, referralCodesIn_(values));
@@ -284,6 +289,12 @@ function apply_saveDraft(data) {
   try {
     // Already applied? (A guard only: apply_submit_ re-checks inside its lock and clears the draft.)
     if (getApplicantByEmail_(email)) return { ok: false, applied: true };
+    // Nothing is stored on our side until they've ticked the data-privacy consent (RA 10173). Before that the page
+    // keeps the draft in this browser only. Unticking it later deletes what we had.
+    if ('DataConsent' in clean && clean.DataConsent !== 'Y') {
+      apply_deleteDraft_(email);
+      return { ok: false, consent: true };
+    }
     const sh = apply_draftSheet_();
     const now = new Date();
     const row = apply_ensureDraftRow_(sh, email);

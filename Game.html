@@ -4,7 +4,7 @@
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<?!= include('Styles') ?>
+<?!= include_('Styles') ?>
 <?!= brand_css() ?>
 <style>
   .state { display: none; }
@@ -146,6 +146,7 @@
   /* vignette screen dimming */
   .vignette { position: fixed; inset: 0; pointer-events: none; z-index: 100; opacity: 0; transition: opacity 1s linear; background: radial-gradient(circle, rgba(0, 0, 0, .55) 0%, rgba(0, 0, 0, .97) 100%); }
   html.calm .vignette { display: none; }
+  html.calm .jump-noise { animation: none; }
 
   /* ---- Jump Scare with Violent Shake & Punch Animation ---- */
   .jump { position: fixed; inset: 0; z-index: 9700; display: none; place-items: center; overflow: hidden; background: #000; }
@@ -211,7 +212,7 @@
 </style>
 </head>
 <body data-loader-wait>
-<?!= include('Loader') ?>
+<?!= include_('Loader') ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 
 <div class="vignette" id="vignette" aria-hidden="true"></div>
@@ -227,7 +228,7 @@
 </div>
 
 <div class="wrap">
-  <?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
+  <?!= includeTemplate_('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
 
   <section class="page-head" style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:12px;">
     <div>

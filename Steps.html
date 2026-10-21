@@ -4,7 +4,7 @@
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<?!= include('Styles') ?>
+<?!= include_('Styles') ?>
 <?!= brand_css() ?>
 <!-- Steps.html  (integrator owns this file) The steps after acceptance, one page with four views:
      ?page=pay (02 proof of payment), reqs (03 requirements), ga (04 1st GA), room (05 room booking).
@@ -75,10 +75,10 @@
 </style>
 </head>
 <body data-loader-wait>
-<?!= include('Loader') ?>
+<?!= include_('Loader') ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 <div class="wrap">
-  <?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
+  <?!= includeTemplate_('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
   <? var S = BRAND.steps[page] || BRAND.steps.pay; ?>
   <section class="page-head">
     <p class="eyebrow">FILE <?= S.n ?> // <?= S.title ?></p>
@@ -219,8 +219,13 @@
     const box = $('qrs'); box.textContent = '';
     (c.qrs || []).forEach(q => {
       const f = document.createElement('figure'); f.className = 'qr';
-      const img = new Image(); img.src = q.src; img.alt = 'QR code' + (q.label ? ' for ' + q.label : ''); img.loading = 'lazy';
-      f.appendChild(img);
+      if (q.src) {
+        const img = new Image(); img.src = q.src; img.alt = 'QR code' + (q.label ? ' for ' + q.label : ''); img.loading = 'lazy';
+        f.appendChild(img);
+      } else {   // the QR file couldn't be read: say so instead of a broken image
+        const p = document.createElement('p'); p.className = 'qr-missing'; p.textContent = BRAND.steps.qrMissing || 'QR unavailable. Message the core team for the payment details.';
+        f.appendChild(p);
+      }
       if (q.label) { const cap = document.createElement('figcaption'); cap.textContent = q.label; f.appendChild(cap); }
       box.appendChild(f);
     });
@@ -333,7 +338,12 @@
   function renderGa(d) {
     $('gaDetails').textContent = d.content.details || '';
     $('gaDetails').hidden = !d.content.details;
-    $('gaLink').href = d.content.link;
+    const link = d.content.link;
+    if (link) { $('gaLink').href = link; $('gaLink').removeAttribute('aria-disabled'); }
+    else {      // no link set yet: a dead button would open "undefined" in a new tab
+      $('gaLink').removeAttribute('href'); $('gaLink').setAttribute('aria-disabled', 'true');
+      $('gaLink').textContent = BRAND.steps.ga.noLink || 'Link posted soon';
+    }
     show('ga');
   }
 

@@ -45,7 +45,7 @@ function doGet(e) {
   template.page = key;
   template.baseUrl = portalUrl_();
   template.ref = normalizeReferral_(e && e.parameter && e.parameter.ref);   // ...exec?ref=BEA (Referrals.gs); '' if none
-  activity_('page_view', notice ? 'unknown page, showed Home' : '', { page: key });
+  activity_('page_view', notice ? 'unknown page, showed Home' : '', { page: key, anon: true });   // no email on page views
   return template.evaluate()
     .setTitle(BRAND.portalName)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
@@ -67,16 +67,16 @@ function portalUrl_() {
   return m ? 'https://script.google.com/a/macros/' + domain + '/s/' + m[1] + '/' + m[2] : url;
 }
 
-/** Lets any page pull in shared files: <?!= include('Styles') ?> */
-function include(name) {
+/** Lets any page pull in shared files: <?!= include_('Styles') ?> */
+function include_(name) {
   return HtmlService.createHtmlOutputFromFile(name).getContent();
 }
 
 /**
  * Like include(), but for a shared piece that needs scriptlets (e.g. PageTop).
- * Usage in a page: <?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl, title: 'Apply' }) ?>
+ * Usage in a page: <?!= includeTemplate_('PageTop', { BRAND: BRAND, baseUrl: baseUrl, title: 'Apply' }) ?>
  */
-function includeTemplate(name, vars) {
+function includeTemplate_(name, vars) {
   const t = HtmlService.createTemplateFromFile(name);
   Object.keys(vars || {}).forEach(k => { t[k] = vars[k]; });
   return t.evaluate().getContent();
@@ -89,7 +89,7 @@ function includeTemplate(name, vars) {
  */
 function includeOptional_(name, vars) {
   try {
-    return includeTemplate(name, vars);
+    return includeTemplate_(name, vars);
   } catch (err) {
     console.error('includeOptional_(' + name + ') skipped: ' + (err && err.message));
     return '';

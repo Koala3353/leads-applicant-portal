@@ -167,6 +167,7 @@ const BRAND = {
   },
   /* ---------- Steps.html: the pages after acceptance (?page=pay | reqs | ga | room) ---------- */
   steps: {
+    qrMissing: 'QR unavailable right now. Message the core team for the payment details.',
     pay:  { n: '02', file: 'PAYMENT.EXE', title: 'Proof of payment',
             lead: 'Scan a code, pay the fee, then upload your proof. The core team checks it and marks it VERIFIED.',
             how: 'How to pay', qrTitle: 'Scan to pay', upTitle: 'Upload your proof',
@@ -181,7 +182,7 @@ const BRAND = {
                       RETURNED: 'Something needs fixing. Check your email, then send it again.', APPROVED: 'Approved. Your requirements are complete.' } },
     ga:   { n: '04', file: 'ASSEMBLY.EXE', title: '1st GA',
             lead: 'Your first general assembly with the other campers. Attendance is noted.',
-            button: 'Add to Google Calendar' },
+            button: 'Add to Google Calendar', noLink: 'Calendar link posted soon' },
     room: { n: '05', file: 'ROOMS.EXE', title: 'Room booking',
             lead: 'Where you will sleep at camp.',
             placeholder: 'Room booking is being set up. The core team will post the details here.' },

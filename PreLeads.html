@@ -1,17 +1,11 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <base target="_top">
-  </head>
-  <body>
-    <!DOCTYPE html>
 <html lang="en">
 <head>
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pre-LEADS: Oversight Preview</title>
-<?!= include('Styles') ?>
+<?!= include_('Styles') ?>
 <?!= brand_css() ?>
 <style>
   /* Page state management */
@@ -379,8 +373,8 @@
 </style>
 </head>
 <body data-base="<?= baseUrl ?>" data-loader-wait>
-<?!= include('Loader') ?>
-<?!= includeTemplate('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
+<?!= include_('Loader') ?>
+<?!= includeTemplate_('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 
 <div class="wrap">
@@ -423,6 +417,14 @@
       <a class="btn" id="switchAccountBtn" href="#" target="_top">Switch account</a>
       <a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a>
     </div>
+  </div>
+
+  <!-- Closed: Settings › PreLeadsOpen is off or PreLeadsDeadline has passed -->
+  <div class="card state" id="state-closed">
+    <p class="eyebrow">TRANSMISSION ENDED</p>
+    <h2>Pre-LEADS registration is closed</h2>
+    <p>Registration for Pre-LEADS is no longer open. If you think this is a mistake, message the core team.</p>
+    <div class="actions"><a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a></div>
   </div>
 
   <!-- State 5: Already Submitted -->
@@ -652,6 +654,7 @@
     document.querySelectorAll('.state').forEach(el => el.classList.remove('show'));
     const target = $(id);
     if (target) target.classList.add('show');
+    if (id !== 'state-loading' && window.Loader) Loader.hide();   // the body has data-loader-wait: we must hide it
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -738,13 +741,10 @@
 
   function loadForm() {
     showState('state-loading');
-    google.script.run
-      .withSuccessHandler(handleContext)
-      .withFailureHandler(err => {
-        $('errorMessage').textContent = err && err.message ? err.message : 'Unable to connect to registry.';
-        showState('state-error');
-      })
-      .preleads_getForm();
+    window.runServer('preleads_getForm').then(handleContext, err => {
+      $('errorMessage').textContent = err && err.message ? err.message : 'Unable to connect to registry.';
+      showState('state-error');
+    });
   }
 
   function handleContext(res) {
@@ -753,7 +753,7 @@
     // Check signed in
     if (!res.signedIn) {
       const url = $('guestSignInBtn');
-      if (url) url.href = 'https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(window.location.href);
+      if (url) url.href = 'https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(document.body.dataset.base + '?page=preleads');
       showState('state-guest');
       return;
     }
@@ -762,7 +762,7 @@
     if (!res.allowedDomain) {
       $('wrongDomainEmail').textContent = res.email || 'this account';
       const switchBtn = $('switchAccountBtn');
-      if (switchBtn) switchBtn.href = 'https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(window.location.href);
+      if (switchBtn) switchBtn.href = 'https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(document.body.dataset.base + '?page=preleads');
       showState('state-wrong-domain');
       return;
     }
@@ -775,6 +775,9 @@
       showState('state-already-submitted');
       return;
     }
+
+    // Closed (but people who already registered still see their confirmation above)
+    if (res.isOpen === false) { showState('state-closed'); return; }
 
     // Active form
     $('userEmailDisplay').textContent = res.email;
@@ -929,8 +932,7 @@
     submitBtn.disabled = true;
     submitBtn.textContent = 'Transmitting File...';
 
-    google.script.run
-      .withSuccessHandler(res => {
+    window.runServer('preleads_submit', payload).then(res => {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Transmit File // Register for Pre-LEADS';
         if (res && res.ok) {
@@ -940,13 +942,11 @@
         } else {
           displayErrors({ form: 'Transmission failed. Please try again.' });
         }
-      })
-      .withFailureHandler(err => {
+      }, err => {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Transmit File // Register for Pre-LEADS';
         displayErrors({ form: err && err.message ? err.message : 'A server error occurred during transmission.' });
-      })
-      .preleads_submit(payload);
+      });
   });
 
   $('retryBtn').addEventListener('click', loadForm);
@@ -957,7 +957,4 @@
   loadForm();
 </script>
 </body>
-</html>
-
-  </body>
 </html>
