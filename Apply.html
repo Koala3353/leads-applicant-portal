@@ -1004,7 +1004,9 @@
     validateMobileField(true);
   }
 
-  const LOCAL_DRAFT = 'leads_apply_draft';
+  // the browser copy of the draft is per account (a shared laptop must never hand one student's answers to the next)
+  let LOCAL_DRAFT = 'leads_apply_draft';
+  try { localStorage.removeItem('leads_apply_draft'); } catch (e) { /* old shared key: gone */ }
   let draftDirty = false, draftSaving = false;
   const setDraftState = t => { const el = $('draftState'); if (el) el.textContent = t; };
 
@@ -1310,7 +1312,9 @@
       return;
     }
 
+    LOCAL_DRAFT = 'leads_apply_draft:' + String(data.email || '').toLowerCase();
     if (data.alreadyApplied) {
+      try { localStorage.removeItem(LOCAL_DRAFT); } catch (e) { /* ignore */ }   // filed: the browser copy has done its job
       $('existingApplicantId').textContent = data.alreadyApplied.id;
       const st = data.alreadyApplied.status || 'SUBMITTED';
       const pill = $('existingStatusPill');
@@ -1672,6 +1676,9 @@
   $('discardDraftBtn').addEventListener('click', () => {
     clearDraft(true);
     $('applyForm').reset();
+    // reset() keeps a hidden input's value, so the consent would stay "Y" behind an unticked box
+    $('f-DataConsent').value = '';
+    document.querySelectorAll('.prefilled').forEach(el => el.classList.remove('prefilled'));
     $('draftBanner').hidden = true;
     updateCounters();
     updateProgress();

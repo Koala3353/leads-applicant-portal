@@ -84,6 +84,12 @@ function apply_submit_(form) {
     return { ok: false, errors: errors };
   }
 
+  // 4. The ID must not belong to another account in the MEA member list (stops anyone filing under a classmate's ID,
+  // which would lock the real owner out). IDs not in MemData (e.g. new members) can't be checked and are allowed.
+  if (apply_idBelongsToOther_(candidateIdStr, email)) {
+    return { ok: false, errors: { IDNumber: 'That ID number belongs to another account in the MEA member list. Use your own ID, or message the core team.' } };
+  }
+
   // 5. Data integrity lock and atomic write. Keep the time inside the lock short: every applicant's submit waits on it.
   // One read covers both duplicate checks; the Log row and draft clean-up happen after the lock is released.
   const lock = LockService.getScriptLock();
@@ -103,7 +109,15 @@ function apply_submit_(form) {
       if (String(values[i][emailCol]).trim().toLowerCase() === email) {
         throw new Error('You already applied.');
       }
-      // Check Ateneo IDNumber uniqueness across all applicant rows
+    }
+
+    // Referral first: the code must belong to someone else who applied and hasn't withdrawn (Referrals.gs).
+    // Checked before the ID so a bogus code can't be used to ask "has this ID applied?" without filing anything.
+    const ref = checkReferral_(v.clean.ReferredBy, values, email);
+    if (ref.error) return { ok: false, errors: { ReferredBy: ref.error } };
+
+    // Check Ateneo IDNumber uniqueness across all applicant rows
+    for (let i = 1; i < values.length; i++) {
       if (String(values[i][idCol]).trim() === candidateIdStr) {
         return {
           ok: false,
@@ -113,10 +127,6 @@ function apply_submit_(form) {
         };
       }
     }
-
-    // Referral: the code must belong to someone else who applied and hasn't withdrawn (Referrals.gs)
-    const ref = checkReferral_(v.clean.ReferredBy, values, email);
-    if (ref.error) return { ok: false, errors: { ReferredBy: ref.error } };
     referralCode = makeReferralCode_(v.clean.Nickname, v.clean.FullName, referralCodesIn_(values));
     referral = ref;
 
@@ -157,7 +167,7 @@ function apply_submit_(form) {
       Notes: ''
     };
 
-    const row = cols_().map(col => safeCell_(rowMap[col] !== undefined ? rowMap[col] : ''));
+    const row = cols_().map(col => textCell_(rowMap[col] !== undefined ? rowMap[col] : ''));   // text stays text (Utils.gs)
     sheet_(SHEET.APPLICANTS).appendRow(row);
     SpreadsheetApp.flush();   // the row is written before the next submit reads the sheet
   } finally {
@@ -313,6 +323,31 @@ function apply_memRows_(sh, email) {
     out.push(sh.getRange(r, 1, 1, lastCol).getDisplayValues()[0]);
   });
   return out;
+}
+
+/** True when MemData lists this ID number only under other email addresses (never this account). */
+function apply_idBelongsToOther_(id, email) {
+  try {
+    const sh = ss_().getSheetByName('MemData');
+    if (!sh || sh.getLastRow() < 2 || !id) return false;
+    const lastCol = sh.getLastColumn();
+    const norm = h => String(h).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const head = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0].map(norm);
+    const at = names => { for (const n of names) { const i = head.indexOf(n); if (i >= 0) return i; } return -1; };
+    const cId = at(['idnumber', 'studentid', 'idno', 'id']);
+    const cMail = [at(['studentemail', 'ateneoemail', 'studentemailaddress']), at(['emailaddress', 'email', 'primaryemail', 'personalemail'])].filter(i => i >= 0);
+    if (cId < 0 || !cMail.length) return false;
+    const hits = sh.getRange(2, cId + 1, sh.getLastRow() - 1, 1).createTextFinder(id).matchEntireCell(true).findAll();
+    if (!hits.length) return false;
+    const target = String(email).toLowerCase();
+    return !hits.some(c => {
+      const r = sh.getRange(c.getRow(), 1, 1, lastCol).getDisplayValues()[0];
+      return cMail.some(i => String(r[i]).trim().toLowerCase() === target);
+    });
+  } catch (err) {
+    activity_('member_id_check', String(err && err.message), { level: 'WARN', page: 'apply' });
+    return false;   // can't check: don't block a real applicant
+  }
 }
 
 function apply_memberFor_(email, idNumber, lists) {

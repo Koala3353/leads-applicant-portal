@@ -1555,8 +1555,11 @@
       }
     ];
 
-    // Filter out completed tasks and invalid dates
-    const pendingTasks = allMilestones.filter(t => !t.isDone && t.deadline && !isNaN(new Date(t.deadline).getTime()));
+    // Filter out completed tasks, invalid dates, and steps that aren't this person's: the application is for people
+    // without a file, payment/requirements for applicants, camp only once CONFIRMED, nothing once rejected/withdrawn
+    const ended = a && (a.status === 'REJECTED' || a.status === 'WITHDRAWN');
+    const mine = t => !ended && (t.id === 'apply' ? !a : !!a) && (t.id !== 'camp' || t.isOpen);
+    const pendingTasks = allMilestones.filter(t => mine(t) && !t.isDone && t.deadline && !isNaN(new Date(t.deadline).getTime()));
     pendingTasks.sort((x, y) => new Date(x.deadline) - new Date(y.deadline));
 
     // Exclude tasks that passed more than 2 hours ago unless it's the only task
@@ -1564,8 +1567,10 @@
     const activeTasks = pendingTasks.filter(t => (new Date(t.deadline).getTime() - curNow) > -72e5);
     const queue = activeTasks.length ? activeTasks : pendingTasks;
 
-    const primary = queue[0] || null;
-    const secondary = queue[1] || null;
+    // the big countdown (and its panic alarms) only for a step that is open to them now; a locked one can still
+    // show as "next" so they see it coming
+    const primary = queue.find(t => t.isOpen) || null;
+    const secondary = queue.find(t => t !== primary) || null;
 
     if (!primary) {
       if (a && a.status === 'CONFIRMED') {

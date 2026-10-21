@@ -305,15 +305,16 @@ function nextId_(sheetName, prefix) {
   return prefix + String(max + 1).padStart(4, '0');
 }
 
-/** Writes some fields of one Applicants row (by header name). Call inside a lock. */
+/**
+ * Writes some fields of one Applicants row (by header name). Call inside a lock.
+ * Only the given cells (+ LastUpdated) are written: rewriting the whole row would re-type every other cell
+ * (a PastOrgs line starting with "-" would turn into a formula) and undo a core-team edit made in between.
+ */
 function updateApplicant_(row, fields) {
   const sh = sheet_(SHEET.APPLICANTS);
   if (Object.keys(fields).some(k => cols_().indexOf(k) < 0)) ensureApplicantHeaders_();
-  const range = sh.getRange(row, 1, 1, cols_().length);
-  const values = range.getValues()[0];
-  Object.keys(fields).forEach(k => { values[col_(k)] = safeCell_(fields[k]); });
-  values[col_('LastUpdated')] = new Date();
-  range.setValues([values]);
+  Object.keys(fields).forEach(k => { sh.getRange(row, col_(k) + 1).setValue(textCell_(fields[k])); });
+  sh.getRange(row, col_('LastUpdated') + 1).setValue(new Date());
 }
 
 /* ---------------- data validation ---------------- */
@@ -385,6 +386,15 @@ function safeCell_(v) {
   return /^[=+\-@]/.test(v) ? "'" + v : v;
 }
 
+/**
+ * For Applicants cells: every non-empty string is stored as plain text (leading apostrophe). Without it Sheets
+ * re-types what it can: "09171234567" loses its 0, an ID becomes a number, a block "1-2" or a referral code
+ * "MAY-2345" becomes a date. Reading the cell back gives the text without the apostrophe. Numbers and Dates pass through.
+ */
+function textCell_(v) {
+  return typeof v === 'string' && v !== '' ? "'" + v : v;
+}
+
 /* ---------------- status + log ---------------- */
 
 /**
@@ -443,6 +453,8 @@ function setTrack_(applicantId, field, value, by) {
     if (!found) throw new Error('No applicant ' + applicantId);
     const from = found.data[field];
     if (from === value) return value;
+    // a proof upload racing the core team's check must never undo VERIFIED
+    if (by === 'system' && field === 'Payment' && from === 'VERIFIED') return from;
     if (['REJECTED', 'WITHDRAWN'].indexOf(found.data.Status) >= 0 && value !== 'NONE') {
       throw new Error(applicantId + ' is ' + found.data.Status + '.');
     }
@@ -602,6 +614,12 @@ function activity_(event, details, opts) {
 
 /** Drops the oldest 5000 rows, but keeps the CHANGE rows among them (the record of every status/track change). */
 function trimActivity_(sh) {
+  // one trim at a time; if another run holds the lock, the next write past the limit trims instead
+  const lock = LockService.getDocumentLock();
+  if (!lock.tryLock(0)) return;
+  try { if (sh.getLastRow() > ACTIVITY_MAX_ROWS) trimActivityLocked_(sh); } finally { lock.releaseLock(); }
+}
+function trimActivityLocked_(sh) {
   const old = sh.getRange(2, 1, 5000, ACTIVITY_HEAD.length).getValues();
   const keep = old.filter(r => r[1] === 'CHANGE');
   sh.deleteRows(2, 5000);
@@ -628,6 +646,13 @@ function traced_(event, page, fn, summarize) {
 /** Called by every page (Styles.html) when something breaks in the visitor's browser. Public on purpose. */
 function log_client(evt) {
   evt = evt || {};
+  // anyone can call this: at most 20 events per person (or 60 for all signed-out visitors together) per 10 minutes
+  try {
+    const email = currentEmail_(), c = CacheService.getScriptCache(), k = 'clog:' + (email || 'anon');
+    const n = Number(c.get(k) || 0) + 1;
+    if (n > (email ? 20 : 60)) return false;
+    c.put(k, String(n), 600);
+  } catch (e) { /* cache down: still log */ }
   const page = String(evt.page || '').slice(0, 30);
   const details = {
     kind: String(evt.kind || 'error').slice(0, 40),
@@ -658,6 +683,10 @@ function report_issue_(r) {
   const cache = CacheService.getScriptCache(), key = email ? 'rep:' + email : 'rep:anon';
   const count = Number(cache.get(key) || 0);
   if (count >= (email ? 3 : 10)) return { ok: false, reason: 'rate', to: to };
+  // and a cap for the whole portal per day, so a script can't use up the sending quota
+  const dayKey = 'rep:day:' + Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyyMMdd');
+  const today = Number(cache.get(dayKey) || 0);
+  if (today >= 150) return { ok: false, reason: 'rate', to: to };
   if (!String(r.what || '').trim()) return { ok: false, reason: 'empty', to: to };
 
   const id = 'R-' + Utilities.formatDate(new Date(), 'Asia/Manila', 'MMdd-HHmm') + '-' + Math.floor(Math.random() * 900 + 100);
@@ -669,10 +698,11 @@ function report_issue_(r) {
   let recent = [];
   try {
     const sh = ss_().getSheetByName(SHEET.ACTIVITY);
-    if (sh && sh.getLastRow() > 1 && (email || contact)) {
+    // only the signed-in account's own activity: a typed-in contact address could be anyone's
+    if (sh && sh.getLastRow() > 1 && email) {
       const n = Math.min(400, sh.getLastRow() - 1);
       const rows = sh.getRange(sh.getLastRow() - n + 1, 1, n, 7).getValues();
-      const who = String(email || contact).toLowerCase();
+      const who = email.toLowerCase();
       recent = rows.filter(x => String(x[2]).toLowerCase() === who).slice(-10).map(x => [
         Utilities.formatDate(new Date(x[0]), 'Asia/Manila', 'MMM d, HH:mm:ss'), x[1], x[3], x[4], clip(x[5], 300), x[6]]);
     }
@@ -707,7 +737,8 @@ function report_issue_(r) {
     section('02 // What they were doing', block(clip(r.doing, 1500))) +
     section('03 // Steps to reproduce', block(clip(r.steps, 2000))) +
     section('04 // Subject', table([
-      row('Reply to', contact ? '<a style="color:#7A86FF" href="mailto:' + esc(contact) + '">' + esc(contact) + '</a>' : ''),
+      row('Reply to', contact ? '<a style="color:#7A86FF" href="mailto:' + esc(contact) + '">' + esc(contact) + '</a>' +
+        (contact.toLowerCase() !== email ? ' <span style="color:#FFFF00">(typed by the reporter, not verified)</span>' : '') : ''),
       row('Signed in as', email ? esc(email) : '<span style="color:#FF2A2A">Not signed in / account hidden</span>'),
       row('Applicant ID', a ? esc(a.ApplicantID) : 'No application on file'),
       row('Name', a ? esc(a.FullName || '') : ''),
@@ -748,6 +779,7 @@ function report_issue_(r) {
   }
   MailApp.sendEmail(opts);
   cache.put(key, String(count + 1), 600);
+  cache.put(dayKey, String(today + 1), 90000);
   return { ok: true, id: id, email: contact };
 }
 

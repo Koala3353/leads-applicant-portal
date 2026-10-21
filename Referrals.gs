@@ -70,14 +70,18 @@ function referralInfo_(found) {
   const a = found.data;
   let code = String(a.ReferralCode || '').trim();
   if (!code) {
-    ensureApplicantHeaders_();
     const lock = LockService.getScriptLock();
     lock.waitLock(10000);
     try {
+      ensureApplicantHeaders_();   // inside the lock, so it can't race a submit adding the same columns
       const values = sheet_(SHEET.APPLICANTS).getDataRange().getValues();
-      const now = values[found.row - 1][col_('ReferralCode')];
+      // find the row again by email: the core team may have sorted or deleted rows since found.row was read
+      const cEmail = col_('Email'), me = String(a.Email || '').trim().toLowerCase();
+      const i = values.findIndex((r, n) => n > 0 && String(r[cEmail]).trim().toLowerCase() === me);
+      if (i < 1) return null;
+      const now = values[i][col_('ReferralCode')];
       code = String(now || '').trim() || makeReferralCode_(a.Nickname, a.FullName, referralCodesIn_(values));
-      if (!String(now || '').trim()) updateApplicant_(found.row, { ReferralCode: code });
+      if (!String(now || '').trim()) updateApplicant_(i + 1, { ReferralCode: code });
     } finally { lock.releaseLock(); }
   }
   const counts = { applied: 0, accepted: 0, confirmed: 0 };

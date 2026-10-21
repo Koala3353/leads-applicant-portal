@@ -24,7 +24,8 @@ function game_getInit_() {
   const draft = email && !found ? apply_getDraft_(email) : null;
   let saved = {};
   if (draft && draft.data && draft.data.GameAnswers) {
-    try { saved = game_cleanAnswers_(JSON.parse(draft.data.GameAnswers)); } catch (e) { saved = {}; }
+    // only v3 saves (the 16-question game): an older 5-question save used the same ids for different questions
+    try { const g = JSON.parse(draft.data.GameAnswers); saved = g && g.v === 3 ? game_cleanAnswers_(g.answers) : {}; } catch (e) { saved = {}; }
   }
   return {
     signedIn: !!email,
@@ -69,7 +70,7 @@ function game_saveProgress(answers) {
   return traced_('game_saveProgress', 'game', () => {
     const email = currentEmail_();
     if (!email || !isAllowedDomain_(email)) return { ok: false };
-    return apply_saveDraft({ GameAnswers: JSON.stringify(game_cleanAnswers_(answers)) });
+    return apply_saveDraft({ GameAnswers: JSON.stringify({ v: 3, answers: game_cleanAnswers_(answers) }) });
   }, r => r.ok ? 'saved' : 'not saved');
 }
 

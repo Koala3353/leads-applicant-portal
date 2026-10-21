@@ -244,6 +244,10 @@
   function pick(file) {
     picked = null; $('upBtn').disabled = true; msg('');
     if (!file) return;
+    // many browsers report no type for .heic photos: work it out from the extension
+    const EXT = { heic: 'image/heic', heif: 'image/heif', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', pdf: 'application/pdf' };
+    const guessed = EXT[(String(file.name).match(/\.([a-z]+)$/i) || [, ''])[1].toLowerCase()];
+    if (!file.type && guessed) file = new File([file], file.name, { type: guessed });
     const okType = /^image\/(png|jpe?g|webp|heic|heif)$/.test(file.type) || file.type === 'application/pdf';
     if (!okType) return msg('Upload a photo (PNG, JPG, WEBP, HEIC) or a PDF.', 'bad');
     const inner = $('dropInner'); inner.textContent = '';

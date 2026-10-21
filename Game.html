@@ -476,7 +476,7 @@
         B: 'Hearing footsteps stop outside your stall and stay there',
         C: 'Looking up and seeing someone watching you over the divider' } }
     ] },
-    { n: 2, name: 'Random', label: 'Room 2: Random', secs: 20, qs: [
+    { n: 2, name: 'Random', label: 'Room 2: Random', secs: 10, qs: [
       { id: 'Q5', text: 'Which situation would stress you out the most?', opts: {
         A: 'Being late for something important',
         B: 'Having to talk to a stranger',
@@ -493,7 +493,7 @@
         A: 'Slow Wi-Fi',
         B: 'Someone cancelling after I’ve already left',
         C: 'Finding out the food I wanted is sold out' } },
-      { id: 'Q9', text: 'If you were a ghost, who would you haunt?', isText: true }
+      { id: 'Q9', text: 'If you were a ghost, who would you haunt?', isText: true, secs: 20 }   // typing takes longer
     ] },
     { n: 3, name: 'Personality', label: 'Room 3: Personality', secs: 10, qs: [
       { id: 'Q10', text: 'When you join a group of people you don’t know, you usually…', opts: {
@@ -779,7 +779,7 @@
           '<span class="feed-nosig">NO SIGNAL</span><span class="feed-stamp">CLEARED</span>' +
         '</span></span>' +
         '<span class="feed-info" aria-hidden="true"><span class="feed-name">' + r.name + '</span>' +
-          '<span class="feed-chips"><span class="chip">' + r.qs.length + ' QUESTIONS</span><span class="chip time">' + r.secs + 's TIMER</span></span>' +
+          '<span class="feed-chips"><span class="chip">' + r.qs.length + ' QUESTIONS</span><span class="chip time">' + r.secs + 's / QUESTION</span></span>' +
           '<span class="feed-go">' + (done ? 'Done' : 'View feed \u25B8') + '</span></span>';
       b.addEventListener('click', () => { if (!roomDone(r)) enterRoom(r); });
       wrap.appendChild(b);
@@ -811,9 +811,9 @@
     $('roomTitle').textContent = 'CAM 0' + r.n + ' · ' + r.name;
     show('room');
     say('');
-    renderQuestion();
-    startRoomTimer(r.secs);
-    kuya('nervous', 'Camera ' + r.n + '. You have ' + r.secs + ' seconds for this set.');
+    roomTimedOut = false;
+    renderQuestion();   // starts the question's own timer
+    kuya('nervous', 'Camera ' + r.n + '. ' + r.secs + ' seconds per question. The clock is running.');
     $('state-room').scrollIntoView({ block: 'start' });
   }
 
@@ -846,14 +846,25 @@
     if (!calm()) $('vignette').style.opacity = Math.min((1 - roomTimeLeft / totalSecs) * 0.9, 0.9);
   }
 
+  /* The timer is per question: when it runs out, this question is filed (typed text is kept; else "NONE")
+     and the next one starts. The room ends after its last question. */
+  let roomTimedOut = false;
   function handleRoomTimeout() {
     stopRoomTimer();
     playStaticGlitch();   // the scream is saved for the real jumpscare
-    currentRoom.qs.forEach(q => {
-      if (!answers[q.id]) answers[q.id] = { a: 'NONE', ms: currentRoom.secs * 1000 };
-    });
-    saveProgress();
-    finishRoom(true);
+    const q = currentRoom.qs[qIndex];
+    if (!answers[q.id]) {
+      const typed = q.isText && $('openGhostInput') ? $('openGhostInput').value.trim() : '';
+      answers[q.id] = { a: typed || 'NONE', ms: (q.secs || currentRoom.secs) * 1000 };
+      if (!typed) roomTimedOut = true;
+    }
+    if (qIndex < currentRoom.qs.length - 1) {
+      qIndex++;
+      renderQuestion();
+      say('Time ran out on the last question. It was filed as no answer.', 'bad');
+    } else {
+      finishRoom(roomTimedOut);
+    }
   }
 
   function renderQuestion() {
@@ -886,6 +897,7 @@
     }
     $('lockBtn').textContent = qIndex < currentRoom.qs.length - 1 ? 'Lock in answer' : 'Lock in and clear room';
     qStartTime = Date.now();
+    startRoomTimer(q.secs || currentRoom.secs);
   }
 
   function lockAnswer(e) {
@@ -904,14 +916,13 @@
 
     say('');
     answers[q.id] = { a: val, ms: Date.now() - qStartTime };
-    saveProgress();
 
     if (qIndex < currentRoom.qs.length - 1) {
       qIndex++;
       renderQuestion();
     } else {
       stopRoomTimer();
-      finishRoom(false);
+      finishRoom(roomTimedOut);   // saves once per room
     }
   }
 
@@ -1073,8 +1084,28 @@
   }
 
   /* Saving & Submit */
-  async function saveProgress() {
-    try { await call('game_saveProgress', answers); } catch (e) {}
+  /* Progress is saved once per cleared room (not per answer), one save at a time, so saves can't finish out of order
+     and a crowd doesn't flood the server. Silent: a failed save mid-game shouldn't set off I.R.I.S.; the final submit
+     sends all answers anyway. */
+  let saving = false, saveAgain = false;
+  function saveProgress() {
+    if (saving) { saveAgain = true; return; }
+    saving = true;
+    const done = () => { saving = false; if (saveAgain) { saveAgain = false; saveProgress(); } };
+    try { google.script.run.withSuccessHandler(done).withFailureHandler(done).game_saveProgress(answers); } catch (e) { done(); }
+  }
+
+  /** Leave the page; if Google blocks the automatic jump (it can, after a server call), show a real link to tap. */
+  function go(url, label, msg) {
+    try { window.open(url, '_top'); } catch (e) { /* blocked */ }
+    setTimeout(() => {
+      if (window.Loader) Loader.hide();
+      $('errorMsg').textContent = msg || '';
+      const r = $('retry'), a = document.createElement('a');
+      a.className = 'btn'; a.href = url; a.target = '_top'; a.textContent = label;
+      r.replaceWith(a); a.id = 'retry';
+      show('error');
+    }, 900);
   }
 
   async function submit() {
@@ -1087,6 +1118,7 @@
       const res = await call('game_submitFinal', answers);
       if (res && res.ok) {
         $('doneId').textContent = res.id;
+        try { localStorage.removeItem('leads_apply_draft:' + String(window.__email || '').toLowerCase()); } catch (e) { /* ignore */ }
         if (res.referralCode) {
           $('doneRef').textContent = BRAND.referral.gameDone.replace('{code}', res.referralCode);
           $('doneRef').hidden = false;
@@ -1098,7 +1130,7 @@
       }
       if (res && res.errors) {
         try { sessionStorage.setItem('leads-apply-errors', JSON.stringify(res.errors)); } catch (e) {}
-        window.open(BASE + '?page=apply', '_top');
+        go(BASE + '?page=apply', 'Fix my application', 'A few answers on the form need fixing. Your assessment is saved.');
         return;
       }
       throw new Error('No response from the server.');
@@ -1117,9 +1149,10 @@
       applyMuteState();
       loadSounds();   // in the background; ready long before the last room
       const data = await call('game_getInit');
-      if (data.alreadyApplied) { window.open(BASE, '_top'); return; }
+      window.__email = data.email || '';
+      if (data.alreadyApplied) { go(BASE, 'Go to the hub', 'You already applied. Your file is on record.'); return; }
       if (!data.signedIn || !data.allowedDomain || !data.hasDraft) {
-        window.open(BASE + '?page=apply', '_top'); return;
+        go(BASE + '?page=apply', 'Open the application', 'Fill in the application form first. The assessment comes after it.'); return;
       }
       answers = data.saved || {};
       window.__nick = data.nickname || '';

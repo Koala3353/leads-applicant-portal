@@ -16,6 +16,19 @@
 const STEP_KEYS = { pay: 'payment', reqs: 'requirements', ga: 'ga', room: 'room' };
 const PROOF_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'];
 const PROOF_MAX_BYTES = 8 * 1024 * 1024;
+const PROOF_PER_DAY = 5;   // uploads per applicant per day: a fix-up is fine, filling the owner's Drive isn't
+const PROOF_EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/heic': 'heic', 'image/heif': 'heif', 'application/pdf': 'pdf' };
+
+/** Does the file really start like the type it claims? (the browser's type is only the filename's guess) */
+function steps_looksLike_(bytes, type) {
+  const b = i => bytes[i] & 255, ascii = (from, len) => String.fromCharCode.apply(null, bytes.slice(from, from + len).map(x => x & 255));
+  if (type === 'image/png') return b(0) === 0x89 && ascii(1, 3) === 'PNG';
+  if (type === 'image/jpeg') return b(0) === 0xFF && b(1) === 0xD8 && b(2) === 0xFF;
+  if (type === 'image/webp') return ascii(0, 4) === 'RIFF' && ascii(8, 4) === 'WEBP';
+  if (type === 'application/pdf') return ascii(0, 5) === '%PDF-';
+  if (type === 'image/heic' || type === 'image/heif') return ascii(4, 4) === 'ftyp';
+  return false;
+}
 
 function steps_get(page) {
   return traced_('steps_get', String(page || ''), () => steps_get_(page), r =>
@@ -138,8 +151,13 @@ function steps_uploadProof_(file) {
   try { bytes = Utilities.base64Decode(String(file.data || '')); } catch (e) { return { ok: false, error: 'That file could not be read. Try again.' }; }
   if (!bytes.length) return { ok: false, error: 'That file is empty.' };
   if (bytes.length > PROOF_MAX_BYTES) return { ok: false, error: 'That file is over 8 MB. Send a smaller photo or a screenshot.' };
+  if (!steps_looksLike_(bytes, type)) return { ok: false, error: 'That file does not look like a photo or a PDF. Send a screenshot of the receipt.' };
+  const cache = CacheService.getScriptCache(), dayKey = 'proof:' + a.ApplicantID + ':' + Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyyMMdd');
+  const today = Number(cache.get(dayKey) || 0);
+  if (today >= PROOF_PER_DAY) return { ok: false, error: 'That is enough uploads for today. If the wrong file went in, message the core team.' };
+  cache.put(dayKey, String(today + 1), 90000);
 
-  const ext = (String(file.name || '').match(/\.([a-z0-9]{2,5})$/i) || [, type === 'application/pdf' ? 'pdf' : 'jpg'])[1].toLowerCase();
+  const ext = PROOF_EXT[type];   // from the checked type, never from the uploaded filename
   const stamp = Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyy-MM-dd HHmm');
   const name = a.ApplicantID + ' ' + String(a.FullName || '').replace(/[^\w .'-]/g, '').slice(0, 60) + ' - proof of payment ' + stamp + '.' + ext;
   const saved = steps_proofFolder_().createFile(Utilities.newBlob(bytes, type, name));
@@ -147,7 +165,12 @@ function steps_uploadProof_(file) {
 
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
-  try { updateApplicant_(found.row, { PaymentProof: saved.getUrl() }); } finally { lock.releaseLock(); }
+  try {
+    // find the row again: rows may have been sorted or deleted during the (slow) Drive upload
+    const now = getApplicantById_(a.ApplicantID);
+    if (!now) throw new Error('Your file could not be found. Message the core team.');
+    updateApplicant_(now.row, { PaymentProof: saved.getUrl() });
+  } finally { lock.releaseLock(); }
   const before = String(a.Payment || 'NONE');
   if (before !== 'SUBMITTED') setTrack_(a.ApplicantID, 'Payment', 'SUBMITTED', 'system');
   else logChange_(a.ApplicantID, 'payment proof', 'replaced', 'new file', 'system');
@@ -158,17 +181,19 @@ function steps_uploadProof_(file) {
 function steps_proofFolder_() {
   const link = String(getSetting_('PaymentFolder') || '');
   const id = (link.match(/folders\/([\w-]{20,})/) || link.match(/^([\w-]{25,})$/) || [])[1];
-  if (id) { try { return DriveApp.getFolderById(id); } catch (e) { /* gone or no access: make a new one */ } }
+  if (id) { try { const f = DriveApp.getFolderById(id); if (!f.isTrashed()) return f; } catch (e) { /* gone or no access: make a new one */ } }
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    clearConfigCache_(); getSettings_.cache = null;
+    clearConfigCache_(); getSettings_.cache = null; cachedTab_.memo = {};   // re-read Settings for real
     const again = (String(getSetting_('PaymentFolder') || '').match(/folders\/([\w-]{20,})/) || [])[1];
     if (again && again !== id) return DriveApp.getFolderById(again);
     // reuse a folder made by an earlier run (e.g. one whose link couldn't be saved) instead of making a second one
     const name = (getSetting_('EventName') || 'LEADS') + ' - Proof of Payment';
     const same = DriveApp.getFoldersByName(name);
-    const folder = same.hasNext() ? same.next() : DriveApp.createFolder(name);
+    let folder = null;
+    while (!folder && same.hasNext()) { const f = same.next(); if (!f.isTrashed()) folder = f; }
+    folder = folder || DriveApp.createFolder(name);
     steps_writeSetting_('PaymentFolder', folder.getUrl(), 'Drive folder where uploaded proofs of payment are saved. Made automatically; share it with the core team.');
     return folder;
   } finally { lock.releaseLock(); }

@@ -47,7 +47,7 @@ function home_getContext_() {
       payment: a.Payment || 'NONE'
     } : null,
     progress: p,
-    referral: found ? referralInfo_(found) : null,   // own code + counts (never names); Referrals.gs
+    referral: found ? safeReferral_(found) : null,   // own code + counts (never names); Referrals.gs
     sheetUrl: isAdmin_(email) ? ss_().getUrl() : ''   // officers get a link to the Sheet
   };
 }
@@ -63,4 +63,12 @@ function campStart_(s) {
   if (!m) return null;
   const d = new Date(m[1] + ' ' + m[2] + ', ' + m[3] + ' 08:00:00 GMT+0800');
   return isNaN(d) ? null : d.toISOString();
+}
+
+/** Referral info for the hub; a failure (busy lock, sheet hiccup) hides the card instead of breaking the whole hub. */
+function safeReferral_(found) {
+  try { return referralInfo_(found); } catch (e) {
+    activity_('referral_info', String(e && e.message), { level: 'WARN', page: 'home' });
+    return null;
+  }
 }

@@ -231,6 +231,7 @@ Functions ending in `_` are server-only. Public shared functions: `home_getConte
 | `nextApplicantId_()` | next `APP-0007`. **Inside a lock.** |
 | `updateApplicant_(row, { Field: value })` | writes through `safeCell_`, sets `LastUpdated`. **Inside a lock.** Throws on unknown column. |
 | `safeCell_(v)` | prefixes `'` to text starting with `= + - @` |
+| `textCell_(v)` | for Applicants cells: prefixes `'` to every non-empty string so Sheets keeps it as text (mobile numbers keep their 0, IDs/blocks/referral codes never turn into numbers or dates). Used by `apply_submit_` and `updateApplicant_`, which writes **only the given cells** (never the whole row). |
 | `validateApplication_(input, 'apply')` | `{ ok, errors: { Field: msg }, clean: { Field: value } }`. Trims, strips control chars, collapses spaces (not essays), checks pattern/list/range/length; `YearLevel` → number. Does **not** check IDNumber uniqueness. |
 | `utils_getFormRules()` *(public)* | `{ rules: RULES, lists: {}, isOpen }` (no Apply question uses a Lists dropdown now) so the page shows the same messages as the server |
 | `logChange_(id, action, from, to, by)` | writes a CHANGE row to Activity (`by` defaults to current email or `'system'`). Member A uses it once: `logChange_(id, 'status', '', 'SUBMITTED', 'system')`. |
