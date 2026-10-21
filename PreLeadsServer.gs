@@ -1,5 +1,5 @@
 /**
- * PreLeadsApi.gs
+ * PreLeadsServer.gs  (renamed from PreLeadsApi.gs: a script file with that name broke the editor and test link)
  * Server implementation for PreLeads.html (LEADS: Oversight applicant portal).
  *
  * Rules:

@@ -18,7 +18,7 @@ const PAGES = {
   home:  'Home',
   apply: 'Apply',
   game:  'Game',    // Section 2 mini-game; submits the application at the end
-  preleads:    'PreLeads',   // Pre-LEADS page (PreLeads.html + PreLeadsApi.gs)
+  preleads:    'PreLeads',   // Pre-LEADS page (PreLeads.html + PreLeadsServer.gs)
   'pre-leads': 'PreLeads',
   pay:   'Steps',   // 02 proof of payment
   reqs:  'Steps',   // 03 requirements
