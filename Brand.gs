@@ -54,7 +54,57 @@ const BRAND = {
     closed: 'Applications are closed',
     tba: 'Deadline to be announced.',
     campTitle: 'Camp starts in',         // once the applicant is CONFIRMED, the clock counts down to camp instead
-    campLabel: 'Camp: '                  // + the date. Camp start = Settings › CampStart, else the first date in EventDates
+    campLabel: 'Camp: ',                 // + the date. Camp start = Settings › CampStart, else the first date in EventDates
+    // Home's deadline queue (Home.html): the nearest open step gets the big clock, the next one shows under it
+    steps: {
+      apply: { title: 'Time left to decide', kicker: '01 · APPLICATION' },
+      pay:   { title: 'Proof of payment due', kicker: '02 · PAYMENT' },
+      reqs:  { title: 'Requirements due', kicker: '03 · REQUIREMENTS' },
+      camp:  { title: 'Camp starts in', kicker: '04 · CAMP' }
+    },
+    deadline: 'Deadline: ',
+    due: 'Due ',
+    passed: 'Passed',
+    stepClosed: ' (closed)',
+    allClear: 'All steps cleared',
+    allClearText: 'Your file is complete. Wait for the camp briefing.',
+    confirmed: 'confirmed camper',
+    reviewTitle: 'File under review',
+    reviewText: "No deadline for you right now. We'll tell you when it's your move.",
+    endedTitle: 'File closed',
+    endedText: 'This file is closed. Thank you for applying.',
+    // I.R.I.S. as a deadline gets close ({step} = the step's title)
+    alarms: {
+      t72: ['thinking', '{step}: three days left.'],
+      t48: ['thinking', '{step}: two days left. Just saying.'],
+      t24: ['scared', '{step}: less than a day left.'],
+      t12: ['scared', '{step}: under twelve hours. I am watching the clock with you.'],
+      t3:  ['scared', '{step}: under three hours. Now would be good.']
+    },
+    pills: { t72: 'closing soon', t48: '48h left', t24: 'under 24h', t12: 'final hours', t3: 'under 3h', closed: 'closed' }
+  },
+
+  // Words people see for the Sheet's track values (never show the raw NONE / PARTIAL)
+  trackLabels: {
+    payment: { NONE: 'not sent yet', SUBMITTED: 'being checked', VERIFIED: 'verified', REJECTED: 'needs a new proof' },
+    requirements: { NONE: 'not sent yet', PARTIAL: 'partly sent', SUBMITTED: 'being checked', RETURNED: 'needs fixing', APPROVED: 'approved' }
+  },
+
+  // Watchlist rank: a made-up rank picked from the Applicant ID (same on every visit). Decorative only:
+  // it never means anything about the application, so don't use it for decisions. {n} = the rank.
+  rank: { line: 'Watchlist rank: #{n}', min: 3, max: 97 },
+
+  // SUBJECT_STATUS.EXE signal lights on Home (progress_ states → words)
+  signal: { done: 'complete', action: 'your move', open: 'open', waiting: 'in review', locked: 'locked', stopped: 'stopped' },
+
+  // Pre-LEADS banner on Home. Hidden after `until` (Manila time) and for confirmed campers. Set show: false to hide it.
+  preleadsBanner: {
+    show: true,
+    until: '2026-11-05T19:30:00+08:00',
+    top: 'SPECIAL TRANSMISSION',
+    title: 'Pre-LEADS Preview // Nov 5',
+    sub: '5:00–7:30 PM, onsite',
+    link: 'Open the Pre-LEADS dossier →'
   },
 
   /* ---------- Home extras for people who haven't applied yet (hidden once they have a file) ---------- */
@@ -245,7 +295,7 @@ const BRAND = {
   referral: {
     label: 'Referral code',
     tag: '[WHO SENT YOU?]',
-    hint: 'Optional. If someone told you to apply, put their code here (it looks like BEA-7K2Q).',
+    hint: 'Optional. If someone told you to apply, put their code here. It is their name, like BEA.',
     prefilled: 'Filled in from the link you opened. Clear it if that\'s wrong.',
     unknown: "We couldn't find that referral code. Check it with whoever sent it, or leave it blank.",
     self: "That's your own code. Leave it blank, or use the code of whoever told you to apply.",

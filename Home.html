@@ -29,6 +29,9 @@
   .refcard .count{margin:12px 0 0;font:400 1rem/1.3 var(--os)}
   .refcard .count b{color:var(--glow);font-size:1.4em}
   @media (max-width:560px){.refcard{transform:none}.refcard .row .btn{flex:1 1 auto;text-align:center}}
+  .status .rank{margin:8px 0 0;font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--glow)}
+  .preleads-strip{margin:18px 0 0}
+  .preleads-strip a{color:#fff;text-decoration:underline;font-weight:700}
   .obslog{margin-top:20px;--py:12px;--px:14px;padding:12px 14px 14px;transform:rotate(-1deg)}
   .obslog ol{list-style:none;margin:0;padding:0;display:grid;gap:4px;min-height:6.2em}
   .obslog li{font:400 1.02rem/1.25 var(--os);letter-spacing:.03em;color:#a9f0a9;overflow-wrap:anywhere}
@@ -48,7 +51,8 @@
   .reacq.on{display:block}
   .reacq.rew{background:repeating-linear-gradient(0deg,rgba(255,255,255,.1) 0 2px,transparent 2px 11px),rgba(0,0,0,.3);animation:rewBands .25s linear infinite}
   @keyframes rewBands{to{background-position:0 -44px,0 0}}
-  body.rewinding .wrap,body.rewinding .ticker{animation:vhsRew .11s steps(2) infinite}
+  body.rewinding .wrap,body.rewinding .ticker{animation:vhsRew .34s steps(2) infinite}   /* ≤3 jumps/sec (flash safety) */
+  html.calm body.rewinding .wrap,html.calm body.rewinding .ticker{animation:none}
   @keyframes vhsRew{0%{transform:translateX(-9px) skewX(-3deg);filter:contrast(1.5) brightness(1.15)}100%{transform:translateX(7px) skewX(2deg);filter:contrast(1.2)}}
   .rq-osd,.rq-tc{position:absolute;top:max(18px,env(safe-area-inset-top));font:400 clamp(1.6rem,5vw,2.4rem)/1 var(--os);letter-spacing:.06em;color:#fff;text-shadow:2px 2px 0 #000,0 0 10px rgba(0,0,0,.8);background:rgba(0,0,0,.55);padding:4px 10px}
   .rq-osd{left:20px}.rq-tc{right:20px;font-variant-numeric:tabular-nums}
@@ -259,6 +263,16 @@
   /* ---------- FAQ as classified files + past campers (hidden once you have a file) ---------- */
   .intel{margin:56px 0 0}
   body.applied .intel{display:none}
+  /* once they have a file, the hub is about their file: drop the pitch and the decoration, keep status + steps.
+     The signal-light card already shows Decision/Payment/Requirements, so the status card keeps just its message. */
+  body.applied .lede,body.applied .tagline,body.applied .obslog,body.applied .wall,body.applied #statusCard .tracks{display:none}
+  @media (max-width:559px){
+    body.applied h1.rgb{font-size:clamp(2rem,11vw,2.6rem)}
+    body.applied .rec .seen{display:none}
+    body.applied .watcher{display:none}           /* no stray eyes over the cards on a small screen */
+    .preleads-strip .b-big{font-size:clamp(1.05rem,5.2vw,1.4rem)}
+    .preleads-strip .b-sub{font-size:.85rem}
+  }
   /* manila case folders: tab, typed form fields, redaction bars, ink stamp, a clipped photo. They pile up crooked. */
   .files{display:grid;gap:30px;padding-top:22px}
   .file{position:relative;color:var(--paper-ink);background:linear-gradient(175deg,var(--manila),#c7ae74);
@@ -407,7 +421,7 @@
   body.panic-tier-3 .watcher{opacity:.95}
   body.panic-tier-3 .watcher.red .reye{filter:grayscale(.1) contrast(1.5) sepia(1) hue-rotate(-50deg) saturate(4) brightness(.9)}
   body.panic-tier-3 .reye{--pupil:10%;filter:contrast(1.25) brightness(.92) drop-shadow(0 0 8px rgba(255,42,42,.4))}
-  body.panic-tier-3 .reye .reye-ball{animation:eyePanic3 .35s steps(2) infinite}
+  body.panic-tier-3 .reye .reye-ball{animation:eyePanic3 .7s steps(2) infinite}
   @keyframes eyePanic3{
     0%,100%{transform:none}
     25%{transform:translate(-1.5px,1px)}
@@ -426,7 +440,7 @@
   body.panic-tier-4 .clock .unit b{color:#ff2222;text-shadow:0 0 14px rgba(255,40,40,.85)}
   body.panic-tier-4 .watcher{opacity:1}
   body.panic-tier-4 .reye{--pupil:6%;filter:grayscale(.05) contrast(1.4) sepia(1) hue-rotate(-50deg) saturate(5) brightness(.92) drop-shadow(0 0 10px rgba(255,42,42,.6))}
-  body.panic-tier-4 .reye .reye-ball{animation:eyePanic4 .18s steps(2) infinite}
+  body.panic-tier-4 .reye .reye-ball{animation:eyePanic4 .7s steps(2) infinite}
   @keyframes eyePanic4{
     0%{transform:translate(0,0)}
     25%{transform:translate(-2px,1.5px)}
@@ -456,7 +470,7 @@
   body.panic-tier-5 .clock .unit b{color:#ff1111;text-shadow:0 0 20px #ff0000}
   body.panic-tier-5 .watcher{opacity:1}
   body.panic-tier-5 .reye{--pupil:5%;filter:contrast(1.6) sepia(1) hue-rotate(-50deg) saturate(6) brightness(.95) drop-shadow(0 0 14px #ff0000)}
-  body.panic-tier-5 .reye .reye-ball{animation:eyePanicFrantic .09s steps(2) infinite}
+  body.panic-tier-5 .reye .reye-ball{animation:eyePanicFrantic .7s steps(2) infinite}
   @keyframes eyePanicFrantic{
     0%{transform:translate(-2.5px,2px)}
     25%{transform:translate(2.5px,-2px)}
@@ -655,10 +669,10 @@
   <div class="bcast strip" id="closingStrip" role="status" hidden><p class="b-top">This is a test of your timing</p><p class="b-big"></p></div>
 
   <!-- Pre-LEADS Preview Transmission -->
-  <div class="bcast strip" style="margin: 18px 0 0;" role="region" aria-label="Pre-LEADS announcement">
-    <p class="b-top">SPECIAL TRANSMISSION</p>
-    <p class="b-big">Pre-LEADS Preview // Nov 5</p>
-    <p class="b-sub">5:00–7:30 PM Onsite · <a href="<?= baseUrl ?>?page=preleads" target="_top" style="color:#fff; text-decoration:underline; font-weight:700;">Open Pre-LEADS Dossier &rarr;</a></p>
+  <div class="bcast strip preleads-strip" id="preleadsStrip" role="region" aria-label="Pre-LEADS announcement" hidden>
+    <p class="b-top"><?= BRAND.preleadsBanner.top ?></p>
+    <p class="b-big"><?= BRAND.preleadsBanner.title ?></p>
+    <p class="b-sub"><?= BRAND.preleadsBanner.sub ?> · <a href="<?= baseUrl ?>?page=preleads" target="_top"><?= BRAND.preleadsBanner.link ?></a></p>
   </div>
 
   <section class="hero">
@@ -669,7 +683,6 @@
       <p class="lede"><?= BRAND.hero.lede ?></p>
       <div class="cta">
         <a class="btn" id="mainBtn" href="<?= baseUrl ?>?page=apply" target="_top"><?= BRAND.buttons.apply ?></a>
-        <a class="btn ghost" href="<?= baseUrl ?>?page=preleads" target="_top">Pre-LEADS Preview</a>
       </div>
       <p class="hint" id="hint" hidden><?= BRAND.hero.hint ?></p>
     </div>
@@ -701,7 +714,6 @@
           <li data-fact="venue">Where <b></b></li>
         </ul>
       </div>
-      <p class="scrap hint-note" aria-hidden="true">After the form, they show you three cameras.<br>Only two of them are empty.<span>pick carefully</span></p>
       <!-- the observation log: what you actually do on this page, typed back at you. Built in the browser, never sent anywhere. -->
       <div class="card obslog" aria-hidden="true">
         <div class="winbar off"><span>OBSERVATION.LOG</span><i><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
@@ -724,6 +736,7 @@
         <span class="pill" id="statusPill">your application</span>
         <p class="big" id="statusBig"></p>
         <p id="statusMsg"></p>
+        <p class="mono rank" id="statusRank" hidden></p>
         <div class="tracks">
           <div class="track"><span>Decision</span><b id="trStatus">-</b></div>
           <div class="track"><span>Payment</span><b id="trPay">-</b></div>
@@ -1319,6 +1332,7 @@
     const n = r.counts.applied;
     $('refCount').innerHTML = '<b></b> ' + BRAND.referral.applied;
     $('refCount').querySelector('b').textContent = n;
+    $('refCount').hidden = !n;   // never show "0 applied": the invitation text says enough until someone uses it
     if (!r.open) { $('refLead').textContent = BRAND.referral.closed; $('refCopy').hidden = true; $('refShare').hidden = true; return; }
     const text = BRAND.referral.shareText.replace('{code}', r.code).replace('{link}', r.link);
     $('refCopy').onclick = () => {
@@ -1353,7 +1367,7 @@
 
     const p = ctx.progress;
     const STEPS = ['apply', 'review', 'payment', 'requirements', 'confirmed'];
-    const TAG = { done: 'complete', now: 'in progress', action: 'action needed', locked: 'locked', stopped: 'stopped', open: 'open' };
+    const TAG = BRAND.signal;
 
     let allDone = true;
     STEPS.forEach(step => {
@@ -1362,7 +1376,7 @@
       if (!bulb || !tag) return;
       const st = (p[step] && p[step].state) || 'locked';
       // done=green, now/action/open=yellow-pulse, stopped=red, else dim-red
-      bulb.className = 'sig' + (st === 'done' ? ' done' : (st === 'stopped' ? ' stopped' : (['now','action','open'].includes(st) ? ' now' : '')));
+      bulb.className = 'sig' + (st === 'done' ? ' done' : (st === 'stopped' ? ' stopped' : (['action', 'open', 'waiting'].includes(st) ? ' now' : '')));
       tag.textContent = TAG[st] || st;
       if (st !== 'done') allDone = false;
     });
@@ -1370,7 +1384,7 @@
     // final door: reveal when applicant is CONFIRMED
     const door = $('accessDoor');
     if (door) {
-      if (allDone || a.status === 'CONFIRMED') {
+      if ((allDone || a.status === 'CONFIRMED') && p.room && p.room.unlocked) {   // only when room booking is open
         const base = document.body.dataset.base || '';
         door.href = base + '?page=room';
         door.hidden = false;
@@ -1380,6 +1394,14 @@
         door.classList.remove('show');
       }
     }
+  }
+
+
+  /* Watchlist rank (BRAND.rank): a stable made-up number from the Applicant ID. Decorative, means nothing. */
+  function watchRank(id) {
+    let h = 7; String(id || '').split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) % 100003; });
+    const R = BRAND.rank || { min: 3, max: 97, line: '#{n}' };
+    return R.line.replace('{n}', R.min + (h % (R.max - R.min + 1)));
   }
 
   /* ---------- render ---------- */
@@ -1505,6 +1527,7 @@
       $('statusCard').dataset.subject = 'Subject: ' + (a.firstName || a.id) + ' // ' + a.id;
       typeOut($('statusBig'), a.status);
       $('statusMsg').textContent = (a.firstName ? 'Hi ' + a.firstName + '. ' : '') + (BRAND.statusCopy[a.status] || '');
+      $('statusRank').textContent = watchRank(a.id); $('statusRank').hidden = false;
       [['trStatus', a.status], ['trReq', a.requirements], ['trPay', a.payment]].forEach(([id, v]) => {
         $(id).textContent = v;
         $(id).style.color = TONE[v] === 'ok' ? 'var(--ok)' : (TONE[v] === 'warn' ? 'var(--danger)' : '');
@@ -1512,6 +1535,10 @@
     }
 
     try { renderReferral(ctx.referral); } catch (e) { console.error(e); }
+    try {   // Pre-LEADS banner: hidden after its date and for confirmed campers (copy + date in BRAND.preleadsBanner)
+      const pb = BRAND.preleadsBanner, until = pb && new Date(pb.until);
+      $('preleadsStrip').hidden = !(pb && pb.show && !(until && Date.now() > until.getTime()) && !(a && a.status === 'CONFIRMED'));
+    } catch (e) { console.error(e); }
     try { renderSubjectStatus(ctx); } catch (e) { console.error(e); }
 
     // FAQ + testimonials: only for people without a file yet
@@ -1527,8 +1554,8 @@
     const allMilestones = [
       {
         id: 'apply',
-        title: BRAND.countdown?.title || 'Application Deadline',
-        kicker: '01 · APPLICATION',
+        title: BRAND.countdown.steps.apply.title,
+        kicker: BRAND.countdown.steps.apply.kicker,
         deadline: dls.apply || ctx.deadline,
         isDone: !!a, // Complete once user has an application file
         isOpen: ctx.isOpen,
@@ -1536,30 +1563,30 @@
       },
       {
         id: 'pay',
-        title: 'Proof of Payment',
-        kicker: '02 · PAYMENT',
+        title: BRAND.countdown.steps.pay.title,
+        kicker: BRAND.countdown.steps.pay.kicker,
         deadline: dls.payment,
         isDone: a && (a.payment === 'SUBMITTED' || a.payment === 'VERIFIED'),
         isOpen: p && p.payment ? p.payment.unlocked : false,
-        badge: a ? 'payment ' + a.payment.toLowerCase() : 'locked'
+        badge: a ? 'payment ' + (BRAND.trackLabels.payment[a.payment] || String(a.payment).toLowerCase()) : 'locked'
       },
       {
         id: 'reqs',
-        title: 'Requirement Forms',
-        kicker: '03 · REQUIREMENTS',
+        title: BRAND.countdown.steps.reqs.title,
+        kicker: BRAND.countdown.steps.reqs.kicker,
         deadline: dls.requirements,
         isDone: a && (a.requirements === 'SUBMITTED' || a.requirements === 'APPROVED'),
         isOpen: p && p.requirements ? p.requirements.unlocked : false,
-        badge: a ? 'requirements ' + a.requirements.toLowerCase() : 'locked'
+        badge: a ? 'requirements ' + (BRAND.trackLabels.requirements[a.requirements] || String(a.requirements).toLowerCase()) : 'locked'
       },
       {
         id: 'camp',
-        title: BRAND.countdown?.campTitle || 'Camp Commencement',
-        kicker: '04 · CAMP COMMENCEMENT',
+        title: BRAND.countdown.steps.camp.title,
+        kicker: BRAND.countdown.steps.camp.kicker,
         deadline: dls.camp || ctx.campStart,
         isDone: false,
         isOpen: a && a.status === 'CONFIRMED',
-        badge: 'confirmed camper'
+        badge: BRAND.countdown.confirmed
       }
     ];
 
@@ -1581,11 +1608,22 @@
     const secondary = queue.find(t => t !== primary) || null;
 
     if (!primary) {
+      const C = BRAND.countdown;
       if (a && a.status === 'CONFIRMED') {
-        $('clockTitle').textContent = 'ALL STEPS CLEARED';
-        pill.textContent = 'confirmed camper';
+        $('clockTitle').textContent = C.allClear;
+        pill.textContent = C.confirmed;
         pill.className = 'pill ok';
-        $('deadlineText').textContent = 'Your file is complete. Awaiting camp briefing.';
+        $('deadlineText').textContent = C.allClearText;
+      } else if (ended) {   // rejected / withdrawn: never "time left to decide"
+        $('clockTitle').textContent = C.endedTitle;
+        pill.textContent = String(a.status).toLowerCase();
+        pill.className = 'pill dim';
+        $('deadlineText').textContent = C.endedText;
+      } else if (a) {       // applied, nothing due yet (under review, or waiting on the core team)
+        $('clockTitle').textContent = C.reviewTitle;
+        pill.textContent = BRAND.signal.waiting;
+        pill.className = 'pill';
+        $('deadlineText').textContent = C.reviewText;
       } else {
         $('clockTitle').textContent = BRAND.countdown.title;
         pill.textContent = ctx.isOpen ? 'applications open' : 'applications closed';
@@ -1604,18 +1642,19 @@
     $('clockTitle').textContent = primary.title;
     pill.textContent = primary.badge;
     pill.className = 'pill ' + (primary.isOpen ? 'ok' : 'dim');
-    $('deadlineText').textContent = 'Deadline: ' + endPrimary.toLocaleString('en-PH', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Manila' });
+    $('deadlineText').textContent = BRAND.countdown.deadline + endPrimary.toLocaleString('en-PH', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Manila' });
 
     if (secondary && nextBox) {
       nextBox.hidden = false;
-      $('nextTitle').textContent = secondary.kicker + ' // ' + secondary.title;
-      $('nextDate').textContent = 'Due ' + new Date(secondary.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', timeZone: 'Asia/Manila' });
+      $('nextTitle').textContent = secondary.kicker + ' · ' + secondary.title;
+      $('nextDate').textContent = BRAND.countdown.due + new Date(secondary.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', timeZone: 'Asia/Manila' });
     } else if (nextBox) {
       nextBox.hidden = true;
     }
 
     const pad = n => String(n).padStart(2, '0');
     let alertTier = 0;
+    const alarm = k => { const l = BRAND.countdown.alarms[k]; if (l) kuya(l[0], String(l[1]).replace('{step}', primary.title)); };
     const PANIC_TIERS = ['panic-tier-1', 'panic-tier-2', 'panic-tier-3', 'panic-tier-4', 'panic-tier-5'];
 
     function tick() {
@@ -1631,7 +1670,7 @@
           const ss = Math.floor(secMs / 1e3);
           $('nextTimer').textContent = sd + 'd ' + pad(sh) + 'h ' + pad(sm) + 'm ' + pad(ss) + 's';
         } else {
-          $('nextTimer').textContent = 'PASSED';
+          $('nextTimer').textContent = BRAND.countdown.passed;
         }
       }
 
@@ -1639,8 +1678,8 @@
         $('clock').classList.add('closed');
         $('clock').classList.remove('urgent');
         PANIC_TIERS.forEach(cls => document.body.classList.remove(cls));
-        $('clockTitle').textContent = primary.title + ' (CLOSED)';
-        pill.textContent = 'closed';
+        $('clockTitle').textContent = primary.title + BRAND.countdown.stepClosed;
+        pill.textContent = BRAND.countdown.pills.closed;
         pill.className = 'pill warn';
         ['d', 'h', 'm', 's'].forEach(k => $(k).textContent = '00');
         return;
@@ -1672,45 +1711,45 @@
       } else if (totalHoursLeft < 3) {
         document.body.classList.add('panic-tier-5');
         $('clock').classList.add('urgent');
-        pill.textContent = 'CODE RED // < 3H';
+        pill.textContent = BRAND.countdown.pills.t3;
         pill.className = 'pill warn';
         if (alertTier < 5) {
           alertTier = 5;
-          kuya('scared', 'IMMINENT LOCKOUT: ' + primary.title + ' closes in under 3 hours!');
+          alarm('t3');
         }
       } else if (totalHoursLeft < 12) {
         document.body.classList.add('panic-tier-4');
         $('clock').classList.add('urgent');
-        pill.textContent = 'FINAL HOURS // < 12H';
+        pill.textContent = BRAND.countdown.pills.t12;
         pill.className = 'pill warn';
         if (alertTier < 4) {
           alertTier = 4;
-          kuya('scared', 'Urgent alert: ' + primary.title + ' closes in under 12 hours.');
+          alarm('t12');
         }
       } else if (totalHoursLeft < 24) {
         document.body.classList.add('panic-tier-3');
         $('clock').classList.add('urgent');
-        pill.textContent = 'URGENT // < 24H';
+        pill.textContent = BRAND.countdown.pills.t24;
         pill.className = 'pill warn';
         if (alertTier < 3) {
           alertTier = 3;
-          kuya('scared', 'Deadline critical: ' + primary.title + ' closes in under 24 hours.');
+          alarm('t24');
         }
       } else if (totalHoursLeft < 48) {
         document.body.classList.add('panic-tier-2');
-        pill.textContent = '48H NOTICE';
+        pill.textContent = BRAND.countdown.pills.t48;
         pill.className = 'pill warn';
         if (alertTier < 2) {
           alertTier = 2;
-          kuya('thinking', 'Notice: 48 hours remaining for ' + primary.title + '.');
+          alarm('t48');
         }
       } else if (totalHoursLeft < 72) {
         document.body.classList.add('panic-tier-1');
-        pill.textContent = 'CLOSING SOON // 3D';
+        pill.textContent = BRAND.countdown.pills.t72;
         pill.className = 'pill ' + (primary.isOpen ? 'ok' : 'dim');
         if (alertTier < 1) {
           alertTier = 1;
-          kuya('thinking', 'Approaching deadline: ' + primary.title + ' closes in 3 days.');
+          alarm('t72');
         }
       } else {
         // Default: >= 72h (3+ days) - strictly calm, no red, no sirens, no jittery eyes

@@ -104,7 +104,7 @@ Navy headers: **never rename** them. The code finds every Applicants column by i
 | `WhyParticipant` / `FirstImpression` / `TakesLeadership` / `FearLeadership` | 50–1000 chars each, multiline, required | Apply (the 4 essays). `Rumors` was dropped Oct 2026; its old column can stay in the Sheet. |
 | `GameAnswers` | JSON text (≤5000 chars) | Game page: the choices made in the 3 CCTV rooms |
 | `PaymentProof` | Drive link | Steps page upload (`steps_uploadProof`). A new upload replaces the link; old files stay in the folder. |
-| `ReferralCode` | e.g. `BEA-7K2Q` | Made on submit (`makeReferralCode_`): first 4 letters of the nickname + 4 random characters (no 0/O/1/I/L). Applicants from before referrals get one the first time they open the hub. |
+| `ReferralCode` | e.g. `BEA` | Made on submit (`makeReferralCode_`): the nickname in capitals (accents and spaces dropped, max 12 letters); if taken, `BEA2`, `BEA3`… Older `BEA-7K2Q` codes still work. Applicants from before referrals get one the first time they open the hub. |
 | `ReferredBy` | a code, or blank | The code they applied with (optional field on Apply, pre-filled from `?ref=`). Checked and **locked on submit**. |
 | `ReferrerID` | ApplicantID or blank | Who that code belongs to, filled in by the server. Filter/sort by it to see who invited whom. |
 
@@ -755,3 +755,12 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 
 **I'm stuck and new**
 > Explain this code line by line in simple words, then tell me the exact next step to get it working on my `/dev` link: [paste].
+
+## Recent behaviour notes (Oct 2026)
+
+- **Game:** tapping an answer files it (no "Lock in" step); only open-text questions keep a Submit button. The screen darkens as each question's timer runs out (`#vignette`). There is no 2-minute search clock any more. The jumpscare plays the scare file at 30% volume (the noise layer carries it).
+- **Watchlist rank** (`BRAND.rank`, `watchRank()` in Home.html + Game.html): a made-up rank (#3 to #97) picked from the Applicant ID, so it's the same everywhere. Decorative only; it means nothing about the application.
+- **Home once applied** (`body.applied`): the pitch (tagline, lede), observation log, TV wall and the status card's Decision/Payment/Requirements row are hidden; the signal-light card carries that status. The referral count only shows once it's 1 or more.
+- **No red-pen notes:** Apply's margin notes and Home's "pick carefully" scrap were removed; the Game debrief line is plain typed text.
+- **Copy for these lives in Brand.gs:** `countdown.steps / alarms / pills`, `trackLabels` (never show raw NONE/PARTIAL), `signal`, `rank`, `preleadsBanner` (hidden after its `until` date and for confirmed campers).
+

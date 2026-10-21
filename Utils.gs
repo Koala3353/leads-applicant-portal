@@ -96,7 +96,7 @@ const RULES = {
   FirstImpression:  { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
   TakesLeadership:  { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
   FearLeadership:   { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
-  ReferredBy:       { stage: 'apply', upper: true, pattern: '^[A-Z]{1,4}-[A-Z0-9]{4}$', msg: 'Referral codes look like BEA-7K2Q. Leave it blank if nobody referred you.' }
+  ReferredBy:       { stage: 'apply', upper: true, pattern: '^([A-Z]{1,12}[0-9]{0,3}|[A-Z]{1,4}-[A-Z0-9]{4})$', msg: "A referral code is the person's name, like BEA. Leave it blank if nobody referred you." }
 };
 
 /** "+63 917 123 4567", "0917-123-4567", "9171234567" -> "09171234567". Same logic as normalizePhone() in Apply.html. */

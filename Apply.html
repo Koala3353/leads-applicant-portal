@@ -464,10 +464,7 @@
   .intake .prefilled{box-shadow:inset 4px 0 0 #e0c200}
   .intake .error-summary{background:#fff0f0;color:#1b1b1b;border-color:#c00000}
   /* margin notes: I.R.I.S. writing on your file in red pen */
-  .mnote{margin:8px 0 0;max-width:30em;font:400 1.5rem/1.05 var(--hand);color:#b00000;transform:rotate(-1.4deg);transform-origin:left}
-  .mnote.in{animation:ink .7s steps(14) 1}
   @keyframes ink{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
-  html.calm .mnote.in{animation:none}
 </style>
 </head>
 <body data-loader-wait>
@@ -809,7 +806,7 @@
           <span class="q-num">OPTIONAL</span>
           <label for="f-ReferredBy"><?= BRAND.referral.label ?> <span style="color:var(--muted)"><?= BRAND.referral.tag ?></span></label>
           <p class="field-hint" id="refHint"><?= BRAND.referral.hint ?></p>
-          <input type="text" id="f-ReferredBy" name="ReferredBy" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. BEA-7K2Q">
+          <input type="text" id="f-ReferredBy" name="ReferredBy" maxlength="15" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. BEA">
           <div class="field-error" id="err-ReferredBy" role="alert" aria-live="polite"></div>
         </div>
       </div>
@@ -1402,16 +1399,6 @@
       last = now;
       const out = fill(pick(line), v || '');
       kuya.apply(null, out);
-      if (noteField) marginNote(noteField, out[1]);
-    }
-    // red-pen note under a field (decorative: the same words are in I.R.I.S.'s bubble or plain on screen)
-    function marginNote(f, text) {
-      const wrap = $('wrap-' + f);
-      if (!wrap || !text) return;
-      let n = wrap.querySelector('.mnote');
-      if (!n) { n = document.createElement('p'); n.className = 'mnote'; n.setAttribute('aria-hidden', 'true'); wrap.appendChild(n); }
-      n.textContent = text;
-      n.classList.remove('in'); void n.offsetWidth; n.classList.add('in');
     }
     // hesitation: focused on a field for a long time with almost nothing typed
     const focusAt = {}, rewrites = {};

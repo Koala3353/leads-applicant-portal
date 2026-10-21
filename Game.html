@@ -33,16 +33,6 @@
   }
   .corner-notif.show { display: block; animation: g-in .3s ease-out; }
 
-  /* 2-minute global search bar */
-  .search-bar {
-    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
-    padding: 8px 12px; margin-bottom: 14px; background: #0c141d; border: 1.5px solid var(--line);
-    font-family: var(--mono); font-size: 13px; text-transform: uppercase;
-  }
-  .search-bar .rec-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--danger); animation: g-blink 1s steps(2) infinite; }
-  .search-bar .timer-val { color: var(--glow); font-weight: 700; font-variant-numeric: tabular-nums; }
-  .search-bar .timer-val.urgent { color: var(--danger); }
-
   /* ---- CCTV wall ---- */
   .feeds { display: grid; gap: 22px; margin: 22px 0 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); }
   .feed {
@@ -154,7 +144,7 @@
   @media (min-width: 560px) { .actions .btn { width: auto; } }
 
   /* vignette screen dimming */
-  .vignette { position: fixed; inset: 0; pointer-events: none; z-index: 100; opacity: 0; transition: opacity 1s linear; background: radial-gradient(circle, transparent 40%, rgba(0, 0, 0, .96) 100%); }
+  .vignette { position: fixed; inset: 0; pointer-events: none; z-index: 100; opacity: 0; transition: opacity 1s linear; background: radial-gradient(circle, rgba(0, 0, 0, .55) 0%, rgba(0, 0, 0, .97) 100%); }
   html.calm .vignette { display: none; }
 
   /* ---- Jump Scare with Violent Shake & Punch Animation ---- */
@@ -211,7 +201,7 @@
   .db-fields div { display: grid; grid-template-columns: 8em minmax(0, 1fr); gap: 8px; align-items: baseline; border-bottom: 1px solid #a89e84; padding-bottom: 3px; }
   .db-fields dt { font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: #6b5a35; }
   .db-fields dd { margin: 0; min-height: 1.3em; font-size: 1.05rem; overflow-wrap: anywhere; }
-  .db-note { margin: 12px 0 0; font: 400 1.55rem/1.05 var(--hand); color: #b00000; transform: rotate(-1.2deg); min-height: 1em; }
+  .db-note { margin: 12px 0 0; font: 400 1rem/1.4 var(--type); color: var(--paper-ink, #222); min-height: 1em; }
   .db-stamp { position: relative; display: table; margin: 10px 4px 0 auto;   /* under the red note, never over it */ --r: -12deg; font-size: 1.3rem; opacity: 0; }
   .db-stamp.slam { animation: slam .35s cubic-bezier(.3, 1.6, .5, 1) forwards; }
   @keyframes slam { from { opacity: 0; transform: rotate(-12deg) scale(2.4); } to { opacity: .85; transform: rotate(-12deg) scale(1); } }
@@ -252,11 +242,7 @@
     </div>
   </section>
 
-  <!-- 2-MINUTE GLOBAL SEARCH BAR -->
-  <div class="search-bar" id="searchBar" hidden>
-    <div><span class="rec-dot"></span><span>SESSION RECORDING</span></div>
-    <div>SEARCH CLOCK: <span class="timer-val" id="searchClock">02:00</span></div>
-  </div>
+
 
   <p class="g-msg" id="msg" role="status" aria-live="polite"></p>
 
@@ -277,7 +263,7 @@
     <div class="winbar red"><span>WARNING.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
     <p class="eyebrow">&#9888; SYSTEM ALERT</p>
     <h2>&#9888; WARNING</h2>
-    <p>Once you start, you have <strong>2 minutes</strong> to complete the search. Complete it in one sitting. There's no pausing or restarting.</p>
+    <p>Each question has its own timer. Tap an answer and it's filed. Finish it in one sitting: there's no pausing or restarting.</p>
     <div class="actions"><button class="btn" type="button" id="btnBegin">BEGIN</button></div>
   </div>
 
@@ -412,6 +398,7 @@
     <p>Your applicant ID:</p>
     <p class="case-id" id="doneId" style="font-family:var(--mono);font-size:1.8rem;color:var(--glow)"></p>
     <p>Keep this ID. Check the hub for your status and requirements.</p>
+    <p class="mono" id="doneRank"></p>
     <p class="mono" id="doneRef" hidden></p>
     <div class="actions"><a class="btn" id="hubLink" target="_top">Back to the hub</a></div>
   </div>
@@ -616,15 +603,15 @@
 
   function scareSound(delaySec) {
     if (isMuted) return;
-    if (playFile('scare', delaySec)) return;
+    if (playFile('scare', delaySec, 0.3)) return;   // the scare file at 30%: the noise is enough
     if (!audio || audio.state !== 'running') return;
     const t = audio.currentTime + delaySec, out = audio.createGain();
     out.gain.value = .5; out.connect(audio.destination);
     const env = (node, peak, len) => { const g = audio.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + len); node.connect(g); g.connect(out); };
     const thud = audio.createOscillator(); thud.type = 'sine'; thud.frequency.setValueAtTime(90, t); thud.frequency.exponentialRampToValueAtTime(38, t + .35);
-    env(thud, .9, .4); thud.start(t); thud.stop(t + .45);
+    env(thud, .3, .4); thud.start(t); thud.stop(t + .45);
     const scr = audio.createOscillator(); scr.type = 'sawtooth'; scr.frequency.setValueAtTime(1400, t); scr.frequency.exponentialRampToValueAtTime(140, t + .8);
-    env(scr, .22, .85); scr.start(t); scr.stop(t + .9);
+    env(scr, .05, .85); scr.start(t); scr.stop(t + .9);
     const len = Math.floor(audio.sampleRate * .9), buf = audio.createBuffer(1, len, audio.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     const noise = audio.createBufferSource(); noise.buffer = buf;
@@ -699,7 +686,6 @@
   let answers = {};
   let currentRoom = null, qIndex = 0, qStartTime = 0;
   let roomTimeLeft = 10, roomTimer = null;
-  let searchTimeLeft = 120, searchTimer = null;
   let roomsClearedOrder = [];
   let chosenMonster = MONSTERS[0];
   try { chosenMonster = MONSTERS.find(x => x.key === sessionStorage.getItem('leads-game-monster')) || chosenMonster; } catch (e) {}
@@ -741,22 +727,6 @@
   }
   setInterval(paintStatus, 1000);
 
-  /* 2-minute search clock */
-  function startSearchTimer() {
-    $('searchBar').hidden = false;
-    searchTimer = setInterval(() => {
-      searchTimeLeft--;
-      const m = Math.floor(searchTimeLeft / 60), s = searchTimeLeft % 60;
-      const el = $('searchClock');
-      el.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-      if (searchTimeLeft <= 30) el.classList.add('urgent');
-      if (searchTimeLeft <= 0) {
-        clearInterval(searchTimer);
-        playStaticGlitch();   // the scream is saved for the real jumpscare
-        say('2-MINUTE SEARCH WINDOW EXPIRED.', 'bad');
-      }
-    }, 1000);
-  }
 
   /* Feeds */
   function renderFeeds() {
@@ -843,7 +813,7 @@
     $('clock').classList.toggle('low', low);
     $('timer').classList.toggle('low', low);
     $('timerFill').style.width = ((Math.max(roomTimeLeft, 0) / totalSecs) * 100) + '%';
-    if (!calm()) $('vignette').style.opacity = Math.min((1 - roomTimeLeft / totalSecs) * 0.9, 0.9);
+    if (!calm()) $('vignette').style.opacity = Math.min((1 - roomTimeLeft / totalSecs) * 0.95, 0.9);   // the room goes dark as time runs out
   }
 
   /* The timer is per question: when it runs out, this question is filed (typed text is kept; else "NONE")
@@ -895,7 +865,8 @@
       const first = box.querySelector('input');
       if (first) first.focus({ preventScroll: true });
     }
-    $('lockBtn').textContent = qIndex < currentRoom.qs.length - 1 ? 'Lock in answer' : 'Lock in and clear room';
+    $('lockBtn').textContent = qIndex < currentRoom.qs.length - 1 ? 'Submit answer' : 'Submit and clear room';
+    $('lockBtn').hidden = !q.isText;   // choice questions: tapping an answer files it (no lock-in step)
     qStartTime = Date.now();
     startRoomTimer(q.secs || currentRoom.secs);
   }
@@ -965,8 +936,6 @@
 
   /* Final Twist & Hallway Sequence per exact script */
   async function triggerFinalTwistSequence() {
-    clearInterval(searchTimer);
-    $('searchBar').hidden = true;
     droneStop();
     // pick the observer now, so its photo is surely loaded by the time the door opens
     const roll = Math.random();
@@ -1108,6 +1077,13 @@
     }, 900);
   }
 
+  /* Watchlist rank (BRAND.rank): a stable made-up number from the Applicant ID. Decorative, means nothing. */
+  function watchRank(id) {
+    let h = 7; String(id || '').split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) % 100003; });
+    const R = BRAND.rank || { min: 3, max: 97, line: '#{n}' };
+    return R.line.replace('{n}', R.min + (h % (R.max - R.min + 1)));
+  }
+
   async function submit() {
     const btn = $('submitBtn');
     if (btn.disabled) return;
@@ -1118,6 +1094,7 @@
       const res = await call('game_submitFinal', answers);
       if (res && res.ok) {
         $('doneId').textContent = res.id;
+        $('doneRank').textContent = watchRank(res.id);
         try { localStorage.removeItem('leads_apply_draft:' + String(window.__email || '').toLowerCase()); } catch (e) { /* ignore */ }
         if (res.referralCode) {
           $('doneRef').textContent = BRAND.referral.gameDone.replace('{code}', res.referralCode);
@@ -1178,12 +1155,18 @@
     setTimeout(() => {
       show('hub');
       renderFeeds();
-      startSearchTimer();
       droneStart(0.10);
     }, 2000);
   });
 
   $('qForm').addEventListener('submit', lockAnswer);
+  // Tap an option = answer it. A short beat so the highlight shows before the next question.
+  let advancing = false;
+  $('qOpts').addEventListener('change', e => {
+    if (e.target.name !== 'opt' || advancing) return;
+    advancing = true;
+    setTimeout(() => { advancing = false; lockAnswer({ preventDefault() {} }); }, 220);
+  });
   $('btnReturnCameras').addEventListener('click', () => {
     show('hub');
     renderFeeds();

@@ -1,8 +1,8 @@
 /**
  * Referrals.gs  (shared: referral codes, checks, counts, and the core team's Referrals tab)
  *
- * - Every applicant gets a code when they submit: first 4 letters of their nickname + 4 random characters,
- *   e.g. BEA-7K2Q (no 0/O/1/I/L, so it's easy to read out). Stored in Applicants › ReferralCode.
+ * - Every applicant gets a code when they submit: just their nickname in capitals, e.g. BEA. If that's taken,
+ *   a number is added (BEA2, BEA3...). Stored in Applicants › ReferralCode. Older BEA-7K2Q style codes still work.
  * - A new applicant can enter someone's code (or arrive via ...exec?ref=CODE). On submit the server checks it and
  *   saves ReferredBy (the code) + ReferrerID (that person's ApplicantID). Locked after submit.
  * - Counts are worked out from the Applicants tab (TextFinder on ReferrerID), so there's no second list to keep in sync.
@@ -10,29 +10,22 @@
  * - The Referrals tab (built by referrals_setupTab) groups everyone by who invited them, for separating friends at camp.
  */
 
-const REFERRAL_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-
-/** "BEA-7K2Q" style code, cleaned. '' if it can't be one. Accepts lower case and stray spaces. */
+/** A referral code, cleaned: "bea" -> "BEA", " Bea 2 " -> "BEA2". Accepts the older BEA-7K2Q style too. */
 function normalizeReferral_(v) {
-  const s = String(v || '').toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9-]/g, '');
-  return /^[A-Z]{1,4}-[A-Z0-9]{4}$/.test(s) ? s : (s ? s.slice(0, 12) : '');
+  return String(v || '').toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9-]/g, '').slice(0, 15);
 }
 
-/** The name part: first 4 letters of the nickname (accents dropped, ñ -> N), else of the full name, else "LEAD". */
+/** The name: the nickname in capitals (accents dropped, ñ -> N, spaces/symbols removed), else the first name, else "LEAD". */
 function referralPrefix_(nickname, fullName) {
-  const letters = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z]/g, '');
-  return (letters(nickname) || letters(fullName) || 'LEAD').slice(0, 4);
+  const letters = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z]/g, '');
+  return (letters(nickname) || letters(String(fullName || '').trim().split(/\s+/)[0]) || 'LEAD').slice(0, 12);
 }
 
-/** A code not in `taken` (a Set of existing codes). */
+/** The name if it's free, else the name + the lowest free number (BEA2, BEA3...). `taken` = Set of existing codes. */
 function makeReferralCode_(nickname, fullName, taken) {
-  const prefix = referralPrefix_(nickname, fullName);
-  for (let tries = 0; tries < 50; tries++) {
-    let tail = '';
-    for (let i = 0; i < 4; i++) tail += REFERRAL_CHARS.charAt(Math.floor(Math.random() * REFERRAL_CHARS.length));
-    const code = prefix + '-' + tail;
-    if (!taken || !taken.has(code)) return code;
-  }
+  const name = referralPrefix_(nickname, fullName);
+  if (!taken || !taken.has(name)) return name;
+  for (let n = 2; n < 1000; n++) if (!taken.has(name + n)) return name + n;
   throw new Error('Could not make a unique referral code. Try again.');
 }
 
