@@ -143,7 +143,6 @@ function apply_submit_(form) {
       OffsiteAvailability: v.clean.OffsiteAvailability,
       WhyParticipant: v.clean.WhyParticipant,
       FirstImpression: v.clean.FirstImpression,
-      Rumors: v.clean.Rumors,
       TakesLeadership: v.clean.TakesLeadership,
       FearLeadership: v.clean.FearLeadership,
       GameAnswers: String(input.GameAnswers || '').slice(0, 5000),   // JSON of the Game page choices
@@ -264,7 +263,7 @@ function apply_saveDraft(data) {
   const fields = [
     'DataConsent', 'IDNumber', 'FullName', 'Nickname', 'Course', 'YearLevel', 'Mobile',
     'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability',
-    'WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership', 'GameAnswers', 'ReferredBy'
+    'WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership', 'GameAnswers', 'ReferredBy'
   ];
   fields.forEach(f => {
     if (data[f] !== undefined && data[f] !== null) {

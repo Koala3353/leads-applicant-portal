@@ -1,11 +1,17 @@
 /**
  * GameApi.gs
  * Server implementation for Game.html (LEADS: Oversight "Threat Assessment", step 2 of applying).
- * The questions live in Game.html; the server only needs their ids to whitelist the answers.
+ * Handles the updated 16 questions (Fear, Random + Open-ended ghost prompt, Personality + This-or-That).
  */
 
-const GAME_QUESTION_IDS = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5'];
-const GAME_CHOICES = ['A', 'B', 'C', 'NONE'];   // NONE = the room's timer ran out first
+const GAME_QUESTION_IDS = [
+  'Q1', 'Q2', 'Q3', 'Q4',              // Room 1: Fear (MCQ)
+  'Q5', 'Q6', 'Q7', 'Q8', 'Q9',        // Room 2: Random (Q5-Q8 MCQ, Q9 open-ended text)
+  'Q10', 'Q11', 'Q12', 'Q13',          // Room 3: Personality (MCQ)
+  'Q14', 'Q15', 'Q16'                  // Room 3: This or That (A/B)
+];
+
+const GAME_CHOICES = ['A', 'B', 'C', 'NONE'];
 
 function game_getInit() {
   return traced_('game_getInit', 'game', game_getInit_, r =>
@@ -26,23 +32,34 @@ function game_getInit_() {
     allowedDomain: email ? isAllowedDomain_(email) : false,
     alreadyApplied: found ? { id: found.data.ApplicantID, status: found.data.Status } : null,
     hasDraft: !!(draft && draft.data),
-    nickname: draft && draft.data ? String(draft.data.Nickname || '').slice(0, 30) : '',   // their own answer, for the mirror
-    saved: saved   // answers from an earlier visit, so a reload resumes where they left off
+    nickname: draft && draft.data ? String(draft.data.Nickname || '').slice(0, 30) : '',
+    saved: saved
   };
 }
 
 /**
- * Keeps only known question ids with a known choice and a sane time. Anything else from the page is dropped.
- * Shape: { Q1: { a: 'B', ms: 4200 }, ... }
+ * Sanitizes question responses. Whitelists MCQ choices and caps open-ended text to 250 characters.
+ * Shape: { Q1: { a: 'B', ms: 4200 }, ..., Q9: { a: 'Text', ms: 3100 } }
  */
 function game_cleanAnswers_(answers) {
   const out = {};
   if (!answers || typeof answers !== 'object') return out;
   GAME_QUESTION_IDS.forEach(id => {
     const x = answers[id];
-    if (!x || GAME_CHOICES.indexOf(String(x.a)) < 0) return;
+    if (!x) return;
     const ms = Math.round(Number(x.ms));
-    out[id] = { a: String(x.a), ms: isFinite(ms) ? Math.max(0, Math.min(ms, 600000)) : 0 };
+    const safeMs = isFinite(ms) ? Math.max(0, Math.min(ms, 600000)) : 0;
+
+    if (id === 'Q9') {
+      // Open-ended ghost response (Room 2, Q5)
+      const val = String(x.a || '').trim().replace(/[\x00-\x1F\x7F]/g, '').slice(0, 250);
+      out[id] = { a: val || 'NONE', ms: safeMs };
+    } else {
+      const choice = String(x.a || '').toUpperCase();
+      if (GAME_CHOICES.indexOf(choice) >= 0) {
+        out[id] = { a: choice, ms: safeMs };
+      }
+    }
   });
   return out;
 }
@@ -52,7 +69,6 @@ function game_saveProgress(answers) {
   return traced_('game_saveProgress', 'game', () => {
     const email = currentEmail_();
     if (!email || !isAllowedDomain_(email)) return { ok: false };
-    // apply_saveDraft merges onto the stored draft under the lock, so the Apply answers stay intact
     return apply_saveDraft({ GameAnswers: JSON.stringify(game_cleanAnswers_(answers)) });
   }, r => r.ok ? 'saved' : 'not saved');
 }
@@ -65,10 +81,11 @@ function game_submitFinal(answers) {
       throw new Error('Sign in with your Ateneo account first.');
     }
 
-    // Safe to retry: if this account already has a file (e.g. the first attempt went through but the answer was lost
-    // on a bad connection, and the browser retried), report success with the existing ID instead of an error.
     const existing = getApplicantByEmail_(email);
-    if (existing) { apply_deleteDraft_(email); return { ok: true, id: existing.data.ApplicantID, referralCode: existing.data.ReferralCode || '', already: true }; }
+    if (existing) {
+      apply_deleteDraft_(email);
+      return { ok: true, id: existing.data.ApplicantID, referralCode: existing.data.ReferralCode || '', already: true };
+    }
 
     const draft = apply_getDraft_(email);
     if (!draft || !draft.data) {
@@ -76,17 +93,16 @@ function game_submitFinal(answers) {
     }
 
     const clean = game_cleanAnswers_(answers);
-    if (Object.keys(clean).length !== GAME_QUESTION_IDS.length) {
-      throw new Error('The assessment is not finished yet. Clear all three feeds first.');
+    if (Object.keys(clean).length < GAME_QUESTION_IDS.length) {
+      throw new Error('The assessment is not finished yet. Complete all three rooms first.');
     }
 
     const fullForm = Object.assign({}, draft.data, {
-      GameAnswers: JSON.stringify({ v: 2, answers: clean })
+      GameAnswers: JSON.stringify({ v: 3, answers: clean })
     });
     try {
       return apply_submit_(fullForm);
     } catch (err) {
-      // two tabs / a retry racing each other: the other one filed it first
       if (/already applied/i.test(String(err && err.message))) {
         const again = getApplicantByEmail_(email);
         if (again) return { ok: true, id: again.data.ApplicantID, already: true };
