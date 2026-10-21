@@ -84,7 +84,7 @@ Navy headers: **never rename** them. The code finds every Applicants column by i
 
 | Column | Format | Set by / notes |
 |---|---|---|
-| `ApplicantID` | `APP-0001`, unique | Apply via `nextApplicantId_()`. Never typed by users; applicants enter it in the Forms (pre-filled). |
+| `ApplicantID` | `APP-2317` style, unique. Starts at Settings › `ApplicantIdStart` (default 2300) and jumps by a random 1–9, so IDs don't reveal how many applied or who was first. Never renumber existing IDs. | Apply via `nextApplicantId_()`. Never typed by users; applicants enter it in the Forms (pre-filled). |
 | `Timestamp` | Date | Apply |
 | `Email` | lowercase, allowed domain, unique | Apply, **from the login**, never a form field. How we identify people. |
 | `FullName` | 2–80 letters, spaces, `. ' -`, accents/ñ | Apply |
@@ -228,7 +228,7 @@ Functions ending in `_` are server-only. Public shared functions: `home_getConte
 | `ownerOnly_()` | throws unless run from the editor by the owner |
 | `getApplicantByEmail_(email)` · `getApplicantById_(id)` | `{ row, data }` or `null`; `data` keyed by `COLS`, Dates already ISO strings |
 | `toObject_(rowValues, cols?)` | row array → object (Dates → ISO) |
-| `nextApplicantId_()` | next `APP-0007`. **Inside a lock.** |
+| `nextApplicantId_()` | next ID (random step of 1–9 from the highest, at least `ApplicantIdStart`). **Inside a lock.** |
 | `updateApplicant_(row, { Field: value })` | writes through `safeCell_`, sets `LastUpdated`. **Inside a lock.** Throws on unknown column. |
 | `safeCell_(v)` | prefixes `'` to text starting with `= + - @` |
 | `textCell_(v)` | for Applicants cells: prefixes `'` to every non-empty string so Sheets keeps it as text (mobile numbers keep their 0, IDs/blocks/referral codes never turn into numbers or dates). Used by `apply_submit_` and `updateApplicant_`, which writes **only the given cells** (never the whole row). |

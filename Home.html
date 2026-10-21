@@ -654,6 +654,13 @@
   <p class="notice warn" id="acctWarn" role="alert" hidden></p>
   <div class="bcast strip" id="closingStrip" role="status" hidden><p class="b-top">This is a test of your timing</p><p class="b-big"></p></div>
 
+  <!-- Pre-LEADS Preview Transmission -->
+  <div class="bcast strip" style="margin: 18px 0 0;" role="region" aria-label="Pre-LEADS announcement">
+    <p class="b-top">SPECIAL TRANSMISSION</p>
+    <p class="b-big">Pre-LEADS Preview // Nov 5</p>
+    <p class="b-sub">5:00–7:30 PM Onsite · <a href="<?= baseUrl ?>?page=preleads" target="_top" style="color:#fff; text-decoration:underline; font-weight:700;">Open Pre-LEADS Dossier &rarr;</a></p>
+  </div>
+
   <section class="hero">
     <div>
       <p class="rec" aria-hidden="true"><span class="dot">REC</span><span>CAM 01</span><time id="recClock">--:--:--</time><span class="seen" id="seen"></span></p>
@@ -662,6 +669,7 @@
       <p class="lede"><?= BRAND.hero.lede ?></p>
       <div class="cta">
         <a class="btn" id="mainBtn" href="<?= baseUrl ?>?page=apply" target="_top"><?= BRAND.buttons.apply ?></a>
+        <a class="btn ghost" href="<?= baseUrl ?>?page=preleads" target="_top">Pre-LEADS Preview</a>
       </div>
       <p class="hint" id="hint" hidden><?= BRAND.hero.hint ?></p>
     </div>

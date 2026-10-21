@@ -289,12 +289,18 @@ function toObject_(rowValues, cols) {
   return o;
 }
 
-/** Next ID like APP-0007. Call this INSIDE a lock. */
+/**
+ * Next Applicant ID, e.g. APP-2317. Call this INSIDE a lock.
+ * IDs don't start at 0001 or count up by one, so an ID never tells anyone how many people applied or how early
+ * they were: numbering starts at Settings › ApplicantIdStart (default 2300) and each new ID skips ahead by a
+ * random 1-9. Existing IDs are never renumbered (forms, referrals and the Log point at them).
+ */
 function nextApplicantId_() {
-  return nextId_(SHEET.APPLICANTS, 'APP-');
+  const start = parseInt(String(getSetting_('ApplicantIdStart') || ''), 10);
+  return nextId_(SHEET.APPLICANTS, 'APP-', isNaN(start) ? 2300 : start, 9);
 }
 
-function nextId_(sheetName, prefix) {
+function nextId_(sheetName, prefix, start, maxStep) {
   const sh = sheet_(sheetName);
   const c = sheetName === SHEET.APPLICANTS ? col_('ApplicantID') + 1 : 1;
   const ids = sh.getRange(2, c, Math.max(sh.getLastRow() - 1, 1), 1).getValues().flat();
@@ -302,7 +308,8 @@ function nextId_(sheetName, prefix) {
     const n = parseInt(String(id).replace(prefix, ''), 10);
     return isNaN(n) ? m : Math.max(m, n);
   }, 0);
-  return prefix + String(max + 1).padStart(4, '0');
+  const step = maxStep ? 1 + Math.floor(Math.random() * maxStep) : 1;
+  return prefix + String(Math.max(max, start || 0) + step).padStart(4, '0');
 }
 
 /**
