@@ -37,7 +37,7 @@ const COLS = [
   'Status', 'Requirements', 'Payment',                                    // the three tracks
   'ReviewedBy', 'LastUpdated', 'Notes',                                   // core team
   'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability', 'DataConsent',
-  'WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership',
+  'WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership',   // the 4 essays (Rumors was dropped Oct 2026)
   'GameAnswers',                                                          // Game page choices (JSON)
   'PaymentProof',                                                         // Drive link to the uploaded proof of payment
   'ReferralCode', 'ReferredBy', 'ReferrerID'                              // own code to share / code they used / who that is (Referrals.gs)
@@ -94,7 +94,6 @@ const RULES = {
   DataConsent:      { stage: 'apply', required: true, options: ['Y'], msg: 'You need to consent to data processing (RA 10173) to apply.' },
   WhyParticipant:   { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
   FirstImpression:  { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
-  Rumors:           { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
   TakesLeadership:  { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
   FearLeadership:   { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
   ReferredBy:       { stage: 'apply', upper: true, pattern: '^[A-Z]{1,4}-[A-Z0-9]{4}$', msg: 'Referral codes look like BEA-7K2Q. Leave it blank if nobody referred you.' }

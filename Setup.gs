@@ -36,7 +36,7 @@ function setup_applyValidation() {
   custom('IDNumber', `=AND(REGEXMATCH(TO_TEXT(${r('IDNumber')}2),"^\\d{6}$"),COUNTIF($${r('IDNumber')}:$${r('IDNumber')},${r('IDNumber')}2)=1)`,
     '6 digits, and only once in this column');
   custom('Mobile', `=REGEXMATCH(TO_TEXT(${r('Mobile')}2),"^09\\d{9}$")`, '11 digits starting with 09');
-  ['WhyParticipant', 'FirstImpression', 'Rumors', 'TakesLeadership', 'FearLeadership'].forEach(name =>
+  ['WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership'].forEach(name =>
     custom(name, `=AND(LEN(${r(name)}2)>=50,LEN(${r(name)}2)<=1000)`, '50 to 1000 characters'));
 
   // keep leading zeros (09...) and stop Sheets turning IDs into numbers

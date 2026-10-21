@@ -101,14 +101,14 @@ Navy headers: **never rename** them. The code finds every Applicants column by i
 | `PastOrgs` | ≤500 chars, multiline, optional | Apply |
 | `FirstOvernight` / `OffsiteAvailability` | `Yes` / `No` | Apply. Availability question shows Settings › `EventDates` |
 | `DataConsent` | `Y` (must be Y to submit) | Apply (RA 10173) |
-| `WhyParticipant` / `FirstImpression` / `Rumors` / `TakesLeadership` / `FearLeadership` | 50–1000 chars each, multiline, required | Apply (the 5 essays) |
+| `WhyParticipant` / `FirstImpression` / `TakesLeadership` / `FearLeadership` | 50–1000 chars each, multiline, required | Apply (the 4 essays). `Rumors` was dropped Oct 2026; its old column can stay in the Sheet. |
 | `GameAnswers` | JSON text (≤5000 chars) | Game page: the choices made in the 3 CCTV rooms |
 | `PaymentProof` | Drive link | Steps page upload (`steps_uploadProof`). A new upload replaces the link; old files stay in the folder. |
 | `ReferralCode` | e.g. `BEA-7K2Q` | Made on submit (`makeReferralCode_`): first 4 letters of the nickname + 4 random characters (no 0/O/1/I/L). Applicants from before referrals get one the first time they open the hub. |
 | `ReferredBy` | a code, or blank | The code they applied with (optional field on Apply, pre-filled from `?ref=`). Checked and **locked on submit**. |
 | `ReferrerID` | ApplicantID or blank | Who that code belongs to, filled in by the server. Filter/sort by it to see who invited whom. |
 
-`WhyLEADS` / `FearEssay` were retired (replaced by the 5 essays) and are deleted by `setup_cleanupAfterDeploy()` (Setup.gs). `ensureApplicantHeaders_()` adds any missing `COLS` header at the end.
+`WhyLEADS` / `FearEssay` were retired (replaced by the essays) and are deleted by `setup_cleanupAfterDeploy()` (Setup.gs). `ensureApplicantHeaders_()` adds any missing `COLS` header at the end.
 
 Camp info (emergency contact, dietary, medical, shirt size) and requirement files live in the **Form responses**, not here.
 
@@ -607,7 +607,7 @@ apply_submit(form) → { ok:false, errors } | { ok:true, id }
 5. Return `{ ok:true, id }`.
 
 **Page must**
-- **17 questions** (`FIELDS` in Apply.html, progress tape shows `NN / 17`): DataConsent (Y/N; must be Y), IDNumber, FullName, Nickname, Course (free text, autofilled from MemData), YearLevel (select 1–5), Block, Mobile, MBTI (select of 16), PastOrgs, FirstOvernight (Yes/No), OffsiteAvailability (Yes/No, shows `eventDates`), then **5 essays**: WhyParticipant, FirstImpression, Rumors, TakesLeadership, FearLeadership (50–1000 chars each).
+- **16 questions** (`FIELDS` in Apply.html, progress tape shows `NN / 16`): DataConsent (Y/N; must be Y), IDNumber, FullName, Nickname, Course (free text, autofilled from MemData), YearLevel (select 1–5), Block, Mobile, MBTI (select of 16), PastOrgs, FirstOvernight (Yes/No), OffsiteAvailability (Yes/No, shows `eventDates`), then **4 essays**: WhyParticipant, FirstImpression, TakesLeadership, FearLeadership (50–1000 chars each).
 - **Applying is two steps.** Apply's button ("Proceed to Threat Assessment") does **not** submit: it checks the form, saves it as the account's draft (`apply_saveDraft`) and only if that save returns `ok` opens `?page=game`. The Game page (`Game.html` / `GameApi.gs`, 3 timed CCTV rooms of choices, then a random "monster" reveal: Sir Kerish 60%, Sir Chums 30%, Sir Aly 10%) submits at the end with `game_submitFinal(answers)` = saved draft + `GameAnswers` → `apply_submit_()`. The game sends people back to Apply if they have no draft, and to the hub if they already applied. If the final submit returns field errors, they're handed to Apply via `sessionStorage['leads-apply-errors']` and shown on the form.
 - **Never put `//` inside a backtick string** in page JS (e.g. `` `CAM ${n} // ROOM` ``). Apps Script's comment stripper can treat it as a comment and cut the line, which kills the whole script with "Unexpected token". Use normal quotes and `+`. Page JS errors show up in the `Activity` tab as `client_js_error`.
 - **Redirects after a server call can be blocked** (Google only allows leaving the frame right after a click), so `go(url, label, msg)` in Apply/Game tries `window.open(url, '_top')` and then shows a themed card with a real `target="_top"` link.

@@ -346,7 +346,6 @@ const BRAND = {
       // essays: said once each, when the answer reaches a decent length
       WhyParticipant:  [['thinking', 'Reason recorded. It sounds like you.'], ['happy', 'That is a real reason. It is going in your file.']],
       FirstImpression: [['thinking', 'First impression recorded. We will compare it at the end of camp.'], ['wink', 'Hold on to that picture. It will change.']],
-      Rumors:          [['thinking', 'Rumor recorded. Some of them are true. You will find out which.'], ['wink', 'We have heard that one too. Keep listening.']],
       TakesLeadership: [['thinking', 'Example recorded. You have done this before.'], ['happy', 'Specific. That is rare. Noted.']],
       FearLeadership:  [['sad', 'Thank you for writing that down. It stays in your file, and with us.'], ['thinking', 'Naming it is the hard part. Camp is for the rest.']],
       essayShort:     ['thinking', "At least 50 characters. Take your time. I'll wait."],
