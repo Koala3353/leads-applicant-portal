@@ -111,3 +111,52 @@ function game_submitFinal(answers) {
     }
   }, r => r.ok ? r.id + ' submitted' : 'needs fixing: ' + Object.keys(r.errors || {}).join(', '));
 }
+/* ---------------- Game sounds ----------------
+ * The knock and the jumpscare scream are audio files in Google Drive. A Drive link can't be used as an <audio> src
+ * (Drive answers with a redirect / warning page, not the file), so the script reads them as the owner and hands them to
+ * the page as data. The owner's account needs view access to the files ("anyone with the link" is enough).
+ * Cached for 6 hours in pieces (CacheService allows ~100 KB per value). '' for a sound that can't be read: the page
+ * then plays its built-in synthesized version.
+ */
+const GAME_SOUNDS = {
+  knock: '1SPokAz52Y1m4WY_JeBp9HmbAhyZyLhND',
+  scare: '19Nz0uFPLIm5Avu7ifXxYdWZHri4vMqE4'
+};
+const GAME_SOUND_MAX_BYTES = 3 * 1024 * 1024;
+
+function game_getSounds() {
+  return traced_('game_getSounds', 'game', () => {
+    const out = {};
+    Object.keys(GAME_SOUNDS).forEach(k => { out[k] = game_sound_(GAME_SOUNDS[k]); });
+    return out;
+  }, r => Object.keys(r).map(k => k + (r[k] ? ' ok' : ' missing')).join(', '));
+}
+
+function game_sound_(id) {
+  const cache = CacheService.getScriptCache(), key = 'snd:' + id, PIECE = 90000;
+  try {
+    const n = Number(cache.get(key + ':n') || 0);
+    if (n) {
+      const keys = []; for (let i = 0; i < n; i++) keys.push(key + ':' + i);
+      const got = cache.getAll(keys);
+      if (keys.every(x => got[x])) return keys.map(x => got[x]).join('');
+    }
+  } catch (e) { /* cache down: read from Drive */ }
+  try {
+    const blob = DriveApp.getFileById(id).getBlob();
+    const bytes = blob.getBytes();
+    if (bytes.length > GAME_SOUND_MAX_BYTES) throw new Error('over 3 MB');
+    const type = /^audio\//.test(blob.getContentType()) ? blob.getContentType() : 'audio/mpeg';
+    const data = 'data:' + type + ';base64,' + Utilities.base64Encode(bytes);
+    try {
+      const pieces = {}, count = Math.ceil(data.length / PIECE);
+      for (let i = 0; i < count; i++) pieces[key + ':' + i] = data.slice(i * PIECE, (i + 1) * PIECE);
+      cache.putAll(pieces, 21600);
+      cache.put(key + ':n', String(count), 21600);
+    } catch (e) { /* too big for the cache: still return it */ }
+    return data;
+  } catch (e) {
+    activity_('game_sound', 'Could not read sound file ' + id + ': ' + (e && e.message), { level: 'WARN', page: 'game' });
+    return '';
+  }
+}

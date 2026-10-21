@@ -212,7 +212,7 @@
   .db-fields dt { font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: #6b5a35; }
   .db-fields dd { margin: 0; min-height: 1.3em; font-size: 1.05rem; overflow-wrap: anywhere; }
   .db-note { margin: 12px 0 0; font: 400 1.55rem/1.05 var(--hand); color: #b00000; transform: rotate(-1.2deg); min-height: 1em; }
-  .db-stamp { position: absolute; right: 14px; bottom: 12px; --r: -12deg; font-size: 1.3rem; opacity: 0; }
+  .db-stamp { position: relative; display: table; margin: 10px 4px 0 auto;   /* under the red note, never over it */ --r: -12deg; font-size: 1.3rem; opacity: 0; }
   .db-stamp.slam { animation: slam .35s cubic-bezier(.3, 1.6, .5, 1) forwards; }
   @keyframes slam { from { opacity: 0; transform: rotate(-12deg) scale(2.4); } to { opacity: .85; transform: rotate(-12deg) scale(1); } }
   .typing-caret::after { content: "\2588"; margin-left: 2px; animation: rec .6s steps(1) infinite; }
@@ -223,10 +223,6 @@
 <body data-loader-wait>
 <?!= include('Loader') ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
-
-<!-- Real Audio Elements from Google Drive -->
-<audio id="sndKnock" preload="auto" src="https://drive.google.com/uc?export=download&id=1SPokAz52Y1m4WY_JeBp9HmbAhyZyLhND"></audio>
-<audio id="sndScare" preload="auto" src="https://drive.google.com/uc?export=download&id=19Nz0uFPLIm5Avu7ifXxYdWZHri4vMqE4"></audio>
 
 <div class="vignette" id="vignette" aria-hidden="true"></div>
 <div class="corner-notif" id="cornerNotif" role="status" aria-live="polite"></div>
@@ -451,10 +447,6 @@
     if (btn) btn.classList.toggle('is-muted', isMuted);
     if (icon) icon.textContent = isMuted ? '🔇' : '🔊';
     if (lbl) lbl.textContent = isMuted ? 'Muted' : 'Sound: ON';
-    ['sndKnock', 'sndScare'].forEach(id => {
-      const el = $(id);
-      if (el) el.muted = isMuted;
-    });
     if (isMuted && drone) droneStop();
   }
 
@@ -572,10 +564,43 @@
       line: 'Almost nobody encounters him. You were specifically selected.' }
   ];
 
-  /* Web Audio Synthesizer */
+  /* Web Audio: the real knock + scream files (GameApi.gs game_getSounds reads them from Drive), else synthesized ones.
+     Everything plays through one AudioContext unlocked by the "Begin" click, so phones allow it later without a tap. */
   let audio = null;
+  const soundRaw = {}, soundBuf = {};
   function openAudio() {
     try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch (e) { audio = null; }
+    decodeSounds();
+  }
+  function loadSounds() {
+    call('game_getSounds').then(r => {
+      Object.keys(r || {}).forEach(k => {
+        const m = String(r[k] || '').match(/^data:[^;]+;base64,(.+)$/);
+        if (!m) return;
+        const bin = atob(m[1]), bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        soundRaw[k] = bytes.buffer;
+      });
+      decodeSounds();
+    }).catch(() => { /* no files: the synthesized sounds play instead */ });
+  }
+  function decodeSounds() {
+    if (!audio) return;
+    Object.keys(soundRaw).forEach(k => {
+      const raw = soundRaw[k];
+      if (!raw || soundBuf[k]) return;
+      soundRaw[k] = null;
+      audio.decodeAudioData(raw, b => { soundBuf[k] = b; }, () => {});
+    });
+  }
+  /** Plays a loaded sound file; false if it isn't ready (the caller then synthesizes one). */
+  function playFile(k, delaySec, vol) {
+    if (isMuted || !audio || audio.state !== 'running' || !soundBuf[k]) return false;
+    const src = audio.createBufferSource(), g = audio.createGain();
+    src.buffer = soundBuf[k]; g.gain.value = vol || 1;
+    src.connect(g); g.connect(audio.destination);
+    src.start(audio.currentTime + (delaySec || 0));
+    return true;
   }
 
   function playStaticGlitch() {
@@ -591,12 +616,7 @@
 
   function scareSound(delaySec) {
     if (isMuted) return;
-    const scareSnd = $('sndScare');
-    if (scareSnd && scareSnd.src) {
-      scareSnd.currentTime = 0;
-      scareSnd.play().catch(() => {});
-      return;
-    }
+    if (playFile('scare', delaySec)) return;
     if (!audio || audio.state !== 'running') return;
     const t = audio.currentTime + delaySec, out = audio.createGain();
     out.gain.value = .5; out.connect(audio.destination);
@@ -614,12 +634,7 @@
 
   function playKnock() {
     if (isMuted) return;
-    const el = $('sndKnock');
-    if (el && el.src) {
-      el.currentTime = 0;
-      el.play().catch(() => {});
-      return;
-    }
+    if (playFile('knock')) return;
     if (!audio || audio.state !== 'running') return;
     const t = audio.currentTime;
     const osc = audio.createOscillator(); osc.type = 'triangle'; osc.frequency.setValueAtTime(115, t);
@@ -687,6 +702,26 @@
   let searchTimeLeft = 120, searchTimer = null;
   let roomsClearedOrder = [];
   let chosenMonster = MONSTERS[0];
+  try { chosenMonster = MONSTERS.find(x => x.key === sessionStorage.getItem('leads-game-monster')) || chosenMonster; } catch (e) {}
+  /* the professors' photos load while the rooms are played, so the jumpscare never flashes an empty frame */
+  const photoReady = {};
+  function preloadPhotos() {
+    Object.keys(PROF_PHOTOS).forEach(k => {
+      if (photoReady[k] || !PROF_PHOTOS[k]) return;
+      photoReady[k] = new Promise(res => { const im = new Image(); im.onload = im.onerror = () => res(); im.src = PROF_PHOTOS[k]; });
+    });
+  }
+  /** Shows a professor's photo; Drive sometimes fails a request, so one retry before giving up. */
+  function setPhoto(el, key) {
+    const url = PROF_PHOTOS[key] || '';
+    el.onerror = () => { if (el.dataset.retried === url) return; el.dataset.retried = url; setTimeout(() => { el.src = url + '&retry=1'; }, 700); };
+    el.src = url;
+  }
+  const whenVisible = () => new Promise(res => {
+    if (!document.hidden) return res();
+    const on = () => { if (!document.hidden) { document.removeEventListener('visibilitychange', on); res(); } };
+    document.addEventListener('visibilitychange', on);
+  });
   const haunted = 1 + Math.floor(Math.random() * 3);
 
   const roomDone = r => r.qs.every(q => answers[q.id]);
@@ -717,7 +752,7 @@
       if (searchTimeLeft <= 30) el.classList.add('urgent');
       if (searchTimeLeft <= 0) {
         clearInterval(searchTimer);
-        scareSound(0);
+        playStaticGlitch();   // the scream is saved for the real jumpscare
         say('2-MINUTE SEARCH WINDOW EXPIRED.', 'bad');
       }
     }, 1000);
@@ -813,7 +848,7 @@
 
   function handleRoomTimeout() {
     stopRoomTimer();
-    scareSound(0);
+    playStaticGlitch();   // the scream is saved for the real jumpscare
     currentRoom.qs.forEach(q => {
       if (!answers[q.id]) answers[q.id] = { a: 'NONE', ms: currentRoom.secs * 1000 };
     });
@@ -922,6 +957,11 @@
     clearInterval(searchTimer);
     $('searchBar').hidden = true;
     droneStop();
+    // pick the observer now, so its photo is surely loaded by the time the door opens
+    const roll = Math.random();
+    chosenMonster = MONSTERS.find(x => roll < x.upTo) || MONSTERS[0];
+    try { sessionStorage.setItem('leads-game-monster', chosenMonster.key); } catch (e) {}
+    preloadPhotos();
 
     show('twist');
     $('twistEyebrow').textContent = 'CAMERA 03 // HALLWAY EXTERIOR';
@@ -939,25 +979,32 @@
     $('twistMain').textContent = 'YOU WERE LOOKING FOR IT. IT WAS WATCHING YOU THE ENTIRE TIME.';
 
     await wait(2400);
+    const knockLen = soundBuf.knock ? soundBuf.knock.duration : 0;
     playKnock();
     $('twistSub').textContent = 'Knock.';
-    await wait(800);
-    playKnock();
-    $('twistSub').textContent = 'Knock. Knock.';
+    if (knockLen > 1.2) {
+      // the recording already has several knocks: play it once and let the text follow it
+      await wait(Math.min(knockLen, 4) * 500);
+      $('twistSub').textContent = 'Knock. Knock.';
+      await wait(Math.min(knockLen, 4) * 500);
+    } else {
+      await wait(800);
+      playKnock();
+      $('twistSub').textContent = 'Knock. Knock.';
+    }
 
     await wait(1400);
     $('twistMain').textContent = '“The sound comes from your office door. You look behind you and—”';
 
     await wait(1800);
+    await Promise.race([photoReady[chosenMonster.key] || Promise.resolve(), wait(3000)]);
+    await whenVisible();   // never scare an empty tab
     executeJumpscare();
   }
 
   function executeJumpscare() {
-    const roll = Math.random();
-    chosenMonster = MONSTERS.find(x => roll < x.upTo) || MONSTERS[0];
-
     const imgEl = $('jumpImg');
-    imgEl.src = PROF_PHOTOS[chosenMonster.key] || '';
+    setPhoto(imgEl, chosenMonster.key);
     imgEl.alt = chosenMonster.name;
 
     scareSound(0);
@@ -999,7 +1046,7 @@
     $('findings').textContent = ''; $('monsterLine').textContent = ''; $('monsterLine').classList.remove('in'); $('dbStamp').classList.remove('slam');
 
     const photoEl = $('monsterPhoto');
-    photoEl.src = PROF_PHOTOS[m.key] || '';
+    setPhoto(photoEl, m.key);
     photoEl.alt = m.name;
 
     const t0 = Date.now(), pad = n => String(n).padStart(2, '0');
@@ -1068,6 +1115,7 @@
     show('loading');
     try {
       applyMuteState();
+      loadSounds();   // in the background; ready long before the last room
       const data = await call('game_getInit');
       if (data.alreadyApplied) { window.open(BASE, '_top'); return; }
       if (!data.signedIn || !data.allowedDomain || !data.hasDraft) {
@@ -1091,6 +1139,7 @@
   /* Event Listeners */
   $('btnBegin').addEventListener('click', () => {
     openAudio();
+    preloadPhotos();
     playStaticGlitch();
     show('alert');
     setTimeout(() => {
