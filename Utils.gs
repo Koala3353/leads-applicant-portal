@@ -387,8 +387,9 @@ const HIDDEN_UNTIL_RELEASE = ['ACCEPTED', 'WAITLISTED', 'REJECTED', 'CONFIRMED']
 function getApplicantForPortal_(email) {
   const found = getApplicantByEmail_(email);
   if (!found || setting_('ResultsReleased') || HIDDEN_UNTIL_RELEASE.indexOf(String(found.data.Status)) < 0) return found;
-  // the core team's note is held back too: "Congrats!" under UNDER REVIEW would give the decision away
-  return { row: found.row, data: Object.assign({}, found.data, { Status: 'UNDER REVIEW', MessageToApplicant: '' }), masked: true };
+  // the core team's note is held back too: "Congrats!" under UNDER REVIEW would give the decision away. So are Payment
+  // and Requirements: a VERIFIED payment or APPROVED requirements set ahead of release would show those steps as done.
+  return { row: found.row, data: Object.assign({}, found.data, { Status: 'UNDER REVIEW', MessageToApplicant: '', Payment: 'NONE', Requirements: 'NONE', PaymentProof: '' }), masked: true };
 }
 
 /* ---------------- lookups ---------------- */

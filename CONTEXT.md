@@ -777,6 +777,11 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 **I'm stuck and new**
 > Explain this code line by line in simple words, then tell me the exact next step to get it working on my `/dev` link: [paste].
 
+## Logging and autosave notes (Oct 23 2026)
+- **Activity tab:** submits, uploads, reports, every WARN / ERROR / CHANGE are always written, even in a rush (only verbose routine rows are capped at 40/min). Hand edits logged as CHANGE: Status / Requirements / Payment (bulk pastes: one row per applicant with the new value), MessageToApplicant (also pasted blocks), **every Settings value** (e.g. `setting ResultsReleased: FALSE → TRUE by …`) and the Admins tab. Draft saves and referral searches go to Executions (routine) unless `ActivityVerbose` is ticked; a failed one still gets a row.
+- **Hidden decisions** also hide Payment, Requirements and PaymentProof (they read NONE) until `ResultsReleased`.
+- **Apply autosave strip** (`#saveBar`): sticky at the top of the form, shows *saved on this device / saving / saved to your account · time / offline*, with a **Save now** button (forces a sync, at most one every 4 s).
+
 ## Recent behaviour notes (Oct 2026)
 
 - **Game:** tapping an answer files it (no "Lock in" step); only open-text questions keep a Submit button. The screen darkens as each question's timer runs out (`#vignette`). There is no 2-minute search clock any more. The jumpscare plays the scare file at 30% volume (the noise layer carries it).

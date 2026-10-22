@@ -281,6 +281,11 @@ function build() {
   renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: !/Mobi/i.test(navigator.userAgent), powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  // a low-memory phone can drop the WebGL context mid-film: stop drawing into it and finish in 2D instead of a black screen
+  $('gl').addEventListener('webglcontextlost', e => {
+    e.preventDefault(); renderer.setAnimationLoop(null); running = false; THREE = null;
+    $('gl').style.display = 'none'; if (!ended) flatPlay();
+  }, { once: true });
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(42, 1, .05, 100);
   const resize = () => { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
@@ -451,12 +456,13 @@ function build() {
   const look = new THREE.Vector2();
   addEventListener('pointermove', e => { look.set(e.clientX / innerWidth * 2 - 1, e.clientY / innerHeight * 2 - 1); });
   const shake = new THREE.Vector3();
+  const BG = [new THREE.Color(0x050505), new THREE.Color(0xfefffe), new THREE.Color(0x0d0b08)];   // made once, not every frame
   // camera distance that fits a w x h subject on this screen (phones are tall, laptops are wide)
   const fit = (w, h) => { const v = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)); return Math.max(h / 2 / v, w / 2 / (v * camera.aspect)); };
   tick = t => {
     const W = t < 7, E = t >= 7 && t < 11, F = t >= 11;
     wall.visible = W; eye.visible = E; file.visible = F;
-    scene.background = new THREE.Color(E ? 0xfefffe : F ? 0x0d0b08 : 0x050505);
+    scene.background = BG[E ? 1 : F ? 2 : 0];
     // static: heavy at the start and at every cut
     const cutNoise = Math.max(0, 1 - Math.abs(t - 3) * 6) + Math.max(0, 1 - Math.abs(t - 7) * 7) + Math.max(0, 1 - Math.abs(t - 11) * 7);
     paintStatic(Math.min(.9, (t < 2.6 ? .55 - t * .12 : 0) + cutNoise * .8));
@@ -513,7 +519,7 @@ function build() {
       stamp.visible = t >= 11.55;
       const s = 2.6 - 1.6 * slam; stamp.scale.set(s, s, 1); stamp.position.z = .06 + (1 - slam) * 2.2; stamp.material.opacity = Math.min(1, slam * 3);
       if (t >= 11.85) fireOnce('slam', () => { thud(); flash(.25); shake.set(.12, .1, 0); });
-      shake.multiplyScalar(.86); camera.position.add(new THREE.Vector3((Math.random() - .5) * shake.x, (Math.random() - .5) * shake.y, 0));
+      shake.multiplyScalar(.86); camera.position.x += (Math.random() - .5) * shake.x; camera.position.y += (Math.random() - .5) * shake.y;
       if (t > 12.3) caption('Finding: ' + who.stamp.toLowerCase() + '.', 12.3, t, 30);
     }
   };

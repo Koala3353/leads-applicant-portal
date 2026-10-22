@@ -37,7 +37,9 @@
 
   /* analog grain + CRT scanlines over everything (decorative, never blocks clicks) */
   body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9000}
-  body::before{background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+  /* no mix-blend-mode here: blending a full-screen layer made phones re-composite the whole page on every animation frame
+     (a black line at 22% looks the same in normal blending) */
+  body::before{background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px)}
   body::after{opacity:.1;animation:grain .5s steps(4) infinite;inset:-40px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
 
   /* VHS tracking band rolling down the screen + a dark vignette at the edges */

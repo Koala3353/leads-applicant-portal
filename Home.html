@@ -470,11 +470,13 @@
   body.panic-tier-5 .dark{
     background:radial-gradient(circle 420px at var(--x,50%) var(--y,30%),rgba(255,20,20,.42),transparent 70%),
                radial-gradient(1100px 520px at 50% -12%,rgba(220,0,0,.6) 0%,transparent 62%),#110101;
-    animation:ambientSiren 1.6s ease-in-out infinite alternate;
   }
+  /* the siren pulses a red layer's opacity (GPU only), not a filter on the full-screen layer (repainted every frame) */
+  body.panic-tier-5 .dark::after{content:"";position:absolute;inset:0;background:rgba(255,30,30,.16);opacity:0;
+    animation:ambientSiren 1.6s ease-in-out infinite alternate;will-change:opacity}
   @keyframes ambientSiren{
-    0%{filter:brightness(1)}
-    100%{filter:brightness(1.35) saturate(1.4)}
+    0%{opacity:0}
+    100%{opacity:1}
   }
   body.panic-tier-5 .clock{box-shadow:var(--bevel-out),0 0 38px rgba(255,20,20,.85);border-color:#ff1111;animation:clockSiren .8s steps(2) infinite}
   @keyframes clockSiren{
@@ -638,6 +640,10 @@
     .path li::before{top:1px;left:0;margin-left:0}
     .path li::after{top:-13px;left:6px;width:2px;height:16px}
     footer{flex-direction:column;gap:8px}
+  }
+  /* phones: no drop-shadow glow on the ~28 watching eyes in the last hours (each one re-rendered at every twitch) */
+  @media (hover:none){
+    body.panic-tier-3 .reye,body.panic-tier-4 .reye,body.panic-tier-5 .reye{filter:sepia(1) hue-rotate(-50deg) saturate(4) brightness(.92)}
   }
 </style>
 </head>
@@ -898,8 +904,9 @@
     function draw() {
       queued = false;
       if (BRAND.effects.searchlight) { dark.style.setProperty('--x', x + 'px'); dark.style.setProperty('--y', y + 'px'); }
-      eyes.forEach(e => {
-        const r = e.getBoundingClientRect();
+      const rects = eyes.map(e => e.getBoundingClientRect());   // read every box first, then write: no layout per eye
+      eyes.forEach((e, i) => {
+        const r = rects[i];
         const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
         const d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 260);
         const away = e.classList.contains('wrong') && !e.classList.contains('caught') ? -1 : 1;   // the poster eye looks away from you
@@ -1945,7 +1952,7 @@
     setTimeout(() => { if (!ready) close(); }, 12000);   // blocked or offline: quietly drop it, they'll get it next time
   }
 
-  window.runServer('home_getContext').then(render, fail);   // retries when Google is busy (a rush of visitors)
+  window.runServer('home_getContext').then(render).catch(fail);   // .catch also covers a throw inside render   // retries when Google is busy (a rush of visitors)
 </script>
 </body>
 </html>

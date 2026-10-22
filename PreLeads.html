@@ -788,7 +788,7 @@
 
   function loadForm() {
     showState('state-loading');
-    window.runServer('preleads_getForm').then(handleContext, err => {
+    window.runServer('preleads_getForm').then(handleContext).catch(err => {   // .catch also covers a throw inside handleContext
       $('errorMessage').textContent = err && err.message ? err.message : 'Unable to connect to registry.';
       showState('state-error');
     });

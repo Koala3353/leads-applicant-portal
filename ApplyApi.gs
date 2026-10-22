@@ -82,9 +82,11 @@ function integrityFlags_(raw, clean) {
 
 /** The referral picker on Apply: matching codes as the applicant types (Referrals.gs referralSearch_). */
 function apply_referralSearch(q) {
-  const email = currentEmail_();
-  if (!email || !isAllowedDomain_(email)) return { codes: [], exact: false };
-  return referralSearch_(q, email);
+  return traced_('apply_referralSearch', 'apply', () => {
+    const email = currentEmail_();
+    if (!email || !isAllowedDomain_(email)) return { codes: [], exact: false };
+    return referralSearch_(q, email);
+  }, r => (r.codes || []).length + ' found' + (r.slow ? ' (rate-limited)' : ''));
 }
 
 /**
@@ -285,6 +287,11 @@ function apply_deleteDraft_(email) {
 
 /** Saves the signed-in applicant's draft. Public. No script lock in the normal case (see above). */
 function apply_saveDraft(data) {
+  return traced_('apply_saveDraft', 'apply', () => apply_saveDraft_(data), r =>
+    r.ok ? 'saved' : r.applied ? 'already applied' : r.consent ? 'no consent yet (browser only)' : r.busy ? 'busy' : 'not saved');
+}
+/** The save itself; an error it throws is logged by the traced_ around it (apply_saveDraft / game_saveProgress). */
+function apply_saveDraft_(data) {
   const email = currentEmail_();
   if (!email || !isAllowedDomain_(email)) return { ok: false };
   data = data || {};
@@ -297,36 +304,31 @@ function apply_saveDraft(data) {
     }
   });
 
-  try {
-    // Already applied? (A guard only: apply_submit_ re-checks inside its lock and clears the draft.)
-    if (getApplicantByEmail_(email)) return { ok: false, applied: true };
-    // Nothing is stored on our side until they've ticked the data-privacy consent (RA 10173). Before that the page
-    // keeps the draft in this browser only. Unticking it later deletes what we had.
-    if ('DataConsent' in clean && clean.DataConsent !== 'Y') {
-      apply_deleteDraft_(email);
-      return { ok: false, consent: true };
-    }
-    const sh = apply_draftSheet_();
-    // Merge onto the stored draft: Apply sends only its fields and the Game only GameAnswers, so replacing outright
-    // would wipe the other page's answers. The per-person lock stops two open tabs (Apply autosaving while the Game
-    // saves) from each reading the old draft and writing over the other's answers. It never waits on anyone else.
-    const lock = LockService.getUserLock();
-    if (!lock.tryLock(10000)) return { ok: false, busy: true };
-    try {
-      const have = apply_draftRow_(sh, email);
-      let stored = {};
-      if (have) { try { stored = JSON.parse(sh.getRange(have, 3).getValue() || '{}') || {}; } catch (e) { stored = {}; } }
-      // A save without the consent box (the Game sends only its answers) is kept only if consent is already on file
-      if (!('DataConsent' in clean) && stored.DataConsent !== 'Y') return { ok: false, consent: true };
-      const now = new Date();
-      const row = have || apply_ensureDraftRow_(sh, email);
-      sh.getRange(row, 2, 1, 2).setValues([[now, JSON.stringify(Object.assign({}, stored, clean))]]);
-      return { ok: true, savedAt: now.toISOString() };
-    } finally { lock.releaseLock(); }
-  } catch (err) {
-    activity_('draft_save', String(err && err.message), { level: 'ERROR', page: 'apply' });
-    throw err;
+  // Already applied? (A guard only: apply_submit_ re-checks inside its lock and clears the draft.)
+  if (getApplicantByEmail_(email)) return { ok: false, applied: true };
+  // Nothing is stored on our side until they've ticked the data-privacy consent (RA 10173). Before that the page
+  // keeps the draft in this browser only. Unticking it later deletes what we had.
+  if ('DataConsent' in clean && clean.DataConsent !== 'Y') {
+    apply_deleteDraft_(email);
+    return { ok: false, consent: true };
   }
+  const sh = apply_draftSheet_();
+  // Merge onto the stored draft: Apply sends only its fields and the Game only GameAnswers, so replacing outright
+  // would wipe the other page's answers. The per-person lock stops two open tabs (Apply autosaving while the Game
+  // saves) from each reading the old draft and writing over the other's answers. It never waits on anyone else.
+  const lock = LockService.getUserLock();
+  if (!lock.tryLock(10000)) return { ok: false, busy: true };
+  try {
+    const have = apply_draftRow_(sh, email);
+    let stored = {};
+    if (have) { try { stored = JSON.parse(sh.getRange(have, 3).getValue() || '{}') || {}; } catch (e) { stored = {}; } }
+    // A save without the consent box (the Game sends only its answers) is kept only if consent is already on file
+    if (!('DataConsent' in clean) && stored.DataConsent !== 'Y') return { ok: false, consent: true };
+    const now = new Date();
+    const row = have || apply_ensureDraftRow_(sh, email);
+    sh.getRange(row, 2, 1, 2).setValues([[now, JSON.stringify(Object.assign({}, stored, clean))]]);
+    return { ok: true, savedAt: now.toISOString() };
+  } finally { lock.releaseLock(); }
 }
 
 /** Clears the signed-in applicant's draft ("Discard draft"). No lock needed: nothing moves. */

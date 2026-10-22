@@ -308,6 +308,24 @@
     color: var(--muted);
     margin-top: 14px;
   }
+  /* the autosave strip: sticks to the top of the screen while they scroll the form, with a Save now button */
+  .savebar { position: sticky; top: calc(8px + env(safe-area-inset-top, 0px)); z-index: 30; display: flex; align-items: center; gap: 10px;
+    margin: 0 0 14px; padding: 6px 6px 6px 12px; background: var(--win, #c0c0c0); color: #000; box-shadow: var(--bevel-out), 3px 3px 0 #000;
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
+  .savebar-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #7a7a7a; box-shadow: inset 1px 1px 0 rgba(0,0,0,.5); }
+  .savebar[data-s="saved"] .savebar-dot { background: #0a8f2a; }
+  .savebar[data-s="local"] .savebar-dot { background: #c9a400; }
+  .savebar[data-s="sync"] .savebar-dot { background: #1084d0; animation: ld-pulse 1s ease-in-out infinite; }
+  .savebar[data-s="bad"] .savebar-dot { background: #c00000; }
+  .savebar[data-s="bad"] { box-shadow: var(--bevel-out), 3px 3px 0 #000, 0 0 0 2px #c00000; }
+  .savebar-text { flex: 1; min-width: 0; line-height: 1.3; }
+  .savebar-btn { flex: none; min-height: 34px; padding: 4px 12px; border: 0; background: var(--win, #c0c0c0); color: #000; cursor: pointer;
+    font: inherit; font-weight: 700; box-shadow: var(--bevel-out); }
+  .savebar-btn:active { box-shadow: var(--bevel-in); }
+  .savebar-btn:focus-visible { outline: 2px dotted #000; outline-offset: -5px; }
+  .savebar-btn:disabled { color: #808080; text-shadow: 1px 1px 0 #fff; cursor: default; }
+  @media (max-width: 420px) { .savebar { font-size: 0.66rem; letter-spacing: 0.03em; gap: 8px; } .savebar-btn { padding: 4px 9px; } }
+  @media (prefers-reduced-motion: reduce) { .savebar[data-s="sync"] .savebar-dot { animation: none; } }
   .draft-banner {
     display: flex;
     align-items: center;
@@ -580,6 +598,12 @@
     <div class="draft-banner" id="draftBanner" hidden>
       <span id="draftBannerText">[NOTE] Draft restored from your account.</span>
       <button type="button" class="btn-text" id="discardDraftBtn">Discard draft</button>
+    </div>
+
+    <div class="savebar" id="saveBar" data-s="idle">
+      <span class="savebar-dot" aria-hidden="true"></span>
+      <span class="savebar-text" id="saveBarText" role="status" aria-live="polite">Autosave on</span>
+      <button type="button" class="savebar-btn" id="saveNowBtn">Save now</button>
     </div>
 
     <div class="tape-container">
@@ -1074,7 +1098,15 @@
   let LOCAL_DRAFT = 'leads_apply_draft';
   try { localStorage.removeItem('leads_apply_draft'); } catch (e) { /* old shared key: gone */ }
   let draftDirty = false, draftSaving = false;
-  const setDraftState = t => { const el = $('draftState'); if (el) el.textContent = t; };
+  /* the long line under the form, and the short one in the sticky strip at the top (s: idle | local | sync | saved | bad) */
+  const setDraftState = (t, s, short) => {
+    const el = $('draftState'); if (el) el.textContent = t;
+    const bar = $('saveBar'), txt = $('saveBarText');
+    if (bar && s) bar.dataset.s = s;
+    if (txt && short && txt.textContent !== short) txt.textContent = short;
+    const btn = $('saveNowBtn'); if (btn) btn.disabled = s === 'sync';
+  };
+  const savedTime = iso => new Date(iso && !isNaN(Date.parse(iso)) ? iso : Date.now()).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
 
   function saveLocal(data) {
     try { localStorage.setItem(LOCAL_DRAFT, JSON.stringify({ data: data, savedAt: new Date().toISOString() })); } catch (e) { /* ignore */ }
@@ -1091,27 +1123,34 @@
      but the account copy only syncs after a pause in typing (6s, plus a little random spread), at most every 20s,
      only if something changed, and right away when the tab is hidden. The Proceed button always saves. */
   const DRAFT_IDLE_MS = 6000, DRAFT_MIN_GAP_MS = 45000;   // server sync at most every ~45s per person (each one is a Sheet write); this browser saves at once
-  let lastServerSave = 0, lastSentJson = '', localTimer = null;
+  let lastServerSave = 0, lastSentJson = '', localTimer = null, lastSavedShort = '', lastManual = 0;
 
   function saveDraft() {
     if (draftSaving) { draftDirty = true; return; }
     const data = readFormData();
     saveLocal(data);
     const json = JSON.stringify(data);
-    if (json === lastSentJson) { setDraftState('All changes saved.'); return; }   // nothing new to send
+    if (json === lastSentJson) { setDraftState('All changes saved.', 'saved', lastSavedShort || 'All changes saved'); return; }   // nothing new to send
     draftSaving = true; draftDirty = false;
     lastServerSave = Date.now(); lastSentJson = json;
-    setDraftState('Saving draft…');
+    setDraftState('Saving draft…', 'sync', 'Saving to your account…');
     google.script.run
       .withSuccessHandler(res => {
         draftSaving = false;
-        if (res && res.ok) setDraftState('Draft saved to your account at ' + new Date(res.savedAt).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' }) + '.');
-        else setDraftState(res && res.consent ? 'Saved in this browser only. Tick the data-privacy consent to save it to your account.' : 'Draft saved in this browser only.');
+        if (res && res.ok) {
+          lastSavedShort = 'Saved to your account · ' + savedTime(res.savedAt);
+          setDraftState('Draft saved to your account at ' + savedTime(res.savedAt) + '.', 'saved', lastSavedShort);
+        } else {
+          if (!(res && res.consent)) lastSentJson = '';   // not on the account yet: the next change (or Save now) tries again
+          if (res && res.consent) setDraftState('Saved in this browser only. Tick the data-privacy consent to save it to your account.', 'local', 'This device only · tick the consent box to save to your account');
+          else if (res && res.busy) setDraftState('Saved in this browser. Your account copy is busy; it will sync on your next change.', 'local', 'Saved on this device · account sync busy, try Save now');
+          else setDraftState('Draft saved in this browser only.', 'local', 'Saved on this device only');
+        }
         if (draftDirty) queueDraftSave();
       })
       .withFailureHandler(() => {
         draftSaving = false; lastSentJson = '';   // retry on the next change
-        setDraftState('Offline? Draft saved in this browser for now; it will sync when you keep typing.');
+        setDraftState('Offline? Draft saved in this browser for now; it will sync when you keep typing.', 'bad', 'Offline · saved on this device, not your account yet');
       })
       .apply_saveDraft(data);
   }
@@ -1119,9 +1158,19 @@
   function queueDraftSave() {
     clearTimeout(draftSaveTimer);
     clearTimeout(localTimer); localTimer = setTimeout(() => saveLocal(readFormData()), 600);   // this browser: almost instant
-    setDraftState('Saved in this browser. Syncing to your account shortly…');
+    setDraftState('Saved in this browser. Syncing to your account shortly…', 'local', 'Saved on this device · syncing soon');
     const wait = Math.max(DRAFT_IDLE_MS, DRAFT_MIN_GAP_MS - (Date.now() - lastServerSave)) + Math.random() * 3000;
     draftSaveTimer = setTimeout(saveDraft, wait);
+  }
+  /** Save now: skip the wait and send it to the account (a few seconds apart at most, so it can't flood the Sheet) */
+  function saveNow() {
+    if (draftSaving) return;
+    const since = Date.now() - lastManual;
+    if (since < 4000 && lastSentJson) { setDraftState('All changes saved.', 'saved', lastSavedShort || 'All changes saved'); return; }
+    lastManual = Date.now();
+    clearTimeout(draftSaveTimer); draftSaveTimer = null;
+    lastSentJson = '';   // send even if nothing changed: they asked for it
+    saveDraft();
   }
   // leaving the tab (switching apps on a phone counts): sync now if anything is waiting
   document.addEventListener('visibilitychange', () => {
@@ -1138,6 +1187,10 @@
       ? '[NOTE] Draft restored from your account.'
       : '[NOTE] Draft restored from this browser.';
     if (pick !== server) saveDraft();
+    else if (server.savedAt) {
+      lastSavedShort = 'Saved to your account · ' + savedTime(server.savedAt);
+      setDraftState('Draft saved to your account at ' + savedTime(server.savedAt) + '.', 'saved', lastSavedShort);
+    }
     return true;
   }
 
@@ -1801,6 +1854,7 @@
     queueDraftSave();
   });
 
+  $('saveNowBtn').addEventListener('click', saveNow);
   $('discardDraftBtn').addEventListener('click', () => {
     clearDraft(true);
     $('applyForm').reset();
@@ -1808,6 +1862,8 @@
     $('f-DataConsent').value = '';
     document.querySelectorAll('.prefilled').forEach(el => el.classList.remove('prefilled'));
     $('draftBanner').hidden = true;
+    lastSentJson = ''; lastSavedShort = '';
+    setDraftState('Draft discarded. New answers save automatically.', 'idle', 'Draft discarded · autosave on');
     updateCounters();
     updateProgress();
     clearErrors();

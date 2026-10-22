@@ -70,7 +70,7 @@ function game_saveProgress(answers) {
   return traced_('game_saveProgress', 'game', () => {
     const email = currentEmail_();
     if (!email || !isAllowedDomain_(email)) return { ok: false };
-    return apply_saveDraft({ GameAnswers: JSON.stringify({ v: 3, answers: game_cleanAnswers_(answers) }) });
+    return apply_saveDraft_({ GameAnswers: JSON.stringify({ v: 3, answers: game_cleanAnswers_(answers) }) });
   }, r => r.ok ? 'saved' : 'not saved');
 }
 

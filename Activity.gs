@@ -53,18 +53,20 @@ function activityBusy_() {
 // (Extensions › Apps Script › Executions), unless Settings › ActivityVerbose is ticked. Failures and slow calls
 // (over SLOW_MS) still get a row. Submits, uploads, referrals and every CHANGE are always written.
 const ROUTINE_EVENTS = ['page_view', 'apply_getForm', 'apply_lookupMember', 'game_getInit', 'game_saveProgress', 'game_getSounds',
-  'home_getContext', 'preleads_getForm', 'steps_get', 'client_info'];
+  'home_getContext', 'preleads_getForm', 'steps_get', 'client_info', 'apply_saveDraft', 'apply_referralSearch'];
 const SLOW_MS = 8000;
 
 function activity_(event, details, opts) {
   opts = opts || {};
   const level = opts.level || 'INFO';
-  if (level === 'INFO' && ROUTINE_EVENTS.indexOf(event) >= 0 && !verboseActivity_()) {
+  const routine = level === 'INFO' && ROUTINE_EVENTS.indexOf(event) >= 0;
+  if (routine && !verboseActivity_()) {
     console.log(event + ' ' + (opts.page || '') + (opts.ms !== undefined ? ' ' + opts.ms + 'ms' : '') + ' ' +
       (typeof details === 'string' ? details : JSON.stringify(details === undefined ? '' : details)).slice(0, 300));
     return;
   }
-  if (level === 'INFO' && activityBusy_()) return;   // WARN, ERROR and CHANGE are always written
+  // only the verbose routine rows are capped in a rush: submits, uploads, reports, WARN, ERROR and CHANGE are always written
+  if (routine && activityBusy_()) return;
   try {
     let who = '';
     if (opts.anon) who = 'visitor';   // page views: we don't need to know who looked, only that the page works

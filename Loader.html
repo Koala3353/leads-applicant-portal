@@ -18,6 +18,8 @@
   .ld{position:fixed;inset:0;z-index:9999;pointer-events:none;visibility:hidden;transition:visibility 0s linear .7s;overflow:hidden;
     --ink:#050505;--paper:#fefffe;--blue:#1d2bd0;--manila:#d3bc86}
   .ld.on{pointer-events:auto;visibility:visible;transition:visibility 0s}
+  /* hidden is not stopped: pause its grain, bars and dots while the page is in use (they resume on the next show) */
+  .ld:not(.on) *,.ld:not(.on) *::before,.ld:not(.on) *::after{animation-play-state:paused}
   .ld .s{position:absolute;inset:0;display:none}
   .ld[data-v="blink"] .s-blink,.ld[data-v="channel"] .s-channel,.ld[data-v="power"] .s-power,.ld[data-v="redact"] .s-redact,
   .ld[data-v="file"] .s-file,.ld[data-v="ebs"] .s-ebs{display:block}

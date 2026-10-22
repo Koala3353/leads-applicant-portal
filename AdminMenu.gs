@@ -204,6 +204,7 @@ function selectedIds_(sh) {
 function onEdit(e) {
   try { guardTrackEdit_(e); } catch (err) { console.error('onEdit: ' + (err && err.message)); }
   try { logMessageEdit_(e); } catch (err) { console.error('onEdit message: ' + (err && err.message)); }
+  try { logConfigEdit_(e); } catch (err) { console.error('onEdit config: ' + (err && err.message)); }
   // the member-list autofill is cached for an hour per person (apply_memberFor_): an edit to MemData clears those people
   try {
     const r = e && e.range, sh = r && r.getSheet();
@@ -231,12 +232,46 @@ function onEdit(e) {
 function logMessageEdit_(e) {
   if (!e || !e.range) return;
   const r = e.range, sh = r.getSheet();
-  if (sh.getName() !== SHEET.APPLICANTS || r.getRow() < 2 || r.getNumRows() !== 1 || r.getNumColumns() !== 1) return;
-  if (cols_()[r.getColumn() - 1] !== 'MessageToApplicant') return;
-  const id = String(sh.getRange(r.getRow(), col_('ApplicantID') + 1).getValue()).trim();
-  const to = String(r.getValue() || '').trim();
-  const who = String((e.user && e.user.getEmail && e.user.getEmail()) || currentEmail_() || 'unknown').toLowerCase();
-  logChange_(id, 'message (by hand)', '', to ? to.slice(0, 80) : '(cleared)', who);
+  if (sh.getName() !== SHEET.APPLICANTS || r.getLastRow() < 2) return;
+  const c = col_('MessageToApplicant') + 1;
+  if (c < r.getColumn() || c > r.getLastColumn()) return;
+  const who = editor_(e);
+  // one row per note, also when several were pasted at once (up to 100 rows)
+  const top = Math.max(2, r.getRow()), n = Math.min(r.getLastRow() - top + 1, 100);
+  const ids = sh.getRange(top, col_('ApplicantID') + 1, n, 1).getValues(), notes = sh.getRange(top, c, n, 1).getValues();
+  ids.forEach((x, i) => {
+    const to = String(notes[i][0] || '').trim();
+    logChange_(String(x[0]).trim(), 'message (by hand)', '', to ? to.slice(0, 80) : '(cleared)', who);
+  });
+}
+
+/** Who made a hand edit (blank on some accounts: Google only tells a simple trigger for people in the same domain). */
+function editor_(e) {
+  return String((e && e.user && e.user.getEmail && e.user.getEmail()) || currentEmail_() || 'unknown').toLowerCase();
+}
+
+/**
+ * Settings and Admins decide what applicants can see (ResultsReleased, PaymentOpen, the deadline...) and who is core
+ * team, so every hand edit there is logged as a CHANGE: "setting ResultsReleased: FALSE → TRUE by ...".
+ */
+function logConfigEdit_(e) {
+  if (!e || !e.range) return;
+  const r = e.range, sh = r.getSheet(), name = sh.getName();
+  if ((name !== SHEET.SETTINGS && name !== SHEET.ADMINS) || r.getLastRow() < 2) return;
+  const who = editor_(e);
+  if (name === SHEET.ADMINS) {
+    const v = r.getDisplayValues().map(x => x.join(' ').trim()).filter(Boolean).join(', ');
+    logChange_('', 'admins (by hand)', r.getNumRows() === 1 && r.getNumColumns() === 1 ? String(e.oldValue || '') : '', (v || '(cleared)') + ' at ' + r.getA1Notation(), who);
+    return;
+  }
+  if (r.getColumn() > 2 || r.getLastColumn() < 2) return;   // only the value column (B); help text in C isn't a setting
+  const top = Math.max(2, r.getRow()), n = Math.min(r.getLastRow() - top + 1, 60);
+  const rows = sh.getRange(top, 1, n, 2).getDisplayValues();
+  const single = r.getNumRows() === 1 && r.getNumColumns() === 1;
+  rows.forEach(x => {
+    const key = String(x[0]).trim();
+    if (key) logChange_('', 'setting ' + key, single ? String(e.oldValue === undefined ? '' : e.oldValue) : '?', String(x[1]), who);
+  });
 }
 
 function guardTrackEdit_(e) {
@@ -251,7 +286,15 @@ function guardTrackEdit_(e) {
 
   // Pasting / dragging over many cells: we can't tell the old values, so just log it loudly.
   if (r.getNumRows() !== 1 || r.getNumColumns() !== 1) {
-    logChange_('', 'bulk hand edit (not checked)', '', r.getA1Notation(), who || 'unknown');
+    // the old values are gone, but record what each row was set to (up to 200 rows), not just the range
+    const top = Math.max(2, r.getRow()), n = Math.min(r.getLastRow() - top + 1, 200);
+    const ids = sh.getRange(top, col_('ApplicantID') + 1, n, 1).getValues();
+    TRACK_COLS.forEach(name => {
+      const c = col_(name) + 1;
+      if (c < r.getColumn() || c > r.getLastColumn()) return;
+      const vals = sh.getRange(top, c, n, 1).getValues();
+      ids.forEach((x, i) => { if (String(x[0]).trim()) logChange_(String(x[0]).trim(), name.toLowerCase() + ' (bulk hand edit, not checked)', '?', String(vals[i][0]), who || 'unknown'); });
+    });
     ss.toast('Bulk edits to Status/Requirements/Payment are not checked or auto-confirmed. Use LEADS → Open review panel for many rows.', 'LEADS', 8);
     return;
   }
