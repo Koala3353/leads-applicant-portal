@@ -264,7 +264,7 @@
     <div class="winbar red"><span>WARNING.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
     <p class="eyebrow">&#9888; SYSTEM ALERT</p>
     <h2>&#9888; WARNING</h2>
-    <p>Each question has its own timer. Tap an answer and it's filed. Finish it in one sitting: there's no pausing or restarting.</p>
+    <p>Each question has its own timer. Tap an answer and it's filed. Type the open question, then press Submit. Finish it in one sitting: there's no pausing or restarting.</p>
     <div class="actions"><button class="btn" type="button" id="btnBegin">BEGIN</button></div>
   </div>
 
@@ -283,7 +283,7 @@
       <p class="eyebrow">STEP 2 OF 2 // SURVEILLANCE</p>
       <h2>Pick a camera</h2>
       <p><em>“It’s late at Ateneo, and you’re alone in the office. The CCTV monitors switch on by themselves. There’s a monster somewhere in the building. Check each camera and search every room until you find it.”</em></p>
-      <p>Three selectable feeds. Rooms 1 and 3 give you <strong>10 seconds</strong> for the set; Room 2 gives you <strong>20 seconds</strong> for the set. Complete all three cameras to unlock submission.</p>
+      <p>Three selectable feeds. Each question has <strong>10 seconds</strong>. The open question in Room 2 has <strong>20 seconds</strong>. Complete all three cameras to unlock submission.</p>
       <div class="feeds" id="feeds"></div>
       <div class="mstatus" aria-hidden="true">
         <div><span>Mission status</span><b data-ms="status">IN PROGRESS</b></div>
@@ -360,7 +360,7 @@
     <p class="mono" style="color:var(--glow)">PASSCODE HINT: Leadership Enhancement and Development Seminar. Five letters.</p>
     <form class="pass-box" id="passForm">
       <input type="text" class="pass-input" id="passInput" placeholder="ENTER PASSCODE" maxlength="10" autocomplete="off" required>
-      <button class="btn" type="submit" id="btnPassSubmit">ACCESS GRANTED</button>
+      <button class="btn" type="submit" id="btnPassSubmit">UNLOCK</button>
     </form>
     <p class="mono bad" id="passError" hidden>INCORRECT PASSCODE. TRY AGAIN.</p>
   </div>
@@ -712,6 +712,25 @@
   const haunted = 1 + Math.floor(Math.random() * 3);
 
   const roomDone = r => r.qs.every(q => answers[q.id]);
+
+  /* Every answer is kept in this browser the moment it's given (the account copy syncs once per room), plus the running
+     question's end time, so a reload continues where they were instead of replaying a room with fresh timers. */
+  let LOCAL = {}, LOCAL_KEY = '';
+  const IDS = ROOMS.reduce((a, r) => a.concat(r.qs.map(q => q.id)), []);
+  function readLocal() {
+    try {
+      const o = JSON.parse(localStorage.getItem(LOCAL_KEY) || 'null');
+      if (!o || o.v !== 3 || typeof o.answers !== 'object') return {};
+      const ok = {};
+      IDS.forEach(id => { const x = o.answers[id]; if (x && typeof x.a === 'string') ok[id] = { a: x.a.slice(0, 250), ms: Number(x.ms) || 0 }; });
+      return { answers: ok, cur: o.cur && IDS.indexOf(o.cur.id) >= 0 ? o.cur : null };
+    } catch (e) { return {}; }
+  }
+  function keepLocal() {
+    if (!LOCAL_KEY) return;
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ v: 3, answers: answers, cur: LOCAL.cur || null })); } catch (e) { /* storage full or blocked */ }
+  }
+  function dropLocal() { try { if (LOCAL_KEY) localStorage.removeItem(LOCAL_KEY); } catch (e) { /* ignore */ } }
   const answeredCount = () => Object.keys(answers).length;
 
   /* Live Feed ticker */
@@ -728,6 +747,9 @@
   }
   setInterval(paintStatus, 1000);
 
+
+  /** the longer timer of a room's open (typed) question, or 0 */
+  const openSecs = r => (r.qs.find(q => q.secs) || {}).secs || 0;
 
   /* Feeds */
   function renderFeeds() {
@@ -750,7 +772,7 @@
           '<span class="feed-nosig">NO SIGNAL</span><span class="feed-stamp">CLEARED</span>' +
         '</span></span>' +
         '<span class="feed-info" aria-hidden="true"><span class="feed-name">' + r.name + '</span>' +
-          '<span class="feed-chips"><span class="chip">' + r.qs.length + ' QUESTIONS</span><span class="chip time">' + r.secs + 's / QUESTION</span></span>' +
+          '<span class="feed-chips"><span class="chip">' + r.qs.length + ' QUESTIONS</span><span class="chip time">' + r.secs + 's / QUESTION' + (openSecs(r) ? ' · OPEN Q ' + openSecs(r) + 's' : '') + '</span></span>' +
           '<span class="feed-go">' + (done ? 'Done' : 'View feed \u25B8') + '</span></span>';
       b.addEventListener('click', () => { if (!roomDone(r)) enterRoom(r); });
       wrap.appendChild(b);
@@ -784,23 +806,22 @@
     say('');
     roomTimedOut = false;
     renderQuestion();   // starts the question's own timer
-    kuya('nervous', 'Camera ' + r.n + '. ' + r.secs + ' seconds per question. The clock is running.');
+    kuya('nervous', 'Camera ' + r.n + '. ' + r.secs + ' seconds per question' + (openSecs(r) ? ', ' + openSecs(r) + ' for the open one' : '') + '. The clock is running.');
     $('state-room').scrollIntoView({ block: 'start' });
   }
 
-  /* Room Timer per set */
-  function startRoomTimer(secs) {
+  /* The question's timer. It runs on the clock, not on ticks, so it keeps counting while the tab is hidden (switching
+     apps or tabs doesn't pause it) and a reload carries on with the time that was left (see keepLocal). */
+  function startRoomTimer(secs, until) {
     stopRoomTimer();
-    roomTimeLeft = secs;
-    paintRoomTimer(secs);
-    roomTimer = setInterval(() => {
-      if (document.hidden) return;
-      roomTimeLeft--;
+    const end = until || Date.now() + secs * 1000;
+    const tick = () => {
+      roomTimeLeft = Math.ceil((end - Date.now()) / 1000);
       paintRoomTimer(secs);
-      if (roomTimeLeft <= 0) {
-        handleRoomTimeout();
-      }
-    }, 1000);
+      if (roomTimeLeft <= 0) handleRoomTimeout();
+    };
+    roomTimer = setInterval(tick, 250);
+    tick();
   }
 
   function stopRoomTimer() {
@@ -822,20 +843,39 @@
   let roomTimedOut = false;
   function handleRoomTimeout() {
     stopRoomTimer();
+    if (advancing) return;   // a tap already filed this question: it counts
     playStaticGlitch();   // the scream is saved for the real jumpscare
     const q = currentRoom.qs[qIndex];
     if (!answers[q.id]) {
       const typed = q.isText && $('openGhostInput') ? $('openGhostInput').value.trim() : '';
       answers[q.id] = { a: typed || 'NONE', ms: (q.secs || currentRoom.secs) * 1000 };
       if (!typed) roomTimedOut = true;
+      keepLocal();
     }
-    if (qIndex < currentRoom.qs.length - 1) {
-      qIndex++;
-      renderQuestion();
-      say('Time ran out on the last question. It was filed as no answer.', 'bad');
-    } else {
-      finishRoom(roomTimedOut);
-    }
+    nextQuestion();
+    if (state() === 'room') say('Time ran out on the last question. It was filed as no answer.', 'bad');
+  }
+
+  /** after a question is filed: the next one, or the end of the room */
+  function nextQuestion() {
+    if (qIndex < currentRoom.qs.length - 1) { qIndex++; renderQuestion(); }
+    else finishRoom(roomTimedOut);   // saves once per room
+  }
+  const state = () => { const el = document.querySelector('.state.show'); return el ? el.id.replace('state-', '') : ''; };
+
+  /** A tapped (or Enter / Space) choice: filed at once, so a tap just before the timer runs out still counts; the
+      next question follows after a short beat so the highlight shows. */
+  let advancing = false;
+  function fileChoice() {
+    if (advancing) return;
+    const q = currentRoom.qs[qIndex], picked = $('qForm').querySelector('input[name="opt"]:checked');
+    if (!picked) { say('Pick an answer first.', 'bad'); return; }
+    advancing = true;
+    stopRoomTimer();
+    say('');
+    answers[q.id] = { a: picked.value, ms: Date.now() - qStartTime };
+    keepLocal();
+    setTimeout(() => { advancing = false; nextQuestion(); }, 220);
   }
 
   function renderQuestion() {
@@ -868,34 +908,26 @@
     }
     $('lockBtn').textContent = qIndex < currentRoom.qs.length - 1 ? 'Submit answer' : 'Submit and clear room';
     $('lockBtn').hidden = !q.isText;   // choice questions: tapping an answer files it (no lock-in step)
-    qStartTime = Date.now();
-    startRoomTimer(q.secs || currentRoom.secs);
+    // a reload mid-question picks up the time that was left, never a fresh timer (an expired one times out at once)
+    const secs = q.secs || currentRoom.secs, was = LOCAL.cur && LOCAL.cur.id === q.id ? Number(LOCAL.cur.until) || 0 : 0;
+    const until = was ? Math.max(was, Date.now()) : Date.now() + secs * 1000;
+    qStartTime = until - secs * 1000;
+    LOCAL.cur = { id: q.id, until: until }; keepLocal();
+    startRoomTimer(secs, until);
   }
 
   function lockAnswer(e) {
     e.preventDefault();
     const q = currentRoom.qs[qIndex];
-    let val = '';
-    if (q.isText) {
-      const area = $('openGhostInput');
-      val = area ? area.value.trim() : '';
-      if (!val) { say('Please provide an answer before time expires.', 'bad'); return; }
-    } else {
-      const picked = $('qForm').querySelector('input[name="opt"]:checked');
-      if (!picked) { say('Pick an answer first.', 'bad'); return; }
-      val = picked.value;
-    }
-
+    if (!q.isText) return fileChoice();
+    if (advancing) return;
+    const area = $('openGhostInput'), val = area ? area.value.trim() : '';
+    if (!val) { say('Please provide an answer before time expires.', 'bad'); return; }
+    stopRoomTimer();
     say('');
     answers[q.id] = { a: val, ms: Date.now() - qStartTime };
-
-    if (qIndex < currentRoom.qs.length - 1) {
-      qIndex++;
-      renderQuestion();
-    } else {
-      stopRoomTimer();
-      finishRoom(roomTimedOut);   // saves once per room
-    }
+    keepLocal();
+    nextQuestion();
   }
 
   function finishRoom(hadTimeout) {
@@ -945,7 +977,7 @@
     preloadPhotos();
 
     show('twist');
-    $('twistEyebrow').textContent = 'CAMERA 03 // HALLWAY EXTERIOR';
+    $('twistEyebrow').textContent = 'CAMERA 0' + (roomsClearedOrder[roomsClearedOrder.length - 1] || 3) + ' // HALLWAY EXTERIOR';
     $('twistMain').textContent = '“You reach the final camera. The hallway outside your office is empty.”';
     $('twistSub').textContent = '';
 
@@ -1097,6 +1129,7 @@
         $('doneId').textContent = res.id;
         $('doneRank').textContent = watchRank(res.id);
         try { localStorage.removeItem('leads_apply_draft:' + String(window.__email || '').toLowerCase()); } catch (e) { /* ignore */ }
+        dropLocal();
         if (res.referralCode) {
           $('doneRef').textContent = BRAND.referral.gameDone.replace('{code}', res.referralCode);
           $('doneRef').hidden = false;
@@ -1113,7 +1146,12 @@
       }
       throw new Error('No response from the server.');
     } catch (e) {
-      say('Error filing: ' + ((e && e.message) || e), 'bad');
+      const m = (e && e.message) || String(e);
+      if (/just closed/i.test(m)) {   // the deadline passed while they played: retrying can never work
+        go(BASE, 'Go to the hub', 'Applications closed before your file was sent. If you think this is wrong, message the core team.');
+        return;
+      }
+      say('Error filing: ' + m, 'bad');
       btn.disabled = false; btn.textContent = 'Try filing again';
     } finally {
       if (window.Loader) Loader.hide();
@@ -1128,11 +1166,19 @@
       loadSounds();   // in the background; ready long before the last room
       const data = await call('game_getInit');
       window.__email = data.email || '';
-      if (data.alreadyApplied) { go(BASE, 'Go to the hub', 'You already applied. Your file is on record.'); return; }
+      if (data.alreadyApplied) {
+        try { localStorage.removeItem('leads-game:' + String(data.email || '').toLowerCase()); } catch (e) { /* ignore */ }
+        go(BASE, 'Go to the hub', 'You already applied. Your file is on record.'); return;
+      }
+      if (data.isOpen === false) { go(BASE, 'Go to the hub', 'Applications are closed. Files can no longer be sent.'); return; }
       if (!data.signedIn || !data.allowedDomain || !data.hasDraft) {
         go(BASE + '?page=apply', 'Open the application', 'Fill in the application form first. The assessment comes after it.'); return;
       }
-      answers = data.saved || {};
+      LOCAL_KEY = 'leads-game:' + String(data.email || '').toLowerCase();
+      LOCAL = readLocal();
+      answers = Object.assign({}, data.saved || {}, LOCAL.answers || {});   // this browser's copy is the newer one
+      roomsClearedOrder = ROOMS.filter(roomDone).map(r => r.n);   // room messages count the rooms already done
+      if (Object.keys(LOCAL.answers || {}).some(k => !(data.saved || {})[k])) saveProgress();   // sync what the account missed
       window.__nick = data.nickname || '';
       paintStatus();
 
@@ -1161,12 +1207,18 @@
   });
 
   $('qForm').addEventListener('submit', lockAnswer);
-  // Tap an option = answer it. A short beat so the highlight shows before the next question.
-  let advancing = false;
+  // Tap an option = answer it. Arrow keys only move between the answers (they change the selection too, which used to
+  // file whatever they passed over); Enter or Space files the one they're on.
+  let keyNav = false;
+  $('qOpts').addEventListener('keydown', e => {
+    if (e.target.name !== 'opt') return;
+    if (/^Arrow/.test(e.key)) { keyNav = true; return; }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.target.checked = true; fileChoice(); }
+  });
   $('qOpts').addEventListener('change', e => {
-    if (e.target.name !== 'opt' || advancing) return;
-    advancing = true;
-    setTimeout(() => { advancing = false; lockAnswer({ preventDefault() {} }); }, 220);
+    if (e.target.name !== 'opt') return;
+    if (keyNav) { keyNav = false; return; }
+    fileChoice();
   });
   $('btnReturnCameras').addEventListener('click', () => {
     show('hub');

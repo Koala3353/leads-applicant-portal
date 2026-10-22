@@ -12,6 +12,7 @@ const GAME_QUESTION_IDS = [
 ];
 
 const GAME_CHOICES = ['A', 'B', 'C', 'NONE'];
+const THIS_OR_THAT = ['Q14', 'Q15', 'Q16'];   // two options only
 
 function game_getInit() {
   return traced_('game_getInit', 'game', game_getInit_, r =>
@@ -33,6 +34,7 @@ function game_getInit_() {
     allowedDomain: email ? isAllowedDomain_(email) : false,
     alreadyApplied: found ? { id: found.data.ApplicantID, status: found.data.Status } : null,
     hasDraft: !!(draft && draft.data),
+    isOpen: isOpen_(),   // closed: the page says so instead of letting them play a game they can't file
     nickname: draft && draft.data ? String(draft.data.Nickname || '').slice(0, 30) : '',
     saved: saved
   };
@@ -57,7 +59,8 @@ function game_cleanAnswers_(answers) {
       out[id] = { a: val || 'NONE', ms: safeMs };
     } else {
       const choice = String(x.a || '').toUpperCase();
-      if (GAME_CHOICES.indexOf(choice) >= 0) {
+      const allowed = THIS_OR_THAT.indexOf(id) >= 0 ? ['A', 'B', 'NONE'] : GAME_CHOICES;   // Q14-Q16 have no C
+      if (allowed.indexOf(choice) >= 0) {
         out[id] = { a: choice, ms: safeMs };
       }
     }

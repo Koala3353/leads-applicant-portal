@@ -399,7 +399,7 @@ const BRAND = {
     hello: {                               // first line on each page
       home:  ['nervous', 'Camera 01 is on. You are being observed. Please continue as normal.'],
       apply: ['thinking', 'This is your intake file. Answer honestly. I am only taking notes.'],
-      game:  ['nervous', 'Three feeds. Two of them are empty. Choose a camera when you are ready.'],
+      game:  ['nervous', 'Three feeds. Something is in one of them. Choose a camera when you are ready.'],
       pay:   ['thinking', 'Scan the code. Pay. Upload the proof. I will keep a copy in your file.'],
       reqs:  ['thinking', 'These are the forms we need from you. Fill in each one. Take your time. I will wait.'],
       ga:    ['happy', 'Your first assembly. Put it on your calendar. We will be counting heads.'],
