@@ -100,6 +100,9 @@ const clean = (v, n) => String(v || '').replace(/[^\w .'ñÑ-]/g, '').slice(0, n
 window.addEventListener('message', e => {
   const d = e.data || {};
   if (d.type !== 'leads-reveal-init') return;
+  // only the portal (Apps Script serves it from *.googleusercontent.com) may say who this is, so nobody can frame
+  // this page elsewhere and fake an acceptance
+  if (!/^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(e.origin)) return;
   who.id = clean(d.id, 12).toUpperCase(); who.nick = clean(d.nick, 24);
   who.stamp = d.stamp === 'ACCEPTED' ? 'ACCEPTED' : 'REVIEWED';   // only two words are ever drawn
   paintIdentity();
