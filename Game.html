@@ -283,7 +283,7 @@
       <p class="eyebrow">STEP 2 OF 2 // SURVEILLANCE</p>
       <h2>Pick a camera</h2>
       <p><em>“It’s late at Ateneo, and you’re alone in the office. The CCTV monitors switch on by themselves. There’s a monster somewhere in the building. Check each camera and search every room until you find it.”</em></p>
-      <p>Three selectable feeds. Each question has <strong>10 seconds</strong>. The open question in Room 2 has <strong>20 seconds</strong>. Complete all three cameras to unlock submission.</p>
+      <p>Three selectable feeds. Each question has <strong>10 seconds</strong>. The open question in the Hallway has <strong>20 seconds</strong>. Complete all three cameras to unlock submission.</p>
       <div class="feeds" id="feeds"></div>
       <div class="mstatus" aria-hidden="true">
         <div><span>Mission status</span><b data-ms="status">IN PROGRESS</b></div>
@@ -444,9 +444,9 @@
     applyMuteState();
   }
 
-  /* The 16 Questions across 3 rooms */
+  /* The 16 Questions across 3 rooms. name = the place the camera shows (feed + room title); label = the question set */
   const ROOMS = [
-    { n: 1, name: 'Fear', label: 'Room 1: Fear', secs: 10, qs: [
+    { n: 1, name: 'Classroom', label: 'Room 1: Fear', secs: 10, qs: [
       { id: 'Q1', text: 'You hear footsteps approaching from the other side of the door. What do you fear most?', opts: {
         A: 'The footsteps suddenly stop outside your door',
         B: 'The doorknob slowly begins to turn',
@@ -464,7 +464,7 @@
         B: 'Hearing footsteps stop outside your stall and stay there',
         C: 'Looking up and seeing someone watching you over the divider' } }
     ] },
-    { n: 2, name: 'Random', label: 'Room 2: Random', secs: 10, qs: [
+    { n: 2, name: 'Hallway', label: 'Room 2: Random', secs: 10, qs: [
       { id: 'Q5', text: 'Which situation would stress you out the most?', opts: {
         A: 'Being late for something important',
         B: 'Having to talk to a stranger',
@@ -483,7 +483,7 @@
         C: 'Finding out the food I wanted is sold out' } },
       { id: 'Q9', text: 'If you were a ghost, who would you haunt?', isText: true, secs: 20 }   // typing takes longer
     ] },
-    { n: 3, name: 'Personality', label: 'Room 3: Personality', secs: 10, qs: [
+    { n: 3, name: 'Security Room', label: 'Room 3: Personality', secs: 10, qs: [
       { id: 'Q10', text: 'When you join a group of people you don’t know, you usually…', opts: {
         A: 'Introduce myself and start talking',
         B: 'Observe first, then join the conversation',
