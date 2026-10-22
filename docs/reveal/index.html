@@ -39,6 +39,8 @@
     font:800 clamp(18px,4.2vw,40px)/1.15 'JetBrains Mono',monospace;letter-spacing:-.02em;text-transform:uppercase;
     text-shadow:-2px 0 rgba(229,0,0,.6),2px 0 rgba(0,15,240,.75);min-height:2.4em}
   #cap.ink{color:var(--black);text-shadow:-1px 0 rgba(229,0,0,.45),1px 0 rgba(0,15,240,.45)}
+  #cap.ink:not(:empty){width:auto;max-width:92vw;padding:.25em .6em;background:rgba(254,255,254,.92);box-shadow:4px 4px 0 var(--black)}
+  #cap:not(.ink):not(:empty){background:rgba(5,5,5,.55);padding:.2em .5em;width:auto;max-width:92vw}
   #cap .cur{display:inline-block;width:.55em;height:.95em;background:currentColor;vertical-align:-.1em;margin-left:.1em;animation:blink .8s steps(1) infinite}
   .ctl{position:fixed;z-index:9;bottom:max(14px,env(safe-area-inset-bottom));display:flex;gap:8px;right:14px}
   .ctl button,.end a,.end button{font:700 13px/1 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;
@@ -482,7 +484,11 @@ function build() {
       const open = t < 7.25 ? .04 : t < 7.9 ? span(t, 7.25, 7.9) : t < 8.4 ? 1 - .92 * Math.sin(span(t, 7.9, 8.4) * Math.PI) : 1;   // opens, one slow blink
       lidGroup.scale.y = Math.max(.04, open); lashes.scale.y = .6 + open * .4;
       const push = span(t, 9.4, 10.95);
-      const wide = fit(7.8, 5.4), close = .07 + fit(2.1, 2.1) * .85;
+      // the eye sits in the upper part of the frame so the caption below never crosses its ink line;
+      // it slides back to centre as the camera pushes into the iris
+      const lift = 1.25 * (1 - push);
+      eye.position.y = lift;
+      const wide = fit(7.8, 5.4 + lift * 2.4), close = .07 + fit(2.1, 2.1) * .85;
       camera.position.set(0, 0, wide - push * (wide - close)); camera.lookAt(0, 0, 0);
       // the iris watches the pointer (or drifts), then settles dead centre: it's looking at you
       const settle = span(t, 8.6, 9.2);
