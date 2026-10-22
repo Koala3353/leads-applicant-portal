@@ -83,7 +83,7 @@
   <div class="card">
     <p class="k" id="endK">Transmission ends</p>
     <p class="t" id="endT">Your file is ready</p>
-    <p class="s" id="endS">You were never being hunted. You were being asked to look.</p>
+    <p class="s" id="endS">Come and see what we found.</p>
     <div class="row"><button type="button" class="go" id="open">Open your file</button><button type="button" id="replay">Replay</button></div>
   </div>
 </div>
@@ -108,8 +108,11 @@ const $ = id => document.getElementById(id);
 function paintIdentity() {
   $('subject').textContent = 'SUBJECT ' + (who.id || '----');
   if (typeof redrawFile === 'function') redrawFile();
+  // brand book voice: short, second person, case-file words, the reveal saved for the last line, ending on an invitation
+  const num = who.id ? who.id.replace('APP-', '') : '000';
+  $('endK').textContent = 'Subject ' + num + ' // finding: ' + who.stamp.toLowerCase();
   $('endT').textContent = who.stamp === 'ACCEPTED' ? 'Welcome to LEADS' : 'Your file is ready';
-  $('endK').textContent = who.stamp === 'ACCEPTED' ? (who.nick ? who.nick + ', you are in' : 'You are in') : 'Transmission ends';
+  $('endS').textContent = who.stamp === 'ACCEPTED' ? 'Your file is ready. Come and see yourself.' : 'Come and see what we found.';
 }
 
 /* ============================== clock, captions ============================== */
@@ -119,6 +122,7 @@ let capText = '', capShown = -1, capInk = false;
 function caption(text, t0, t, cps) {   // types text out from t0 at cps characters a second
   const n = Math.max(0, Math.min(text.length, Math.floor((t - t0) * (cps || 34))));
   if (text === capText && n === capShown) return;
+  if (text === capText && n > capShown && n <= text.length && text[n - 1] !== ' ') typeTick();
   capText = text; capShown = n;
   $('cap').innerHTML = '';
   $('cap').append(document.createTextNode(text.slice(0, n)));
@@ -127,31 +131,58 @@ function caption(text, t0, t, cps) {   // types text out from t0 at cps characte
 function captionClear() { if (capText !== '') { capText = ''; capShown = -1; $('cap').textContent = ''; } }
 
 /* ============================== sound (only after a tap: browsers block autoplay audio) ============================== */
-let ac = null, master = null, drone = null;
+let ac = null, master = null, drone = null, hiss = null, soundIsOn = false;
+// Small speakers can't play the 55 Hz hum this started with, so the bed is made of things they can play:
+// tape hiss, a mains hum with harmonics, a faint CRT whine, plus typing ticks, static on every cut and a stamp thud.
 function soundOn() {
-  if (ac) { master.gain.value = master.gain.value ? 0 : .5; return !!master.gain.value; }
-  ac = new (window.AudioContext || window.webkitAudioContext)();
-  master = ac.createGain(); master.gain.value = .5; master.connect(ac.destination);
-  drone = ac.createGain(); drone.gain.value = .0; drone.connect(master);
-  [55, 82.4, 110.3].forEach((f, i) => { const o = ac.createOscillator(); o.type = i ? 'sine' : 'sawtooth'; o.frequency.value = f;
-    const g = ac.createGain(); g.gain.value = i ? .08 : .03; o.connect(g); g.connect(drone); o.start(); });
-  return true;
+  if (!ac) {
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+    master = ac.createGain(); master.gain.value = 0; master.connect(ac.destination);
+    drone = ac.createGain(); drone.gain.value = 0; drone.connect(master);
+    const hum = ac.createBiquadFilter(); hum.type = 'lowpass'; hum.frequency.value = 1400; hum.connect(drone);
+    [[120, 'sawtooth', .05], [180, 'triangle', .05], [240, 'sine', .04], [7800, 'sine', .004]].forEach(([f, type, g]) => {
+      const o = ac.createOscillator(), v = ac.createGain(); o.type = type; o.frequency.value = f; v.gain.value = g;
+      o.connect(v); v.connect(f > 5000 ? drone : hum); o.start();
+    });
+    const nb = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), nd = nb.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    const src = ac.createBufferSource(); src.buffer = nb; src.loop = true;
+    const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2500;
+    hiss = ac.createGain(); hiss.gain.value = .03; src.connect(hp); hp.connect(hiss); hiss.connect(master); src.start();
+  }
+  soundIsOn = !soundIsOn;
+  if (ac.state === 'suspended') ac.resume();   // Safari / some Chrome builds start it suspended even after a tap
+  master.gain.setTargetAtTime(soundIsOn ? .8 : 0, ac.currentTime, .05);
+  if (soundIsOn) drone.gain.setTargetAtTime(.7, ac.currentTime, .3);
+  return soundIsOn;
 }
+const live = () => ac && soundIsOn;
+window.__revealAudio = () => ac ? { state: ac.state, on: soundIsOn, master: +master.gain.value.toFixed(2), drone: +drone.gain.value.toFixed(2), hiss: +hiss.gain.value.toFixed(3), t: +ac.currentTime.toFixed(2) } : null;   // for checking it plays
 function noiseBurst(len, vol) {
-  if (!ac || !master.gain.value) return;
-  const b = ac.createBuffer(1, ac.sampleRate * len, ac.sampleRate), d = b.getChannelData(0);
+  if (!live()) return;
+  const b = ac.createBuffer(1, Math.floor(ac.sampleRate * len), ac.sampleRate), d = b.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
-  const s = ac.createBufferSource(), g = ac.createGain(); g.gain.value = vol; s.buffer = b; s.connect(g); g.connect(master); s.start();
+  const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+  f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = .4; g.gain.value = vol;
+  s.buffer = b; s.connect(f); f.connect(g); g.connect(master); s.start();
+}
+let lastTick = 0;
+function typeTick() {   // one key of a typewriter / terminal
+  if (!live() || ac.currentTime - lastTick < .045) return;
+  lastTick = ac.currentTime;
+  const o = ac.createOscillator(), g = ac.createGain(); o.type = 'square'; o.frequency.value = 1600 + Math.random() * 500;
+  g.gain.setValueAtTime(.07, ac.currentTime); g.gain.exponentialRampToValueAtTime(.0005, ac.currentTime + .03);
+  o.connect(g); g.connect(master); o.start(); o.stop(ac.currentTime + .035);
 }
 function thud() {
-  if (!ac || !master.gain.value) return;
-  const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine';
-  o.frequency.setValueAtTime(120, ac.currentTime); o.frequency.exponentialRampToValueAtTime(38, ac.currentTime + .35);
-  g.gain.setValueAtTime(.9, ac.currentTime); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + .5);
-  o.connect(g); g.connect(master); o.start(); o.stop(ac.currentTime + .55);
-  noiseBurst(.18, .25);
+  if (!live()) return;
+  const o = ac.createOscillator(), g = ac.createGain(); o.type = 'triangle';
+  o.frequency.setValueAtTime(220, ac.currentTime); o.frequency.exponentialRampToValueAtTime(70, ac.currentTime + .25);
+  g.gain.setValueAtTime(1, ac.currentTime); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + .4);
+  o.connect(g); g.connect(master); o.start(); o.stop(ac.currentTime + .45);
+  noiseBurst(.12, .9);   // the paper smack is what small speakers hear
 }
-$('sound').addEventListener('click', () => { const on = soundOn(); $('sound').textContent = on ? 'Sound on' : 'Sound off'; $('sound').setAttribute('aria-pressed', String(on)); });
+$('sound').addEventListener('click', () => { const on = soundOn(); $('sound').textContent = on ? 'Sound on' : 'Sound off'; $('sound').setAttribute('aria-pressed', String(on)); noiseBurst(.15, .5); });
 
 /* ============================== static overlay ============================== */
 const st = $('static'), sx = st.getContext('2d'), simg = sx.createImageData(160, 90);
@@ -181,7 +212,7 @@ function finish(how) {
   if (ended) return; ended = true;
   captionClear(); paintStatic(0);
   $('end').classList.add('on'); $('open').focus();
-  if (drone) drone.gain.value = .02;
+  if (live()) { drone.gain.setTargetAtTime(.15, ac.currentTime, .4); hiss.gain.setTargetAtTime(.01, ac.currentTime, .4); }
   if (how === 'skip') tell('leads-reveal-done', { skipped: true });
 }
 $('skip').addEventListener('click', () => { if (embedded) { tell('leads-reveal-done', { skipped: true }); } else finish('skip'); });
@@ -201,7 +232,7 @@ function flatPlay() {
     [2.5, eyeSvg(false)], [5, eyeSvg(true)],
     [7.5, '<div class="card" style="background:var(--manila);color:#111;box-shadow:6px 6px 0 #000"><p class="k" style="color:#7a5a12">CASE FILE 26/27</p><p class="t" style="color:var(--red);border:6px solid var(--red);display:inline-block;padding:4px 14px;rotate:-6deg">' + who.stamp + '</p></div>']
   ];
-  const caps = [[0, 'Subject located.'], [2.5, 'We have been watching.'], [5, 'Do you see yourself?'], [7.5, '']];
+  const caps = [[0, 'We have been watching.'], [2.5, 'I can see you.'], [5, 'Do you see yourself?'], [7.5, 'Finding: ' + who.stamp.toLowerCase() + '.']];
   const tStart = performance.now();
   (function step() {
     if (ended) return;
@@ -424,14 +455,14 @@ function build() {
     // static: heavy at the start and at every cut
     const cutNoise = Math.max(0, 1 - Math.abs(t - 3) * 6) + Math.max(0, 1 - Math.abs(t - 7) * 7) + Math.max(0, 1 - Math.abs(t - 11) * 7);
     paintStatic(Math.min(.9, (t < 2.6 ? .55 - t * .12 : 0) + cutNoise * .8));
-    if (drone) drone.gain.value = t < END_AT ? Math.min(.6, t / 4) : .05;
-    fireOnce('c3', () => { if (t >= 3) noiseBurst(.25, .2); });
-    if (t >= 7) fireOnce('c7', () => { flash(.9); noiseBurst(.2, .3); });
-    if (t >= 11) fireOnce('c11', () => { flash(.5); noiseBurst(.2, .25); });
+    if (live()) { drone.gain.value = E ? .35 : F ? .5 : .7; hiss.gain.value = .02 + Math.min(.12, cutNoise * .15) + (t < 2.6 ? .05 : 0); }
+    if (t >= 3) fireOnce('c3', () => noiseBurst(.3, .6));
+    if (t >= 7) fireOnce('c7', () => { flash(.9); noiseBurst(.35, .8); });
+    if (t >= 11) fireOnce('c11', () => { flash(.5); noiseBurst(.3, .7); });
 
     if (t < 3) {   // dead CRT: only the HUD and the words
       wall.visible = false;
-      caption('Subject located.', .6, t, 30);
+      caption('We have been watching.', .6, t, 30);
     } else if (W) {
       const k = span(t, 3, 6.9);
       const far = fit(10.5, 5), near = .645 + fit(1.5, 1.12);
@@ -446,7 +477,7 @@ function build() {
       screens.forEach((s, i) => { if (s.dead) s.mat.color.setScalar(Math.random() < .5 ? .15 : .5); });
       if (t > 5.3) { center.mat.map = fileTex; drawFile(t - 5.3); } else center.mat.map = eyeTex[0];
       center.mat.needsUpdate = true;
-      t < 5.3 ? caption('We have been watching.', 3.4, t, 30) : caption('Your file was reviewed.', 5.4, t, 34);
+      t < 5.3 ? caption('Please remain seated.', 3.4, t, 30) : caption('Subject ' + (who.id ? who.id.replace('APP-', '') : '000') + ', your file is ready.', 5.4, t, 34);
     } else if (E) {
       const open = t < 7.25 ? .04 : t < 7.9 ? span(t, 7.25, 7.9) : t < 8.4 ? 1 - .92 * Math.sin(span(t, 7.9, 8.4) * Math.PI) : 1;   // opens, one slow blink
       lidGroup.scale.y = Math.max(.04, open); lashes.scale.y = .6 + open * .4;
@@ -474,7 +505,7 @@ function build() {
       const s = 2.6 - 1.6 * slam; stamp.scale.set(s, s, 1); stamp.position.z = .06 + (1 - slam) * 2.2; stamp.material.opacity = Math.min(1, slam * 3);
       if (t >= 11.85) fireOnce('slam', () => { thud(); flash(.25); shake.set(.12, .1, 0); });
       shake.multiplyScalar(.86); camera.position.add(new THREE.Vector3((Math.random() - .5) * shake.x, (Math.random() - .5) * shake.y, 0));
-      if (t > 12.3) caption('You were never being hunted.', 12.3, t, 40);
+      if (t > 12.3) caption('Finding: ' + who.stamp.toLowerCase() + '.', 12.3, t, 30);
     }
   };
 }
