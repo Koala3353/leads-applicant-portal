@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <?!= include_('Styles') ?>
-<?!= brand_css() ?>
+<?!= brand_css_() ?>
 <style>
   .state { display: none; }
   .state.show { display: block; }
@@ -410,7 +410,7 @@
 </div>
 
 <script>
-  const BRAND = <?!= brand_json() ?>;
+  const BRAND = <?!= brand_json_() ?>;
   const BASE = <?!= JSON.stringify(String(baseUrl)) ?>;
   const $ = id => document.getElementById(id);
 

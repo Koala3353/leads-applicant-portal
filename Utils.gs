@@ -21,11 +21,16 @@
  * ACCEPTED + APPROVED + VERIFIED = CONFIRMED (automatic).
  */
 
+// Every tab the code touches. The Status / Requirements / Payment dropdowns come from the constants below (the old
+// Lists tab is gone): setup_applyValidation (Setup.gs) builds them.
 const SHEET = {
-  APPLICANTS: 'Applicants', SETTINGS: 'Settings', ADMINS: 'Admins', LISTS: 'Lists',
+  APPLICANTS: 'Applicants', SETTINGS: 'Settings', ADMINS: 'Admins',
   REQUIREMENTS: 'Requirements',   // one row per requirement Google Form: Form | Link | What to do | Due
   ACTIVITY: 'Activity',  // made automatically by activity_(); status/track changes are its CHANGE rows (the old Log tab)
-  DRAFTS: 'Drafts'       // hidden; Apply drafts per account, made automatically (ApplyApi.gs)
+  DRAFTS: 'Drafts',      // hidden; Apply drafts per account, made automatically (ApplyApi.gs)
+  PRELEADS: 'PreLeads',  // Pre-LEADS registrations, made automatically (PreLeadsServer.gs)
+  REFERRALS: 'Referrals',   // formulas only, built from the LEADS menu (Referrals.gs)
+  MEMDATA: 'MemData'     // the MEA member list (read only): autofill + the ID ownership check (ApplyApi.gs)
 };
 
 // The Applicants columns the portal uses. The code finds each one by its HEADER NAME (cols_()), so columns can be
@@ -57,7 +62,7 @@ function col_(name) {
   if (i < 0) throw new Error('The Applicants tab has no "' + name + '" column.');
   return i;
 }
-// The three columns officers change (LEADS menu or by hand). Everything else is written by the portal.
+// The three columns the core team changes (LEADS menu or by hand). Everything else is written by the portal.
 const TRACK_COLS = ['Status', 'Requirements', 'Payment'];
 
 const STATUSES = ['SUBMITTED', 'UNDER REVIEW', 'WAITLISTED', 'ACCEPTED', 'REJECTED', 'CONFIRMED', 'WITHDRAWN'];
@@ -75,7 +80,7 @@ const NEXT_STATUS = {
   'WITHDRAWN':    []
 };
 
-// One set of rules for the page AND the server. Pages fetch these with utils_getFormRules().
+// One set of rules for the page AND the server. Pages get these from formRules_() (via apply_getForm).
 // stage 'apply' = the Apply page. (Camp info like emergency contacts is collected in the requirements Google Form.)
 const RULES = {
   FullName:         { stage: 'apply', required: true, pattern: "^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ .'-]{1,79}$", msg: 'Letters, spaces, . \' - only (2 to 80 characters).' },
@@ -127,7 +132,7 @@ function ensureApplicantHeaders_() {
   cols_.memo = null;
 }
 
-/* ---------------- settings + lists ---------------- */
+/* ---------------- settings ---------------- */
 
 function ss_() { return SpreadsheetApp.getActiveSpreadsheet(); }
 function sheet_(name) {
@@ -136,13 +141,63 @@ function sheet_(name) {
   return sh;
 }
 
-/** Reads the Settings tab (Key | Value) once per run. */
-/* ---------- small config tabs (Settings, Lists, Admins) are cached across executions ----------
+/**
+ * The tab called `name`, made the first time with a bold, frozen header row. An existing tab is returned as it is
+ * (its headers are never rewritten). opts: hidden, widths (pixels per column), dateCol (1-based, shown as date+time),
+ * textCols (1-based columns kept as plain text, e.g. IDs and phone numbers).
+ */
+function ensureTab_(name, headers, opts) {
+  opts = opts || {};
+  const ss = ss_();
+  let sh = ss.getSheetByName(name);
+  if (sh && sh.getLastColumn() > 0) return sh;
+  sh = sh || ss.insertSheet(name);
+  sh.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold').setBackground('#10275A').setFontColor('#FFFFFF');
+  sh.setFrozenRows(1);
+  (opts.widths || []).forEach((w, i) => sh.setColumnWidth(i + 1, w));
+  if (opts.dateCol) sh.getRange(1, opts.dateCol, sh.getMaxRows(), 1).setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  (opts.textCols || []).forEach(c => sh.getRange(1, c, sh.getMaxRows(), 1).setNumberFormat('@'));
+  if (opts.hidden) sh.hideSheet();
+  return sh;
+}
+
+/**
+ * Finds a column in a header row by any of several names, ignoring case, spaces and punctuation
+ * ("Student Email" = "studentemail"). Returns the 0-based index, or -1.
+ */
+function headerIndex_(head, names) {
+  const norm = h => String(h).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const have = head.map(norm);
+  for (const n of names) { const i = have.indexOf(norm(n)); if (i >= 0) return i; }
+  return -1;
+}
+
+/** 1 -> A, 27 -> AA */
+function columnLetter_(n) {
+  let s = '';
+  while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+
+/** Writes a Settings value (adds the row, with its help text from SETTINGS_SCHEMA, if it's missing). */
+function writeSetting_(key, value) {
+  const sh = sheet_(SHEET.SETTINGS);
+  const keys = sh.getRange(1, 1, Math.max(sh.getLastRow(), 1), 1).getValues().map(r => String(r[0]).trim());
+  const i = keys.indexOf(key);
+  if (i >= 0) sh.getRange(i + 1, 2).setValue(value);
+  else sh.appendRow([key, value, ((SETTINGS_SCHEMA.find(s => s.key === key) || {}).help) || '']);
+  clearConfigCache_();
+  getSettings_.cache = null; cachedTab_.memo = {};
+}
+
+/* ---------- small config tabs (Settings, Admins, Requirements) are cached across executions ----------
  * Every page load used to re-read these tabs, which made each call slower and pushed the portal toward Apps Script's
  * limit on simultaneous executions during a rush. They change rarely, so they're kept in CacheService for 2 minutes
  * and cleared by onEdit (AdminMenu.gs) the moment someone edits one of them. Dates come back as ISO text, which
  * parseDate_() reads fine. */
 const CONFIG_TTL_ = 120;
+const CONFIG_TABS = [SHEET.SETTINGS, SHEET.ADMINS, SHEET.REQUIREMENTS];   // an edit in one of these clears the cache (onEdit)
 function cachedTab_(name) {
   cachedTab_.memo = cachedTab_.memo || {};
   if (cachedTab_.memo[name]) return cachedTab_.memo[name];
@@ -157,7 +212,7 @@ function cachedTab_(name) {
   return rows;
 }
 function clearConfigCache_() {
-  try { CacheService.getScriptCache().removeAll(['tab:' + SHEET.SETTINGS, 'tab:' + SHEET.LISTS, 'tab:' + SHEET.ADMINS, 'tab:' + SHEET.REQUIREMENTS]); } catch (e) { /* fine */ }
+  try { CacheService.getScriptCache().removeAll(CONFIG_TABS.map(n => 'tab:' + n)); } catch (e) { /* fine */ }
 }
 
 function getSettings_() {
@@ -169,6 +224,59 @@ function getSettings_() {
   return out;
 }
 function getSetting_(key) { return getSettings_()[key]; }
+
+/**
+ * Every Settings row the portal reads, in Sheet order: its type, what a BLANK cell means, and the help text shown in
+ * column C. setting_(key) returns the typed value; setup_formatSheets (Setup.gs) adds any missing row with its help.
+ * Types: bool (TRUE / ticked), date (a Date cell or "2026-11-11 23:59", Manila time), int, text.
+ */
+const SETTINGS_SCHEMA = [
+  // the event
+  { key: 'EventName', type: 'text', def: '', help: 'Shown on the hub, e.g. LEADS 2026' },
+  { key: 'EventDates', type: 'text', def: '', help: 'Plain text, e.g. Nov 21 to 23, 2026' },
+  { key: 'EventVenue', type: 'text', def: '', help: 'Plain text, e.g. Tagaytay' },
+  { key: 'CampStart', type: 'date', def: null, help: 'Optional. When camp starts (for the countdown), e.g. 2027-01-29 08:00. Blank = the first date in EventDates.' },
+  // 01 applications
+  { key: 'ApplicationsOpen', type: 'bool', def: false, help: 'Ticked = applications open. Untick to close the application form right away, no code change.' },
+  { key: 'Deadline', type: 'date', def: null, help: 'Application form closes after this (Manila time)' },
+  { key: 'AllowedEmailDomains', type: 'text', def: '', help: 'Comma-separated. Only these accounts can apply. Blank = student.ateneo.edu, ateneo.edu.' },
+  { key: 'ApplicantIdStart', type: 'int', def: 2300, help: 'Applicant IDs start above this number (default 2300) and skip ahead randomly, so IDs never show how many applied.' },
+  { key: 'ContactEmail', type: 'text', def: '', help: 'Core team email shown in the footer (leave blank to hide)' },
+  { key: 'IssueEmail', type: 'text', def: '', help: 'Optional. Where "Report an issue" emails go. Blank = the default in Brand.gs.' },
+  // 02 payment
+  { key: 'PaymentOpen', type: 'bool', def: false, help: 'STEP 02. Tick to open Proof of payment for ACCEPTED applicants.' },
+  { key: 'PaymentDetails', type: 'text', def: '', help: 'Shown on the payment page: amount, account names, what to write in the notes. Line breaks are kept.' },
+  { key: 'PaymentQRCodes', type: 'text', def: '', help: 'One QR per line: Label | link to the QR image, e.g. GCash (Juan Dela Cruz) | https://drive.google.com/file/d/... (the Drive file does not need to be shared).' },
+  { key: 'PaymentDeadline', type: 'date', def: null, help: 'Last day to send proof of payment, e.g. 2026-12-01 23:59 (shown to applicants)' },
+  { key: 'PaymentFolder', type: 'text', def: '', help: 'Drive folder where uploaded proofs are saved. Made automatically on the first upload; share it with the core team.' },
+  // 03 requirements
+  { key: 'RequirementsOpen', type: 'bool', def: false, help: 'STEP 03. Tick to open Requirements for accepted applicants whose Payment is VERIFIED. The forms are listed in the Requirements tab.' },
+  { key: 'RequirementsNote', type: 'text', def: '', help: 'Shown above the forms: general instructions for every requirement.' },
+  { key: 'RequirementsDeadline', type: 'date', def: null, help: 'Last day to finish requirements, e.g. 2026-12-15 23:59 (shown to applicants)' },
+  // 04 GA, 05 rooms
+  { key: 'GACalendarLink', type: 'text', def: '', help: 'STEP 04. Google Calendar link for the 1st GA. The step stays locked until this is filled in.' },
+  { key: 'GADetails', type: 'text', def: '', help: 'Shown with the calendar button: date, time, room, what to bring.' },
+  { key: 'RoomBookingOpen', type: 'bool', def: false, help: 'STEP 05. Tick to open Room booking for accepted applicants whose Requirements are APPROVED (placeholder page for now).' },
+  { key: 'RoomBookingNote', type: 'text', def: '', help: 'Shown on the room booking page. Blank shows: details will be posted here.' },
+  // Pre-LEADS
+  { key: 'PreLeadsOpen', type: 'bool', def: true, help: 'Untick / FALSE to close Pre-LEADS registration right away. Blank = open.' },
+  { key: 'PreLeadsDeadline', type: 'date', def: '2026-11-05 17:00', help: 'When Pre-LEADS registration closes, e.g. 2026-11-05 17:00. Blank = Nov 5, 2026, 5 PM.' },
+  { key: 'PreLeadsDate', type: 'text', def: 'November 5, 2026', help: 'Shown on the Pre-LEADS page. Blank = November 5, 2026.' },
+  { key: 'PreLeadsTime', type: 'text', def: '5:00 PM – 7:30 PM', help: 'Shown on the Pre-LEADS page. Blank = 5:00 PM – 7:30 PM.' },
+  { key: 'PreLeadsVenue', type: 'text', def: 'Onsite (Ateneo de Manila University)', help: 'Shown on the Pre-LEADS page. Blank = Onsite (Ateneo de Manila University).' }
+];
+
+/** A Settings value with its type applied; a blank (or missing) cell gives the schema's default. */
+function setting_(key) {
+  const spec = SETTINGS_SCHEMA.find(s => s.key === key);
+  if (!spec) throw new Error('Unknown setting: ' + key);
+  const raw = getSetting_(key);
+  const blank = raw === undefined || raw === null || String(raw).trim() === '';
+  if (spec.type === 'bool') return blank ? spec.def : isTrue_(raw);
+  if (spec.type === 'date') return parseDate_(blank ? spec.def : raw);
+  if (spec.type === 'int') { const n = parseInt(String(raw), 10); return blank || isNaN(n) ? spec.def : n; }
+  return blank ? spec.def : String(raw).trim();
+}
 
 function isTrue_(v) { return v === true || String(v).trim().toUpperCase() === 'TRUE'; }
 
@@ -190,23 +298,14 @@ function parseDate_(v) {
   return isNaN(d) ? null : d;
 }
 
-/** Reads a column from the Lists tab by header name, skipping blanks. */
-function getList_(name) {
-  const data = cachedTab_(SHEET.LISTS);
-  const col = data[0].indexOf(name);
-  if (col < 0) throw new Error('Lists tab has no column called ' + name);
-  return data.slice(1).map(r => String(r[col]).trim()).filter(String);
-}
-
 /** Are applications open right now? Checks the switch AND the deadline. */
 function isOpen_() {
-  const s = getSettings_();
-  const deadline = parseDate_(s.Deadline);
-  return isTrue_(s.ApplicationsOpen) && (!deadline || new Date() <= deadline);
+  const deadline = setting_('Deadline');
+  return setting_('ApplicationsOpen') && (!deadline || new Date() <= deadline);
 }
 
 /** The core team's switches in Settings: PaymentOpen, RequirementsOpen, RoomBookingOpen (TRUE/FALSE). */
-function stepOpen_(key) { return isTrue_(getSetting_(key)); }
+function stepOpen_(key) { return setting_(key) === true; }
 
 /* ---------------- who is this ---------------- */
 
@@ -215,11 +314,16 @@ function currentEmail_() {
   return String(Session.getActiveUser().getEmail() || '').trim().toLowerCase();
 }
 
+/** Settings › AllowedEmailDomains. A blank cell means the school default, never "everyone". */
+const DEFAULT_DOMAINS = ['student.ateneo.edu', 'ateneo.edu'];
+function allowedDomains_() {
+  const list = String(getSetting_('AllowedEmailDomains') || '')
+    .split(',').map(d => d.trim().toLowerCase().replace(/^@/, '')).filter(String);
+  return list.length ? list : DEFAULT_DOMAINS.slice();
+}
 function isAllowedDomain_(email) {
-  const domains = String(getSetting_('AllowedEmailDomains') || '')
-    .split(',').map(d => d.trim().toLowerCase()).filter(String);
-  if (!domains.length) return true;
-  return domains.some(d => email.endsWith('@' + d));
+  email = String(email || '').toLowerCase();
+  return !!email && allowedDomains_().some(d => email.endsWith('@' + d));
 }
 
 function isAdmin_(email) {
@@ -274,12 +378,16 @@ function getApplicantByEmail_(email) {
   return { row: row, data: toObject_(sh.getRange(row, 1, 1, cols_().length).getValues()[0]) };
 }
 
+/** Returns { row, data } for this Applicant ID, or null. Searches only the ID column, then reads that one row. */
 function getApplicantById_(applicantId) {
-  const values = sheet_(SHEET.APPLICANTS).getDataRange().getValues(), c = col_('ApplicantID');
-  for (let i = 1; i < values.length; i++) {
-    if (String(values[i][c]).trim() === applicantId) return { row: i + 1, data: toObject_(values[i]) };
-  }
-  return null;
+  applicantId = String(applicantId || '').trim();
+  if (!applicantId) return null;
+  const sh = sheet_(SHEET.APPLICANTS), last = sh.getLastRow();
+  if (last < 2) return null;
+  const hit = sh.getRange(2, col_('ApplicantID') + 1, last - 1, 1).createTextFinder(applicantId).matchEntireCell(true).findNext();
+  if (!hit) return null;
+  const row = hit.getRow();
+  return { row: row, data: toObject_(sh.getRange(row, 1, 1, cols_().length).getValues()[0]) };
 }
 
 function toObject_(rowValues, cols) {
@@ -296,20 +404,13 @@ function toObject_(rowValues, cols) {
  * random 1-9. Existing IDs are never renumbered (forms, referrals and the Log point at them).
  */
 function nextApplicantId_() {
-  const start = parseInt(String(getSetting_('ApplicantIdStart') || ''), 10);
-  return nextId_(SHEET.APPLICANTS, 'APP-', isNaN(start) ? 2300 : start, 9);
-}
-
-function nextId_(sheetName, prefix, start, maxStep) {
-  const sh = sheet_(sheetName);
-  const c = sheetName === SHEET.APPLICANTS ? col_('ApplicantID') + 1 : 1;
-  const ids = sh.getRange(2, c, Math.max(sh.getLastRow() - 1, 1), 1).getValues().flat();
+  const sh = sheet_(SHEET.APPLICANTS);
+  const ids = sh.getRange(2, col_('ApplicantID') + 1, Math.max(sh.getLastRow() - 1, 1), 1).getValues().flat();
   const max = ids.reduce((m, id) => {
-    const n = parseInt(String(id).replace(prefix, ''), 10);
+    const n = parseInt(String(id).replace('APP-', ''), 10);
     return isNaN(n) ? m : Math.max(m, n);
   }, 0);
-  const step = maxStep ? 1 + Math.floor(Math.random() * maxStep) : 1;
-  return prefix + String(Math.max(max, start || 0) + step).padStart(4, '0');
+  return 'APP-' + String(Math.max(max, setting_('ApplicantIdStart')) + 1 + Math.floor(Math.random() * 9)).padStart(4, '0');
 }
 
 /**
@@ -317,22 +418,24 @@ function nextId_(sheetName, prefix, start, maxStep) {
  * Only the given cells (+ LastUpdated) are written: rewriting the whole row would re-type every other cell
  * (a PastOrgs line starting with "-" would turn into a formula) and undo a core-team edit made in between.
  */
-function updateApplicant_(row, fields) {
+function updateApplicant_(row, fields, applicantId) {
   const sh = sheet_(SHEET.APPLICANTS);
   if (Object.keys(fields).some(k => cols_().indexOf(k) < 0)) ensureApplicantHeaders_();
+  // Sorting by hand doesn't wait for the script lock: if the row no longer holds this applicant, find it again
+  if (applicantId && String(sh.getRange(row, col_('ApplicantID') + 1).getValue()).trim() !== applicantId) {
+    const again = getApplicantById_(applicantId);
+    if (!again) throw new Error('No applicant ' + applicantId);
+    row = again.row;
+  }
   Object.keys(fields).forEach(k => { sh.getRange(row, col_(k) + 1).setValue(textCell_(fields[k])); });
   sh.getRange(row, col_('LastUpdated') + 1).setValue(new Date());
 }
 
 /* ---------------- data validation ---------------- */
 
-/** For pages: the same rules + dropdown options the server uses. */
-function utils_getFormRules() {
-  return {
-    rules: RULES,
-    lists: {},   // no Apply question uses a Lists dropdown any more (Course is free text, autofilled from MemData)
-    isOpen: isOpen_()
-  };
+/** For pages: the same rules the server uses. */
+function formRules_() {
+  return { rules: RULES, isOpen: isOpen_() };
 }
 
 /**
@@ -342,14 +445,22 @@ function utils_getFormRules() {
  */
 function validateApplication_(input, stage) {
   stage = stage || 'apply';
+  const rules = {};
+  Object.keys(RULES).forEach(f => { if (RULES[f].stage === stage) rules[f] = RULES[f]; });
+  return validateFields_(input, rules);
+}
+
+/**
+ * The checker behind every form (Apply, Pre-LEADS): one rule per field, same options as RULES.
+ * requiredMsg (optional) replaces "Required." for a blank field.
+ */
+function validateFields_(input, rules) {
   const errors = {};
   const clean = {};
   input = input || {};
-  const lists = {};
 
-  Object.keys(RULES).forEach(field => {
-    const rule = RULES[field];
-    if (rule.stage !== stage) return;
+  Object.keys(rules).forEach(field => {
+    const rule = rules[field];
     let v = input[field];
     v = (v === null || v === undefined) ? '' : String(v);
     v = v.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim(); // strip control chars
@@ -358,18 +469,13 @@ function validateApplication_(input, stage) {
     if (rule.upper) v = v.toUpperCase().replace(/\s+/g, '');
 
     if (v === '') {
-      if (rule.required) errors[field] = 'Required.';
-      else if (rule.requiredIfFreshman && isFreshman_(input)) errors[field] = rule.requiredMsg || 'Required.';
+      if (rule.required || (rule.requiredIfFreshman && isFreshman_(input))) errors[field] = rule.requiredMsg || 'Required.';
       else clean[field] = '';
       return;
     }
     if (rule.pattern && !new RegExp(rule.pattern).test(v)) { errors[field] = rule.msg; return; }
     if (rule.idMin !== undefined && (Number(v) < rule.idMin || Number(v) > rule.idMax)) { errors[field] = rule.rangeMsg; return; }
     if (rule.options && rule.options.indexOf(v) < 0) { errors[field] = rule.msg; return; }
-    if (rule.list) {
-      lists[rule.list] = lists[rule.list] || getList_(rule.list);
-      if (lists[rule.list].indexOf(v) < 0) { errors[field] = rule.msg; return; }
-    }
     if (rule.min !== undefined) {
       const n = Number(v);
       if (!Number.isInteger(n) || n < rule.min || n > rule.max) { errors[field] = rule.msg; return; }
@@ -405,17 +511,21 @@ function textCell_(v) {
 /* ---------------- status + log ---------------- */
 
 /**
+ * Runs fn while holding the script lock (the one every write to Applicants takes), waiting up to ms for it.
+ * Throws "busy" if it can't get it in time.
+ */
+function withScriptLock_(ms, fn) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(ms)) throw new Error('The portal is busy. Try again in a minute.');
+  try { return fn(); } finally { lock.releaseLock(); }
+}
+
+/**
  * The ONLY way to change a status. Checks the order, updates the row, logs it.
  * by = who did it (admin email or 'system').
  */
 function setStatus_(applicantId, newStatus, by) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
-  try {
-    return setStatusLocked_(applicantId, newStatus, by);
-  } finally {
-    lock.releaseLock();
-  }
+  return withScriptLock_(20000, () => setStatusLocked_(applicantId, newStatus, by));
 }
 
 /** setStatus without taking the lock. Only call this when you already hold it. */
@@ -424,17 +534,32 @@ function setStatusLocked_(applicantId, newStatus, by) {
   const found = getApplicantById_(applicantId);
   if (!found) throw new Error('No applicant ' + applicantId);
   const from = found.data.Status;
-  if ((NEXT_STATUS[from] || []).indexOf(newStatus) < 0) {
-    throw new Error('Can\'t go from ' + from + ' to ' + newStatus + '.');
-  }
-  if (newStatus === 'CONFIRMED' && !(found.data.Requirements === 'APPROVED' && found.data.Payment === 'VERIFIED')) {
-    throw new Error('Confirm only after requirements are APPROVED and payment is VERIFIED.');
-  }
+  const problem = statusMoveError_(from, newStatus, found.data);
+  if (problem) throw new Error(problem);
   const fields = { Status: newStatus };
   if (by && by !== 'system') fields.ReviewedBy = by;
-  updateApplicant_(found.row, fields);
+  updateApplicant_(found.row, fields, applicantId);
   logChange_(applicantId, 'status', from, newStatus, by);
   return newStatus;
+}
+
+/**
+ * The rules for a change, shared by the LEADS menu (setStatus_ / setTrack_) and hand edits (AdminMenu.gs).
+ * Each returns '' when the change is allowed, else the reason in plain words.
+ */
+function statusMoveError_(from, to, d) {
+  if (from && (NEXT_STATUS[from] || []).indexOf(to) < 0) return 'Can\'t go from ' + from + ' to ' + (to || 'blank') + '.';
+  if (to === 'CONFIRMED' && !(d.Requirements === 'APPROVED' && d.Payment === 'VERIFIED')) {
+    return 'Confirm only after Requirements is APPROVED and Payment is VERIFIED.';
+  }
+  return '';
+}
+function trackChangeError_(field, to, d) {
+  const list = { Requirements: REQUIREMENT_STATES, Payment: PAYMENT_STATES }[field];
+  if (!list) return 'Unknown track: ' + field;
+  if (list.indexOf(to) < 0) return field + ' can\'t be ' + (to || 'blank') + '.';
+  if (['REJECTED', 'WITHDRAWN'].indexOf(d.Status) >= 0 && to !== 'NONE') return (d.ApplicantID || 'This applicant') + ' is ' + d.Status + '.';
+  return '';
 }
 
 /** Records a status/track change as a CHANGE row in Activity (never skipped in a rush, never trimmed). */
@@ -443,48 +568,45 @@ function logChange_(applicantId, action, from, to, by) {
     { level: 'CHANGE' });
 }
 
-/* ---------------- officer changes to Requirements / Payment ---------------- */
+/* ---------------- core team changes to Requirements / Payment ---------------- */
 
 /**
  * The ONLY way to change Requirements or Payment from code (the LEADS menu uses it).
  * field = 'Requirements' | 'Payment'. Checks the value, logs, and auto-confirms.
  */
 function setTrack_(applicantId, field, value, by) {
-  const allowed = { Requirements: REQUIREMENT_STATES, Payment: PAYMENT_STATES }[field];
-  if (!allowed) throw new Error('Unknown track: ' + field);
-  if (allowed.indexOf(value) < 0) throw new Error(field + ' can\'t be ' + value + '.');
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
-  try {
+  const bad = trackChangeError_(field, value, {});
+  if (bad) throw new Error(bad);
+  return withScriptLock_(20000, () => {
     const found = getApplicantById_(applicantId);
     if (!found) throw new Error('No applicant ' + applicantId);
     const from = found.data[field];
     if (from === value) return value;
     // a proof upload racing the core team's check must never undo VERIFIED
     if (by === 'system' && field === 'Payment' && from === 'VERIFIED') return from;
-    if (['REJECTED', 'WITHDRAWN'].indexOf(found.data.Status) >= 0 && value !== 'NONE') {
-      throw new Error(applicantId + ' is ' + found.data.Status + '.');
-    }
+    const problem = trackChangeError_(field, value, found.data);
+    if (problem) throw new Error(problem);
     const fields = {}; fields[field] = value;
     if (by && by !== 'system') fields.ReviewedBy = by;
-    updateApplicant_(found.row, fields);
+    updateApplicant_(found.row, fields, applicantId);
     logChange_(applicantId, field.toLowerCase(), from, value, by);
-    autoConfirmLocked_(applicantId);
+    const now = Object.assign({}, found.data, fields);
+    if (shouldConfirm_(now)) setStatusLocked_(applicantId, 'CONFIRMED', 'system');
+    else if (shouldUnconfirm_(now)) {
+      updateApplicant_(found.row, { Status: 'ACCEPTED' }, applicantId);
+      logChange_(applicantId, 'status', 'CONFIRMED', 'ACCEPTED', 'system (' + field.toLowerCase() + ' moved back)');
+    }
     return value;
-  } finally {
-    lock.releaseLock();
-  }
+  });
 }
 
-/** ACCEPTED + Requirements APPROVED + Payment VERIFIED → CONFIRMED. Call while holding the lock. */
-function autoConfirmLocked_(applicantId) {
-  const found = getApplicantById_(applicantId);
-  const d = found && found.data;
-  if (d && d.Status === 'ACCEPTED' && d.Requirements === 'APPROVED' && d.Payment === 'VERIFIED') {
-    setStatusLocked_(applicantId, 'CONFIRMED', 'system');
-    return true;
-  }
-  return false;
+/** ACCEPTED + Requirements APPROVED + Payment VERIFIED → CONFIRMED (the menu and hand edits both use this). */
+function shouldConfirm_(d) {
+  return !!d && d.Status === 'ACCEPTED' && d.Requirements === 'APPROVED' && d.Payment === 'VERIFIED';
+}
+/** A CONFIRMED camper whose Payment or Requirements moved back (e.g. a bounced payment) drops to ACCEPTED. */
+function shouldUnconfirm_(d) {
+  return !!d && d.Status === 'CONFIRMED' && !(d.Requirements === 'APPROVED' && d.Payment === 'VERIFIED');
 }
 
 /**
@@ -557,293 +679,8 @@ function progress_(a) {
 
 /** Settings > GACalendarLink if it's a real link, else ''. */
 function gaLink_() {
-  const url = String(getSetting_('GACalendarLink') || '').trim();
+  const url = setting_('GACalendarLink');
   return /^https:\/\//.test(url) ? url : '';
 }
 
-/* ---------------- Activity tab: what the portal is doing (debugging + tracking) ----------------
- * One row per event: page views, every server call (with how long it took), applications,
- * validation failures, server errors with their stack, and errors from people's browsers.
- * Columns: When | Level | Who | Page | Event | Details | ms
- * Logging never breaks the portal: if writing fails, the event is dropped (and printed to Executions).
- * Never log essays, ID numbers or phone numbers here: only what's needed to see what happened.
- */
-const ACTIVITY_HEAD = ['When', 'Level', 'Who', 'Page', 'Event', 'Details', 'ms'];
-const ACTIVITY_MAX_ROWS = 20000;   // oldest 5000 are trimmed when the tab gets this long
-
-function activitySheet_() {
-  const ss = ss_();
-  let sh = ss.getSheetByName(SHEET.ACTIVITY);
-  if (sh) return sh;
-  sh = ss.insertSheet(SHEET.ACTIVITY);
-  sh.getRange(1, 1, 1, ACTIVITY_HEAD.length).setValues([ACTIVITY_HEAD])
-    .setFontWeight('bold').setBackground('#10275A').setFontColor('#FFFFFF');
-  sh.setFrozenRows(1);
-  [160, 60, 220, 70, 170, 520, 60].forEach((w, i) => sh.setColumnWidth(i + 1, w));
-  sh.getRange('A:A').setNumberFormat('yyyy-mm-dd hh:mm:ss');
-  const rules = [['ERROR', '#F4CCCC'], ['WARN', '#FFF2CC'], ['CHANGE', '#D9EAD3']].map(([lvl, color]) =>
-    SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied('=$B1="' + lvl + '"')
-      .setBackground(color).setRanges([sh.getRange('A:G')]).build());
-  sh.setConditionalFormatRules(rules);
-  return sh;
-}
-
-/**
- * activity_('apply_submit', 'APP-0012 submitted', { level: 'INFO', page: 'apply', ms: 840 })
- * level: 'INFO' (default) | 'WARN' | 'ERROR' | 'CHANGE' (status/track changes). details can be a string or any object (stored as JSON).
- */
-/** True once 40 routine (INFO) rows have been written this minute: during a rush they're skipped to keep calls fast.
- *  WARN and ERROR rows are always written. */
-function activityBusy_() {
-  try {
-    const c = CacheService.getScriptCache(), k = 'act:' + Math.floor(Date.now() / 60000);
-    const n = Number(c.get(k) || 0) + 1;
-    c.put(k, String(n), 120);
-    return n > 40;
-  } catch (e) { return false; }
-}
-
-function activity_(event, details, opts) {
-  opts = opts || {};
-  if ((opts.level || 'INFO') === 'INFO' && activityBusy_()) return;   // WARN, ERROR and CHANGE are always written
-  try {
-    let who = '';
-    if (opts.anon) who = 'visitor';   // page views: we don't need to know who looked, only that the page works
-    else { try { who = currentEmail_() || 'guest'; } catch (e) { who = 'unknown'; } }
-    const text = typeof details === 'string' ? details : JSON.stringify(details === undefined ? '' : details);
-    const sh = activitySheet_();
-    sh.appendRow([new Date(), opts.level || 'INFO', who, opts.page || '', event,
-      String(text).slice(0, 5000), opts.ms === undefined ? '' : opts.ms].map(safeCell_));
-    if (sh.getLastRow() > ACTIVITY_MAX_ROWS) trimActivity_(sh);
-  } catch (err) {
-    console.error('activity_ could not write: ' + err + ' | ' + event);
-  }
-}
-
-/**
- * Daily clean-up (time trigger, installed once with setup_dailyMaintenance in Setup.gs). RA 10173: don't keep
- * personal data longer than needed.
- *  - Drafts: blanks any draft not touched for DRAFT_KEEP_DAYS (the row stays so row numbers never move).
- *  - Activity: deletes routine rows older than ACTIVITY_KEEP_DAYS. CHANGE rows (the status/track record) are kept.
- */
-const DRAFT_KEEP_DAYS = 30, ACTIVITY_KEEP_DAYS = 60;
-function maintenance_daily() {
-  const now = Date.now(), day = 864e5;
-  try {
-    const sh = ss_().getSheetByName('Drafts');
-    if (sh && sh.getLastRow() > 1) {
-      const r = sh.getRange(2, 2, sh.getLastRow() - 1, 2), v = r.getValues();
-      let n = 0;
-      v.forEach(x => { const t = x[0] instanceof Date ? x[0].getTime() : Date.parse(x[0]); if (x[1] && t && now - t > DRAFT_KEEP_DAYS * day) { x[0] = ''; x[1] = ''; n++; } });
-      if (n) r.setValues(v);
-      activity_('maintenance', n + ' old drafts cleared', { page: 'admin' });
-    }
-  } catch (e) { activity_('maintenance', 'drafts: ' + (e && e.message), { level: 'WARN', page: 'admin' }); }
-  const lock = LockService.getDocumentLock();   // same lock as trimActivity_, so the two never run together
-  if (!lock.tryLock(30000)) return;
-  try {
-    const sh = activitySheet_(), last = sh.getLastRow();
-    if (last < 2) return;
-    const v = sh.getRange(2, 1, last - 1, ACTIVITY_HEAD.length).getValues();
-    const cut = now - ACTIVITY_KEEP_DAYS * day;
-    let k = 0;   // rows are in time order: count the old ones at the top
-    while (k < v.length && v[k][0] instanceof Date && v[k][0].getTime() < cut) k++;
-    if (!k) return;
-    const keep = v.slice(0, k).filter(r => r[1] === 'CHANGE');
-    sh.deleteRows(2, k);
-    if (keep.length) { sh.insertRowsBefore(2, keep.length); sh.getRange(2, 1, keep.length, ACTIVITY_HEAD.length).setValues(keep); }
-  } finally { lock.releaseLock(); }
-}
-
-/** Drops the oldest 5000 rows, but keeps the CHANGE rows among them (the record of every status/track change). */
-function trimActivity_(sh) {
-  // one trim at a time; if another run holds the lock, the next write past the limit trims instead
-  const lock = LockService.getDocumentLock();
-  if (!lock.tryLock(0)) return;
-  try { if (sh.getLastRow() > ACTIVITY_MAX_ROWS) trimActivityLocked_(sh); } finally { lock.releaseLock(); }
-}
-function trimActivityLocked_(sh) {
-  const old = sh.getRange(2, 1, 5000, ACTIVITY_HEAD.length).getValues();
-  const keep = old.filter(r => r[1] === 'CHANGE');
-  sh.deleteRows(2, 5000);
-  if (keep.length) { sh.insertRowsBefore(2, keep.length); sh.getRange(2, 1, keep.length, ACTIVITY_HEAD.length).setValues(keep); }
-}
-
-/**
- * Runs a public server function and logs it: OK with timing, or ERROR with the message and stack
- * (then rethrows, so the page still gets the error). summarize(result) picks what to log on success.
- */
-function traced_(event, page, fn, summarize) {
-  const t0 = Date.now();
-  try {
-    const out = fn();
-    const ok = !(out && out.ok === false);
-    activity_(event, summarize ? summarize(out) : (ok ? 'ok' : out), { level: ok ? 'INFO' : 'WARN', page: page, ms: Date.now() - t0 });
-    return out;
-  } catch (err) {
-    activity_(event, (err && err.message) + (err && err.stack ? '\n' + err.stack : ''), { level: 'ERROR', page: page, ms: Date.now() - t0 });
-    throw err;
-  }
-}
-
-/**
- * Rate limits that can't be raced: adds 1 to `key` (kept `ttl` seconds) and returns true if the new count is
- * within `max`, false if it's over (the caller refuses). The read + write happen under a short lock, so 50
- * calls fired at once can't all read 0. If the lock is busy we refuse rather than risk going over.
- * peek: true only checks (no +1), for "has this person failed too often?" style checks.
- */
-function bump_(key, max, ttl, peek) {
-  const cache = CacheService.getScriptCache();
-  if (peek) return Number(cache.get(key) || 0) < max;
-  const lock = LockService.getUserLock();   // not the script lock: never queues behind submits
-  if (!lock.tryLock(3000)) return false;
-  try {
-    const n = Number(cache.get(key) || 0) + 1;
-    if (n > max) return false;
-    cache.put(key, String(n), ttl);
-    return true;
-  } finally { lock.releaseLock(); }
-}
-
-/** Called by every page (Styles.html) when something breaks in the visitor's browser. Public on purpose. */
-function log_client(evt) {
-  evt = evt || {};
-  // anyone can call this: at most 20 events per person (or 60 for all signed-out visitors together) per 10 minutes
-  try {
-    const email = currentEmail_();
-    if (!bump_('clog:' + (email || 'anon'), email ? 20 : 60, 600)) return false;
-  } catch (e) { /* cache down: still log */ }
-  const page = String(evt.page || '').slice(0, 30);
-  const details = {
-    kind: String(evt.kind || 'error').slice(0, 40),
-    message: String(evt.message || '').slice(0, 500),   // browser text: kept short (it's free text anyone can send)
-    where: String(evt.where || '').slice(0, 300),
-    ua: String(evt.ua || '').slice(0, 200)
-  };
-  activity_('client_' + details.kind, details, { level: details.kind === 'info' ? 'INFO' : 'ERROR', page: page });
-  return true;
-}
-
-/* ---------------- "Report an issue" (Styles.html opens the form on every page) ----------------
- * Emails a detailed, LEADS: Oversight-themed case file to Settings > IssueEmail (or BRAND.report.to).
- * Adds what the reporter can't see: their signed-in account, applicant ID/status/tracks, their last
- * Activity rows and the time on the server. Rate-limited to 3 reports per 10 minutes per person.
- * Needs the "send email as you" permission: the owner runs report_authorize once from the editor.
- */
-function report_issue(r) {
-  return traced_('report_issue', String((r && r.page) || ''), () => report_issue_(r || {}), x => x.ok ? 'sent ' + x.id : 'not sent: ' + x.reason);
-}
-function report_issue_(r) {
-  const R = BRAND.report || {};
-  const to = String(getSetting_('IssueEmail') || R.to || '').trim();
-  const email = currentEmail_();
-  const contact = String(r.contact || '').trim().slice(0, 120) || email;
-  // Signed-out reporters share one bucket: keying on the page-supplied contact let anyone dodge the limit
-  // by changing it each call. 10 leaves room for real sign-in trouble without flooding the inbox.
-  if (!String(r.what || '').trim()) return { ok: false, reason: 'empty' };
-  // Limits are reserved BEFORE the (slow) email, under a lock, so firing many at once can't slip past them.
-  // Signed-out reporters get their own small daily pool, so they can't use up the signed-in budget (and vice versa).
-  const day = Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyyMMdd');
-  if (!bump_(email ? 'rep:' + email : 'rep:anon', email ? 3 : 10, 600)) return { ok: false, reason: 'rate' };
-  if (!bump_((email ? 'rep:day:' : 'rep:dayanon:') + day, email ? 150 : 30, 90000)) return { ok: false, reason: 'rate' };
-  if (!email) r.shot = null;   // no attachments from people we can't identify
-
-  const id = 'R-' + Utilities.formatDate(new Date(), 'Asia/Manila', 'MMdd-HHmm') + '-' + Math.floor(Math.random() * 900 + 100);
-  const clip = (v, n) => String(v === undefined || v === null ? '' : v).slice(0, n || 2000);
-  const found = email ? getApplicantByEmail_(email) : null;
-  const a = found ? found.data : null;
-
-  // this person's recent activity (newest last), so we can see what they did right before reporting
-  let recent = [];
-  try {
-    const sh = ss_().getSheetByName(SHEET.ACTIVITY);
-    // only the signed-in account's own activity: a typed-in contact address could be anyone's
-    if (sh && sh.getLastRow() > 1 && email) {
-      const n = Math.min(400, sh.getLastRow() - 1);
-      const rows = sh.getRange(sh.getLastRow() - n + 1, 1, n, 7).getValues();
-      const who = email.toLowerCase();
-      recent = rows.filter(x => String(x[2]).toLowerCase() === who).slice(-10).map(x => [
-        Utilities.formatDate(new Date(x[0]), 'Asia/Manila', 'MMM d, HH:mm:ss'), x[1], x[3], x[4], clip(x[5], 300), x[6]]);
-    }
-  } catch (e) { /* no activity: fine */ }
-
-  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const nl = s => esc(s).replace(/\n/g, '<br>');
-  const sev = clip(r.blocking, 80);
-  const sevColor = /can't continue/i.test(sev) ? '#FF2A2A' : (/small/i.test(sev) ? '#8C8C8C' : '#FFFF00');
-  const row = (k, v) => '<tr><td style="padding:6px 12px 6px 0;color:#8C8C8C;font:12px/1.5 Menlo,Consolas,monospace;text-transform:uppercase;letter-spacing:.08em;vertical-align:top;white-space:nowrap">' + esc(k) +
-    '</td><td style="padding:6px 0;color:#EAEAEA;font:14px/1.5 Arial,sans-serif;vertical-align:top">' + (v === '' || v === null || v === undefined ? '<span style="color:#555">—</span>' : v) + '</td></tr>';
-  const section = (title, inner) => '<tr><td style="padding:22px 28px 0"><div style="font:700 11px/1 Menlo,Consolas,monospace;letter-spacing:.18em;color:#FFFF00;text-transform:uppercase;border-bottom:1px solid #2E2E2E;padding-bottom:8px;margin-bottom:8px">' + esc(title) + '</div>' + inner + '</td></tr>';
-  const table = rows => '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">' + rows.join('') + '</table>';
-  const block = text => '<div style="background:#141414;border-left:3px solid #FFFF00;padding:12px 14px;color:#EAEAEA;font:14px/1.6 Arial,sans-serif">' + (text ? nl(text) : '<span style="color:#555">Not given</span>') + '</div>';
-  const c = r.client || {};
-  const errs = (c.errors || []).slice(-5).map(e => '<div style="font:12px/1.5 Menlo,Consolas,monospace;color:#FF8A8A;margin:4px 0">' + esc(clip(e, 400)) + '</div>').join('') || '<span style="color:#555;font:13px Arial">None caught on this page</span>';
-  const act = recent.length ? '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font:12px/1.45 Menlo,Consolas,monospace">' +
-    recent.map(x => '<tr><td style="padding:3px 8px 3px 0;color:#8C8C8C;white-space:nowrap">' + esc(x[0]) + '</td><td style="padding:3px 8px 3px 0;color:' + (x[1] === 'ERROR' ? '#FF2A2A' : x[1] === 'WARN' ? '#FFFF00' : '#EAEAEA') + '">' + esc(x[1]) + '</td><td style="padding:3px 8px 3px 0;color:#7A86FF">' + esc(x[2]) + '</td><td style="padding:3px 8px 3px 0;color:#EAEAEA">' + esc(x[3]) + '</td><td style="padding:3px 0;color:#8C8C8C">' + esc(x[4]) + (x[5] !== '' ? ' (' + esc(x[5]) + 'ms)' : '') + '</td></tr>').join('') + '</table>'
-    : '<span style="color:#555;font:13px Arial">No recent activity under this account</span>';
-
-  const html =
-    '<div style="background:#0A0A0A;padding:24px 0;margin:0">' +
-    '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:640px;margin:0 auto;background:#0A0A0A;border:2px solid #FFFF00;border-collapse:collapse">' +
-    '<tr><td style="height:12px;background:repeating-linear-gradient(-45deg,#FFFF00 0 14px,#0A0A0A 14px 28px);background-color:#FFFF00"></td></tr>' +
-    '<tr><td style="padding:22px 28px 0">' +
-      '<div style="font:700 11px/1 Menlo,Consolas,monospace;letter-spacing:.2em;color:#FF2A2A">&#9679; REC // INCIDENT REPORT</div>' +
-      '<div style="font:700 30px/1.05 Impact,\'Arial Narrow\',Arial,sans-serif;color:#EAEAEA;text-transform:uppercase;margin:10px 0 4px">LEADS: <span style="color:#FFFF00">Oversight</span></div>' +
-      '<div style="font:13px/1.5 Menlo,Consolas,monospace;color:#8C8C8C">Case ' + esc(id) + ' &middot; filed ' + esc(Utilities.formatDate(new Date(), 'Asia/Manila', "EEE, MMM d yyyy 'at' h:mm a")) + ' (Manila)</div>' +
-      '<div style="display:inline-block;margin-top:14px;padding:5px 10px;border:1.5px solid ' + sevColor + ';color:' + sevColor + ';font:700 12px/1 Menlo,Consolas,monospace;letter-spacing:.1em;text-transform:uppercase">' + esc(sev || 'Severity not given') + '</div>' +
-    '</td></tr>' +
-    section('01 // The problem', table([row('Category', esc(clip(r.category, 120))), row('When', esc(clip(r.when, 80)))]) + block(clip(r.what, 4000))) +
-    section('02 // What they were doing', block(clip(r.doing, 1500))) +
-    section('03 // Steps to reproduce', block(clip(r.steps, 2000))) +
-    section('04 // Subject', table([
-      row('Reply to', contact ? '<a style="color:#7A86FF" href="mailto:' + esc(contact) + '">' + esc(contact) + '</a>' +
-        (contact.toLowerCase() !== email ? ' <span style="color:#FFFF00">(typed by the reporter, not verified)</span>' : '') : ''),
-      row('Signed in as', email ? esc(email) : '<span style="color:#FF2A2A">Not signed in / account hidden</span>'),
-      row('Applicant ID', a ? esc(a.ApplicantID) : 'No application on file'),
-      row('Name', a ? esc(a.FullName || '') : ''),
-      row('Status', a ? esc(a.Status + ' / Req ' + (a.Requirements || 'NONE') + ' / Pay ' + (a.Payment || 'NONE')) : ''),
-      row('Ateneo account', email ? (isAllowedDomain_(email) ? 'Yes' : '<span style="color:#FF2A2A">No (wrong domain)</span>') : '')])) +
-    section('05 // Where it happened', table([
-      row('Page', esc(clip(c.page || r.page, 40))),
-      row('URL', esc(clip(c.url, 300))),
-      row('Page title', esc(clip(c.title, 120))),
-      row('Local time', esc(clip(c.localTime, 80))),
-      row('Browser', esc(clip(c.ua, 300))),
-      row('Screen', esc(clip(c.screen, 60))),
-      row('Language', esc(clip(c.lang, 30))),
-      row('Online', c.online === false ? '<span style="color:#FF2A2A">Offline</span>' : 'Yes'),
-      row('In-app browser', c.inApp ? '<span style="color:#FFFF00">' + esc(c.inApp) + '</span>' : 'No'),
-      row('CRT effects', c.calm ? 'Off' : 'On')])) +
-    section('06 // Errors caught on the page', errs) +
-    section('07 // Their last activity (Activity tab)', act) +
-    '<tr><td style="padding:24px 28px 26px;font:12px/1.6 Menlo,Consolas,monospace;color:#555">Reply to this email to reach the reporter. ' +
-      (r.shot ? 'Screenshot attached. ' : '') + 'Full log: the Sheet\'s Activity tab, filter Who = ' + esc(email || contact || 'their email') + '.</td></tr>' +
-    '<tr><td style="height:6px;background:#FFFF00"></td></tr>' +
-    '</table></div>';
-
-  const plain = ['LEADS: Oversight // Incident report ' + id, '',
-    'Category: ' + clip(r.category, 120), 'Severity: ' + sev, 'When: ' + clip(r.when, 80), '',
-    'What happened:', clip(r.what, 4000), '', 'What they were doing:', clip(r.doing, 1500), '', 'Steps:', clip(r.steps, 2000), '',
-    'Reply to: ' + contact, 'Signed in as: ' + (email || '(not signed in)'), 'Applicant: ' + (a ? a.ApplicantID + ' ' + a.Status : 'none'),
-    'Page: ' + clip(c.page || r.page, 40) + '  URL: ' + clip(c.url, 300), 'Browser: ' + clip(c.ua, 300), 'Screen: ' + clip(c.screen, 60),
-    'Errors: ' + (c.errors || []).slice(-5).join(' | ')].join('\n');
-
-  const opts = { to: to, subject: '[LEADS: Oversight] Case ' + id + ' // ' + clip(r.category, 60) + (sev ? ' // ' + sev : ''), htmlBody: html, body: plain, name: 'LEADS: Oversight portal' };
-  if (contact && /@/.test(contact)) opts.replyTo = contact;
-  if (r.shot && r.shot.data && String(r.shot.data).length < 4.2e6) {
-    try {
-      const type = /^image\/(png|jpe?g|gif|webp)$/.test(r.shot.type) ? r.shot.type : 'image/png';
-      opts.attachments = [Utilities.newBlob(Utilities.base64Decode(r.shot.data), type, clip(r.shot.name, 80) || 'screenshot.png')];
-    } catch (e) { /* bad image: send without it */ }
-  }
-  MailApp.sendEmail(opts);
-  return { ok: true, id: id, email: contact };
-}
-
-/** Run once from the editor (as the owner) so Google asks for the "send email" permission. Sends a test to the report inbox. */
-function report_authorize() {
-  ownerOnly_();
-  const to = String(getSetting_('IssueEmail') || (BRAND.report || {}).to || '');
-  MailApp.sendEmail(to, '[LEADS: Oversight] Issue reports are switched on', 'Reports from the portal will arrive at this address.');
-  return 'Test email sent to ' + to;
-}
+// The Activity tab, rate limits and the daily clean-up are in Activity.gs; "Report an issue" is in ReportApi.gs.

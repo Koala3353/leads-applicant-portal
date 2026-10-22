@@ -5,7 +5,8 @@
  *   a number is added (BEA2, BEA3...). Stored in Applicants › ReferralCode. Older BEA-7K2Q style codes still work.
  * - A new applicant can enter someone's code (or arrive via ...exec?ref=CODE). On submit the server checks it and
  *   saves ReferredBy (the code) + ReferrerID (that person's ApplicantID). Locked after submit.
- * - Counts are worked out from the Applicants tab (TextFinder on ReferrerID), so there's no second list to keep in sync.
+ * - Counts are worked out from the Applicants tab (one read of the ReferrerID + Status columns), so there's no second
+ *   list to keep in sync.
  *   A referral counts once the referred person applies; withdrawn applicants aren't counted.
  * - The Referrals tab (built by referrals_setupTab) groups everyone by who invited them, for separating friends at camp.
  */
@@ -63,19 +64,21 @@ function referralInfo_(found) {
   const a = found.data;
   let code = String(a.ReferralCode || '').trim();
   if (!code) {
-    const lock = LockService.getScriptLock();
-    lock.waitLock(10000);
-    try {
+    const made = withScriptLock_(10000, () => {
       ensureApplicantHeaders_();   // inside the lock, so it can't race a submit adding the same columns
       const values = sheet_(SHEET.APPLICANTS).getDataRange().getValues();
       // find the row again by email: the core team may have sorted or deleted rows since found.row was read
       const cEmail = col_('Email'), me = String(a.Email || '').trim().toLowerCase();
       const i = values.findIndex((r, n) => n > 0 && String(r[cEmail]).trim().toLowerCase() === me);
-      if (i < 1) return null;
-      const now = values[i][col_('ReferralCode')];
-      code = String(now || '').trim() || makeReferralCode_(a.Nickname, a.FullName, referralCodesIn_(values));
-      if (!String(now || '').trim()) updateApplicant_(i + 1, { ReferralCode: code });
-    } finally { lock.releaseLock(); }
+      if (i < 1) return '';
+      const now = String(values[i][col_('ReferralCode')] || '').trim();
+      if (now) return now;
+      const fresh = makeReferralCode_(a.Nickname, a.FullName, referralCodesIn_(values));
+      updateApplicant_(i + 1, { ReferralCode: fresh }, String(a.ApplicantID));
+      return fresh;
+    });
+    if (!made) return null;
+    code = made;
   }
   // Only how many applied with the code. Never their statuses: that would tell a referrer whether a friend got in
   // (RA 10173). One read of the Status column instead of one call per referral.
@@ -101,7 +104,7 @@ function referralInfo_(found) {
 function referrals_setupTab() {
   requireAdmin_();
   ensureApplicantHeaders_();
-  const ss = ss_(), name = 'Referrals';
+  const ss = ss_(), name = SHEET.REFERRALS;
   const sh = ss.getSheetByName(name) || ss.insertSheet(name);
   const L = h => columnLetter_(col_(h) + 1);
   const A = "'" + SHEET.APPLICANTS + "'!";

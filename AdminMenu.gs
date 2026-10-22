@@ -1,14 +1,14 @@
 /**
- * AdminMenu.gs  (integrator owns this file) — officers work directly in the Sheet.
+ * AdminMenu.gs  (integrator owns this file) — the core team works directly in the Sheet.
  *
  *  1. LEADS menu (top bar of the Sheet): select applicant rows in the Applicants tab, then
  *     LEADS → Decision / Requirements / Payment → pick the new value. Every row is checked
  *     (allowed status moves only), logged, and auto-confirmed when all three tracks are done.
- *  2. Hand edits to Status / Requirements / Payment cells are checked too: an officer's valid
+ *  2. Hand edits to Status / Requirements / Payment cells are checked too: a core team member's valid
  *     change is logged; anything else (wrong order, not in Admins) is undone with a message.
  *
- * Officers must be in the Admins tab AND be editors of the Sheet, using an account in the same
- * Google Workspace as the owner (otherwise Google hides their email and they count as "not an officer").
+ * The core team must be in the Admins tab AND be editors of the Sheet, using an account in the same
+ * Google Workspace as the owner (otherwise Google hides their email and they count as "not core team").
  * Menu functions are public (menus need that), so each one checks requireAdmin_() first.
  */
 
@@ -60,12 +60,12 @@ function menu_portalLink() {
     'Not deployed yet: Extensions → Apps Script → Deploy → New deployment → Web app.', SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
-/** Applies one change to every applicant row the officer has selected (several ranges allowed). */
+/** Applies one change to every applicant row selected (several ranges allowed). */
 function applyToSelection_(field, value) {
   const ui = SpreadsheetApp.getUi();
   let by;
   try { by = requireAdmin_(); } catch (e) {
-    ui.alert('Only officers listed in the Admins tab can do this. You are signed in as ' + (currentEmail_() || 'an account Google hides from the script') + '.');
+    ui.alert('Only core team members listed in the Admins tab can do this. You are signed in as ' + (currentEmail_() || 'an account Google hides from the script') + '.');
     return;
   }
   const sh = ss_().getActiveSheet();
@@ -115,7 +115,7 @@ function selectedIds_(sh) {
 function onEdit(e) {
   try { guardTrackEdit_(e); } catch (err) { console.error('onEdit: ' + (err && err.message)); }
   // config tabs are cached for 2 minutes (Utils.gs cachedTab_): an edit clears the cache right away
-  try { const n = e && e.range && e.range.getSheet().getName(); if ([SHEET.SETTINGS, SHEET.LISTS, SHEET.ADMINS, SHEET.REQUIREMENTS].indexOf(n) >= 0) clearConfigCache_(); } catch (err) { /* fine */ }
+  try { const n = e && e.range && e.range.getSheet().getName(); if (CONFIG_TABS.indexOf(n) >= 0) clearConfigCache_(); } catch (err) { /* fine */ }
 }
 
 function guardTrackEdit_(e) {
@@ -141,21 +141,15 @@ function guardTrackEdit_(e) {
   const get = name => String(values[col_(name)] || '');
   const id = get('ApplicantID');
   const from = e.oldValue === undefined ? '' : String(e.oldValue);
-  const to = e.value === undefined ? '' : String(e.value);
+  const to = String(r.getValue() === null ? '' : r.getValue()).trim();   // e.value is missing when a cell is cleared or pasted into
   if (from === to) return;
 
+  // the same rules as the LEADS menu (statusMoveError_ / trackChangeError_ in Utils.gs)
+  const d = { ApplicantID: id, Status: get('Status'), Requirements: get('Requirements'), Payment: get('Payment') };
   let problem = '';
   if (!isAdmin_(who)) problem = 'Only core team members in the Admins tab can change ' + field + '.';
-  else if (field === 'Status') {
-    if (from && (NEXT_STATUS[from] || []).indexOf(to) < 0) problem = 'Can\'t go from ' + from + ' to ' + (to || 'blank') + '.';
-    else if (to === 'CONFIRMED' && !(get('Requirements') === 'APPROVED' && get('Payment') === 'VERIFIED')) {
-      problem = 'Confirm only after Requirements is APPROVED and Payment is VERIFIED.';
-    }
-  } else {
-    const list = field === 'Requirements' ? REQUIREMENT_STATES : PAYMENT_STATES;
-    if (list.indexOf(to) < 0) problem = field + ' can\'t be ' + (to || 'blank') + '.';
-    else if (['REJECTED', 'WITHDRAWN'].indexOf(get('Status')) >= 0 && to !== 'NONE') problem = id + ' is ' + get('Status') + '.';
-  }
+  else if (field === 'Status') problem = statusMoveError_(from, to, d);
+  else problem = trackChangeError_(field, to, d);
   if (problem) {
     r.setValue(from);
     ss.toast(problem + ' Your edit was undone.', 'LEADS', 8);
@@ -166,12 +160,16 @@ function guardTrackEdit_(e) {
   sh.getRange(row, col_('ReviewedBy') + 1).setValue(who);
   logChange_(id, field.toLowerCase() + ' (by hand)', from, to, who);
 
-  // auto-confirm, same rule as the menu
+  // auto-confirm / un-confirm, same rules as the menu (shouldConfirm_ / shouldUnconfirm_ in Utils.gs)
   const now = { Status: get('Status'), Requirements: get('Requirements'), Payment: get('Payment') };
   now[field] = to;
-  if (now.Status === 'ACCEPTED' && now.Requirements === 'APPROVED' && now.Payment === 'VERIFIED') {
+  if (shouldConfirm_(now)) {
     sh.getRange(row, col_('Status') + 1).setValue('CONFIRMED');
     logChange_(id, 'status', 'ACCEPTED', 'CONFIRMED', 'system');
     ss.toast(id + ' is now CONFIRMED.', 'LEADS', 5);
+  } else if (field !== 'Status' && shouldUnconfirm_(now)) {
+    sh.getRange(row, col_('Status') + 1).setValue('ACCEPTED');
+    logChange_(id, 'status', 'CONFIRMED', 'ACCEPTED', 'system (' + field.toLowerCase() + ' moved back)');
+    ss.toast(id + ' is back to ACCEPTED: ' + field + ' is no longer done.', 'LEADS', 6);
   }
 }

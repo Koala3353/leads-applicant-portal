@@ -14,7 +14,7 @@
 
 /**
  * Returns everything the Apply page needs to render, in a single remote call.
- * @return {Object} Context including sign-in state, application status, rules, and lists.
+ * @return {Object} Context including sign-in state, application status, rules, draft and member autofill.
  */
 function apply_getForm() {
   return traced_('apply_getForm', 'apply', apply_getForm_, () => 'form loaded');
@@ -24,13 +24,13 @@ function apply_getForm_() {
   const email = currentEmail_();
   const found = email ? getApplicantByEmail_(email) : null;
   const deadline = parseDate_(getSetting_('Deadline'));
-  const rules = utils_getFormRules();
+  const rules = formRules_();
   const contact = String(getSetting_('ContactEmail') || '').trim();
 
   let draft = null;
   if (email && !found) {
     try {
-      draft = typeof apply_getDraft_ === 'function' ? apply_getDraft_(email) : null;
+      draft = apply_getDraft_(email);
     } catch (err) {
       draft = null;
     }
@@ -47,11 +47,10 @@ function apply_getForm_() {
       status: found.data.Status
     } : null,
     rules: rules.rules,
-    lists: rules.lists,
     contact: contact,
     eventDates: String(getSetting_('EventDates') || '').trim(),   // shown in the offsite-availability question
     draft: draft,
-    member: email && !found ? apply_memberFor_(email, '', rules.lists) : null
+    member: email && !found ? apply_memberFor_(email, '') : null
   };
 }
 
@@ -76,7 +75,7 @@ function apply_submit_(form) {
 
   // 2b. Someone who keeps getting "that ID can't be used" or "unknown referral code" is probably guessing other
   // people's IDs or names to learn who applied: after 6 failures in an hour, stop answering for a while.
-  const failKey = 'subfail:' + email;
+  const failKey = probeKey_(email);
   if (!bump_(failKey, 6, 3600, true)) {
     return { ok: false, errors: { IDNumber: 'Too many attempts. Wait an hour, or message the core team if something is wrong.' } };
   }
@@ -101,10 +100,9 @@ function apply_submit_(form) {
 
   // 5. Data integrity lock and atomic write. Keep the time inside the lock short: every applicant's submit waits on it.
   // One read covers both duplicate checks; the Log row and draft clean-up happen after the lock is released.
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);   // a submit is rare and precious: wait longer rather than fail during a rush
   let nextId, referralCode = '', referral = {};
-  try {
+  // a submit is rare and precious: wait longer rather than fail during a rush
+  const early = withScriptLock_(30000, () => {
     // Re-verify applications open status inside lock
     if (!isOpen_()) {
       throw new Error('Applications just closed.');
@@ -139,27 +137,15 @@ function apply_submit_(form) {
     nextId = nextApplicantId_();
     const now = new Date();
 
-    // Each value goes under its header, wherever that column is in the Sheet
-    const rowMap = {
+    // Each value goes under its header, wherever that column is in the Sheet. Every Apply answer comes straight from
+    // RULES (a new question needs no line here), then the fields the portal fills in itself.
+    const rowMap = Object.assign({}, v.clean, {
       ApplicantID: nextId,
       Timestamp: now,
       Email: email,
-      FullName: v.clean.FullName,
-      Nickname: v.clean.Nickname,
       IDNumber: candidateIdStr,
-      Course: v.clean.Course,
       YearLevel: Number(v.clean.YearLevel),
       Mobile: String(v.clean.Mobile),
-      DataConsent: v.clean.DataConsent,
-      Block: v.clean.Block,
-      MBTI: v.clean.MBTI,
-      PastOrgs: v.clean.PastOrgs,
-      FirstOvernight: v.clean.FirstOvernight,
-      OffsiteAvailability: v.clean.OffsiteAvailability,
-      WhyParticipant: v.clean.WhyParticipant,
-      FirstImpression: v.clean.FirstImpression,
-      TakesLeadership: v.clean.TakesLeadership,
-      FearLeadership: v.clean.FearLeadership,
       GameAnswers: String(input.GameAnswers || '').slice(0, 5000),   // JSON of the Game page choices
       ReferralCode: referralCode,
       ReferredBy: referral.code || '',
@@ -170,14 +156,14 @@ function apply_submit_(form) {
       ReviewedBy: '',
       LastUpdated: now,
       Notes: ''
-    };
+    });
 
     const row = cols_().map(col => textCell_(rowMap[col] !== undefined ? rowMap[col] : ''));   // text stays text (Utils.gs)
     sheet_(SHEET.APPLICANTS).appendRow(row);
     SpreadsheetApp.flush();   // the row is written before the next submit reads the sheet
-  } finally {
-    lock.releaseLock();
-  }
+    return null;
+  });
+  if (early) return early;   // refused inside the lock (referral or ID problem)
 
   // Outside the lock: appends and a single-row clear don't need it
   logChange_(nextId, 'status', '', 'SUBMITTED', 'system');
@@ -194,15 +180,7 @@ function apply_submit_(form) {
  */
 
 function apply_draftSheet_() {
-  const tabName = 'Drafts';
-  const ss = ss_();
-  let sh = ss.getSheetByName(tabName);
-  if (sh) return sh;
-  sh = ss.insertSheet(tabName);
-  sh.getRange(1, 1, 1, 3).setValues([['Email', 'SavedAt', 'Data']]).setFontWeight('bold');
-  sh.setFrozenRows(1);
-  sh.hideSheet();
-  return sh;
+  return ensureTab_(SHEET.DRAFTS, ['Email', 'SavedAt', 'Data'], { hidden: true });
 }
 
 function apply_findDraftRow_(sh, email) {
@@ -229,14 +207,12 @@ function apply_draftRow_(sh, email) {
 function apply_ensureDraftRow_(sh, email) {
   let row = apply_draftRow_(sh, email);
   if (row) return row;
-  const lock = LockService.getScriptLock();
-  lock.waitLock(15000);
-  try {
-    row = apply_findDraftRow_(sh, email);   // someone (another tab) may have added it while we waited
-    if (!row) { sh.appendRow([email, '', '']); SpreadsheetApp.flush(); row = sh.getLastRow(); }
-  } finally {
-    lock.releaseLock();
-  }
+  row = withScriptLock_(15000, () => {
+    const again = apply_findDraftRow_(sh, email);   // someone (another tab) may have added it while we waited
+    if (again) return again;
+    sh.appendRow([email, '', '']); SpreadsheetApp.flush();
+    return sh.getLastRow();
+  });
   CacheService.getScriptCache().put('draftrow:' + email, String(row), 21600);
   return row;
 }
@@ -275,11 +251,8 @@ function apply_saveDraft(data) {
   if (!email || !isAllowedDomain_(email)) return { ok: false };
   data = data || {};
   const clean = {};
-  const fields = [
-    'DataConsent', 'IDNumber', 'FullName', 'Nickname', 'Course', 'YearLevel', 'Mobile',
-    'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability',
-    'WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership', 'GameAnswers', 'ReferredBy'
-  ];
+  // every Apply question in RULES, plus the Game's answers
+  const fields = Object.keys(RULES).filter(f => RULES[f].stage === 'apply').concat(['GameAnswers']);
   fields.forEach(f => {
     if (data[f] !== undefined && data[f] !== null) {
       clean[f] = String(data[f]).slice(0, f === 'GameAnswers' ? 5000 : 1500);
@@ -296,15 +269,22 @@ function apply_saveDraft(data) {
       return { ok: false, consent: true };
     }
     const sh = apply_draftSheet_();
-    const now = new Date();
-    const row = apply_ensureDraftRow_(sh, email);
-    // Merge onto the stored draft: Apply sends only its 18 fields and the Game only GameAnswers,
-    // so replacing outright would wipe the other page's answers. Only this account writes this row.
-    let stored = {};
-    try { stored = JSON.parse(sh.getRange(row, 3).getValue() || '{}') || {}; } catch (e) { stored = {}; }
-    const merged = Object.assign({}, stored, clean);
-    sh.getRange(row, 2, 1, 2).setValues([[now, JSON.stringify(merged)]]);
-    return { ok: true, savedAt: now.toISOString() };
+    // Merge onto the stored draft: Apply sends only its fields and the Game only GameAnswers, so replacing outright
+    // would wipe the other page's answers. The per-person lock stops two open tabs (Apply autosaving while the Game
+    // saves) from each reading the old draft and writing over the other's answers. It never waits on anyone else.
+    const lock = LockService.getUserLock();
+    if (!lock.tryLock(10000)) return { ok: false, busy: true };
+    try {
+      const have = apply_draftRow_(sh, email);
+      let stored = {};
+      if (have) { try { stored = JSON.parse(sh.getRange(have, 3).getValue() || '{}') || {}; } catch (e) { stored = {}; } }
+      // A save without the consent box (the Game sends only its answers) is kept only if consent is already on file
+      if (!('DataConsent' in clean) && stored.DataConsent !== 'Y') return { ok: false, consent: true };
+      const now = new Date();
+      const row = have || apply_ensureDraftRow_(sh, email);
+      sh.getRange(row, 2, 1, 2).setValues([[now, JSON.stringify(Object.assign({}, stored, clean))]]);
+      return { ok: true, savedAt: now.toISOString() };
+    } finally { lock.releaseLock(); }
   } catch (err) {
     activity_('draft_save', String(err && err.message), { level: 'ERROR', page: 'apply' });
     throw err;
@@ -320,6 +300,22 @@ function apply_discardDraft() {
 }
 
 /* ---------------- MemData: autofill from member list ---------------- */
+
+// MemData's columns, found by any of these header names (case, spaces and punctuation ignored; headerIndex_ in Utils.gs)
+const MEMDATA_COLS = {
+  id: ['idnumber', 'studentid', 'idno', 'id'],
+  last: ['lastname', 'surname', 'last'],
+  first: ['firstname', 'givenname', 'first'],
+  mi: ['middleinitial', 'mi', 'middle'],
+  semail: ['studentemail', 'ateneoemail', 'studentemailaddress'],
+  email: ['emailaddress', 'email', 'primaryemail', 'personalemail'],
+  year: ['yearlevel', 'year', 'yr'],
+  course: ['course', 'program', 'degree'],
+  mobile: ['mobilenumber', 'mobile', 'contactnumber', 'cellphone'],
+  block: ['block', 'section'],
+  mbti: ['mbti', 'mbtitype', 'personalitytype']
+};
+const MEMDATA_MBTI_FALLBACK = 27;   // the member form's MBTI answer has a long question as its header: column AB
 
 /** MemData header + the rows where this email appears (found by a server-side search, not by reading every member). */
 function apply_memRows_(sh, email) {
@@ -339,14 +335,12 @@ function apply_memRows_(sh, email) {
 /** True when MemData lists this ID number only under other email addresses (never this account). */
 function apply_idBelongsToOther_(id, email) {
   try {
-    const sh = ss_().getSheetByName('MemData');
+    const sh = ss_().getSheetByName(SHEET.MEMDATA);
     if (!sh || sh.getLastRow() < 2 || !id) return false;
     const lastCol = sh.getLastColumn();
-    const norm = h => String(h).toLowerCase().replace(/[^a-z0-9]/g, '');
-    const head = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0].map(norm);
-    const at = names => { for (const n of names) { const i = head.indexOf(n); if (i >= 0) return i; } return -1; };
-    const cId = at(['idnumber', 'studentid', 'idno', 'id']);
-    const cMail = [at(['studentemail', 'ateneoemail', 'studentemailaddress']), at(['emailaddress', 'email', 'primaryemail', 'personalemail'])].filter(i => i >= 0);
+    const head = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+    const cId = headerIndex_(head, MEMDATA_COLS.id);
+    const cMail = [headerIndex_(head, MEMDATA_COLS.semail), headerIndex_(head, MEMDATA_COLS.email)].filter(i => i >= 0);
     if (cId < 0 || !cMail.length) return false;
     const hits = sh.getRange(2, cId + 1, sh.getLastRow() - 1, 1).createTextFinder(id).matchEntireCell(true).findAll();
     if (!hits.length) return false;
@@ -361,35 +355,14 @@ function apply_idBelongsToOther_(id, email) {
   }
 }
 
-function apply_memberFor_(email, idNumber, lists) {
+function apply_memberFor_(email, idNumber) {
   try {
-    const sh = ss_().getSheetByName('MemData');
+    const sh = ss_().getSheetByName(SHEET.MEMDATA);
     if (!sh || sh.getLastRow() < 2) return null;
     const rows = apply_memRows_(sh, email);   // header + only the rows that mention this email
-    const norm = h => String(h).toLowerCase().replace(/[^a-z0-9]/g, '');
-    const head = rows[0].map(norm);
-    
-    const col = (...names) => {
-      for (const n of names) {
-        const i = head.indexOf(n);
-        if (i >= 0) return i;
-      }
-      return -1;
-    };
-
-    const c = {
-      id: col('idnumber', 'studentid', 'idno', 'id'),
-      last: col('lastname', 'surname', 'last'),
-      first: col('firstname', 'givenname', 'first'),
-      mi: col('middleinitial', 'mi', 'middle'),
-      semail: col('studentemail', 'ateneoemail', 'studentemailaddress'),
-      email: col('emailaddress', 'email', 'primaryemail', 'personalemail'),
-      year: col('yearlevel', 'year', 'yr'),
-      course: col('course', 'program', 'degree'),
-      mobile: col('mobilenumber', 'mobile', 'contactnumber', 'cellphone'),
-      block: col('block', 'section'),
-      mbti: col('mbti', 'mbtitype', 'personalitytype') >= 0 ? col('mbti', 'mbtitype', 'personalitytype') : 27 // fallback: Column AB (0-indexed 27)
-    };
+    const c = {};
+    Object.keys(MEMDATA_COLS).forEach(k => { c[k] = headerIndex_(rows[0], MEMDATA_COLS[k]); });
+    if (c.mbti < 0) c.mbti = MEMDATA_MBTI_FALLBACK;
 
     const cell = (r, i) => (i >= 0 && i < r.length) ? String(r[i] || '').trim() : '';
     const targetEmail = String(email || '').toLowerCase().trim();
@@ -451,7 +424,7 @@ function apply_lookupMember(idNumber) {
   return traced_('apply_lookupMember', 'apply', () => {
     const email = currentEmail_();
     if (!email || !isAllowedDomain_(email)) return { found: false };
-    const m = apply_memberFor_(email, idNumber, utils_getFormRules().lists);
+    const m = apply_memberFor_(email, idNumber);
     return m ? { found: true, member: m } : { found: false };
   }, r => r.found ? 'matched by ' + r.member.matchedBy : 'no match');
 }

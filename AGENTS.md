@@ -24,7 +24,7 @@ If `clasp pull` changed files, someone edited in the browser. Commit those first
 
 ## While working
 - Only edit the files the human owns (CONTEXT.md ownership table). `Home.html` + `HomeApi.gs` and `Steps.html` +
-  `StepsApi.gs` (Member B: the payment view, `?page=pay`) are shared between Member B and Keene: both may edit, so pull first and keep commits small. For the other shared files (`Utils.gs`,
+  `StepsApi.gs` (Member B: the payment view, `?page=pay`) are shared between Member B and Keene: both may edit, so pull first and keep commits small. For the other shared files (`Utils.gs`, `Activity.gs`, `ReportApi.gs`,
   `Styles.html`, `Brand.gs`, `Referrals.gs`, `Mascot.html`, `Loader.html`, `Code.gs`) write an **"Ask Keene"** note instead of editing.
 - **Never name a script file `PreLeadsApi`** (in any form, e.g. `PreLeadsApi.gs`). In Oct 2026 a file with that name made the
   Apps Script editor show "500" and the /dev link "You need access" for everyone; the same code as `PreLeadsServer.gs` works.
@@ -32,7 +32,9 @@ If `clasp pull` changed files, someone edited in the browser. Commit those first
 - Create new files locally and `clasp push` them; don't type a name ending in `.gs` in the editor (it adds another: `X.gs.gs`).
 - Keep `.gs` as `.gs`; never create `.js` copies. Never rename sheet headers (the code finds Applicants columns by header name, `col_()` in Utils.gs; never by position).
 - New Apply question = `RULES` + `COLS` (append at the END) in Utils.gs, `FIELDS` + HTML in Apply.html,
-  the draft field list in ApplyApi.gs, and a `judge` line + `LABEL` for I.R.I.S. (CONTEXT.md §9.1).
+  and a `judge` line + `LABEL` for I.R.I.S. (CONTEXT.md §9.1). The saved row and draft come from `RULES`.
+- Never make a top-level `const` that reads a const from another file (e.g. `const X = RULES.Y` outside a function):
+  Apps Script's file load order isn't guaranteed, and if that file loads first the whole project fails to start.
 - User-facing copy says "core team", never "officers".
 
 ## End of every change (in this order)

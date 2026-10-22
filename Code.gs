@@ -11,7 +11,7 @@
  *
  * FILE NAMES: Apps Script won't let a .gs and an .html share a name (Home.gs + Home.html = error),
  * so server code is HomeApi.gs, ApplyApi.gs, GameApi.gs, StepsApi.gs.
- * Shared: Code.gs (this), Utils.gs, Brand.gs, Referrals.gs, Setup.gs, AdminMenu.gs, Styles.html, PageTop.html, Loader.html, Mascot.html.
+ * Shared: Code.gs (this), Utils.gs, Activity.gs, ReportApi.gs, Brand.gs, Referrals.gs, Setup.gs, AdminMenu.gs, Styles.html, PageTop.html, Loader.html, Mascot.html.
  * Any other ?page= value shows Home.
  */
 const PAGES = {
@@ -62,7 +62,7 @@ function doGet(e) {
 function portalUrl_() {
   const url = ScriptApp.getService().getUrl() || '';
   let domain = 'student.ateneo.edu';
-  try { domain = String(getSetting_('AllowedEmailDomains') || '').split(',')[0].trim().replace(/^@/, '') || domain; } catch (e) { /* Settings missing: use the default */ }
+  try { domain = allowedDomains_()[0] || domain; } catch (e) { /* Settings missing: use the default */ }
   const m = url.match(/\/s\/([^/]+)\/(exec|dev)/);
   return m ? 'https://script.google.com/a/macros/' + domain + '/s/' + m[1] + '/' + m[2] : url;
 }

@@ -80,9 +80,9 @@ function steps_forms_(applicantId) {
   const sh = ss_().getSheetByName(SHEET.REQUIREMENTS);
   if (!sh) return [];
   const rows = cachedTab_(SHEET.REQUIREMENTS);
-  const head = (rows[0] || []).map(h => String(h).trim().toLowerCase());
-  const at = (...names) => { for (const n of names) { const i = head.indexOf(n); if (i >= 0) return i; } return -1; };
-  const c = { title: at('form', 'title', 'requirement'), link: at('link', 'url', 'form link'), what: at('what to do', 'instructions'), due: at('due', 'deadline') };
+  const head = rows[0] || [];
+  const c = { title: headerIndex_(head, ['form', 'title', 'requirement']), link: headerIndex_(head, ['link', 'url', 'form link']),
+    what: headerIndex_(head, ['what to do', 'instructions']), due: headerIndex_(head, ['due', 'deadline']) };
   return rows.slice(1).filter(r => c.title >= 0 && String(r[c.title]).trim()).map(r => {
     const raw = c.link >= 0 ? String(r[c.link]).trim() : '';
     const link = formLink_(raw, applicantId) || (/^https:\/\//.test(raw) ? raw : '');
@@ -161,14 +161,18 @@ function steps_uploadProof_(file) {
   const saved = steps_proofFolder_().createFile(Utilities.newBlob(bytes, type, name));
   saved.setDescription('Uploaded by ' + a.Email + ' through the LEADS portal.');
 
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
   try {
-    // find the row again: rows may have been sorted or deleted during the (slow) Drive upload
-    const now = getApplicantById_(a.ApplicantID);
-    if (!now) throw new Error('Your file could not be found. Message the core team.');
-    updateApplicant_(now.row, { PaymentProof: saved.getUrl() });
-  } finally { lock.releaseLock(); }
+    withScriptLock_(20000, () => {
+      // find the row again: rows may have been sorted or deleted during the (slow) Drive upload
+      const now = getApplicantById_(a.ApplicantID);
+      if (!now) throw new Error('Your file could not be found. Message the core team.');
+      updateApplicant_(now.row, { PaymentProof: saved.getUrl() }, a.ApplicantID);
+    });
+  } catch (err) {
+    // never leave a receipt (personal data) in Drive that no row points to
+    try { saved.setTrashed(true); } catch (e) { /* best effort */ }
+    throw err;
+  }
   const before = String(a.Payment || 'NONE');
   if (before !== 'SUBMITTED') setTrack_(a.ApplicantID, 'Payment', 'SUBMITTED', 'system');
   else logChange_(a.ApplicantID, 'payment proof', 'replaced', 'new file', 'system');
@@ -180,9 +184,7 @@ function steps_proofFolder_() {
   const link = String(getSetting_('PaymentFolder') || '');
   const id = (link.match(/folders\/([\w-]{20,})/) || link.match(/^([\w-]{25,})$/) || [])[1];
   if (id) { try { const f = DriveApp.getFolderById(id); if (!f.isTrashed()) return f; } catch (e) { /* gone or no access: make a new one */ } }
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
-  try {
+  return withScriptLock_(20000, () => {
     clearConfigCache_(); getSettings_.cache = null; cachedTab_.memo = {};   // re-read Settings for real
     const again = (String(getSetting_('PaymentFolder') || '').match(/folders\/([\w-]{20,})/) || [])[1];
     if (again && again !== id) return DriveApp.getFolderById(again);
@@ -197,19 +199,9 @@ function steps_proofFolder_() {
       try { if (!f.isTrashed() && f.getOwner() && f.getOwner().getEmail().toLowerCase() === me) folder = f; } catch (e) { /* skip */ }
     }
     folder = folder || DriveApp.createFolder(name);
-    steps_writeSetting_('PaymentFolder', folder.getUrl(), 'Drive folder where uploaded proofs of payment are saved. Made automatically; share it with the core team.');
+    writeSetting_('PaymentFolder', folder.getUrl());
     return folder;
-  } finally { lock.releaseLock(); }
-}
-
-/** Writes a Settings value (adds the row if it's missing). */
-function steps_writeSetting_(key, value, help) {
-  const sh = sheet_(SHEET.SETTINGS);
-  const keys = sh.getRange(1, 1, sh.getLastRow(), 1).getValues().map(r => String(r[0]).trim());
-  const i = keys.indexOf(key);
-  if (i >= 0) sh.getRange(i + 1, 2).setValue(value);
-  else sh.appendRow([key, value, help || '']);
-  clearConfigCache_();
+  });
 }
 
 /** Run once from the editor (as the owner) so Google asks for the Drive permission the upload needs. */

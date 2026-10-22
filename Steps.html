@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <?!= include_('Styles') ?>
-<?!= brand_css() ?>
+<?!= brand_css_() ?>
 <!-- Steps.html  (integrator owns this file) The steps after acceptance, one page with four views:
      ?page=pay (02 proof of payment), reqs (03 requirements), ga (04 1st GA), room (05 room booking).
      Server: StepsApi.gs (steps_get, steps_uploadProof). Copy: BRAND.steps. What's unlocked: progress_ in Utils.gs.
@@ -163,7 +163,7 @@
 </div>
 
 <script>
-  const BRAND = <?!= brand_json() ?>;
+  const BRAND = <?!= brand_json_() ?>;
   const PAGE = <?!= JSON.stringify(String(page || 'pay')).replace(/</g, '\\u003c') ?>;
   const T = BRAND.steps;
   const $ = id => document.getElementById(id);

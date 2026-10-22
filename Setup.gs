@@ -3,14 +3,13 @@
  * Select setup_applyValidation in the dropdown → Run → Allow.
  *
  * It (re)applies Google-Sheets-native data validation, including regex checks
- * that an .xlsx file can't carry, plus status colors and Log protection.
+ * that an .xlsx file can't carry, plus status colors and Activity protection.
  * Remember: these rules guard hand edits. The code guards itself in Utils.gs.
  */
 function setup_applyValidation() {
   ownerOnly_();
   const ss = ss_();
   const sh = sheet_(SHEET.APPLICANTS);
-  const lists = sheet_(SHEET.LISTS);
   const max = sh.getMaxRows();
   ensureApplicantHeaders_();
   const col = name => col_(name) + 1;   // found by header name
@@ -26,18 +25,18 @@ function setup_applyValidation() {
 
   custom('ApplicantID', `=REGEXMATCH(TO_TEXT(${r('ApplicantID')}2),"^APP-\\d{4,}$")`, 'Made by the script: APP-2317');
   // email domains come from Settings > AllowedEmailDomains, so porting needs no code change
-  const domains = String(getSetting_('AllowedEmailDomains') || '').split(',')
-    .map(d => d.trim().toLowerCase().replace(/[.]/g, '\\.')).filter(String);
-  const domainRe = domains.length ? '(' + domains.join('|') + ')' : '[a-z0-9.-]+\\.[a-z]+';
+  const domainRe = '(' + allowedDomains_().map(d => d.replace(/[.]/g, '\\.')).join('|') + ')';
   custom('Email', `=AND(REGEXMATCH(LOWER(${r('Email')}2),"^[a-z0-9._%+-]+@${domainRe}$"),COUNTIF($${r('Email')}:$${r('Email')},${r('Email')}2)=1)`,
     'Allowed email domain only, and only once in this column');
-  custom('FullName', `=REGEXMATCH(${r('FullName')}2,"^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ .'-]{1,79}$")`, 'Letters, spaces, . \' - only');
-  custom('Nickname', `=REGEXMATCH(${r('Nickname')}2,"^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ .'-]{0,29}$")`, 'Up to 30 letters');
-  custom('IDNumber', `=AND(REGEXMATCH(TO_TEXT(${r('IDNumber')}2),"^\\d{6}$"),COUNTIF($${r('IDNumber')}:$${r('IDNumber')},${r('IDNumber')}2)=1)`,
+  // the same patterns and lengths as RULES (Utils.gs), so a hand edit is held to what the form accepts
+  const re = name => RULES[name].pattern.replace(/"/g, '""');
+  custom('FullName', `=REGEXMATCH(${r('FullName')}2,"${re('FullName')}")`, RULES.FullName.msg);
+  custom('Nickname', `=REGEXMATCH(${r('Nickname')}2,"${re('Nickname')}")`, RULES.Nickname.msg);
+  custom('IDNumber', `=AND(REGEXMATCH(TO_TEXT(${r('IDNumber')}2),"${re('IDNumber')}"),COUNTIF($${r('IDNumber')}:$${r('IDNumber')},${r('IDNumber')}2)=1)`,
     '6 digits, and only once in this column');
-  custom('Mobile', `=REGEXMATCH(TO_TEXT(${r('Mobile')}2),"^09\\d{9}$")`, '11 digits starting with 09');
-  ['WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership'].forEach(name =>
-    custom(name, `=AND(LEN(${r(name)}2)>=50,LEN(${r(name)}2)<=1000)`, '50 to 1000 characters'));
+  custom('Mobile', `=REGEXMATCH(TO_TEXT(${r('Mobile')}2),"${re('Mobile')}")`, RULES.Mobile.msg);
+  Object.keys(RULES).filter(n => RULES[n].minLen && cols_().indexOf(n) >= 0).forEach(name =>
+    custom(name, `=AND(LEN(${r(name)}2)>=${RULES[name].minLen},LEN(${r(name)}2)<=${RULES[name].maxLen})`, RULES[name].msg));
 
   // keep leading zeros (09...) and stop Sheets turning IDs into numbers
   ['IDNumber', 'Mobile'].forEach(name => range(name).setNumberFormat('@'));
@@ -47,18 +46,12 @@ function setup_applyValidation() {
   range('Timestamp').setDataValidation(B().requireDate().setAllowInvalid(false).build());
   range('LastUpdated').setDataValidation(B().requireDate().setAllowInvalid(false).build());
 
-  const listHeaders = lists.getRange(1, 1, 1, lists.getLastColumn()).getValues()[0].map(String);
-  const listCol = header => {
-    const c = listHeaders.indexOf(header) + 1;
-    if (!c) throw new Error('Lists tab has no column called ' + header);
-    return lists.getRange(2, c, lists.getMaxRows() - 1, 1);
-  };
-  const dropdown = (name, header) => range(name).setDataValidation(
-    B().requireValueInRange(listCol(header), true).setAllowInvalid(false).build());
-  ['Course', 'MEAInvolvement'].forEach(name => { if (cols_().indexOf(name) >= 0) range(name).clearDataValidations(); });   // Course is free text now; MEAInvolvement was removed
-  dropdown('Status', 'Statuses');
-  dropdown('Requirements', 'RequirementStates');
-  dropdown('Payment', 'PaymentStates');
+  // the three track dropdowns come from the constants in Utils.gs (one list, so the Sheet and the code never disagree)
+  const dropdown = (name, values) => range(name).setDataValidation(
+    B().requireValueInList(values, true).setAllowInvalid(false).build());
+  dropdown('Status', STATUSES);
+  dropdown('Requirements', REQUIREMENT_STATES);
+  dropdown('Payment', PAYMENT_STATES);
 
   // colors for the three tracks
   const color = (name, pairs) => pairs.map(([text, bg]) => SpreadsheetApp.newConditionalFormatRule()
@@ -79,8 +72,8 @@ function setup_applyValidation() {
 
   // the portal can only see who is signed in if the owner is in the applicants' Google Workspace
   const owner = String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
-  const allowed = String(getSetting_('AllowedEmailDomains') || '').split(',').map(d => d.trim().toLowerCase()).filter(String);
-  if (allowed.length && !allowed.some(d => owner.endsWith('@' + d))) {
+  const allowed = allowedDomains_();
+  if (!allowed.some(d => owner.endsWith('@' + d))) {
     console.warn('HEADS UP: this script is owned by ' + owner + '. Deploy the web app from an account in ' +
       allowed.join(' or ') + ', or the portal will not be able to see who is signed in.');
   }
@@ -89,49 +82,6 @@ function setup_applyValidation() {
   // getUi() only works when run from the Sheet's menu, not from the editor, so log instead
   console.log('Validation applied. Try typing a bad ID number in the Applicants tab to test it.');
   try { ss.toast('Validation applied.', 'LEADS setup', 5); } catch (e) { /* editor run: no toast */ }
-}
-
-/** 1 -> A, 27 -> AA */
-function columnLetter_(n) {
-  let s = '';
-  while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
-  return s;
-}
-
-/**
- * One-time sheet clean-up (Oct 2026). Run from the editor AFTER the new version is deployed (the old version
- * reads columns by position and writes to the Log tab, so it must be gone first). Safe to run twice.
- *  1. Deletes the retired Applicants columns WhyLEADS and FearEssay (replaced by the five essays).
- *  2. Adds any missing columns (PaymentProof) at the end.
- *  3. Copies every Log row into Activity as a CHANGE row, then deletes the Log tab.
- *  4. Re-applies validation.
- */
-function setup_cleanupAfterDeploy() {
-  ownerOnly_();
-  const ss = ss_(), sh = sheet_(SHEET.APPLICANTS), out = [];
-  ['WhyLEADS', 'FearEssay'].forEach(name => {
-    cols_.memo = null;
-    const i = cols_().indexOf(name);
-    if (i >= 0) { sh.deleteColumn(i + 1); out.push('deleted column ' + name); }
-  });
-  cols_.memo = null;
-  ensureApplicantHeaders_();
-
-  const log = ss.getSheetByName('Log');
-  if (log) {
-    const rows = log.getLastRow() > 1 ? log.getRange(2, 1, log.getLastRow() - 1, 6).getValues() : [];
-    const act = activitySheet_();
-    if (rows.length) {
-      const moved = rows.map(r => [r[0], 'CHANGE', r[1], '', 'change_' + r[3],
-        r[2] + ': ' + (r[4] || '(none)') + ' → ' + (r[5] || '(none)') + ' by ' + r[1] + ' (from the old Log tab)', ''].map(safeCell_));
-      act.getRange(act.getLastRow() + 1, 1, moved.length, moved[0].length).setValues(moved);
-    }
-    ss.deleteSheet(log);
-    out.push('moved ' + rows.length + ' Log rows into Activity and deleted the Log tab');
-  }
-  setup_applyValidation();
-  console.log(out.join('\n') || 'Nothing to clean up.');
-  return out;
 }
 
 /**
@@ -176,18 +126,9 @@ function setup_formatSheets() {
 
   // Settings
   const st = sheet_(SHEET.SETTINGS);
-  const NEW = [
-    ['ApplicantIdStart', '', 'Applicant IDs start above this number (default 2300) and skip ahead randomly, so IDs never show how many applied.'],
-    ['CampStart', '', 'Optional. When camp starts (for the countdown), e.g. 2027-01-29 08:00. Blank = the first date in EventDates.'],
-    ['IssueEmail', '', 'Optional. Where "Report an issue" emails go. Blank = the default in Brand.gs.'],
-    ['PreLeadsOpen', '', 'Untick / FALSE to close Pre-LEADS registration right away. Blank = open.'],
-    ['PreLeadsDeadline', '', 'When Pre-LEADS registration closes, e.g. 2026-11-05 17:00. Blank = Nov 5, 2026, 5 PM.'],
-    ['PreLeadsDate', '', 'Shown on the Pre-LEADS page. Blank = November 5, 2026.'],
-    ['PreLeadsTime', '', 'Shown on the Pre-LEADS page. Blank = 5:00 PM – 7:30 PM.'],
-    ['PreLeadsVenue', '', 'Shown on the Pre-LEADS page. Blank = Onsite (Ateneo de Manila University).']
-  ];
+  // a row for every setting the code reads (SETTINGS_SCHEMA in Utils.gs), with its help text; existing rows are kept
   const keys = st.getRange(1, 1, Math.max(st.getLastRow(), 1), 1).getValues().map(r => String(r[0]).trim());
-  const add = NEW.filter(r => keys.indexOf(r[0]) < 0);
+  const add = SETTINGS_SCHEMA.filter(s => keys.indexOf(s.key) < 0).map(s => [s.key, '', s.help]);
   if (add.length) { st.getRange(st.getLastRow() + 1, 1, add.length, 3).setValues(add); out.push('Settings: added ' + add.map(r => r[0]).join(', ')); }
   const sr = st.getLastRow();
   st.getRange(1, 1, sr, 3).setVerticalAlignment('top').setWrap(true);
@@ -198,7 +139,7 @@ function setup_formatSheets() {
   out.push('Settings formatted');
 
   // Activity, Drafts, PreLeads
-  [[SHEET.ACTIVITY, [150, 70, 210, 80, 150, 520, 60]], ['Drafts', [220, 150, 520]], ['PreLeads', null]].forEach(([name, widths]) => {
+  [[SHEET.ACTIVITY, [150, 70, 210, 80, 150, 520, 60]], [SHEET.DRAFTS, [220, 150, 520]], [SHEET.PRELEADS, null]].forEach(([name, widths]) => {
     const sh = ss.getSheetByName(name);
     if (!sh || !sh.getLastColumn()) return;
     const c = sh.getLastColumn();
@@ -213,3 +154,19 @@ function setup_formatSheets() {
   return out;
 }
 
+/**
+ * Everything the owner sets up by hand, in one run (safe to run again). Run from the editor as the owner: Google asks
+ * once for every permission the portal needs (Sheets, Drive for proofs, Mail for issue reports, triggers).
+ */
+function setup_all() {
+  ownerOnly_();
+  const out = [];
+  const step = (name, fn) => { try { const r = fn(); out.push('OK   ' + name + (typeof r === 'string' ? ': ' + r : '')); } catch (e) { out.push('FAIL ' + name + ': ' + (e && e.message)); } };
+  step('validation', setup_applyValidation);
+  step('formatting', setup_formatSheets);
+  step('daily clean-up', setup_dailyMaintenance);
+  step('Drive (proof uploads)', steps_authorizeDrive);
+  step('issue report emails', report_authorize);
+  console.log(out.join('\n'));
+  return out;
+}

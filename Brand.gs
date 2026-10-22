@@ -4,9 +4,8 @@
  * To port the portal to another org/project:
  *   1. Copy the whole Apps Script project (or every .gs/.html file).
  *   2. Edit ONLY this file: names, copy, colors, fonts, effects.
- *   3. In the Sheet: Settings (event, deadline, fee, domains, contact), Lists (courses,
- *      MEA involvement, shirt sizes), Requirements (the PDFs), Admins (officer emails).
- *      No other code changes needed.
+ *   3. In the Sheet: Settings (event, deadlines, domains, contact, step switches), Requirements (one row per
+ *      Google Form), Admins (core team emails). No other code changes needed.
  *
  * Rules:
  *   - Plain text only in copy fields (no HTML). It's escaped before showing.
@@ -30,7 +29,7 @@ const BRAND = {
     kicker: 'Case file 26/27',            // yellow tape label above the headline
     headline: 'LEADS: Oversight',
     tagline: 'Someone is already watching. Apply anyway.',
-    hint: 'About 10 minutes. One application per person. We will know if you try twice.',   // under the main button, before applying
+    hint: 'About 15 minutes: the form, then a short assessment. One application per person. We will know if you try twice.',   // under the main button, before applying
     redact: [],                            // words in the lede shown as black bars until hovered or tapped (empty = off)
     lede: 'LEADS is MEA\'s off-site leadership camp. For a few days, people watch you make calls, ' +
           'and sometimes they watch you get them wrong. That\'s how the training works. ' +
@@ -38,6 +37,9 @@ const BRAND = {
   },
   buttons: {
     apply: 'Start your application',
+    applySignIn: 'Sign in to apply',          // the main button for guests
+    applyWrongAccount: 'Switch to your Ateneo account',   // signed in, but not with an Ateneo account
+    applyClosed: 'Applications are closed',
     status: 'Check my status',
     applied: 'You already applied',
     upload: 'Send requirements',
@@ -50,27 +52,35 @@ const BRAND = {
   },
   countdown: {
     title: 'Time left to decide',
-    soon: 'Less than two days left. We noticed you waiting.',            // under 2 days left
     closed: 'Applications are closed',
+    closedText: 'The application window has ended.',
     tba: 'Deadline to be announced.',
-    campTitle: 'Camp starts in',         // once the applicant is CONFIRMED, the clock counts down to camp instead
     campLabel: 'Camp: ',                 // + the date. Camp start = Settings › CampStart, else the first date in EventDates
+    campStarted: 'Camp is in session',
+    campStartedText: 'You are on site. Look up.',
     // Home's deadline queue (Home.html): the nearest open step gets the big clock, the next one shows under it
     steps: {
       apply: { title: 'Time left to decide', kicker: '01 · APPLICATION' },
       pay:   { title: 'Proof of payment due', kicker: '02 · PAYMENT' },
       reqs:  { title: 'Requirements due', kicker: '03 · REQUIREMENTS' },
-      camp:  { title: 'Camp starts in', kicker: '04 · CAMP' }
+      camp:  { title: 'Camp starts in', kicker: '05 · CAMP' }
     },
     deadline: 'Deadline: ',
     due: 'Due ',
     passed: 'Passed',
-    stepClosed: ' (closed)',
+    stepClosed: ': deadline passed',    // a payment/requirements deadline went by (uploads still work, so not "closed")
     allClear: 'All steps cleared',
     allClearText: 'Your file is complete. Wait for the camp briefing.',
     confirmed: 'confirmed camper',
     reviewTitle: 'File under review',
     reviewText: "No deadline for you right now. We'll tell you when it's your move.",
+    actionTitle: 'Your move',            // a step is open for them but has no deadline set
+    actionText: 'No deadline set yet. Next: {step}.',
+    waitingTitle: 'Proof received',      // they sent something; the core team is checking it
+    waitingText: 'Waiting on the core team. Nothing to do yet.',
+    applyOpen: 'applications open',
+    applyClosedPill: 'applications closed',
+    loading: 'loading',
     endedTitle: 'File closed',
     endedText: 'This file is closed. Thank you for applying.',
     // I.R.I.S. as a deadline gets close ({step} = the step's title)
@@ -81,7 +91,7 @@ const BRAND = {
       t12: ['scared', '{step}: under twelve hours. I am watching the clock with you.'],
       t3:  ['scared', '{step}: under three hours. Now would be good.']
     },
-    pills: { t72: 'closing soon', t48: '48h left', t24: 'under 24h', t12: 'final hours', t3: 'under 3h', closed: 'closed' }
+    pills: { t72: 'closing soon', t48: '48h left', t24: 'under 24h', t12: 'final hours', t3: 'under 3h', closed: 'overdue' }
   },
 
   // Words people see for the Sheet's track values (never show the raw NONE / PARTIAL)
@@ -95,7 +105,19 @@ const BRAND = {
   rank: { line: 'Watchlist rank: #{n}', min: 3, max: 97 },
 
   // SUBJECT_STATUS.EXE signal lights on Home (progress_ states → words)
-  signal: { done: 'complete', action: 'your move', open: 'open', waiting: 'in review', locked: 'locked', stopped: 'stopped' },
+  signal: { done: 'done', action: 'your move', open: 'open', waiting: 'in review', locked: 'locked', stopped: 'closed' },
+  // labels for the progress path + SUBJECT_STATUS.EXE rows (the same words in both places)
+  path: { apply: 'Applied', review: 'Accepted', payment: 'Payment', requirements: 'Requirements', confirmed: 'Confirmed',
+          waitlisted: 'Waitlisted', rejected: 'Not accepted', withdrawn: 'Withdrawn' },
+  door: 'Access granted. Book your room →',   // SUBJECT_STATUS.EXE, once room booking opens for a confirmed camper
+
+  // Home: the "closes today" strip, and the one-time full-screen cards when the status changes. {id} = Applicant ID
+  broadcast: {
+    closingTop: 'This is a test of your timing',
+    closingToday: 'Applications close today, ',   // + the time
+    ACCEPTED: { top: 'This is not a test', big: 'Access granted', sub: 'Subject {id}, your file is ready. Next: pay, then send your requirements.', btn: 'Open my file' },
+    CONFIRMED: { top: 'Broadcast', big: "You're in", sub: 'Camp confirmed. Please remain seated until then.', btn: 'Continue' }
+  },
 
   // Pre-LEADS banner on Home. Hidden after `until` (Manila time) and for confirmed campers. Set show: false to hide it.
   preleadsBanner: {
@@ -103,33 +125,39 @@ const BRAND = {
     until: '2026-11-05T19:30:00+08:00',
     top: 'SPECIAL TRANSMISSION',
     title: 'Pre-LEADS Preview // Nov 5',
-    sub: '5:00–7:30 PM, onsite',
-    link: 'Open the Pre-LEADS dossier →'
+    sub: '5:00–7:30 PM, onsite',          // fallback: Settings › PreLeadsTime + PreLeadsVenue show instead when filled in
+    link: 'Open the Pre-LEADS file →'
   },
 
   /* ---------- Home extras for people who haven't applied yet (hidden once they have a file) ---------- */
-  // FAQ: {fee} {dates} {venue} {contact} are filled from Settings. If a value a line needs is blank, `fallback` shows instead.
-  // todo: true = an officer still has to write the answer; only admins see it (marked TODO) until then.
+  // FAQ: {dates} {venue} {contact} are filled from Settings. If a value a line needs is blank, `fallback` shows instead.
+  // todo: true = the core team still has to write the answer; only admins see it (marked TODO) until then.
   faq: {
     eyebrow: 'FAQ',
     title: 'Classified files',
     note: 'Open a file. We already read it.',
+    venueFallback: 'a venue to be announced',
     items: [
-      { q: 'How much does camp cost?', a: 'Once you are accepted, the Proof of payment page on this portal shows the fee and how to pay. You pay first, then upload your proof. Requirements open after your payment is verified.' },
+      { q: 'When do I pay, and how much?', a: 'Only once you are accepted. The Payment page on this portal then shows the fee and how to pay. You pay first, then upload your proof. Requirements open after your payment is verified.' },
       { q: 'When and where is it?', a: '{dates}, at {venue}.', needs: 'dates', fallback: 'Dates and venue are still being finalized.' },
       { q: 'Who can apply? Can freshmen join?', a: 'TODO: core team, write the eligibility rule here (year levels, courses, MEA membership).', todo: true },
       { q: 'What should I bring?', a: 'TODO: core team, write the packing list here.', todo: true },
-      { q: "What's the fear essay for?", a: "It's one of two questions on the form. Write about a fear you actually want to work on at camp. It doesn't have to be impressive. It has to be yours." },
+      { q: "What's the leadership fear question for?", a: "It's one of four essays. Write about a fear you actually want to work on at camp. It doesn't have to be impressive. It has to be yours." },
       { q: 'Can I edit my application after I submit it?', a: "Not from the portal. It's one application per person. If something's wrong, message the core team." },
-      { q: 'What if I close the tab halfway?', a: 'Your draft saves to your Ateneo account as you type, so you can finish later on any device.' },
+      { q: 'What if I close the tab halfway?', a: 'Once you tick the consent box, your draft saves to your Ateneo account as you type, so you can finish later on any device.' },
       { q: 'Who sees my answers?', a: 'Only the LEADS core team. We use your info for LEADS and nothing else (RA 10173).' }
     ]
   },
-  // Quotes from past campers. sample: true shows a SAMPLE stamp so placeholders are never mistaken for real quotes.
-  // Replace these with real ones (with the camper's permission) and delete `sample`.
+  // Quotes from past campers. sample: true = a placeholder: only the core team sees it (with a SAMPLE stamp), so
+  // made-up quotes never reach applicants. Replace with real ones (with the camper's permission) and delete `sample`.
+  // finding = the line under the quote (blank: "Fear of <fear>. Faced it anyway.")
   testimonials: {
     eyebrow: 'Intercepted transcripts',
     title: 'They applied too',
+    findingLabel: 'FINDING: ',
+    fallbackFinding: 'Came back changed.',
+    tape: 'Transcript // ',
+    develop: 'Develop the negative',
     items: [   // placeholders written for this portal, not real quotes yet: swap in real ones, then delete `sample`
       { quote: "I volunteered to lead our group's presentation mostly so I'd stop dreading it. My voice shook the whole time. Nobody cared. I'd do it again.", who: 'Camper', meta: 'LEADS 2025', fear: 'Public speaking', sample: true },
       { quote: "I spent the first night trying to say the right thing. By day two I gave up on that, and that's when people actually started talking to me.", who: 'Camper', meta: 'LEADS 2025', fear: 'Being judged', sample: true },
@@ -155,11 +183,21 @@ const BRAND = {
   hub: {
     eyebrow: 'Your file // live',
     title: 'What we have on you.',
-    guestNote: 'Sign in with your Ateneo account to see your file.'
+    guestNote: 'Sign in with your Ateneo account to see your file.',
+    noFileNote: 'No file on you yet. Start one above.',
+    checking: 'Checking who you are…',
+    signedIn: 'Signed in as ',
+    signedOut: 'Not signed in',
+    signOutTitle: 'Signs you out of Google in this browser, then back here to sign in with your Ateneo account.',
+    applyOpen: 'Open now.',
+    applyDone: 'Filed. Your application is on record.',
+    wrongAccount: 'Use your Ateneo account.',
+    open: 'Open', view: 'View', start: 'Start',
+    hi: 'Hi {name}. '
   },
   modules: {
-    apply:   { n: '01', title: 'Apply',            fix: 'A short form and two questions. One of them is about a fear you want to face.' },
-    pay:     { n: '02', title: 'Proof of payment', fix: 'Once accepted: scan the QR, pay, and upload your proof here. It says VERIFIED once the core team checks it.' },
+    apply:   { n: '01', title: 'Apply',            fix: 'An intake form, four short essays, then a threat assessment. One essay is about a fear you want to face.' },
+    pay:     { n: '02', title: 'Payment',          fix: 'Once accepted: scan the QR, pay, and upload your proof on its page. It says VERIFIED once the core team checks it.' },
     req:     { n: '03', title: 'Requirements',     fix: 'After your payment is verified: the forms to fill in, with what each one needs.' },
     ga:      { n: '04', title: '1st GA',           fix: 'Your first general assembly. Add it to your calendar once the date is set.' },
     room:    { n: '05', title: 'Room booking',     fix: 'Where you sleep at camp. Opens after your requirements are approved.' },
@@ -207,12 +245,12 @@ const BRAND = {
 
   statusCopy: {
     'SUBMITTED':    'We got your application. Someone from the core team will read it soon.',
-    'UNDER REVIEW': 'The core team is reading your file now. Honestly, the waiting is the worst part.',
+    'UNDER REVIEW': 'The core team is reading your file. Nothing to do yet. We will tell you when it is your move.',
     'WAITLISTED':   "You're on the waitlist. Slots open up more often than you think.",
     'ACCEPTED':     "You're accepted. Next: pay and upload your proof of payment. Requirements open once your payment is verified.",
     'REJECTED':     'Not this time. Applying still took guts, and we hope you try again next year.',
     'CONFIRMED':    "You're in. See you at camp.",
-    'WITHDRAWN':    'You withdrew your application. Message the core team if that was a mistake.'
+    'WITHDRAWN':    'You withdrew. Your file is closed. Message the core team if you have questions.'
   },
   // themed pop-up for people stuck on the wrong Google account (Home + Apply). {url} = the portal link pinned to the school account
   signInHelp: {
@@ -289,7 +327,7 @@ const BRAND = {
   messages: {
     notSignedIn: "We can't see your Google account. Sign in with your Ateneo email, then reload this page.",
     wrongDomain: "Switch to your Ateneo account to apply. You're signed in as ",
-    loadError: "Something went wrong. The portal couldn't load your info: ",
+    loadError: "Something went wrong. The portal couldn't load your file. Reload the page. If it happens again, message the core team.",
     comingSoon: 'That page is still being built. Check back soon.'
   },
   /* ---------- referrals (Referrals.gs, Home card, Apply field) ---------- */
@@ -313,7 +351,8 @@ const BRAND = {
   },
 
   footer: {
-    contact: 'Portal issues? Message the LEADS core team.',   // replaced by Settings > ContactEmail if set
+    contact: 'Portal issues? Message the LEADS core team.',   // shown when Settings > ContactEmail is blank
+    contactEmail: 'Portal issues? Email {contact}',
     privacy: 'We only use your info for LEADS, and only core team can see it (RA 10173).'
   },
 
@@ -362,7 +401,7 @@ const BRAND = {
       'ACCEPTED':     ['excited',  'Subject cleared. Next: payment, then requirements. Your file is ready.'],
       'REJECTED':     ['sad',      'Not this time. Your file stays on record. You can open it again next year.'],
       'CONFIRMED':    ['love',     'Confirmed. We have been watching. We will see you at camp.'],
-      'WITHDRAWN':    ['sad',      'You withdrew. If that was a mistake, the core team can reopen your file.']
+      'WITHDRAWN':    ['sad',      'You withdrew. Your file is closed. Message the core team if you have questions.']
     },
     tips: [                                // a random one each time someone taps I.R.I.S.
       ['nervous',  'When something breaks, my light turns red. Then I go back to watching.'],
@@ -485,8 +524,8 @@ const BRAND = {
       every: [10, 22],
       popups: [                // a little 90s alert window in a corner (never the bottom-right, that's I.R.I.S.)
         'CAM 02 has a better angle of you.',
-        'Someone else just opened this page.',
-        'Your file was opened 3 seconds ago.',
+        'A file was opened. It might be yours.',
+        'There is someone else on CAM 04.',
         'Do you hear that too?',
         'We saved your spot, {name}.',
         'Movement detected near your door.',
@@ -502,8 +541,8 @@ const BRAND = {
   }
 };
 
-/** CSS variables built from BRAND.colors / BRAND.fonts. Pages print it with <?!= brand_css() ?> */
-function brand_css() {
+/** CSS variables built from BRAND.colors / BRAND.fonts. Pages print it with <?!= brand_css_() ?> (private: scriptlets only) */
+function brand_css_() {
   const c = BRAND.colors, f = BRAND.fonts;
   const clean = v => String(v).replace(/[<>{};]/g, '');
   const vars = {
@@ -523,7 +562,13 @@ function mascotJson_() {
   return JSON.stringify(BRAND.mascot || {}).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
 }
 
-/** BRAND as JSON that's safe to drop inside a <script> tag. */
-function brand_json() {
-  return JSON.stringify(BRAND).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
+/**
+ * BRAND as JSON that's safe to drop inside a <script> tag. The report inbox (report.to) stays on the server:
+ * pages get the public ContactEmail instead, for the "email us" fallback when a report can't be sent.
+ */
+function brand_json_() {
+  let contact = '';
+  try { contact = String(getSetting_('ContactEmail') || '').trim(); } catch (e) { /* Settings missing */ }
+  const out = Object.assign({}, BRAND, { report: Object.assign({}, BRAND.report, { to: contact }) });
+  return JSON.stringify(out).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
 }

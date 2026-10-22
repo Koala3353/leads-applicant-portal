@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <?!= include_('Styles') ?>
-<?!= brand_css() ?>
+<?!= brand_css_() ?>
 <style>
   body{overflow-x:hidden}
   /* ---------- background: a searchlight that follows the pointer + eyes that watch it ---------- */
@@ -210,7 +210,7 @@
     linear-gradient(var(--danger),var(--danger)) 100% 0/7px 1px,linear-gradient(var(--danger),var(--danger)) 100% 0/1px 7px,
     linear-gradient(var(--danger),var(--danger)) 0 100%/7px 1px,linear-gradient(var(--danger),var(--danger)) 0 100%/1px 7px,
     linear-gradient(var(--danger),var(--danger)) 100% 100%/7px 1px,linear-gradient(var(--danger),var(--danger)) 100% 100%/1px 7px;background-repeat:no-repeat}
-  #camYou .box::after{content:"ID: PENDING";position:absolute;left:0;top:calc(100% + 3px);white-space:nowrap;font:700 .5rem var(--mono);letter-spacing:.1em;color:var(--danger)}
+  #camYou .box::after{content:attr(data-id);position:absolute;left:0;top:calc(100% + 3px);white-space:nowrap;font:700 .5rem var(--mono);letter-spacing:.1em;color:var(--danger)}
   @keyframes figLobby{0%,58%{opacity:0}59%,71%{opacity:.95}72%,100%{opacity:0}}
   @keyframes figHall{0%,30%{transform:translate(0,0) scale(1);opacity:.9}31%,62%{transform:translate(-4px,-6px) scale(1.6);opacity:.95}63%,64%{opacity:0}65%,100%{transform:none;opacity:.9}}
   @keyframes lamp{0%,100%{opacity:1}12%{opacity:.2}13%{opacity:1}14%{opacity:.3}15%{opacity:1}}
@@ -658,21 +658,21 @@
 <div class="wrap">
   <header class="top">
     <a class="logo" href="<?= baseUrl ?>" target="_top"><?= BRAND.logoText ?><span><?= BRAND.logoAccent ?></span></a>
-    <div class="who"><span id="who">checking who you are...</span>
-      <a class="admin-chip" id="adminChip" target="_blank" rel="noopener">Open the Sheet</a>
+    <div class="who"><span id="who"><?= BRAND.hub.checking ?></span>
+      <a class="admin-chip" id="adminChip" target="_blank" rel="noopener"><?= BRAND.buttons.admin ?></a>
       <a class="acct" id="acctBtn" target="_top" hidden></a>
       <button type="button" class="lights" data-lights data-on="<?= BRAND.horror.lightsOn ?>" data-off="<?= BRAND.horror.lightsOff ?>" aria-pressed="false"><?= BRAND.horror.lightsOn ?></button></div>
   </header>
 
   <? if (notice) { ?><p class="notice" role="status"><?= notice ?></p><? } ?>
   <p class="notice warn" id="acctWarn" role="alert" hidden></p>
-  <div class="bcast strip" id="closingStrip" role="status" hidden><p class="b-top">This is a test of your timing</p><p class="b-big"></p></div>
+  <div class="bcast strip" id="closingStrip" role="status" hidden><p class="b-top"><?= BRAND.broadcast.closingTop ?></p><p class="b-big"></p></div>
 
   <!-- Pre-LEADS Preview Transmission -->
   <div class="bcast strip preleads-strip" id="preleadsStrip" role="region" aria-label="Pre-LEADS announcement" hidden>
     <p class="b-top"><?= BRAND.preleadsBanner.top ?></p>
     <p class="b-big"><?= BRAND.preleadsBanner.title ?></p>
-    <p class="b-sub"><?= BRAND.preleadsBanner.sub ?> · <a href="<?= baseUrl ?>?page=preleads" target="_top"><?= BRAND.preleadsBanner.link ?></a></p>
+    <p class="b-sub"><span id="preleadsSub"><?= BRAND.preleadsBanner.sub ?></span> · <a href="<?= baseUrl ?>?page=preleads" target="_top"><?= BRAND.preleadsBanner.link ?></a></p>
   </div>
 
   <section class="hero">
@@ -690,7 +690,7 @@
     <div>
       <div class="card clock" id="clock">
         <div class="winbar red"><span>COUNTDOWN.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
-        <span class="pill" id="openPill">loading</span>
+        <span class="pill" id="openPill"><?= BRAND.countdown.loading ?></span>
         <h2 id="clockTitle"><?= BRAND.countdown.title ?></h2>
         <div class="units" aria-live="off">
           <div class="unit"><b id="d">--</b><span>days</span></div>
@@ -723,14 +723,14 @@
       <div class="card substat" id="substatCard" hidden>
         <div class="winbar"><span>SUBJECT_STATUS.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
         <div class="substat-rows">
-          <div class="substat-row"><span class="sig" id="sig-apply"></span><span class="substat-label">Apply</span><span class="substat-tag" id="sigtag-apply">—</span></div>
-          <div class="substat-row"><span class="sig" id="sig-review"></span><span class="substat-label">Accepted</span><span class="substat-tag" id="sigtag-review">—</span></div>
-          <div class="substat-row"><span class="sig" id="sig-payment"></span><span class="substat-label">Payment</span><span class="substat-tag" id="sigtag-payment">—</span></div>
-          <div class="substat-row"><span class="sig" id="sig-requirements"></span><span class="substat-label">Requirements</span><span class="substat-tag" id="sigtag-requirements">—</span></div>
-          <div class="substat-row"><span class="sig" id="sig-confirmed"></span><span class="substat-label">Confirmed</span><span class="substat-tag" id="sigtag-confirmed">—</span></div>
+          <div class="substat-row"><span class="sig" id="sig-apply"></span><span class="substat-label"><?= BRAND.path.apply ?></span><span class="substat-tag" id="sigtag-apply">—</span></div>
+          <div class="substat-row"><span class="sig" id="sig-review"></span><span class="substat-label" id="sublabel-review"><?= BRAND.path.review ?></span><span class="substat-tag" id="sigtag-review">—</span></div>
+          <div class="substat-row"><span class="sig" id="sig-payment"></span><span class="substat-label"><?= BRAND.path.payment ?></span><span class="substat-tag" id="sigtag-payment">—</span></div>
+          <div class="substat-row"><span class="sig" id="sig-requirements"></span><span class="substat-label"><?= BRAND.path.requirements ?></span><span class="substat-tag" id="sigtag-requirements">—</span></div>
+          <div class="substat-row"><span class="sig" id="sig-confirmed"></span><span class="substat-label"><?= BRAND.path.confirmed ?></span><span class="substat-tag" id="sigtag-confirmed">—</span></div>
         </div>
         <!-- visible only when fully confirmed -->
-        <a class="access-door" id="accessDoor" href="#" target="_top" hidden>&#9656; Access Granted — Open the Door</a>
+        <a class="access-door" id="accessDoor" href="#" target="_top" hidden>&#9656; <?= BRAND.door ?></a>
       </div>
       <div class="card status" id="statusCard" aria-live="polite">
         <span class="pill" id="statusPill">your application</span>
@@ -802,7 +802,7 @@
     <div class="feed" id="camYou"><b>CAM 03 // YOU</b><svg viewBox="0 0 160 90" preserveAspectRatio="none">
       <path class="ln2" d="M0 30 H160 M0 60 H160 M40 0 V90 M80 0 V90 M120 0 V90"/>
       <path class="ln2" d="M78 45 h4 M80 43 v4"/>
-    </svg><span class="box" id="youBox"></span><span class="dot" id="youDot"></span><time data-feedtime></time></div>
+    </svg><span class="box" id="youBox" data-id="ID: PENDING"></span><span class="dot" id="youDot"></span><time data-feedtime></time></div>
     <div class="feed"><b>CAM 04 // ARCHIVE</b><span class="bars"></span><span class="nosig">NO SIGNAL</span><time data-feedtime></time></div>
   </div>
 </div>
@@ -818,11 +818,11 @@
     </div>
 
     <ol class="path" id="path" aria-label="Your progress">
-      <li data-step="apply">Applied</li>
-      <li data-step="review">Accepted</li>
-      <li data-step="payment">Payment</li>
-      <li data-step="requirements">Requirements</li>
-      <li data-step="confirmed">Confirmed</li>
+      <li data-step="apply"><?= BRAND.path.apply ?></li>
+      <li data-step="review"><?= BRAND.path.review ?></li>
+      <li data-step="payment"><?= BRAND.path.payment ?></li>
+      <li data-step="requirements"><?= BRAND.path.requirements ?></li>
+      <li data-step="confirmed"><?= BRAND.path.confirmed ?></li>
     </ol>
 
     <ul class="mods" id="mods">
@@ -834,7 +834,7 @@
         <p class="fix"><?= m.fix ?></p>
         <div class="go">
           <p class="why" data-why></p>
-          <? if (pg) { ?><a class="btn ghost" data-link href="<?= baseUrl ?>?page=<?= pg ?>" target="_top" aria-disabled="true" tabindex="-1">Open</a><? } else { ?><a class="btn ghost" data-link target="_blank" rel="noopener" aria-disabled="true" tabindex="-1">Open</a><? } ?>
+          <? if (pg) { ?><a class="btn ghost" data-link href="<?= baseUrl ?>?page=<?= pg ?>" target="_top" aria-disabled="true" tabindex="-1"><?= BRAND.hub.open ?></a><? } else { ?><a class="btn ghost" data-link target="_blank" rel="noopener" aria-disabled="true" tabindex="-1"><?= BRAND.hub.open ?></a><? } ?>
         </div>
       </li>
       <? }); ?>
@@ -866,7 +866,7 @@
 </div>
 
 <script>
-  const BRAND = <?!= brand_json() ?>;
+  const BRAND = <?!= brand_json_() ?>;
   const $ = id => document.getElementById(id);
   /** I.R.I.S., the mascot (§7.2). Guarded: I.R.I.S. can be hidden or turned off. */
   const kuya = (face, text) => { try { if (window.Iris) window.Iris.say([face, text]); } catch (e) { /* never break the page */ } };
@@ -1298,7 +1298,7 @@
     pill.textContent = BRAND.stateLabels[state] || state;
     pill.className = 'pill ' + (PILL_CLASS[state] || '');
     card.querySelector('[data-why]').textContent = why || '';
-    link.textContent = label || 'Open';
+    link.textContent = label || BRAND.hub.open;
     link.classList.toggle('ghost', state !== 'action' && state !== 'open');
     if (href) link.href = href;
     const usable = state !== 'locked' && state !== 'stopped' && (href || link.getAttribute('href'));
@@ -1419,17 +1419,14 @@
       const left = new Date(ctx.deadline) - new Date();
       if (left > 0 && left < 864e5) {
         const t = new Date(ctx.deadline).toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', hour12: false });
-        strip.querySelector('.b-big').textContent = 'Applications close today, ' + t;
+        strip.querySelector('.b-big').textContent = BRAND.broadcast.closingToday + t;
         strip.hidden = false;
       }
     }
     if (!a || !window.Broadcast) return;
-    const CARDS = {
-      ACCEPTED: { top: 'This is not a test', big: 'Access granted', sub: 'Subject ' + a.id + ', your file is ready. Next: pay, then send your requirements.', btn: 'Open my file' },
-      CONFIRMED: { top: 'Broadcast', big: "You're in", sub: 'Camp confirmed. Please remain seated until then.', btn: 'Continue' }
-    };
-    const c = CARDS[a.status];
-    if (!c) return;
+    const card = BRAND.broadcast[a.status];
+    if (!card || !card.big) return;
+    const c = Object.assign({}, card, { sub: String(card.sub || '').replace('{id}', a.id) });
     const key = 'leads-bcast-' + a.id + '-' + a.status;
     try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch (e) { return; }
     setTimeout(() => Broadcast.show(c), 900);
@@ -1439,13 +1436,15 @@
     Loader.hide();
     try { announce('context', ctx); } catch (e) { console.error(e); } // a widget error must not stop the hub
     const p = ctx.progress, a = ctx.applicant;
-    $('who').innerHTML = ctx.signedIn ? 'Logged in as <b></b>' : 'Not signed in';
-    if (ctx.signedIn) $('who').querySelector('b').textContent = ctx.email;
+    $('who').textContent = ctx.signedIn ? BRAND.hub.signedIn : BRAND.hub.signedOut;
+    if (ctx.signedIn) { const b = document.createElement('b'); b.textContent = ctx.email; $('who').append(b); }
     window.__creep.name = (a && a.firstName) || '';
     window.__creep.id = (a && a.id) || '';
+    if (a && $('youBox')) $('youBox').dataset.id = 'ID: ' + a.id;   // CAM 03 tags you with your file number once you have one
     try { broadcastMoments(ctx); } catch (e) { console.error(e); }
     $('hint').hidden = !(ctx.signedIn && !a && ctx.isOpen && ctx.allowedDomain);
-    if (ctx.contact) $('contact').textContent = 'Portal issues? Email ' + ctx.contact;
+    $('contact').textContent = ctx.contact ? BRAND.footer.contactEmail.replace('{contact}', ctx.contact) : BRAND.footer.contact;
+    $('contact').hidden = false;
     if (ctx.isAdmin && ctx.sheetUrl) {
       $('adminChip').href = ctx.sheetUrl;
       $('adminChip').classList.add('show');
@@ -1472,7 +1471,7 @@
     const ab = $('acctBtn');
     ab.textContent = ctx.signedIn ? BRAND.buttons.signOut : BRAND.buttons.signIn;
     ab.href = ctx.signedIn ? ACCOUNT.out : ACCOUNT.choose;
-    if (ctx.signedIn) ab.title = 'Signs you out of Google in this browser, then back here to sign in with your Ateneo account.';
+    if (ctx.signedIn) ab.title = BRAND.hub.signOutTitle;
     ab.hidden = false;
 
     // main buttons
@@ -1484,7 +1483,14 @@
         main.href = move.href;
         if (move.external) { main.target = '_blank'; main.rel = 'noopener'; }
       }
-    } else disable(main, ctx.signedIn ? BRAND.countdown.closed : 'Sign in first');
+    } else {
+      // no move: say why on the button itself, not only in a tooltip
+      const B = BRAND.buttons;
+      const why = !ctx.signedIn ? B.applySignIn : (!ctx.allowedDomain ? B.applyWrongAccount : B.applyClosed);
+      main.textContent = why;
+      if (!ctx.signedIn || !ctx.allowedDomain) main.href = ctx.signedIn ? ACCOUNT.out : ACCOUNT.choose;
+      else disable(main, why);
+    }
 
     // hub cards
     const L = BRAND.lockedWhy;
@@ -1492,17 +1498,22 @@
       ['apply', 'pay', 'req', 'ga', 'room'].forEach(k => setModule(k, 'locked', ''));
       $('hubNote').textContent = BRAND.hub.guestNote;
     } else {
-      if (a) setModule('apply', 'done', BRAND.buttons.applied, 'View');
-      else if (!ctx.allowedDomain) setModule('apply', 'locked', 'Use your Ateneo account.');
-      else setModule('apply', p.apply.state, p.apply.unlocked ? 'Open until the deadline above.' : L.apply, 'Start');
+      const H = BRAND.hub;
+      if (!a) $('hubNote').textContent = H.noFileNote;
+      if (a) setModule('apply', 'done', H.applyDone, H.view);
+      else if (!ctx.allowedDomain) setModule('apply', 'locked', H.wrongAccount);
+      else setModule('apply', p.apply.state, p.apply.unlocked ? H.applyOpen : L.apply, H.start);
 
       // the steps after acceptance: each opens its own page once progress_ (Utils.gs) unlocks it.
       // Locked cards say what they're waiting for (BRAND.lockedWhy[key + '_' + why], then lockedWhy[why]).
-      const now = { pay: a ? 'Payment: ' + a.payment : '', req: a ? 'Requirements: ' + a.requirements : '', ga: L.gaOpen, room: L.roomOpen };
+      // never the raw NONE / PARTIAL: the words in BRAND.trackLabels
+      const T = BRAND.trackLabels;
+      const now = { pay: a ? BRAND.path.payment + ': ' + (T.payment[a.payment] || a.payment) : '',
+        req: a ? BRAND.path.requirements + ': ' + (T.requirements[a.requirements] || a.requirements) : '', ga: L.gaOpen, room: L.roomOpen };
       [['pay', 'payment'], ['req', 'requirements'], ['ga', 'ga'], ['room', 'room']].forEach(([key, step]) => {
         const st = p[step];
         const why = st.state === 'locked' ? (L[key + '_' + st.why] || L[st.why] || '') : (st.state === 'stopped' ? '' : now[key]);
-        setModule(key, st.state, why, st.state === 'done' ? 'View' : 'Open');
+        setModule(key, st.state, why, st.state === 'done' ? BRAND.hub.view : BRAND.hub.open);
       });
     }
     if (ctx.isAdmin && ctx.sheetUrl) setModule('sheet', 'open', '', BRAND.buttons.admin, ctx.sheetUrl);
@@ -1517,8 +1528,11 @@
         li.className = st === 'done' ? 'done' : (st === 'stopped' ? 'stopped' : '');
         if (!nowSet && st !== 'done' && st !== 'stopped') { li.classList.add('now'); li.setAttribute('aria-current', 'step'); nowSet = true; }
       });
-      if (p.review.state === 'stopped') document.querySelector('[data-step="review"]').textContent = a.status === 'WITHDRAWN' ? 'Withdrawn' : 'Not accepted';
-      if (a.status === 'WAITLISTED') document.querySelector('[data-step="review"]').textContent = 'Waitlisted';
+      // the "Accepted" step says what really happened, on the path AND in SUBJECT_STATUS.EXE
+      const P = BRAND.path;
+      const reviewLabel = p.review.state === 'stopped' ? (a.status === 'WITHDRAWN' ? P.withdrawn : P.rejected) : (a.status === 'WAITLISTED' ? P.waitlisted : P.review);
+      document.querySelector('[data-step="review"]').textContent = reviewLabel;
+      if ($('sublabel-review')) $('sublabel-review').textContent = reviewLabel;
 
       $('statusCard').classList.add('show');
       $('statusPill').textContent = a.id;
@@ -1526,10 +1540,13 @@
       $('statusBig').className = 'big ' + (STAMP[a.status] || '');
       $('statusCard').dataset.subject = 'Subject: ' + (a.firstName || a.id) + ' // ' + a.id;
       typeOut($('statusBig'), a.status);
-      $('statusMsg').textContent = (a.firstName ? 'Hi ' + a.firstName + '. ' : '') + (BRAND.statusCopy[a.status] || '');
-      $('statusRank').textContent = watchRank(a.id); $('statusRank').hidden = false;
-      [['trStatus', a.status], ['trReq', a.requirements], ['trPay', a.payment]].forEach(([id, v]) => {
-        $(id).textContent = v;
+      $('statusMsg').textContent = (a.firstName ? BRAND.hub.hi.replace('{name}', a.firstName) : '') + (BRAND.statusCopy[a.status] || '');
+      // the made-up rank reads like a score, so it is not shown on a closed file
+      const closedFile = a.status === 'REJECTED' || a.status === 'WITHDRAWN';
+      $('statusRank').textContent = watchRank(a.id); $('statusRank').hidden = closedFile;
+      const T = BRAND.trackLabels;
+      [['trStatus', a.status, a.status], ['trReq', a.requirements, T.requirements[a.requirements]], ['trPay', a.payment, T.payment[a.payment]]].forEach(([id, v, label]) => {
+        $(id).textContent = label || v;
         $(id).style.color = TONE[v] === 'ok' ? 'var(--ok)' : (TONE[v] === 'warn' ? 'var(--danger)' : '');
       });
     }
@@ -1538,6 +1555,9 @@
     try {   // Pre-LEADS banner: hidden after its date and for confirmed campers (copy + date in BRAND.preleadsBanner)
       const pb = BRAND.preleadsBanner, until = pb && new Date(pb.until);
       $('preleadsStrip').hidden = !(pb && pb.show && !(until && Date.now() > until.getTime()) && !(a && a.status === 'CONFIRMED'));
+      const pl = ctx.preleads || {};
+      const sub = [pl.time, pl.venue].filter(Boolean).join(', ');
+      if (sub) $('preleadsSub').textContent = sub;
     } catch (e) { console.error(e); }
     try { renderSubjectStatus(ctx); } catch (e) { console.error(e); }
 
@@ -1619,16 +1639,18 @@
         pill.textContent = String(a.status).toLowerCase();
         pill.className = 'pill dim';
         $('deadlineText').textContent = C.endedText;
-      } else if (a) {       // applied, nothing due yet (under review, or waiting on the core team)
-        $('clockTitle').textContent = C.reviewTitle;
-        pill.textContent = BRAND.signal.waiting;
-        pill.className = 'pill';
-        $('deadlineText').textContent = C.reviewText;
+      } else if (a) {       // applied, nothing due: their move (no deadline set), waiting on the core team, or under review
+        const act = [['payment', BRAND.path.payment], ['requirements', BRAND.path.requirements]].find(([k]) => p[k] && p[k].state === 'action');
+        const wait = ['payment', 'requirements'].some(k => p[k] && p[k].state === 'waiting');
+        $('clockTitle').textContent = act ? C.actionTitle : (wait ? C.waitingTitle : C.reviewTitle);
+        pill.textContent = act ? BRAND.signal.action : BRAND.signal.waiting;
+        pill.className = 'pill' + (act ? ' wait' : '');
+        $('deadlineText').textContent = act ? C.actionText.replace('{step}', act[1]) : (wait ? C.waitingText : C.reviewText);
       } else {
-        $('clockTitle').textContent = BRAND.countdown.title;
-        pill.textContent = ctx.isOpen ? 'applications open' : 'applications closed';
+        $('clockTitle').textContent = ctx.isOpen ? C.title : C.closed;
+        pill.textContent = ctx.isOpen ? C.applyOpen : C.applyClosedPill;
         pill.className = 'pill ' + (ctx.isOpen ? 'ok' : 'warn');
-        $('deadlineText').textContent = BRAND.countdown.tba;
+        $('deadlineText').textContent = ctx.isOpen ? C.tba : C.closedText;
       }
       if (nextBox) nextBox.hidden = true;
       ['d', 'h', 'm', 's'].forEach(k => $(k).textContent = '--');
@@ -1642,11 +1664,11 @@
     $('clockTitle').textContent = primary.title;
     pill.textContent = primary.badge;
     pill.className = 'pill ' + (primary.isOpen ? 'ok' : 'dim');
-    $('deadlineText').textContent = BRAND.countdown.deadline + endPrimary.toLocaleString('en-PH', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Manila' });
+    $('deadlineText').textContent = (primary.id === 'camp' ? BRAND.countdown.campLabel : BRAND.countdown.deadline) + endPrimary.toLocaleString('en-PH', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Manila' });
 
     if (secondary && nextBox) {
       nextBox.hidden = false;
-      $('nextTitle').textContent = secondary.kicker + ' · ' + secondary.title;
+      $('nextTitle').textContent = secondary.kicker;
       $('nextDate').textContent = BRAND.countdown.due + new Date(secondary.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', timeZone: 'Asia/Manila' });
     } else if (nextBox) {
       nextBox.hidden = true;
@@ -1655,6 +1677,7 @@
     const pad = n => String(n).padStart(2, '0');
     let alertTier = 0;
     const alarm = k => { const l = BRAND.countdown.alarms[k]; if (l) kuya(l[0], String(l[1]).replace('{step}', primary.title)); };
+    const calm = primary.id === 'camp';   // counting down to camp is not a deadline: no alarms, no panic
     const PANIC_TIERS = ['panic-tier-1', 'panic-tier-2', 'panic-tier-3', 'panic-tier-4', 'panic-tier-5'];
 
     function tick() {
@@ -1674,6 +1697,13 @@
         }
       }
 
+      if (ms <= 0 && calm) {
+        $('clockTitle').textContent = BRAND.countdown.campStarted;
+        $('deadlineText').textContent = BRAND.countdown.campStartedText;
+        pill.textContent = primary.badge; pill.className = 'pill ok';
+        ['d', 'h', 'm', 's'].forEach(k => $(k).textContent = '00');
+        return;
+      }
       if (ms <= 0) {
         $('clock').classList.add('closed');
         $('clock').classList.remove('urgent');
@@ -1706,8 +1736,10 @@
       PANIC_TIERS.forEach(cls => document.body.classList.remove(cls));
       $('clock').classList.remove('urgent');
 
-      if (totalHoursLeft <= 0) {
-        // Expired
+      if (totalHoursLeft <= 0 || calm) {
+        // expired, or the camp countdown: stay calm
+        pill.textContent = primary.badge;
+        pill.className = 'pill ' + (primary.isOpen ? 'ok' : 'dim');
       } else if (totalHoursLeft < 3) {
         document.body.classList.add('panic-tier-5');
         $('clock').classList.add('urgent');
@@ -1767,12 +1799,12 @@
   /** FAQ "classified files" + past-camper quotes. Text only (textContent), filled from Settings. */
   function renderIntel(ctx) {
     const ev = ctx.event || {};
-    const vals = { fee: ev.fee ? Number(ev.fee).toLocaleString('en-PH') : '', dates: ev.dates, venue: ev.venue || 'a venue to be announced', contact: ctx.contact };
+    const vals = { dates: ev.dates, venue: ev.venue || BRAND.faq.venueFallback, contact: ctx.contact };
     const list = $('faqList');
     list.textContent = '';
     let fileNo = 0;
     (BRAND.faq.items || []).forEach(it => {
-      if (it.todo && !ctx.isAdmin) return;                  // unanswered: only officers see the TODO
+      if (it.todo && !ctx.isAdmin) return;                  // unanswered: only the core team sees the TODO
       const n = ++fileNo;
       const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
       const d = el('details', 'file'); d.dataset.no = 'FILE ' + String(n).padStart(2, '0') + '-A';
@@ -1803,18 +1835,20 @@
     vl.textContent = '';
     // Negative + Findings (brand book): an inverted portrait (silhouette until real photos) next to the typed transcript
     // and a finding. Tap or hover the negative to develop it.
-    (BRAND.testimonials.items || []).forEach((t, i) => {
+    const TM = BRAND.testimonials;
+    // placeholder quotes (sample: true) are shown to the core team only, never to applicants
+    (TM.items || []).filter(t => !t.sample || ctx.isAdmin).forEach((t, i) => {
       const li = document.createElement('li'); li.className = 'voice';
-      const neg = document.createElement('button'); neg.type = 'button'; neg.className = 'neg'; neg.setAttribute('aria-label', 'Develop the negative');
+      const neg = document.createElement('button'); neg.type = 'button'; neg.className = 'neg'; neg.setAttribute('aria-label', TM.develop);
       neg.innerHTML = '<span class="sil"></span>';
       const no = document.createElement('span'); no.className = 'neg-no'; no.textContent = 'SUBJECT ' + String(17 + i * 23).padStart(3, '0'); neg.append(no);
       neg.addEventListener('click', () => neg.classList.toggle('pos'));
       const note = document.createElement('div'); note.className = 'neg-note';
-      const tape = document.createElement('span'); tape.className = 'tape'; tape.textContent = 'Transcript // ' + (t.meta || 'LEADS');
+      const tape = document.createElement('span'); tape.className = 'tape'; tape.textContent = TM.tape + (t.meta || 'LEADS');
       const bq = document.createElement('blockquote'); bq.textContent = t.quote;
       const fd = document.createElement('p'); fd.className = 'finding';
-      const fb = document.createElement('b'); fb.textContent = 'FINDING: ';
-      fd.append(fb, document.createTextNode(t.fear ? 'Fear of ' + t.fear.toLowerCase() + '. Faced it anyway.' : 'Came back changed.'));
+      const fb = document.createElement('b'); fb.textContent = TM.findingLabel;
+      fd.append(fb, document.createTextNode(t.finding || (t.fear ? 'Fear of ' + t.fear.toLowerCase() + '. Faced it anyway.' : TM.fallbackFinding)));
       const by = document.createElement('span'); by.className = 'by'; by.textContent = t.who || '';
       note.append(tape, bq, fd, by);
       li.append(neg, note);
@@ -1830,7 +1864,7 @@
     $('who').textContent = '';
     const warn = $('acctWarn');
     warn.hidden = false;
-    warn.textContent = BRAND.messages.loadError + (err && err.message ? err.message : err) + '. Try reloading.';
+    warn.textContent = BRAND.messages.loadError;   // the raw error goes to the report form (announce above), not on screen
   }
 
   window.runServer('home_getContext').then(render, fail);   // retries when Google is busy (a rush of visitors)

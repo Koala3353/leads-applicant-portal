@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <?!= include_('Styles') ?>
-<?!= brand_css() ?>
+<?!= brand_css_() ?>
 <style>
   /* Page state management */
   .state { display: none; }
@@ -839,7 +839,7 @@
 </div>
 
 <script>
-  const BRAND = <?!= brand_json() ?>;
+  const BRAND = <?!= brand_json_() ?>;
   const BASE = <?!= JSON.stringify(String(baseUrl)) ?>;
   const REF = <?!= JSON.stringify(String(ref || '')) ?>;   // from ...exec?ref=CODE (already cleaned on the server)
   try { if (REF) localStorage.setItem('leads-ref', REF); } catch (e) { /* ignore */ }

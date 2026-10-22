@@ -47,8 +47,9 @@ function home_getContext_() {
       payment: a.Payment || 'NONE'
     } : null,
     progress: p,
+    preleads: { date: String(s.PreLeadsDate || ''), time: String(s.PreLeadsTime || ''), venue: String(s.PreLeadsVenue || '') },   // the Home banner
     referral: found ? safeReferral_(found) : null,   // own code + counts (never names); Referrals.gs
-    sheetUrl: isAdmin_(email) ? ss_().getUrl() : ''   // officers get a link to the Sheet
+    sheetUrl: isAdmin_(email) ? ss_().getUrl() : ''   // the core team gets a link to the Sheet
   };
 }
 

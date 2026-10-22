@@ -13,8 +13,6 @@
  * - No emojis used anywhere
  */
 
-const PRELEADS_SHEET_NAME = 'PreLeads';
-
 const PRELEADS_DAUNTING_OPTIONS = [
   'failing as a leader',
   'making mistakes',
@@ -29,6 +27,25 @@ const PRELEADS_DAUNTING_OPTIONS = [
   'trusting others with important responsibilities',
   'Other'
 ];
+
+/**
+ * Pre-LEADS fields, checked by validateFields_ (Utils.gs). The identity fields reuse Apply's RULES, so the two forms
+ * can never accept different IDs or names; only the messages (and Mobile being optional) differ.
+ * A function, not a const: a top-level const that reads RULES (another file) breaks if this file loads first.
+ */
+function preleadsRules_() {
+  return {
+  FullName:   Object.assign({}, RULES.FullName, { requiredMsg: 'Full name is required.' }),
+  Nickname:   Object.assign({}, RULES.Nickname, { requiredMsg: 'Nickname is required.', msg: 'Nickname must be letters only (up to 30 characters).' }),
+  IDNumber:   Object.assign({}, RULES.IDNumber, { requiredMsg: RULES.IDNumber.msg }),
+  YearLevel:  Object.assign({}, RULES.YearLevel, { requiredMsg: 'Year level must be between 1 and 5.', msg: 'Year level must be between 1 and 5.' }),
+  Course:     Object.assign({}, RULES.Course, { requiredMsg: 'Course is required.', msg: 'Enter a valid degree program (up to 60 characters).' }),
+  Block:      Object.assign({}, RULES.Block, { requiredMsg: 'Block is required for first years.' }),
+  Mobile:     Object.assign({}, RULES.Mobile, { required: false }),   // optional here
+  HopeToGainPreLEADS: { required: true, minLen: 10, maxLen: 500, multiline: true, requiredMsg: 'Please answer in 1–2 sentences.',
+                        msg: 'Must be between 10 and 500 characters (about 1–2 sentences).' }
+  };
+}
 
 const PRELEADS_HEADERS = [
   'Timestamp',
@@ -57,17 +74,13 @@ function preleads_getForm() {
 /**
  * Open/closed and event details come from Settings, so nobody needs a code change to move the date:
  *   PreLeadsOpen (TRUE/FALSE, blank = open), PreLeadsDeadline (date/time registrations close),
- *   PreLeadsDate, PreLeadsTime, PreLeadsVenue (shown on the page). Blank values use the defaults below.
+ *   PreLeadsDate, PreLeadsTime, PreLeadsVenue (shown on the page). Blank values use the defaults in
+ *   SETTINGS_SCHEMA (Utils.gs).
  */
-const PRELEADS_DEFAULTS = {
-  deadline: '2026-11-05T17:00:00+08:00',
-  date: 'November 5, 2026', time: '5:00 PM – 7:30 PM', venue: 'Onsite (Ateneo de Manila University)'
-};
 function preleads_isOpen_() {
-  const s = getSettings_();
-  if (/^(false|no|0|off|closed)$/i.test(String(s.PreLeadsOpen || '').trim())) return false;
-  const end = parseDate_(s.PreLeadsDeadline) || new Date(PRELEADS_DEFAULTS.deadline);
-  return Date.now() < end.getTime();
+  if (!setting_('PreLeadsOpen')) return false;
+  const end = setting_('PreLeadsDeadline');
+  return !end || Date.now() < end.getTime();
 }
 
 function preleads_getForm_() {
@@ -75,8 +88,6 @@ function preleads_getForm_() {
   const allowed = email ? isAllowedDomain_(email) : false;
   const existing = email ? preleads_findRegistration_(email) : null;
   const member = (email && allowed && !existing) ? preleads_memberFor_(email) : null;   // Ateneo accounts only, like Apply
-  const s = getSettings_();
-
   return {
     signedIn: !!email,
     email: email,
@@ -94,9 +105,9 @@ function preleads_getForm_() {
     },
     eventInfo: {
       title: 'Pre-LEADS: Oversight Preview',
-      date: String(s.PreLeadsDate || PRELEADS_DEFAULTS.date),
-      time: String(s.PreLeadsTime || PRELEADS_DEFAULTS.time),
-      location: String(s.PreLeadsVenue || PRELEADS_DEFAULTS.venue)
+      date: setting_('PreLeadsDate'),
+      time: setting_('PreLeadsTime'),
+      location: setting_('PreLeadsVenue')
     }
   };
 }
@@ -124,7 +135,7 @@ function preleads_submit_(form) {
   if (!preleads_isOpen_()) throw new Error('Pre-LEADS registration is closed.');
 
   // Someone who keeps hitting "that ID can't be used" is probably trying other people's IDs: stop after 6 an hour
-  const failKey = 'plfail:' + email;
+  const failKey = probeKey_(email);   // the same counter as Apply, so the two forms together still allow only 6
   if (!bump_(failKey, 6, 3600, true)) return { ok: false, errors: { IDNumber: 'Too many attempts. Wait an hour, or message the core team.' } };
   const idTaken = { ok: false, errors: { IDNumber: "That ID number can't be used for this registration. If it's yours, message the core team." } };
 
@@ -141,91 +152,10 @@ function preleads_submit_(form) {
     clean.Consent = 'Y';
   }
 
-  // Full Name
-  const fullName = String(input.FullName || '').trim();
-  if (!fullName) {
-    errors.FullName = 'Full name is required.';
-  } else if (!/^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ .'-]{1,79}$/.test(fullName)) {
-    errors.FullName = 'Letters, spaces, and . \' - only (2 to 80 characters).';
-  } else {
-    clean.FullName = fullName;
-  }
-
-  // Nickname
-  const nickname = String(input.Nickname || '').trim();
-  if (!nickname) {
-    errors.Nickname = 'Nickname is required.';
-  } else if (!/^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ .'-]{0,29}$/.test(nickname)) {
-    errors.Nickname = 'Nickname must be letters only (up to 30 characters).';
-  } else {
-    clean.Nickname = nickname;
-  }
-
-  // ID Number
-  const idStr = String(input.IDNumber || '').trim();
-  if (!/^\d{6}$/.test(idStr)) {
-    errors.IDNumber = 'Your 6-digit Ateneo ID number, e.g. 241234.';
-  } else {
-    const idNum = Number(idStr);
-    if (idNum < 200000 || idNum > 280000) {
-      errors.IDNumber = 'Invalid ID number.';
-    } else {
-      clean.IDNumber = idStr;
-    }
-  }
-
-  // Year Level
-  const yr = String(input.YearLevel || '').trim();
-  const yrNum = parseInt(yr, 10);
-  if (!yr || isNaN(yrNum) || yrNum < 1 || yrNum > 5) {
-    errors.YearLevel = 'Year level must be between 1 and 5.';
-  } else {
-    clean.YearLevel = yrNum;
-  }
-
-  // Course
-  const course = String(input.Course || '').trim();
-  if (!course) {
-    errors.Course = 'Course is required.';
-  } else if (!/^[A-Za-zÀ-ÿÑñ0-9][A-Za-zÀ-ÿÑñ0-9 .,&()\/'-]{1,59}$/.test(course)) {
-    errors.Course = 'Enter a valid degree program (up to 60 characters).';
-  } else {
-    clean.Course = course;
-  }
-
-  // Block: Required for first years (ID starting with 26 or YearLevel == 1)
-  const isFreshman = (clean.IDNumber && clean.IDNumber.indexOf('26') === 0) || clean.YearLevel === 1;
-  const block = String(input.Block || '').trim();
-  if (isFreshman && !block) {
-    errors.Block = 'Block is required for first years.';
-  } else if (block && !/^[A-Za-z0-9][A-Za-z0-9 -]{0,29}$/.test(block)) {
-    errors.Block = 'Letters and numbers only, e.g. 21A.';
-  } else {
-    clean.Block = block;
-  }
-
-  // Mobile
-  const rawMobile = String(input.Mobile || '').trim();
-  if (rawMobile) {
-    const normMobile = normalizeMobile_(rawMobile);
-    if (!/^09\d{9}$/.test(normMobile)) {
-      errors.Mobile = '11 digits starting with 09, e.g. 09171234567.';
-    } else {
-      clean.Mobile = normMobile;
-    }
-  } else {
-    clean.Mobile = '';
-  }
-
-  // Question: What do you hope to gain from your Pre-LEADS experience? (Answer in 1-2 sentences)
-  const qHope = String(input.HopeToGainPreLEADS || '').trim();
-  if (!qHope) {
-    errors.HopeToGainPreLEADS = 'Please answer in 1–2 sentences.';
-  } else if (qHope.length < 10 || qHope.length > 500) {
-    errors.HopeToGainPreLEADS = 'Must be between 10 and 500 characters (about 1–2 sentences).';
-  } else {
-    clean.HopeToGainPreLEADS = qHope;
-  }
+  // Identity + the "hope to gain" answer: the same checks as Apply (RULES in Utils.gs), with Pre-LEADS' own messages
+  const v = validateFields_(input, preleadsRules_());
+  Object.assign(errors, v.errors);
+  Object.assign(clean, v.clean);
 
   // Question: Daunting Aspects (Check all that applies)
   let daunting = input.DauntingAspects;
@@ -268,9 +198,7 @@ function preleads_submit_(form) {
   if (apply_idBelongsToOther_(clean.IDNumber, email)) { bump_(failKey, 99, 3600); return idTaken; }
 
   // 4. Data integrity lock and atomic write
-  const lock = LockService.getScriptLock();
-  lock.waitLock(25000);
-  try {
+  return withScriptLock_(25000, () => {
     const sh = preleads_ensureSheet_();
 
     if (!preleads_isOpen_()) throw new Error('Pre-LEADS registration just closed.');
@@ -281,19 +209,18 @@ function preleads_submit_(form) {
     if (dup === 'id') { bump_(failKey, 99, 3600); return idTaken; }
 
     // Each value goes under its header (so the core team can reorder or add columns safely). Missing headers are added.
+    // every string is stored as text (textCell_), so Sheets never turns a Course like "2-1" into a date
     const values = {
-      Timestamp: new Date(), Email: safeCell_(email), FullName: safeCell_(clean.FullName), Nickname: safeCell_(clean.Nickname),
-      IDNumber: textCell_(clean.IDNumber), YearLevel: clean.YearLevel, Course: safeCell_(clean.Course),
-      Block: textCell_(clean.Block), Mobile: textCell_(clean.Mobile), Consent: 'Y',
-      HopeToGainPreLEADS: safeCell_(clean.HopeToGainPreLEADS), DauntingAspects: safeCell_(clean.DauntingAspects.join('; ')),
-      OtherDaunting: safeCell_(clean.OtherDaunting)
+      Timestamp: new Date(), Email: email, FullName: clean.FullName, Nickname: clean.Nickname,
+      IDNumber: clean.IDNumber, YearLevel: clean.YearLevel, Course: clean.Course,
+      Block: clean.Block, Mobile: clean.Mobile, Consent: 'Y',
+      HopeToGainPreLEADS: clean.HopeToGainPreLEADS, DauntingAspects: clean.DauntingAspects.join('; '),
+      OtherDaunting: clean.OtherDaunting
     };
     const head = preleads_headers_(sh);
-    sh.appendRow(head.map(h => (h in values ? values[h] : '')));
+    sh.appendRow(head.map(h => textCell_(h in values ? values[h] : '')));
     return { ok: true };
-  } finally {
-    lock.releaseLock();
-  }
+  });
 }
 
 /**
@@ -301,28 +228,7 @@ function preleads_submit_(form) {
  * @return {GoogleAppsScript.Spreadsheet.Sheet}
  */
 function preleads_ensureSheet_() {
-  const ss = ss_();
-  let sh = ss.getSheetByName(PRELEADS_SHEET_NAME);
-  if (!sh) {
-    sh = ss.insertSheet(PRELEADS_SHEET_NAME);
-    sh.getRange(1, 1, 1, PRELEADS_HEADERS.length)
-      .setValues([PRELEADS_HEADERS])
-      .setFontWeight('bold')
-      .setBackground('#10275A')
-      .setFontColor('#FFFFFF');
-    sh.setFrozenRows(1);
-    sh.getRange('A:A').setNumberFormat('yyyy-mm-dd hh:mm:ss');
-    sh.getRange('E:E').setNumberFormat('@'); // IDNumber as text
-    sh.getRange('H:I').setNumberFormat('@'); // Block and Mobile as text
-  } else if (sh.getLastColumn() === 0) {
-    sh.getRange(1, 1, 1, PRELEADS_HEADERS.length)
-      .setValues([PRELEADS_HEADERS])
-      .setFontWeight('bold')
-      .setBackground('#10275A')
-      .setFontColor('#FFFFFF');
-    sh.setFrozenRows(1);
-  }
-  return sh;
+  return ensureTab_(SHEET.PRELEADS, PRELEADS_HEADERS, { dateCol: 1, textCols: [5, 8, 9] });   // ID, Block, Mobile as text
 }
 
 /** The PreLeads header row as it is now, adding any of PRELEADS_HEADERS that are missing (at the end). */
@@ -345,8 +251,7 @@ function preleads_headers_(sh) {
 function preleads_findRegistration_(email) {
   email = String(email || '').trim().toLowerCase();
   if (!email) return null;
-  const ss = ss_();
-  const sh = ss.getSheetByName(PRELEADS_SHEET_NAME);
+  const sh = ss_().getSheetByName(SHEET.PRELEADS);
   if (!sh || sh.getLastRow() < 2) return null;
 
   // Search only the Email column (cheap) and read just that row: this runs on every page load.
@@ -392,19 +297,17 @@ function preleads_isDuplicateLocked_(sh, email, idNumber) {
  */
 function preleads_memberFor_(email) {
   try {
-    if (typeof apply_memberFor_ === 'function') {
-      const mem = apply_memberFor_(email, '', null);
-      if (mem) {
-        return {
-          FullName: mem.FullName || '',
-          Nickname: mem.Nickname || '',
-          IDNumber: mem.IDNumber || '',
-          Course: mem.Course || '',
-          YearLevel: mem.YearLevel || '',
-          Block: mem.Block || '',
-          Mobile: mem.Mobile || ''
-        };
-      }
+    const mem = apply_memberFor_(email, '');
+    if (mem) {
+      return {
+        FullName: mem.FullName || '',
+        Nickname: mem.Nickname || '',
+        IDNumber: mem.IDNumber || '',
+        Course: mem.Course || '',
+        YearLevel: mem.YearLevel || '',
+        Block: mem.Block || '',
+        Mobile: mem.Mobile || ''
+      };
     }
   } catch (err) {
     console.error('preleads_memberFor_ error: ' + (err && err.message));
