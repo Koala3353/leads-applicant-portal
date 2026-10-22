@@ -26,16 +26,8 @@ const PRELEADS_DAUNTING_OPTIONS = [
   'making the wrong decision',
   'taking initiative',
   'stepping outside my comfort zone',
-  'trusting others with important responsibilities'
-];
-
-const PRELEADS_ENVIRONMENT_OPTIONS = [
-  'Small-group discussions',
-  'Individual reflection',
-  'Interactive games and team challenges',
-  'Listening to others share their experiences',
-  'Open discussions with the whole group',
-  'No particular preference'
+  'trusting others with important responsibilities',
+  'Other'
 ];
 
 const PRELEADS_HEADERS = [
@@ -49,11 +41,9 @@ const PRELEADS_HEADERS = [
   'Block',
   'Mobile',
   'Consent',
-  'DevelopInLEADS',
   'HopeToGainPreLEADS',
-  'LeadershipChallenge',
   'DauntingAspects',
-  'ComfortableEnvironment'
+  'OtherDaunting'
 ];
 
 /**
@@ -100,8 +90,7 @@ function preleads_getForm_() {
     member: member,
     isOpen: preleads_isOpen_(),
     options: {
-      daunting: PRELEADS_DAUNTING_OPTIONS,
-      environment: PRELEADS_ENVIRONMENT_OPTIONS
+      daunting: PRELEADS_DAUNTING_OPTIONS
     },
     eventInfo: {
       title: 'Pre-LEADS: Oversight Preview',
@@ -144,7 +133,7 @@ function preleads_submit_(form) {
   const errors = {};
   const clean = {};
 
-  // Consent
+  // Consent (Strictly required: cannot submit without checking it)
   const consentVal = String(input.Consent || '').trim().toUpperCase();
   if (consentVal !== 'Y' && consentVal !== 'YES' && input.Consent !== true) {
     errors.Consent = 'You must agree to the data collection and consent statement to proceed.';
@@ -228,58 +217,46 @@ function preleads_submit_(form) {
     clean.Mobile = '';
   }
 
-  // Question 1: What would you like to learn more about or develop in your LEADS experience? (Answer in 2-3 Sentences)
-  const q1 = String(input.DevelopInLEADS || '').trim();
-  if (!q1) {
-    errors.DevelopInLEADS = 'Please answer in 2-3 sentences.';
-  } else if (q1.length < 20 || q1.length > 1000) {
-    errors.DevelopInLEADS = 'Must be between 20 and 1000 characters (about 2-3 sentences).';
+  // Question: What do you hope to gain from your Pre-LEADS experience? (Answer in 1-2 sentences)
+  const qHope = String(input.HopeToGainPreLEADS || '').trim();
+  if (!qHope) {
+    errors.HopeToGainPreLEADS = 'Please answer in 1–2 sentences.';
+  } else if (qHope.length < 10 || qHope.length > 500) {
+    errors.HopeToGainPreLEADS = 'Must be between 10 and 500 characters (about 1–2 sentences).';
   } else {
-    clean.DevelopInLEADS = q1;
+    clean.HopeToGainPreLEADS = qHope;
   }
 
-  // Question 2: What do you hope to gain from your Pre-LEADS experience? (Answer in 2-3 Sentences)
-  const q2 = String(input.HopeToGainPreLEADS || '').trim();
-  if (!q2) {
-    errors.HopeToGainPreLEADS = 'Please answer in 2-3 sentences.';
-  } else if (q2.length < 20 || q2.length > 1000) {
-    errors.HopeToGainPreLEADS = 'Must be between 20 and 1000 characters (about 2-3 sentences).';
-  } else {
-    clean.HopeToGainPreLEADS = q2;
-  }
-
-  // Question 3: Reflecting on your past experiences, what is one challenge you've encountered when working with or leading others? (Answer in 2-3 sentences)
-  const q3 = String(input.LeadershipChallenge || '').trim();
-  if (!q3) {
-    errors.LeadershipChallenge = 'Please answer in 2-3 sentences.';
-  } else if (q3.length < 20 || q3.length > 1000) {
-    errors.LeadershipChallenge = 'Must be between 20 and 1000 characters (about 2-3 sentences).';
-  } else {
-    clean.LeadershipChallenge = q3;
-  }
-
-  // Question 4: Daunting Aspects (Check all that apply)
+  // Question: Daunting Aspects (Check all that applies)
   let daunting = input.DauntingAspects;
   if (typeof daunting === 'string') {
     try { daunting = JSON.parse(daunting); } catch (e) { daunting = [daunting]; }
   }
+  const otherText = String(input.OtherDaunting || '').trim();
+
   if (!Array.isArray(daunting) || daunting.length === 0) {
     errors.DauntingAspects = 'Please select at least one option.';
   } else {
-    const filtered = daunting.map(s => String(s || '').trim()).filter(s => PRELEADS_DAUNTING_OPTIONS.indexOf(s) >= 0);
-    if (filtered.length === 0) {
-      errors.DauntingAspects = 'Please select valid options from the list.';
-    } else {
-      clean.DauntingAspects = filtered;
+    const hasOther = daunting.indexOf('Other') >= 0;
+    if (hasOther && !otherText) {
+      errors.OtherDaunting = 'Please specify your other challenging or daunting aspect.';
     }
-  }
 
-  // Question 5: Comfortable Environment (Multiple Choice)
-  const envChoice = String(input.ComfortableEnvironment || '').trim();
-  if (!envChoice || PRELEADS_ENVIRONMENT_OPTIONS.indexOf(envChoice) < 0) {
-    errors.ComfortableEnvironment = 'Please select your preferred environment from the choices.';
-  } else {
-    clean.ComfortableEnvironment = envChoice;
+    const standardChoices = daunting.filter(s => s !== 'Other' && PRELEADS_DAUNTING_OPTIONS.indexOf(s) >= 0);
+    const finalAspects = standardChoices.slice();
+
+    if (hasOther && otherText) {
+      finalAspects.push('Other: ' + otherText);
+      clean.OtherDaunting = otherText;
+    } else {
+      clean.OtherDaunting = '';
+    }
+
+    if (finalAspects.length === 0) {
+      errors.DauntingAspects = 'Please select at least one option.';
+    } else {
+      clean.DauntingAspects = finalAspects;
+    }
   }
 
   if (Object.keys(errors).length > 0) {
@@ -308,9 +285,8 @@ function preleads_submit_(form) {
       Timestamp: new Date(), Email: safeCell_(email), FullName: safeCell_(clean.FullName), Nickname: safeCell_(clean.Nickname),
       IDNumber: textCell_(clean.IDNumber), YearLevel: clean.YearLevel, Course: safeCell_(clean.Course),
       Block: textCell_(clean.Block), Mobile: textCell_(clean.Mobile), Consent: 'Y',
-      DevelopInLEADS: safeCell_(clean.DevelopInLEADS), HopeToGainPreLEADS: safeCell_(clean.HopeToGainPreLEADS),
-      LeadershipChallenge: safeCell_(clean.LeadershipChallenge), DauntingAspects: safeCell_(clean.DauntingAspects.join('; ')),
-      ComfortableEnvironment: safeCell_(clean.ComfortableEnvironment)
+      HopeToGainPreLEADS: safeCell_(clean.HopeToGainPreLEADS), DauntingAspects: safeCell_(clean.DauntingAspects.join('; ')),
+      OtherDaunting: safeCell_(clean.OtherDaunting)
     };
     const head = preleads_headers_(sh);
     sh.appendRow(head.map(h => (h in values ? values[h] : '')));

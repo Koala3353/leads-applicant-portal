@@ -131,7 +131,7 @@
     color: #EAEAEA;
   }
   .field textarea {
-    min-height: 7em;
+    min-height: 6em;
     resize: vertical;
     line-height: 1.5;
   }
@@ -144,8 +144,8 @@
   .field.has-error textarea,
   .field.has-error .choice-group,
   .field.has-error .consent-box {
-    border-color: var(--danger);
-    background: rgba(255, 42, 42, 0.08);
+    border-color: var(--danger) !important;
+    background: rgba(255, 42, 42, 0.08) !important;
   }
   .field .err {
     display: none;
@@ -171,7 +171,7 @@
   .char-counter.error { color: var(--danger); }
   .char-counter.valid { color: var(--glow); }
 
-  /* Consent Box */
+  /* Consent Box (Strictly Required) */
   .consent-box {
     display: flex;
     align-items: flex-start;
@@ -184,6 +184,7 @@
     font-weight: 400;
     line-height: 1.45;
     margin-top: 14px;
+    transition: border-color 0.2s, background 0.2s;
   }
   .consent-box input {
     position: absolute;
@@ -217,12 +218,13 @@
   }
   .consent-box:has(input:checked) {
     border-color: var(--glow);
+    background: rgba(255, 255, 0, 0.04);
   }
   .consent-box:has(input:checked) .consent-text {
     color: var(--glow);
   }
 
-  /* Choice Group: Tiles for Checkbox and Radio */
+  /* Choice Group: Tiles for Checkbox */
   .choice-group {
     display: grid;
     grid-template-columns: 1fr;
@@ -267,19 +269,9 @@
     place-items: center;
     box-shadow: var(--bevel-in);
   }
-  .choice-tile.radio .tile-indicator {
-    border-radius: 50%;
-  }
   .choice-tile input:checked ~ .tile-indicator {
     background: var(--glow);
     border-color: var(--glow);
-  }
-  .choice-tile.radio input:checked ~ .tile-indicator::after {
-    content: "";
-    width: 6px;
-    height: 6px;
-    background: #000;
-    border-radius: 50%;
   }
   .choice-tile.checkbox input:checked ~ .tile-indicator::after {
     content: "";
@@ -297,6 +289,20 @@
   .choice-tile input:focus-visible ~ .tile-indicator {
     outline: 2px solid var(--sky);
     outline-offset: 2px;
+  }
+
+  /* Other write-in box */
+  .other-input-wrap {
+    margin-top: 8px;
+    display: none;
+  }
+  .other-input-wrap.show {
+    display: block;
+  }
+  .other-input-wrap input {
+    background: #0e0e0e;
+    border: 1.5px dashed var(--glow);
+    color: var(--glow);
   }
 
   /* Overview Dossier Card */
@@ -370,6 +376,46 @@
     transform: rotate(-1.5deg);
     box-shadow: 4px 4px 0 var(--blue);
   }
+
+/* OVERSIGHT multi-step extension */
+#oversightSteps{display:flex;gap:8px;margin:22px 0 30px;padding:0;list-style:none}
+#oversightSteps li{flex:1;border-top:3px solid var(--line);padding:10px 3px;color:var(--muted);font:700 .75rem var(--mono);text-align:center}
+#oversightSteps li.current{border-color:var(--glow);color:var(--glow)}
+#oversightSteps li.passed{border-color:var(--glow);color:var(--text)}
+.ov-step[hidden],#ovTerminal[hidden]{display:none!important}
+.ov-actions{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0 10px}
+.ov-actions button{min-height:44px}
+#ovTerminal{position:fixed;inset:0;z-index:10000;background:#050505;display:flex;align-items:center;justify-content:center;padding:20px}
+.ov-terminal-inner{max-width:550px;width:100%;border:2px solid var(--glow);background:#090909;padding:26px;font:700 1rem var(--mono);color:var(--glow)}
+#ovTerminalBar{height:6px;background:var(--glow);width:0;margin:20px 0}
+#ovTerminalSkip{font:inherit}
+.ov-review{margin:14px 0;padding:10px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.ov-review b{display:block;color:var(--glow);font:.8rem var(--mono)}
+@media(max-width:520px){#oversightSteps li{font-size:.6rem}.ov-actions .btn{width:100%}}
+@media(prefers-reduced-motion:reduce){#ovTerminalBar{transition:none!important}}
+
+/* PRELEADS_CENTER_WATCHER_V1 -- Pre-LEADS only */
+#preleadsCenterEye {
+  position:fixed; top:50%; left:50%; z-index:0;
+  width:clamp(150px,24vw,270px); height:clamp(95px,15vw,170px);
+  display:grid;place-items:center;pointer-events:none;user-select:none;
+  opacity:.19;
+  filter:sepia(1) saturate(3) hue-rotate(1deg) brightness(.85) drop-shadow(0 0 30px rgba(255,255,70,.42));
+  transform:translate(-50%,-50%);
+}
+#preleadsCenterEye[hidden]{display:none!important}
+#preleadsCenterEye .reye{--s:clamp(165px,28vw,265px);-webkit-mask:radial-gradient(ellipse at 50% 50%,#000 52%,transparent 95%);mask:radial-gradient(ellipse at 50% 50%,#000 52%,transparent 95%)}
+.wrap{position:relative;z-index:1}
+/* Keep the existing messages, but replace the corner TV with the background eye. */
+#kuyaBtn{display:none!important}
+@media (hover:hover) and (pointer:fine) {
+ body, body a, body button, body label {
+  cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M3 2 L3 27 L9 20 L14 30 L19 27 L14 17 L25 16 Z' fill='%23FFFF44' stroke='%23111111' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") 3 2, auto!important;
+ }
+}
+@media (prefers-reduced-motion:reduce) {#preleadsCenterEye{transform:translate(-50%,-50%)!important}}
+@media (pointer:coarse) {#preleadsCenterEye{opacity:.09}}
+
 </style>
 </head>
 <body data-base="<?= baseUrl ?>" data-loader-wait>
@@ -377,6 +423,8 @@
 <?!= includeTemplate_('PageTop', { BRAND: BRAND, baseUrl: baseUrl }) ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 
+<div id="ovTerminal" hidden role="dialog" aria-modal="true" aria-label="Loading next section"><div class="ov-terminal-inner"><div id="ovTerminalText" aria-live="polite"></div><div id="ovTerminalResult"></div><div style="height:6px;background:#303000"><div id="ovTerminalBar"></div></div><button id="ovTerminalSkip" type="button" class="btn ghost">Skip animation</button></div></div>
+<div id="preleadsCenterEye" aria-hidden="true"><span class="reye"><span class="reye-ball"><i></i></span></span></div>
 <div class="wrap">
 
   <!-- State 1: Loading -->
@@ -475,8 +523,10 @@
       <ul id="errorSummaryList"></ul>
     </div>
 
+    <ol id="oversightSteps" aria-label="Registration progress"><li class="current">01 Overview</li><li>02 Identity</li><li>03 Leadership</li><li>04 Review</li></ol>
     <form id="preleadsForm" novalidate autocomplete="on">
 
+      <section class="ov-step" id="ovStep1">
       <!-- SECTION 1: WHAT IS PRE-LEADS & CONSENT -->
       <div class="form-section-head" style="margin-top: 12px;">
         <h2>Section 1 // Overview & Consent Clearance</h2>
@@ -490,18 +540,21 @@
       </div>
 
       <div class="field" id="field-Consent">
-        <label>Consent & Authorization</label>
+        <label>Consent & Authorization *</label>
         <p class="field-hint">
-          By submitting this form, I consent to the collection and use of the information I provide by the Pre-LEADS organizing team for participating registration, activity coordination, and communication regarding Pre-LEADS. My information will be kept confidential and accessed only by authorized organizers and facilitators who need it for these purposes.
+          By submitting this form, I consent to the collection and use of the information I provide by the Pre-LEADS organizing team for participant registration, activity coordination, and communication regarding Pre-LEADS. My information will be kept confidential and accessed only by authorized organizers and facilitators who need it for these purposes.
         </p>
         <label class="consent-box" for="Consent">
           <input type="checkbox" id="Consent" name="Consent" value="Y" required>
           <span class="consent-tick"></span>
-          <span class="consent-text">I have read and agree to the collection and use of my information for the purposes stated above.</span>
+          <span class="consent-text"><strong>I have read and agree to the collection and use of my information for the purposes stated above.</strong></span>
         </label>
-        <span class="err" id="err-Consent">You must agree to the data collection consent statement.</span>
+        <span class="err" id="err-Consent">You must read and check the consent box to submit this form.</span>
       </div>
 
+      <div class="ov-actions"><button class="btn" type="button" data-ov-next="1">CONTINUE →</button></div>
+      </section>
+      <section class="ov-step" id="ovStep2" hidden>
       <!-- SECTION 2: GENERAL INFORMATION -->
       <div class="form-section-head">
         <h2>Section 2 // General Subject Information</h2>
@@ -561,61 +614,51 @@
         </div>
       </div>
 
-      <!-- SECTION 3: INQUIRIES & INTROSPECTION -->
+      <div class="ov-actions"><button class="btn ghost" type="button" data-ov-back="1">← BACK</button><button class="btn" type="button" data-ov-next="2">CONTINUE →</button></div>
+      </section>
+      <section class="ov-step" id="ovStep3" hidden>
+      <!-- SECTION 3: INQUIRIES & LEADERSHIP INTROSPECTION -->
       <div class="form-section-head">
         <h2>Section 3 // Inquiries & Leadership Introspection</h2>
         <p>Answer honestly. Your reflections help facilitators shape the preview activities.</p>
       </div>
 
-      <div class="field" id="field-DevelopInLEADS">
-        <label for="DevelopInLEADS">What would you like to learn more about or develop in your LEADS experience? *</label>
-        <p class="field-hint">Answer in 2–3 sentences.</p>
-        <textarea id="DevelopInLEADS" name="DevelopInLEADS" required maxlength="1000" placeholder="Type your response here..."></textarea>
-        <div class="char-counter" id="count-DevelopInLEADS">0 / 1000 characters</div>
-        <span class="err" id="err-DevelopInLEADS">Please answer in 2–3 sentences (at least 20 characters).</span>
-      </div>
-
+      <!-- Hope To Gain Essay -->
       <div class="field" id="field-HopeToGainPreLEADS">
         <label for="HopeToGainPreLEADS">What do you hope to gain from your Pre-LEADS experience? *</label>
-        <p class="field-hint">Answer in 2–3 sentences.</p>
-        <textarea id="HopeToGainPreLEADS" name="HopeToGainPreLEADS" required maxlength="1000" placeholder="Type your response here..."></textarea>
-        <div class="char-counter" id="count-HopeToGainPreLEADS">0 / 1000 characters</div>
-        <span class="err" id="err-HopeToGainPreLEADS">Please answer in 2–3 sentences (at least 20 characters).</span>
+        <p class="field-hint">Answer in 1–2 sentences.</p>
+        <textarea id="HopeToGainPreLEADS" name="HopeToGainPreLEADS" required maxlength="500" placeholder="Type your response here..."></textarea>
+        <div class="char-counter" id="count-HopeToGainPreLEADS">0 / 500 characters</div>
+        <span class="err" id="err-HopeToGainPreLEADS">Please answer in 1–2 sentences (at least 10 characters).</span>
       </div>
 
-      <div class="field" id="field-LeadershipChallenge">
-        <label for="LeadershipChallenge">Reflecting on your past experiences, what is one challenge you've encountered when working with or leading others? *</label>
-        <p class="field-hint">Answer in 2–3 sentences.</p>
-        <textarea id="LeadershipChallenge" name="LeadershipChallenge" required maxlength="1000" placeholder="Type your response here..."></textarea>
-        <div class="char-counter" id="count-LeadershipChallenge">0 / 1000 characters</div>
-        <span class="err" id="err-LeadershipChallenge">Please answer in 2–3 sentences (at least 20 characters).</span>
-      </div>
-
-      <!-- Daunting Aspects Checkboxes -->
+      <!-- Daunting Aspects Checkboxes with Other:___ -->
       <div class="field" id="field-DauntingAspects">
         <label>When taking on a leadership role, which of the following do you find most challenging or daunting? *</label>
         <p class="field-hint">Check all that apply.</p>
         <div class="choice-group cols-2" id="dauntingGroup">
-          <!-- Dynamically populated or rendered -->
+          <!-- Populated by script with options + other:___ -->
+        </div>
+        <div class="other-input-wrap" id="otherInputWrap">
+          <label for="OtherDaunting" style="margin-top:8px;">Please specify other:</label>
+          <input type="text" id="OtherDaunting" name="OtherDaunting" placeholder="Type your other challenge here..." maxlength="150">
         </div>
         <span class="err" id="err-DauntingAspects">Please select at least one option.</span>
+        <span class="err" id="err-OtherDaunting">Please specify your other challenge or uncheck Other.</span>
       </div>
 
-      <!-- Comfortable Environment Radios -->
-      <div class="field" id="field-ComfortableEnvironment">
-        <label>What kind of environment helps you feel most comfortable participating and sharing your thoughts with others? *</label>
-        <p class="field-hint">Select the option that fits you best.</p>
-        <div class="choice-group" id="environmentGroup">
-          <!-- Dynamically populated or rendered -->
-        </div>
-        <span class="err" id="err-ComfortableEnvironment">Please select one option.</span>
-      </div>
-
+      <div class="ov-actions"><button class="btn ghost" type="button" data-ov-back="2">← BACK</button><button class="btn" type="button" data-ov-next="3">CONTINUE →</button></div>
+      </section>
+      <section class="ov-step" id="ovStep4" hidden>
+        <div class="form-section-head"><h2>Section 4 // Final Verification</h2><p>Review your answers before submitting.</p></div>
+        <div id="ovReview" aria-live="polite"></div>
+        <div class="ov-actions"><button class="btn ghost" type="button" data-ov-back="3">← EDIT ANSWERS</button></div>
       <div class="actions">
         <button type="submit" class="btn" id="submitBtn">Transmit File // Register for Pre-LEADS</button>
         <a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a>
       </div>
 
+      </section>
     </form>
   </div>
 
@@ -639,15 +682,6 @@
     'trusting others with important responsibilities'
   ];
 
-  const ENVIRONMENT_OPTIONS = [
-    'Small-group discussions',
-    'Individual reflection',
-    'Interactive games and team challenges',
-    'Listening to others share their experiences',
-    'Open discussions with the whole group',
-    'No particular preference'
-  ];
-
   let currentContext = null;
 
   function showState(id) {
@@ -659,25 +693,45 @@
   }
 
   function initOptions() {
-    // Populate Daunting Aspects
     const dContainer = $('dauntingGroup');
-    dContainer.innerHTML = DAUNTING_OPTIONS.map((opt, idx) => `
+    const items = DAUNTING_OPTIONS.map((opt, idx) => `
       <label class="choice-tile checkbox" for="daunt_${idx}">
         <input type="checkbox" name="DauntingAspects" value="${escapeHtml(opt)}" id="daunt_${idx}">
         <span class="tile-indicator"></span>
         <span>${escapeHtml(opt)}</span>
       </label>
-    `).join('');
+    `);
 
-    // Populate Environment Options
-    const eContainer = $('environmentGroup');
-    eContainer.innerHTML = ENVIRONMENT_OPTIONS.map((opt, idx) => `
-      <label class="choice-tile radio" for="env_${idx}">
-        <input type="radio" name="ComfortableEnvironment" value="${escapeHtml(opt)}" id="env_${idx}" required>
+    // Add "other:___" option
+    items.push(`
+      <label class="choice-tile checkbox" for="daunt_other">
+        <input type="checkbox" name="DauntingAspects" value="Other" id="daunt_other">
         <span class="tile-indicator"></span>
-        <span>${escapeHtml(opt)}</span>
+        <span>other:___</span>
       </label>
-    `).join('');
+    `);
+
+    dContainer.innerHTML = items.join('');
+
+    const otherCb = $('daunt_other');
+    const otherWrap = $('otherInputWrap');
+    const otherInput = $('OtherDaunting');
+
+    otherCb.addEventListener('change', function () {
+      if (this.checked) {
+        otherWrap.classList.add('show');
+        otherInput.focus();
+      } else {
+        otherWrap.classList.remove('show');
+        otherInput.value = '';
+      }
+    });
+
+    otherInput.addEventListener('input', function () {
+      if (this.value.trim().length > 0 && !otherCb.checked) {
+        otherCb.checked = true;
+      }
+    });
   }
 
   function escapeHtml(str) {
@@ -690,24 +744,22 @@
   }
 
   function setupCharCounters() {
-    ['DevelopInLEADS', 'HopeToGainPreLEADS', 'LeadershipChallenge'].forEach(id => {
-      const ta = $(id);
-      const cnt = $('count-' + id);
-      if (!ta || !cnt) return;
-      const update = () => {
-        const len = ta.value.length;
-        cnt.textContent = `${len} / 1000 characters`;
-        if (len < 20 && len > 0) {
-          cnt.className = 'char-counter error';
-        } else if (len >= 20) {
-          cnt.className = 'char-counter valid';
-        } else {
-          cnt.className = 'char-counter';
-        }
-      };
-      ta.addEventListener('input', update);
-      update();
-    });
+    const ta = $('HopeToGainPreLEADS');
+    const cnt = $('count-HopeToGainPreLEADS');
+    if (!ta || !cnt) return;
+    const update = () => {
+      const len = ta.value.length;
+      cnt.textContent = `${len} / 500 characters`;
+      if (len < 10 && len > 0) {
+        cnt.className = 'char-counter error';
+      } else if (len >= 10) {
+        cnt.className = 'char-counter valid';
+      } else {
+        cnt.className = 'char-counter';
+      }
+    };
+    ta.addEventListener('input', update);
+    update();
   }
 
   function setupBlockRequirement() {
@@ -800,8 +852,9 @@
   function validateClient(data) {
     const errors = {};
 
+    // Consent is strictly required - cannot submit without clicking the check box
     if (!data.Consent) {
-      errors.Consent = 'You must agree to the data collection consent statement.';
+      errors.Consent = 'You must agree to the data collection and consent statement to proceed.';
     }
 
     if (!data.FullName || !/^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ .'-]{1,79}$/.test(data.FullName)) {
@@ -840,24 +893,14 @@
       }
     }
 
-    if (!data.DevelopInLEADS || data.DevelopInLEADS.length < 20) {
-      errors.DevelopInLEADS = 'Please answer in 2–3 sentences (at least 20 characters).';
-    }
-
-    if (!data.HopeToGainPreLEADS || data.HopeToGainPreLEADS.length < 20) {
-      errors.HopeToGainPreLEADS = 'Please answer in 2–3 sentences (at least 20 characters).';
-    }
-
-    if (!data.LeadershipChallenge || data.LeadershipChallenge.length < 20) {
-      errors.LeadershipChallenge = 'Please answer in 2–3 sentences (at least 20 characters).';
+    if (!data.HopeToGainPreLEADS || data.HopeToGainPreLEADS.length < 10) {
+      errors.HopeToGainPreLEADS = 'Please answer in 1–2 sentences (at least 10 characters).';
     }
 
     if (!data.DauntingAspects || data.DauntingAspects.length === 0) {
       errors.DauntingAspects = 'Please select at least one option.';
-    }
-
-    if (!data.ComfortableEnvironment) {
-      errors.ComfortableEnvironment = 'Please select your preferred environment.';
+    } else if (data.DauntingAspects.indexOf('Other') >= 0 && !data.OtherDaunting) {
+      errors.OtherDaunting = 'Please specify your other challenge or uncheck Other.';
     }
 
     return errors;
@@ -903,7 +946,7 @@
 
     const form = $('preleadsForm');
     const dauntingChecked = Array.from(form.querySelectorAll('input[name="DauntingAspects"]:checked')).map(cb => cb.value);
-    const envChecked = form.querySelector('input[name="ComfortableEnvironment"]:checked');
+    const otherText = (form.querySelector('#OtherDaunting').value || '').trim();
 
     const payload = {
       Consent: form.querySelector('#Consent').checked ? 'Y' : '',
@@ -914,11 +957,9 @@
       Course: form.querySelector('#Course').value.trim(),
       Block: form.querySelector('#Block').value.trim(),
       Mobile: normalizePhone(form.querySelector('#Mobile').value.trim()),
-      DevelopInLEADS: form.querySelector('#DevelopInLEADS').value.trim(),
       HopeToGainPreLEADS: form.querySelector('#HopeToGainPreLEADS').value.trim(),
-      LeadershipChallenge: form.querySelector('#LeadershipChallenge').value.trim(),
       DauntingAspects: dauntingChecked,
-      ComfortableEnvironment: envChecked ? envChecked.value : ''
+      OtherDaunting: otherText
     };
 
     const clientErrors = validateClient(payload);
@@ -955,6 +996,125 @@
   initOptions();
   setupCharCounters();
   loadForm();
+</script>
+
+<script>
+(function(){
+'use strict';
+const q=id=>document.getElementById(id), form=q('preleadsForm');
+let stage=1, busy=false, saidFear=false;
+const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+const messages={2:['VERIFYING SUBJECT IDENTITY...','ACCESS GRANTED'],3:['ACCESSING SUBJECT PROFILE...','PROFILE LOADED'],4:['PROCESSING SUBJECT RESPONSES...','VERIFICATION READY']};
+const irisAnnouncements = new Set();
+let irisQueue = [], irisTimer = 0, irisLastShown = 0;
+
+function iris(face, message) {
+  if (irisAnnouncements.has(message)) return;
+  irisAnnouncements.add(message);
+  irisQueue.push({face, message, atStage:stage});
+  scheduleIris();
+}
+
+function scheduleIris() {
+  if (irisTimer || !irisQueue.length) return;
+  const delay = Math.max(400, 4400 - (Date.now() - irisLastShown));
+
+  irisTimer = setTimeout(function flushIris() {
+    irisTimer = 0;
+    irisQueue = irisQueue.filter(item => item.atStage === stage);
+    if (!irisQueue.length) return;
+
+    const active = document.activeElement;
+    if (document.hidden || (active && active.matches('textarea, input[type="text"], input[type="tel"]'))) {
+      irisTimer = setTimeout(flushIris, 1500);
+      return;
+    }
+
+    const item = irisQueue.shift();
+    try {
+      if (window.Iris && typeof window.Iris.say === 'function') {
+        window.Iris.say([item.face, item.message]);
+        irisLastShown = Date.now();
+      }
+    } catch(e) {}
+    scheduleIris();
+  }, delay);
+}
+function page(n){stage=n;irisQueue=irisQueue.filter(m=>m.atStage===n);for(let i=1;i<=4;i++)q('ovStep'+i).hidden=i!==n;
+  document.querySelectorAll('#oversightSteps li').forEach((el,i)=>{el.classList.toggle('current',i+1===n);el.classList.toggle('passed',i+1<n);if(i+1===n)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
+  window.scrollTo({top:0,behavior:reduced.matches?'auto':'smooth'});
+  if(n===3){iris('neutral','Identity recorded. Your file has been updated.');setTimeout(()=>{if(stage===3)iris('neutral','The next responses may reveal more than you expect.');},4600);}
+  if(n===4)iris('neutral','Your responses are awaiting final submission.');
+}
+function validate(n){const ids=n===1?['Consent']:n===2?['FullName','Nickname','IDNumber','YearLevel','Course','Block','Mobile']:['HopeToGainPreLEADS','DauntingAspects','OtherDaunting'];
+ const f=x=>(q(x)?.value||'').trim();const errors={};
+ if(n===1&&!q('Consent').checked)errors.Consent='Consent is required to continue.';
+ if(n===2){for(const x of ['FullName','Nickname','IDNumber','YearLevel','Course'])if(!f(x))errors[x]='This field is required.';
+  if(f('IDNumber')&&!/^\d{6}$/.test(f('IDNumber')))errors.IDNumber='Enter a valid 6-digit ID.';
+  if(f('YearLevel')==='1'&&!f('Block'))errors.Block='Block is required for first-year students.';
+  if(f('Mobile')&&!/^(09\d{9}|\+639\d{9}|639\d{9})$/.test(f('Mobile').replace(/[\s().-]/g,'')))errors.Mobile='Enter a valid Philippine mobile number.';}
+ if(n===3){if(f('HopeToGainPreLEADS').length<10)errors.HopeToGainPreLEADS='Please write at least 10 characters.';
+  const checked=[...form.querySelectorAll('input[name="DauntingAspects"]:checked')];if(!checked.length)errors.DauntingAspects='Choose at least one option.';
+  if(checked.some(el=>el.value==='Other')&&!f('OtherDaunting'))errors.OtherDaunting='Please specify Other.';}
+ document.querySelectorAll('.field').forEach(el=>el.classList.remove('has-error'));
+ const keys=Object.keys(errors),box=q('errorSummaryBox'),list=q('errorSummaryList');list.textContent='';box.hidden=!keys.length;
+ for(const key of keys){const li=document.createElement('li');li.textContent=errors[key];list.appendChild(li);q('field-'+key)?.classList.add('has-error');const err=q('err-'+key);if(err)err.textContent=errors[key];}
+ if(keys.length) (q('field-'+keys[0])||box).scrollIntoView({block:'center'});
+ return !keys.length;
+}
+function review(){const items=[['Full name','FullName'],['Nickname','Nickname'],['ID number','IDNumber'],['Year level','YearLevel'],['Course','Course'],['Block','Block'],['Mobile','Mobile'],['Hope to gain','HopeToGainPreLEADS']];
+ const root=q('ovReview');root.textContent='';for(const [label,id] of items){const el=document.createElement('div');el.className='ov-review';const b=document.createElement('b');b.textContent=label;el.appendChild(b);el.append(document.createTextNode(q(id).value||'—'));root.appendChild(el);}
+ const el=document.createElement('div');el.className='ov-review';const b=document.createElement('b');b.textContent='Leadership challenges';el.appendChild(b);let selections=[...form.querySelectorAll('input[name="DauntingAspects"]:checked')].map(el=>el.value);if(selections.includes('Other'))selections=selections.map(x=>x==='Other'?'Other: '+q('OtherDaunting').value:x);el.append(document.createTextNode(selections.join(', ')));root.appendChild(el);
+}
+function animate(n,done){if(reduced.matches){done();return;}busy=true;const ov=q('ovTerminal'),bar=q('ovTerminalBar'),txt=q('ovTerminalText'),res=q('ovTerminalResult'),skip=q('ovTerminalSkip');const [a,b]=messages[n];ov.hidden=false;bar.style.width='0%';txt.textContent='';res.textContent='';let timers=[],ended=false,previous=document.activeElement;
+ const later=(fn,delay)=>timers.push(setTimeout(fn,delay));function finish(){if(ended)return;ended=true;timers.forEach(clearTimeout);ov.hidden=true;busy=false;done();if(previous&&previous.focus)previous.blur();}
+ skip.onclick=finish;skip.focus();for(let i=1;i<=a.length;i++)later(()=>txt.textContent=a.slice(0,i),i*30);later(()=>res.textContent=b,1350);later(finish,2750);later(()=>{bar.style.transition='width 2680ms linear';bar.style.width='100%';},25);}
+ document.querySelectorAll('[data-ov-next]').forEach(btn=>btn.addEventListener('click',()=>{if(busy)return;const n=Number(btn.dataset.ovNext);if(!validate(n))return;if(n===3)review();animate(n+1,()=>page(n+1));}));
+ document.querySelectorAll('[data-ov-back]').forEach(btn=>btn.addEventListener('click',()=>{if(!busy)page(Number(btn.dataset.ovBack));}));
+ q('Consent').addEventListener('change',()=>{if(q('Consent').checked)iris('neutral','Authorization received. Proceed with identification.');});
+ q('dauntingGroup').addEventListener('change',()=>{if(!saidFear){saidFear=true;iris('neutral','Interesting. Everyone is afraid of something.');}});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!q('ovTerminal').hidden)q('ovTerminalSkip').click();});
+ // Capture submit before the existing handler; preserve original Apps Script submission API.
+ form.addEventListener('submit',e=>{if(stage!==4){e.preventDefault();e.stopImmediatePropagation();return;}for(let n=1;n<=3;n++)if(!validate(n)){e.preventDefault();e.stopImmediatePropagation();page(n);return;}},true);
+ const success=q('state-success');new MutationObserver(()=>{if(success.classList.contains('show'))iris('happy','SUBJECT REGISTERED. Your file is now archived.');}).observe(success,{attributes:true,attributeFilter:['class']});
+ const active=q('state-form');new MutationObserver(()=>{if(active.classList.contains('show')){page(1);iris('neutral','New subject detected. Registration protocol initiated.');}}).observe(active,{attributes:true,attributeFilter:['class']});
+})();
+</script>
+
+<script>
+/* PRELEADS_CENTER_WATCHER_V1 pointer follow; cosmetic only */
+(function(){
+  'use strict';
+  const eye=document.getElementById('preleadsCenterEye');
+  if(!eye)return;
+  const mascot=document.getElementById('kuya');
+  if(mascot){
+    const sync=()=>{eye.hidden=mascot.hidden;};
+    new MutationObserver(sync).observe(mascot,{attributes:true,attributeFilter:['hidden']});
+    sync();
+  }
+  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+  const precise=window.matchMedia('(hover:hover) and (pointer:fine)');
+  if(reduced.matches||!precise.matches)return;
+  let tx=0,ty=0,cx=0,cy=0,mx=innerWidth/2,my=innerHeight/2,raf=0;
+  const paint=()=>{
+    raf=0;
+    cx+=(tx-cx)*.11; cy+=(ty-cy)*.11;
+    eye.style.transform='translate(-50%,-50%) translate('+cx.toFixed(1)+'px,'+cy.toFixed(1)+'px)';
+    const r=eye.getBoundingClientRect();
+    const dx=mx-(r.left+r.width/2),dy=my-(r.top+r.height/2),d=Math.hypot(dx,dy)||1,k=Math.min(1,d/260);
+    eye.style.setProperty('--px',(dx/d*k*r.width*.18).toFixed(1)+'px');
+    eye.style.setProperty('--py',(dy/d*k*r.height*.11).toFixed(1)+'px');
+    if(Math.abs(tx-cx)+Math.abs(ty-cy)>.3)raf=requestAnimationFrame(paint);
+  };
+  window.addEventListener('pointermove',e=>{
+    if(e.pointerType==='touch'||reduced.matches)return;
+    mx=e.clientX;my=e.clientY;
+    tx=Math.max(-75,Math.min(75,(mx-innerWidth/2)*.13));
+    ty=Math.max(-55,Math.min(55,(my-innerHeight/2)*.13));
+    if(!raf)raf=requestAnimationFrame(paint);
+  },{passive:true});
+})();
 </script>
 </body>
 </html>
