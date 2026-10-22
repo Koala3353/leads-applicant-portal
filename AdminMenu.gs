@@ -158,11 +158,22 @@ function review_setMessage(ids, message) {
   const by = requireAdmin_();
   const text = String(message || '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, 1000);
   const done = [], failed = [];
+  ensureApplicantHeaders_();
+  // one read of the ID + Email columns, then only the three cells per person: holding the lock for 100 separate
+  // lookups would make every submit wait
   withScriptLock_(20000, () => {
+    const sh = sheet_(SHEET.APPLICANTS), last = sh.getLastRow();
+    const idv = last >= 2 ? sh.getRange(2, col_('ApplicantID') + 1, last - 1, 1).getValues().map(r => String(r[0]).trim()) : [];
+    const mailv = last >= 2 ? sh.getRange(2, col_('Email') + 1, last - 1, 1).getValues().map(r => r[0]) : [];
+    const now = new Date();
     (ids || []).map(String).slice(0, 100).forEach(id => {
-      const found = getApplicantById_(id);
-      if (!found) { failed.push(id + ': not found'); return; }
-      updateApplicant_(found.row, { MessageToApplicant: text, ReviewedBy: by }, id);
+      const i = idv.indexOf(id);
+      if (i < 0) { failed.push(id + ': not found'); return; }
+      const row = i + 2;
+      sh.getRange(row, col_('MessageToApplicant') + 1).setValue(textCell_(text));
+      sh.getRange(row, col_('ReviewedBy') + 1).setValue(by);
+      sh.getRange(row, col_('LastUpdated') + 1).setValue(now);
+      forgetApplicant_(mailv[i]);
       done.push(id);
     });
   });
@@ -193,12 +204,23 @@ function selectedIds_(sh) {
 function onEdit(e) {
   try { guardTrackEdit_(e); } catch (err) { console.error('onEdit: ' + (err && err.message)); }
   try { logMessageEdit_(e); } catch (err) { console.error('onEdit message: ' + (err && err.message)); }
+  // the member-list autofill is cached for an hour per person (apply_memberFor_): an edit to MemData clears those people
+  try {
+    const r = e && e.range, sh = r && r.getSheet();
+    if (sh && sh.getName() === SHEET.MEMDATA && r.getLastRow() >= 2) {
+      const head = sh.getRange(1, 1, 1, sh.getLastColumn()).getDisplayValues()[0];
+      const top = Math.max(2, r.getRow()), n = Math.min(r.getLastRow() - top + 1, 300);
+      [headerIndex_(head, MEMDATA_COLS.semail), headerIndex_(head, MEMDATA_COLS.email)].filter(i => i >= 0)
+        .forEach(c => sh.getRange(top, c + 1, n, 1).getValues().forEach(v => forgetMember_(v[0])));
+    }
+  } catch (err) { /* fine: the cache runs out in an hour anyway */ }
   // the portal caches each person's row for a minute (getApplicantByEmail_): a hand edit clears the edited rows
   try {
     const r = e && e.range, sh = r && r.getSheet();
     if (sh && sh.getName() === SHEET.APPLICANTS && r.getLastRow() >= 2) {
       const top = Math.max(2, r.getRow()), n = Math.min(r.getLastRow() - top + 1, 300);
       sh.getRange(top, col_('Email') + 1, n, 1).getValues().forEach(v => forgetApplicant_(v[0]));
+      if (e.oldValue && r.getNumRows() === 1 && r.getNumColumns() === 1 && cols_()[r.getColumn() - 1] === 'Email') forgetApplicant_(e.oldValue);
     }
   } catch (err) { /* fine: the cache runs out in a minute anyway */ }
   // config tabs are cached for 2 minutes (Utils.gs cachedTab_): an edit clears the cache right away

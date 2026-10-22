@@ -159,11 +159,14 @@ function setup_formatSheets() {
 }
 
 /**
- * Moves Status, Requirements, Payment, MessageToApplicant and IntegrityFlags to just after FullName (the frozen columns), in that
+ * Moves Status, Requirements, Payment, MessageToApplicant and IntegrityFlags to just after FullName (right after the frozen ID-to-name columns), in that
  * order, and widens the filter to every column. Safe: the code finds columns by header name, and dropdowns, colors
  * and values move with their columns. Does nothing if they're already there.
  */
 function setup_reviewLayout_(sh) {
+  return withScriptLock_(30000, () => setup_reviewLayoutLocked_(sh));   // no submit may build a row mid-move
+}
+function setup_reviewLayoutLocked_(sh) {
   const want = ['Status', 'Requirements', 'Payment', 'MessageToApplicant', 'IntegrityFlags'];
   let moved = 0;
   want.forEach((name, i) => {

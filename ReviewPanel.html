@@ -40,7 +40,7 @@
 </head>
 <body>
   <h2>REVIEW_PANEL.EXE</h2>
-  <p class="note" id="gate" hidden>Results are hidden from applicants until Settings › ResultsReleased is ticked. They see UNDER REVIEW.</p>
+  <p class="note" id="gate" hidden>Results are hidden until Settings › ResultsReleased is ticked: accepted, waitlisted and rejected applicants see UNDER REVIEW, and their messages wait until then too.</p>
   <div class="bar"><span id="count">Select rows in the Applicants tab.</span><label><input type="checkbox" id="all" checked> all</label></div>
   <div class="box" id="list"><p class="empty">Click any cell in an applicant's row. Ctrl/Cmd-click or Shift-click for more.</p></div>
 
@@ -85,7 +85,9 @@
     $('count').textContent = rows.length ? n + ' of ' + rows.length + ' ticked' : 'Select rows in the Applicants tab.';
     $('all').checked = rows.length > 0 && n === rows.length;
     document.querySelectorAll('button').forEach(b => { b.disabled = busy || !n; });
-    if (n === 1 && !$('message').dataset.touched) $('message').value = (rows.find(r => picked.has(r.id)) || {}).message || '';
+    // the box shows the note of the ONE ticked person; with several ticked it starts empty, so nobody's note gets
+    // sent to others by accident
+    if (!$('message').dataset.touched) { $('message').value = n === 1 ? ((rows.find(r => picked.has(r.id)) || {}).message || '') : ''; $('withMsg').checked = false; }
   }
   $('all').addEventListener('change', e => { picked = new Set(e.target.checked ? rows.map(r => r.id) : []); render(); });
   $('message').addEventListener('input', e => { e.target.dataset.touched = '1'; $('withMsg').checked = !!e.target.value.trim(); });
@@ -93,6 +95,7 @@
   function poll() {
     if (busy || document.hidden) return setTimeout(poll, 1500);
     google.script.run.withSuccessHandler(r => {
+      if (busy) return setTimeout(poll, 1500);   // a button is running: don't swap the rows out from under it
       $('gate').hidden = !r.rows.length || r.released;
       const next = r.rows.map(x => [x.id, x.status, x.payment, x.requirements, x.message, x.flag].join('|')).join(';');
       if (next !== sig) {

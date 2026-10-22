@@ -77,6 +77,7 @@ function activity_(event, details, opts) {
     if (level === 'ERROR') noteIssue_(event, text);   // the same error 3x today = an email right away (StatusReport.gs)
   } catch (err) {
     console.error('activity_ could not write: ' + err + ' | ' + event);
+    if (level === 'ERROR') noteIssue_(event, typeof details === 'string' ? details : JSON.stringify(details || ''));   // still counts toward an alert
   }
 }
 
@@ -89,7 +90,8 @@ function activity_(event, details, opts) {
 const DRAFT_KEEP_DAYS = 30, ACTIVITY_KEEP_DAYS = 60;
 function maintenance_daily(e) {
   // public only because triggers need that: from a browser (no trigger event) it refuses
-  if (!(e && e.triggerUid)) ownerOnly_();
+  const ours = e && e.triggerUid && ScriptApp.getProjectTriggers().some(t => t.getUniqueId() === String(e.triggerUid));
+  if (!ours) ownerOnly_();   // a made-up {triggerUid} from a browser must not pass
   const now = Date.now(), day = 864e5;
   try {
     const sh = ss_().getSheetByName(SHEET.DRAFTS);

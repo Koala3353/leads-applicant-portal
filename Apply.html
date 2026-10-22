@@ -365,6 +365,9 @@
     border: 1px dashed var(--glow);
     background: rgba(255, 255, 0, 0.05);
     padding: 8px 16px;
+    max-width: calc(100vw - 32px);
+    justify-content: center;
+    text-align: center;
     animation: ld-pulse 1.4s ease-in-out infinite;
     pointer-events: auto;
     cursor: pointer;
@@ -387,9 +390,10 @@
                 bottom 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
   .kuya.iris-centered .kuya-btn { cursor: pointer !important; }
+  @media (pointer: coarse) { .wake-verb { font-size: 0; } .wake-verb::after { content: 'TAP'; font-size: 0.7rem; } }
   @media (max-width: 560px) {
     .kuya.iris-centered { transform: translate(-50%, -50%) scale(1.25) !important; }
-    .iris-wake-prompt { top: calc(50% + 68px); font-size: 0.7rem; }
+    .iris-wake-prompt { top: calc(50% + 68px); font-size: 0.7rem; letter-spacing: 0.08em; padding: 10px 12px; }
   }
 
   .kuya.iris-docked-left {
@@ -489,7 +493,7 @@
 
 <div id="irisWakeStage" class="iris-wake-stage" hidden>
   <button type="button" class="iris-wake-prompt mono" id="irisWakePrompt">
-    [ I.R.I.S. IS OFF // CLICK TO TURN IT ON ]
+    [ I.R.I.S. IS OFF // <span class="wake-verb">CLICK</span> TO TURN IT ON ]
   </button>
 </div>
 
@@ -1029,7 +1033,8 @@
      focus (switching tabs or apps) and for how long, and how often that happened while the cursor was in an essay.
      Only counts and lengths: never what was pasted, never other tabs. The server turns these into a short flag. */
   const ESSAYS = ['WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership'];
-  const INTEG = { v: 1, essays: {}, away: { count: 0, ms: 0, inEssay: 0 } };
+  // touch: on a phone, the screen locking or a notification also counts as "left the page", so flags say (phone)
+  const INTEG = { v: 1, touch: !!(window.matchMedia && matchMedia('(pointer: coarse)').matches), essays: {}, away: { count: 0, ms: 0, inEssay: 0 } };
   ESSAYS.forEach(f => { INTEG.essays[f] = { pastes: 0, pasted: 0, typed: 0, biggest: 0 }; });
   function mergeInteg(json) {
     try {
@@ -1693,6 +1698,7 @@
   const RefPick = (() => {
     const el = $('f-ReferredBy'), list = $('refList'), state = $('refState');
     const R = BRAND.referral, known = new Set();   // codes the server said exist
+    const unsure = new Set(), seenQ = {};   // codes we couldn't check (offline / rate-limited): submit lets the server decide
     let opts = [], active = -1, timer = 0, seq = 0, na = false;
     const clean = v => String(v || '').toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9-]/g, '');
     const setState = (text, kind) => { state.textContent = text || ''; state.className = 'refpick-state' + (kind ? ' ' + kind : ''); };
@@ -1717,12 +1723,14 @@
       el.dispatchEvent(new Event('input', { bubbles: true, cancelable: false }));   // drafts + progress pick it up
     }
     function search(q, then) {
+      if (seenQ[q]) return then(seenQ[q]);   // same query again (focus, arrow keys): no new server call
       const my = ++seq;
       google.script.run.withSuccessHandler(r => {
-        if (my !== seq) return;
+        if (!r.slow) seenQ[q] = r;
+        if (r.slow) unsure.add(q);
         (r.codes || []).forEach(c => known.add(c)); if (r.exact) known.add(q);
-        then(r);
-      }).withFailureHandler(() => { if (my === seq) then({ codes: [], failed: true }); }).apply_referralSearch(q);
+        if (my === seq) then(r);
+      }).withFailureHandler(() => { unsure.add(q); if (my === seq) then({ codes: [], failed: true }); }).apply_referralSearch(q);
     }
     function onType(e) {
       if (e && e.isTrusted === false) return;   // our own re-fired input after a choice
@@ -1752,11 +1760,15 @@
       else if (e.key === 'Escape') open(false);
     });
     return {
-      ok: v => known.has(clean(v)),
+      ok: v => known.has(clean(v)) || unsure.has(clean(v)),
       /** a code filled in from a link or a draft: check it exists, quietly */
       verify() {
         const q = clean(el.value); if (q.length < 2) return;
-        search(q, r => { if (clean(el.value) === q) setState(r.exact ? R.found.replace('{code}', q) : R.notFound, r.exact ? 'ok' : 'warn'); });
+        search(q, r => {
+          if (clean(el.value) !== q) return;
+          if (r.failed || r.slow) setState(r.failed ? R.offline : R.slow, 'na');   // can't check now: the server checks it on submit
+          else setState(r.exact ? R.found.replace('{code}', q) : R.notFound, r.exact ? 'ok' : 'warn');
+        });
       }
     };
   })();

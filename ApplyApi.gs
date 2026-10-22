@@ -77,7 +77,7 @@ function integrityFlags_(raw, clean) {
   const away = o.away || {};
   if (num(away.inEssay) >= INTEGRITY.awayInEssay) out.push('left the page ' + num(away.inEssay) + 'x mid-essay');
   else if (num(away.count) >= INTEGRITY.awayCount) out.push('left the page ' + num(away.count) + 'x (' + Math.round(num(away.ms) / 60000) + ' min away)');
-  return out.length ? 'FLAG: ' + out.join('; ') : '';
+  return out.length ? 'FLAG: ' + out.join('; ') + (o.touch ? ' (phone: screen locks count as leaving)' : '') : '';
 }
 
 /** The referral picker on Apply: matching codes as the applicant types (Referrals.gs referralSearch_). */
@@ -361,7 +361,11 @@ function apply_memRows_(sh, email) {
   const head = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
   const target = String(email || '').toLowerCase().trim();
   if (!target || lastRow < 2) return [head];
-  const hits = sh.getRange(2, 1, lastRow - 1, lastCol).createTextFinder(target).matchEntireCell(true).matchCase(false).findAll();
+  // search only the email columns (the whole 100+ column sheet took ~1.3 s on every Apply / Pre-LEADS load)
+  const mailCols = [headerIndex_(head, MEMDATA_COLS.semail), headerIndex_(head, MEMDATA_COLS.email)].filter(i => i >= 0);
+  const hits = mailCols.length
+    ? [].concat.apply([], mailCols.map(c => sh.getRange(2, c + 1, lastRow - 1, 1).createTextFinder(target).matchEntireCell(true).matchCase(false).findAll()))
+    : sh.getRange(2, 1, lastRow - 1, lastCol).createTextFinder(target).matchEntireCell(true).matchCase(false).findAll();
   const out = [head], seen = {};
   hits.map(c => c.getRow()).sort((x, y) => x - y).forEach(r => {
     if (seen[r]) return; seen[r] = 1;
@@ -393,7 +397,25 @@ function apply_idBelongsToOther_(id, email) {
   }
 }
 
+/**
+ * The member-list autofill for this email (by ID too when given). The email-only lookup runs on every Apply and
+ * Pre-LEADS page load, so its result is cached for an hour per person; a hand edit to MemData clears the edited
+ * rows' people (onEdit in AdminMenu.gs -> forgetMember_).
+ */
+const MEMBER_TTL = 3600;
 function apply_memberFor_(email, idNumber) {
+  if (idNumber) return apply_memberLookup_(email, idNumber);
+  const key = 'mem:' + String(email || '').toLowerCase().trim(), cache = CacheService.getScriptCache();
+  try { const hit = cache.get(key); if (hit) { const v = JSON.parse(hit); return v.none ? null : v; } } catch (e) { /* read it fresh */ }
+  const found = apply_memberLookup_(email, '');
+  try { cache.put(key, JSON.stringify(found || { none: 1 }), MEMBER_TTL); } catch (e) { /* fine */ }
+  return found;
+}
+function forgetMember_(email) {
+  email = String(email || '').toLowerCase().trim();
+  if (email) try { CacheService.getScriptCache().remove('mem:' + email); } catch (e) { /* fine */ }
+}
+function apply_memberLookup_(email, idNumber) {
   try {
     const sh = ss_().getSheetByName(SHEET.MEMDATA);
     if (!sh || sh.getLastRow() < 2) return null;

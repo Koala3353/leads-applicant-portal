@@ -5,8 +5,8 @@
  *     new applications, Pre-LEADS registrations, decisions so far, flagged applications (IntegrityFlags), errors,
  *     slow calls, issues people reported, and errors in people's browsers, for the last 24 hours.
  *  2. Alert as soon as the same problem happens 3 times in one day (noteIssue_, called from activity_ for every
- *     ERROR and from report_issue for every user report): one email per problem per day, so a crash loop can't
- *     flood the inbox.
+ *     ERROR, even when the Activity tab can't be written, and from report_issue for every user report): one email
+ *     per problem per day, at most ALERT_CAP a day, so a crash loop or fake browser errors can't flood the inbox.
  * Recipient: Settings › StatusReportEmail (default brigadokeene@gmail.com). Send a report right now from the editor
  * with status_sendNow. The email lists IDs and counts only: no essays, ID numbers or phone numbers.
  */
@@ -20,38 +20,40 @@ function statusTo_() {
 const manilaDay_ = d => Utilities.formatDate(d || new Date(), 'Asia/Manila', 'yyyyMMdd');
 
 /**
- * Counts one occurrence of a problem today; on the 3rd, emails an alert (once per problem per day).
+ * Counts one occurrence of a problem today; on the 3rd, emails an alert (once per problem per day, and at most
+ * ALERT_CAP alerts a day so nobody can burn the email quota by sending fake browser errors).
  * `kind` groups it (an event name, or 'user_report'); `detail` is what happened. Digits are folded so
- * "row 12" and "row 40" count as the same problem. Never throws: logging must never break the portal.
+ * "row 12" and "row 40" count as the same problem. Counters live in CacheService (6 hours, no lock: this runs on
+ * every ERROR and must never make a submit wait). Never throws: logging must never break the portal.
  */
+const ALERT_CAP = 8;
 function noteIssue_(kind, detail) {
   try {
     const first = String(detail || '').split('\n')[0].replace(/\d+/g, '#').slice(0, 120);
     const sig = kind === 'user_report' ? 'user_report' : kind + ' | ' + first;
     const hash = Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, sig)).slice(0, 12);
-    const day = manilaDay_(), key = 'iss:' + day + ':' + hash;
-    const lock = LockService.getScriptLock();
-    if (!lock.tryLock(1500)) return;   // busy: skip counting this one rather than slow the call down
-    let n;
-    try {
-      const props = PropertiesService.getScriptProperties();
-      n = Number(props.getProperty(key) || 0) + 1;
-      props.setProperty(key, String(n));
-    } finally { lock.releaseLock(); }
+    const day = manilaDay_(), cache = CacheService.getScriptCache(), key = 'iss:' + day + ':' + hash;
+    const n = Number(cache.get(key) || 0) + 1;
+    cache.put(key, String(n), 21600);
     if (n !== ISSUE_ALERT_AT) return;
+    const sentKey = 'iss:sent:' + day, sent = Number(cache.get(sentKey) || 0);
+    if (sent >= ALERT_CAP) return;
+    cache.put(sentKey, String(sent + 1), 21600);
     const to = statusTo_();
     if (!to) return;
     const what = kind === 'user_report' ? ISSUE_ALERT_AT + ' issue reports from people today' : 'The same error happened ' + ISSUE_ALERT_AT + ' times today';
     const body = [what + '.', '', 'Problem: ' + sig, 'Latest: ' + String(detail || '').slice(0, 1500), '',
       'Open the Activity tab and filter Level = ERROR (or Event = report_issue) to see each one: ' + sheetUrl_(),
-      '', 'You get this once per problem per day. The daily report has everything else.'].join('\n');
+      '', 'You get this once per problem per day (at most ' + ALERT_CAP + ' alerts a day). The daily report has everything else.'].join('\n');
     MailApp.sendEmail({ to: to, subject: '[Eyes on LEADS] ALERT: ' + (kind === 'user_report' ? 'issue reports piling up' : 'repeated error in ' + kind), body: body, name: 'Eyes on LEADS portal' });
   } catch (e) { console.error('noteIssue_: ' + (e && e.message)); }
 }
 
 /** The trigger's job (8 AM Manila). From a browser it refuses; the owner can run status_sendNow instead. */
 function status_dailyReport(e) {
-  if (!(e && e.triggerUid)) ownerOnly_();
+  // public only because triggers need that; a made-up {triggerUid} from a browser must not pass, so check it's ours
+  const ours = e && e.triggerUid && ScriptApp.getProjectTriggers().some(t => t.getUniqueId() === String(e.triggerUid));
+  if (!ours) ownerOnly_();
   return statusSend_();
 }
 /** Run from the editor to get the report now (checks the email works too). */
@@ -120,13 +122,12 @@ function statusData_(from, to) {
         bucket[k] = bucket[k] || { event: event, sample: first, page: page, count: 0, people: {} };
         bucket[k].count++; if (who) bucket[k].people[who] = 1;
       } else if (level === 'WARN' && / \(slow\)$/.test(event)) out.slow++;
-      if (event === 'report_issue' && /^sent /.test(String(details))) out.reports.push({ when: when, who: who, page: page, id: String(details).slice(5) });
+      if (/^report_issue( \(slow\))?$/.test(event) && /^sent /.test(String(details))) out.reports.push({ when: when, who: who, page: page, id: String(details).slice(5) });
     });
     const top = o => Object.keys(o).map(k => Object.assign(o[k], { people: Object.keys(o[k].people).length })).sort((a, b) => b.count - a.count).slice(0, 12);
     out.errors.groups = top(err); out.client.groups = top(cli);
   }
-  try { out.alertsToday = PropertiesService.getScriptProperties().getKeys().filter(k => k.indexOf('iss:' + manilaDay_() + ':') === 0 &&
-    Number(PropertiesService.getScriptProperties().getProperty(k)) >= ISSUE_ALERT_AT).length; } catch (e) { /* fine */ }
+  try { out.alertsToday = Number(CacheService.getScriptCache().get('iss:sent:' + manilaDay_()) || 0); } catch (e) { /* fine */ }
   return out;
 }
 
@@ -168,11 +169,11 @@ function statusText_(r) {
     'Slow calls: ' + r.slow, '', 'Open the Sheet: ' + sheetUrl_()].join('\n');
 }
 
-/** Drops alert counters from earlier days (they're only for "3 times today"). */
+/** Drops alert counters an older version kept in Script Properties (they now live in CacheService). */
 function statusCleanProps_() {
   try {
-    const props = PropertiesService.getScriptProperties(), today = 'iss:' + manilaDay_() + ':';
-    props.getKeys().forEach(k => { if (k.indexOf('iss:') === 0 && k.indexOf(today) !== 0) props.deleteProperty(k); });
+    const props = PropertiesService.getScriptProperties();
+    props.getKeys().forEach(k => { if (k.indexOf('iss:') === 0) props.deleteProperty(k); });
   } catch (e) { /* fine */ }
 }
 

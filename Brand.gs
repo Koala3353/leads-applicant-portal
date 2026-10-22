@@ -493,7 +493,7 @@ const BRAND = {
     os: "'VT323', 'Lucida Console', monospace",                         // 90s OS chrome: buttons, title bars, taskbar
     type: "'Special Elite', 'Courier New', monospace",                  // typewriter: case folders, stamps, scraps
     hand: "'Reenie Beanie', 'Comic Sans MS', cursive",                    // red-pen handwriting: margin notes on Apply
-    googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;700;800&family=Reenie+Beanie&family=Special+Elite&family=VT323&display=swap'
+    googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;700;800&family=Special+Elite&family=VT323&display=swap'
   },
   effects: {
     eyes: true,           // eyes in the background follow the pointer (Home); they stare harder when you stop moving

@@ -255,8 +255,8 @@
   h1 .kicker.shiver{animation:shiver 5s steps(1) infinite}
   @keyframes shiver{0%,86%,100%{transform:none}88%{transform:translate(-3px,1px)}90%{transform:translate(3px,-1px) skewX(-6deg)}92%{transform:translate(-1px,0)}}
   h1 .line{display:block;font-family:var(--title);font-weight:800;text-transform:uppercase;letter-spacing:-.05em;font-size:.74em;line-height:.95}   /* the brand book's title font, all caps */
-  .reveal-veil{position:fixed;inset:0;z-index:9990;background:#050505;opacity:0;transition:opacity .4s ease}
-  .reveal-veil.on{opacity:1}
+  .reveal-veil{position:fixed;inset:0;z-index:9990;background:#050505;opacity:0;pointer-events:none;transition:opacity .4s ease}
+  .reveal-veil.on{opacity:1;pointer-events:auto}
   .reveal-veil iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
   .cnote{margin:14px 0 0;padding:10px 12px 12px;background:#f4efe1;color:#111;border-left:5px solid var(--danger);box-shadow:4px 4px 0 #000;rotate:-.4deg}
   .cnote-k{margin:0 0 4px;font:700 .68rem/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#b00000}
@@ -1923,21 +1923,25 @@
     const veil = document.createElement('div'); veil.className = 'reveal-veil'; veil.setAttribute('role', 'dialog'); veil.setAttribute('aria-modal', 'true'); veil.setAttribute('aria-label', 'Results transmission');
     const frame = document.createElement('iframe'); frame.title = 'Results transmission'; frame.allow = 'autoplay; fullscreen';
     veil.append(frame); document.body.append(veil);
-    let ready = false, marked = false;
-    const close = () => { window.removeEventListener('message', onMsg); veil.classList.remove('on'); setTimeout(() => veil.remove(), 400); };
+    let ready = false, marked = false, maxTimer = 0;
+    const close = () => { window.removeEventListener('message', onMsg); document.removeEventListener('keydown', onKey); clearTimeout(maxTimer);
+      veil.classList.remove('on'); setTimeout(() => veil.remove(), 400); };
+    const onKey = e => { if (e.key === 'Escape') close(); };
     const onMsg = e => {
       if (e.origin !== origin || e.source !== frame.contentWindow) return;
       const d = e.data || {};
       if (d.type === 'leads-reveal-ready') {
         ready = true;
+        veil.classList.add('on'); try { frame.focus(); } catch (err) { /* fine */ }   // only now does it cover the hub
+        maxTimer = setTimeout(close, 45000);   // the film is ~15 s plus its end card; never strand anyone behind it
         frame.contentWindow.postMessage({ type: 'leads-reveal-init', id: a ? a.id : 'APP-0000', nick: a ? a.firstName : 'Preview',
           stamp: 'ACCEPTED' }, origin);   // own: the portal shows ACCEPTED/CONFIRMED; preview: the core team
         if (own && !marked) { marked = true; window.runServer('home_revealSeen').catch(() => {}); }
       } else if (d.type === 'leads-reveal-done') close();
     };
     window.addEventListener('message', onMsg);
-    frame.src = url;
-    requestAnimationFrame(() => veil.classList.add('on'));
+    document.addEventListener('keydown', onKey);
+    frame.src = url;   // loads invisibly (the veil isn't .on yet), so a slow or blocked film never blacks out the hub
     setTimeout(() => { if (!ready) close(); }, 12000);   // blocked or offline: quietly drop it, they'll get it next time
   }
 
