@@ -46,10 +46,31 @@ function doGet(e) {
   template.baseUrl = portalUrl_();
   template.ref = normalizeReferral_(e && e.parameter && e.parameter.ref);   // ...exec?ref=BEA (Referrals.gs); '' if none
   activity_('page_view', notice ? 'unknown page, showed Home' : '', { page: key, anon: true });   // no email on page views
+  PAGE_BOOT_ = notice ? null : pageBoot_(key);   // printed into the page by brand_css_() (Brand.gs)
   return template.evaluate()
     .setTitle(BRAND.portalName)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
+}
+
+/**
+ * Page speed: every page used to load, THEN ask the server for its data (a second round trip, often 1.5 to 3 s on a
+ * phone). Now doGet runs that first call itself and the result is printed into the page as window.__BOOT;
+ * runServer (Styles.html) answers the page's first matching call from it instantly. Later calls (refresh, retry)
+ * go to the server as before. If the call fails here, the page simply makes it itself.
+ */
+let PAGE_BOOT_ = null;
+const BOOT_CALLS = {
+  home: ['home_getContext'], apply: ['apply_getForm'], game: ['game_getInit'], preleads: ['preleads_getForm'], 'pre-leads': ['preleads_getForm'],
+  pay: ['steps_get', 'pay'], reqs: ['steps_get', 'reqs'], ga: ['steps_get', 'ga'], room: ['steps_get', 'room']
+};
+function pageBoot_(key) {
+  const c = BOOT_CALLS[key];
+  if (!c) return null;
+  try {
+    const args = c.slice(1);
+    return { fn: c[0], args: args, data: globalThis[c[0]].apply(null, args) };
+  } catch (e) { return null; }
 }
 
 /**

@@ -45,7 +45,8 @@ const COLS = [
   'WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership',   // the 4 essays (Rumors was dropped Oct 2026)
   'GameAnswers',                                                          // Game page choices (JSON)
   'PaymentProof',                                                         // Drive link to the uploaded proof of payment
-  'ReferralCode', 'ReferredBy', 'ReferrerID'                              // own code to share / code they used / who that is (Referrals.gs)
+  'ReferralCode', 'ReferredBy', 'ReferrerID',                             // own code to share / code they used / who that is (Referrals.gs)
+  'MessageToApplicant'                                                    // core team: a note shown on the applicant's hub (plain text)
 ];
 
 /** The Applicants header row as it is in the Sheet right now (read once per run). Falls back to COLS on an empty tab. */
@@ -135,6 +136,14 @@ function ensureApplicantHeaders_() {
 /* ---------------- settings ---------------- */
 
 function ss_() { return SpreadsheetApp.getActiveSpreadsheet(); }
+/** The Sheet's link for the core team's "Open the Sheet" button, cached (it never changes; one less Sheets call per hub load). */
+function sheetUrl_() {
+  const cache = CacheService.getScriptCache();
+  let url = null;
+  try { url = cache.get('sheetUrl'); } catch (e) { /* read it */ }
+  if (!url) { url = ss_().getUrl(); try { cache.put('sheetUrl', url, 21600); } catch (e) { /* fine */ } }
+  return url;
+}
 function sheet_(name) {
   const sh = ss_().getSheetByName(name);
   if (!sh) throw new Error('The Sheet has no tab called "' + name + '".');
@@ -242,6 +251,8 @@ const SETTINGS_SCHEMA = [
   { key: 'AllowedEmailDomains', type: 'text', def: '', help: 'Comma-separated. Only these accounts can apply. Blank = student.ateneo.edu, ateneo.edu.' },
   { key: 'ApplicantIdStart', type: 'int', def: 2300, help: 'Applicant IDs start above this number (default 2300) and skip ahead randomly, so IDs never show how many applied.' },
   { key: 'ContactEmail', type: 'text', def: '', help: 'Core team email shown in the footer (leave blank to hide)' },
+  { key: 'ResultsReleased', type: 'bool', def: false, help: 'Tick to show decisions to applicants. Unticked = ACCEPTED, WAITLISTED, REJECTED and CONFIRMED all show as UNDER REVIEW in the portal, and payment stays locked.' },
+  { key: 'ActivityVerbose', type: 'bool', def: false, help: 'Tick only while debugging: also logs every page view and page load in the Activity tab. Leave unticked for launch (those writes slow the Sheet down in a rush).' },
   { key: 'IssueEmail', type: 'text', def: '', help: 'Optional. Where "Report an issue" emails go. Blank = the default in Brand.gs.' },
   // 02 payment
   { key: 'PaymentOpen', type: 'bool', def: false, help: 'STEP 02. Tick to open Proof of payment for ACCEPTED applicants.' },
@@ -356,17 +367,51 @@ function requireAdmin_() {
 function requireApplicant_() {
   const email = currentEmail_();
   if (!email) throw new Error('Sign in with your Ateneo account first.');
-  const found = getApplicantByEmail_(email);
+  const found = getApplicantForPortal_(email);
   if (!found) throw new Error('You have not applied yet.');
   return found;
 }
 
+// Decisions an applicant can't see until Settings › ResultsReleased is ticked: until then they read as UNDER REVIEW.
+const HIDDEN_UNTIL_RELEASE = ['ACCEPTED', 'WAITLISTED', 'REJECTED', 'CONFIRMED'];
+
+/**
+ * The applicant's row as the PORTAL may show it (every page an applicant opens goes through this, never
+ * getApplicantByEmail_ directly): the decision is masked until results are released, so the core team can set
+ * statuses in the Sheet ahead of time. Server-side checks that must see the real row (duplicates) use the raw lookup.
+ */
+function getApplicantForPortal_(email) {
+  const found = getApplicantByEmail_(email);
+  if (!found || setting_('ResultsReleased') || HIDDEN_UNTIL_RELEASE.indexOf(String(found.data.Status)) < 0) return found;
+  return { row: found.row, data: Object.assign({}, found.data, { Status: 'UNDER REVIEW' }), masked: true };
+}
+
 /* ---------------- lookups ---------------- */
 
-/** Returns { row, data } for this email, or null. Always look people up by login email. */
+/**
+ * Returns { row, data } for this email, or null. Always look people up by login email.
+ * Cached per person for a minute (CacheService): in a load test, page loads queued for up to 40s behind each other's
+ * Sheet reads once ~60 people loaded at the same moment, and a returning visitor's hub needs no Sheet read at all
+ * this way. Every write through the portal (updateApplicant_, a submit) and every hand edit (onEdit) clears that
+ * person's entry, so a change shows on their next load; anything else (rows deleted by hand) shows within a minute.
+ * Writes never trust the cached row number: updateApplicant_ re-checks it by ApplicantID.
+ */
+const APPLICANT_TTL = 60;
 function getApplicantByEmail_(email) {
   email = String(email || '').trim().toLowerCase();
   if (!email) return null;
+  const cache = CacheService.getScriptCache(), key = 'appl:' + email;
+  try { const hit = cache.get(key); if (hit) { const v = JSON.parse(hit); return v.none ? null : v; } } catch (e) { /* read it fresh */ }
+  const found = readApplicantByEmail_(email);
+  try { cache.put(key, JSON.stringify(found || { none: 1 }), APPLICANT_TTL); } catch (e) { /* too big or cache down: fine */ }
+  return found;
+}
+/** Drops one person's cached lookup (after anything changes their row). */
+function forgetApplicant_(email) {
+  email = String(email || '').trim().toLowerCase();
+  if (email) try { CacheService.getScriptCache().remove('appl:' + email); } catch (e) { /* fine */ }
+}
+function readApplicantByEmail_(email) {
   // Search just the Email column (Sheets does it server-side), then read only that row. Much cheaper than reading
   // the whole tab on every page load. Emails are written by the portal from the login, so exact matches work;
   // apply_submit_ still does a full trimmed scan inside its lock before filing anything.
@@ -429,6 +474,7 @@ function updateApplicant_(row, fields, applicantId) {
   }
   Object.keys(fields).forEach(k => { sh.getRange(row, col_(k) + 1).setValue(textCell_(fields[k])); });
   sh.getRange(row, col_('LastUpdated') + 1).setValue(new Date());
+  forgetApplicant_(sh.getRange(row, col_('Email') + 1).getValue());   // their next page load reads the new values
 }
 
 /* ---------------- data validation ---------------- */

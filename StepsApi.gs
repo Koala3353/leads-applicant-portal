@@ -38,7 +38,7 @@ function steps_get(page) {
 function steps_get_(page) {
   const key = STEP_KEYS[page] ? page : 'pay';
   const email = currentEmail_();
-  const found = email ? getApplicantByEmail_(email) : null;
+  const found = email ? getApplicantForPortal_(email) : null;
   const a = found ? found.data : null;
   const p = progress_(a);
   const step = p[STEP_KEYS[key]];
@@ -50,7 +50,8 @@ function steps_get_(page) {
     signedIn: !!email,
     email: email,
     applicant: a ? { id: a.ApplicantID, firstName: String(a.Nickname || a.FullName || '').trim().split(' ')[0], status: a.Status,
-      payment: a.Payment || 'NONE', requirements: a.Requirements || 'NONE' } : null,
+      payment: a.Payment || 'NONE', requirements: a.Requirements || 'NONE',
+      message: String(a.MessageToApplicant || '').trim().slice(0, 1000) } : null,
     step: { state: step.state, unlocked: !!step.unlocked, why: step.why || '' },
     progress: { payment: p.payment.state, requirements: p.requirements.state, ga: p.ga.state, room: p.room.state },
     contact: String(s.ContactEmail || ''),

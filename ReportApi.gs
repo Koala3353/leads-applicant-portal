@@ -4,7 +4,7 @@
  */
 
 /* ---------------- "Report an issue" (Styles.html opens the form on every page) ----------------
- * Emails a detailed, LEADS: Oversight-themed case file to Settings > IssueEmail (or BRAND.report.to).
+ * Emails a detailed, Eyes on LEADS-themed case file to Settings > IssueEmail (or BRAND.report.to).
  * Adds what the reporter can't see: their signed-in account, applicant ID/status/tracks, their last
  * Activity rows and the time on the server. Rate-limited to 3 reports per 10 minutes per person.
  * Needs the "send email as you" permission: the owner runs report_authorize once from the editor.
@@ -67,7 +67,7 @@ function report_issue_(r) {
     '<tr><td style="height:12px;background:repeating-linear-gradient(-45deg,#FFFF00 0 14px,#0A0A0A 14px 28px);background-color:#FFFF00"></td></tr>' +
     '<tr><td style="padding:22px 28px 0">' +
       '<div style="font:700 11px/1 Menlo,Consolas,monospace;letter-spacing:.2em;color:#FF2A2A">&#9679; REC // INCIDENT REPORT</div>' +
-      '<div style="font:700 30px/1.05 Impact,\'Arial Narrow\',Arial,sans-serif;color:#EAEAEA;text-transform:uppercase;margin:10px 0 4px">LEADS: <span style="color:#FFFF00">Oversight</span></div>' +
+      '<div style="font:800 28px/1.05 \'JetBrains Mono\',Menlo,Consolas,monospace;color:#EAEAEA;text-transform:uppercase;margin:10px 0 4px">Eyes on <span style="color:#FFFF00">LEADS</span></div>' +
       '<div style="font:13px/1.5 Menlo,Consolas,monospace;color:#8C8C8C">Case ' + esc(id) + ' &middot; filed ' + esc(Utilities.formatDate(new Date(), 'Asia/Manila', "EEE, MMM d yyyy 'at' h:mm a")) + ' (Manila)</div>' +
       '<div style="display:inline-block;margin-top:14px;padding:5px 10px;border:1.5px solid ' + sevColor + ';color:' + sevColor + ';font:700 12px/1 Menlo,Consolas,monospace;letter-spacing:.1em;text-transform:uppercase">' + esc(sev || 'Severity not given') + '</div>' +
     '</td></tr>' +
@@ -100,14 +100,14 @@ function report_issue_(r) {
     '<tr><td style="height:6px;background:#FFFF00"></td></tr>' +
     '</table></div>';
 
-  const plain = ['LEADS: Oversight // Incident report ' + id, '',
+  const plain = ['Eyes on LEADS // Incident report ' + id, '',
     'Category: ' + clip(r.category, 120), 'Severity: ' + sev, 'When: ' + clip(r.when, 80), '',
     'What happened:', clip(r.what, 4000), '', 'What they were doing:', clip(r.doing, 1500), '', 'Steps:', clip(r.steps, 2000), '',
     'Reply to: ' + contact, 'Signed in as: ' + (email || '(not signed in)'), 'Applicant: ' + (a ? a.ApplicantID + ' ' + a.Status : 'none'),
     'Page: ' + clip(c.page || r.page, 40) + '  URL: ' + clip(c.url, 300), 'Browser: ' + clip(c.ua, 300), 'Screen: ' + clip(c.screen, 60),
     'Errors: ' + (c.errors || []).slice(-5).join(' | ')].join('\n');
 
-  const opts = { to: to, subject: '[LEADS: Oversight] Case ' + id + ' // ' + clip(r.category, 60) + (sev ? ' // ' + sev : ''), htmlBody: html, body: plain, name: 'LEADS: Oversight portal' };
+  const opts = { to: to, subject: '[Eyes on LEADS] Case ' + id + ' // ' + clip(r.category, 60) + (sev ? ' // ' + sev : ''), htmlBody: html, body: plain, name: 'Eyes on LEADS portal' };
   if (contact && /@/.test(contact)) opts.replyTo = contact;
   if (r.shot && r.shot.data && String(r.shot.data).length < 4.2e6) {
     try {
@@ -123,6 +123,6 @@ function report_issue_(r) {
 function report_authorize() {
   ownerOnly_();
   const to = String(getSetting_('IssueEmail') || (BRAND.report || {}).to || '');
-  MailApp.sendEmail(to, '[LEADS: Oversight] Issue reports are switched on', 'Reports from the portal will arrive at this address.');
+  MailApp.sendEmail(to, '[Eyes on LEADS] Issue reports are switched on', 'Reports from the portal will arrive at this address.');
   return 'Test email sent to ' + to;
 }

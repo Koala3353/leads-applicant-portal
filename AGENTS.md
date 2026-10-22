@@ -1,4 +1,4 @@
-# AI instructions: LEADS: Oversight applicant portal
+# AI instructions: Eyes on LEADS applicant portal
 
 Google Apps Script web app. Read `CONTEXT.md` before writing any code (rules, file ownership, sheet columns, specs).
 `README.md` has the one-time clasp setup.

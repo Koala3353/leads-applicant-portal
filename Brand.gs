@@ -15,19 +15,19 @@
  */
 const BRAND = {
   /* ---------- identity ---------- */
-  // Theme: LEADS: Oversight. (1) watchful supervision, (2) an inadvertent error.
+  // Title: Eyes on LEADS (was LEADS: Oversight). Theme: oversight = (1) watchful supervision, (2) an inadvertent error.
   // Fears: being watched, feeling boxed in, failing. Mood: a surveillance case file, 1984-style.
   org: 'LEADS',
   parentOrg: 'MEA',
-  portalName: 'LEADS: Oversight',         // browser tab title
-  logoText: 'LEADS',
-  logoAccent: ': Oversight',              // colored part after the logo
+  portalName: 'Eyes on LEADS',            // browser tab title
+  logoText: 'Eyes on ',
+  logoAccent: 'LEADS',                    // colored part after the logo
 
   /* ---------- home page copy ---------- */
   hero: {
     eyebrow: 'MEA leadership camp',       // shown as "<event> · <eyebrow> · applications open"
     kicker: 'Case file 26/27',            // yellow tape label above the headline
-    headline: 'LEADS: Oversight',
+    headline: 'Eyes on LEADS',
     tagline: 'Someone is already watching. Apply anyway.',
     hint: 'About 15 minutes: the form, then a short assessment. One application per person. We will know if you try twice.',   // under the main button, before applying
     redact: [],                            // words in the lede shown as black bars until hovered or tapped (empty = off)
@@ -126,7 +126,9 @@ const BRAND = {
     top: 'SPECIAL TRANSMISSION',
     title: 'Pre-LEADS Preview // Nov 5',
     sub: '5:00–7:30 PM, onsite',          // fallback: Settings › PreLeadsTime + PreLeadsVenue show instead when filled in
-    link: 'Open the Pre-LEADS file →'
+    link: 'Open the Pre-LEADS file →',
+    popup: 'Registration is open until the file closes. Come see what it is about.',   // the once-a-day pop-up on Home (blank = no pop-up)
+    later: 'Later'
   },
 
   /* ---------- Home extras for people who haven't applied yet (hidden once they have a file) ---------- */
@@ -182,6 +184,7 @@ const BRAND = {
   /* ---------- the hub: one card per step, in order ---------- */
   hub: {
     eyebrow: 'Your file // live',
+    noteLabel: 'Note from the core team',   // above Applicants › MessageToApplicant on the status card
     title: 'What we have on you.',
     guestNote: 'Sign in with your Ateneo account to see your file.',
     noFileNote: 'No file on you yet. Start one above.',
@@ -201,7 +204,7 @@ const BRAND = {
     req:     { n: '03', title: 'Requirements',     fix: 'After your payment is verified: the forms to fill in, with what each one needs.' },
     ga:      { n: '04', title: '1st GA',           fix: 'Your first general assembly. Add it to your calendar once the date is set.' },
     room:    { n: '05', title: 'Room booking',     fix: 'Where you sleep at camp. Opens after your requirements are approved.' },
-    sheet:   { n: '00', title: 'Core team',        fix: 'Review applicants in the Sheet. Use the LEADS menu to accept, verify and confirm.' }
+    sheet:   { n: '00', title: 'Core team',        fix: 'Review applicants in the Sheet: LEADS → Open review panel, click their rows, press Accept, Verify or Approve. Add a note and they see it here.' }
   },
   /* ---------- Steps.html: the pages after acceptance (?page=pay | reqs | ga | room) ---------- */
   steps: {
@@ -334,7 +337,17 @@ const BRAND = {
   referral: {
     label: 'Referral code',
     tag: '[WHO SENT YOU?]',
-    hint: 'Optional. If someone told you to apply, put their code here. It is their name, like BEA.',
+    hint: 'Optional. If someone told you to apply, start typing their code (their name, like BEA) and pick it from the list. Nobody? Pick N/A.',
+    placeholder: 'Type 2+ letters, e.g. BE',
+    none: 'N/A: nobody referred me',
+    noneChosen: 'No referral. That is fine.',
+    found: 'Code {code} is on file.',
+    notFound: "That code isn't on file. Pick one from the list, or choose N/A.",
+    pick: 'Pick the code from the list, or choose N/A.',
+    typeMore: 'Keep typing: 2 letters or more.',
+    noMatch: 'No code starts with that. Check the spelling with whoever sent you.',
+    slow: 'Too many searches. Wait a few minutes, or choose N/A.',
+    offline: "Couldn't check codes right now. Try again in a moment.",
     prefilled: 'Filled in from the link you opened. Clear it if that\'s wrong.',
     unknown: "We couldn't find that referral code. Check it with whoever sent it, or leave it blank.",
     self: "That's your own code. Leave it blank, or use the code of whoever told you to apply.",
@@ -344,7 +357,7 @@ const BRAND = {
     copy: 'Copy my link',
     copied: 'Link copied',
     share: 'Share',
-    shareText: 'Apply to LEADS: Oversight with my code {code}: {link}',
+    shareText: 'Apply to LEADS with my code {code}: {link}',
     applied: 'applied with your code',
     closed: "Applications are closed, so your code can't bring anyone new in. Your count is final.",
     gameDone: 'Your referral code is {code}. Send it to whoever should apply next; it counts toward an advantage at camp.'
@@ -472,6 +485,7 @@ const BRAND = {
     fixText: '#EAEAEA'
   },
   fonts: {
+    title: "'JetBrains Mono', ui-monospace, monospace",                 // the brand book's title font: the logo and page titles
     display: "'Anton', 'Archivo Narrow', 'Arial Narrow', sans-serif",   // condensed grotesque headlines
     kicker: "'JetBrains Mono', ui-monospace, monospace",                // the case-file label
     body: "'Inter', 'Arimo', system-ui, sans-serif",
@@ -479,7 +493,7 @@ const BRAND = {
     os: "'VT323', 'Lucida Console', monospace",                         // 90s OS chrome: buttons, title bars, taskbar
     type: "'Special Elite', 'Courier New', monospace",                  // typewriter: case folders, stamps, scraps
     hand: "'Reenie Beanie', 'Comic Sans MS', cursive",                    // red-pen handwriting: margin notes on Apply
-    googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;700&family=Reenie+Beanie&family=Special+Elite&family=VT323&display=swap'
+    googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;700;800&family=Reenie+Beanie&family=Special+Elite&family=VT323&display=swap'
   },
   effects: {
     eyes: true,           // eyes in the background follow the pointer (Home); they stare harder when you stop moving
@@ -549,12 +563,16 @@ function brand_css_() {
     '--night': c.bg, '--night-glow': c.bgGlow, '--night-2': c.card, '--text': c.text, '--muted': c.muted,
     '--blue': c.primary, '--sky': c.soft, '--glow': c.accent, '--pink': c.accent2, '--danger': c.danger,
     '--ok': c.ok, '--fear-text': c.fearText, '--fix-text': c.fixText,
-    '--display': f.display, '--kicker': f.kicker, '--body': f.body, '--mono': f.mono,
+    '--display': f.display, '--title': f.title || f.display, '--kicker': f.kicker, '--body': f.body, '--mono': f.mono,
     '--os': f.os || f.mono, '--type': f.type || f.mono, '--hand': f.hand || f.type || f.mono
   };
   const body = Object.keys(vars).map(k => k + ':' + clean(vars[k])).join(';');
-  return '<link rel="stylesheet" href="' + encodeURI(f.googleFontsUrl).replace(/"/g, '') + '">' +
-         '<style>:root{' + body + '}</style>';
+  const boot = typeof PAGE_BOOT_ !== 'undefined' && PAGE_BOOT_ ?   // the page's first data, fetched in doGet (Code.gs pageBoot_)
+    '<script>window.__BOOT=' + JSON.stringify(PAGE_BOOT_).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
+      .replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029') + ';</script>' : '';
+  return '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+         '<link rel="stylesheet" href="' + encodeURI(f.googleFontsUrl).replace(/"/g, '') + '">' +
+         '<style>:root{' + body + '}</style>' + boot;
 }
 
 /** BRAND.mascot as JSON for Mascot.html (safe inside a <script> tag). Private: only scriptlets call it. */

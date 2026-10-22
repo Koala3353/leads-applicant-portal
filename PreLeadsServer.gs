@@ -1,6 +1,6 @@
 /**
  * PreLeadsServer.gs  (renamed from PreLeadsApi.gs: a script file with that name broke the editor and test link)
- * Server implementation for PreLeads.html (LEADS: Oversight applicant portal).
+ * Server implementation for PreLeads.html (Eyes on LEADS applicant portal).
  *
  * Rules:
  * - Public functions start with preleads_ (no trailing _)
@@ -104,7 +104,7 @@ function preleads_getForm_() {
       daunting: PRELEADS_DAUNTING_OPTIONS
     },
     eventInfo: {
-      title: 'Pre-LEADS: Oversight Preview',
+      title: 'Pre-LEADS Preview · Eyes on LEADS',
       date: setting_('PreLeadsDate'),
       time: setting_('PreLeadsTime'),
       location: setting_('PreLeadsVenue')

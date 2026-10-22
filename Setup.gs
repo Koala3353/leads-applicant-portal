@@ -110,8 +110,12 @@ function setup_formatSheets() {
   const head = (sh, n) => sh.getRange(1, 1, 1, n).setFontWeight('bold').setWrap(true).setVerticalAlignment('middle');
   const oneLine = (sh, rows, cols) => { if (rows > 0) sh.getRange(2, 1, rows, cols).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP).setVerticalAlignment('top'); };
 
-  // Applicants
-  const ap = sheet_(SHEET.APPLICANTS), cols = cols_(), n = cols.length;
+  // Applicants: the columns the core team works in sit right after the name (frozen), so a decision is one click away
+  const ap = sheet_(SHEET.APPLICANTS);
+  ensureApplicantHeaders_();
+  out.push(setup_reviewLayout_(ap));
+  cols_.memo = null;
+  const cols = cols_(), n = cols.length;
   head(ap, n); ap.setRowHeight(1, 40); ap.setFrozenRows(1);
   const nameCol = cols.indexOf('FullName');
   ap.setFrozenColumns(nameCol >= 0 && nameCol < 6 ? nameCol + 1 : 1);
@@ -119,7 +123,7 @@ function setup_formatSheets() {
   const W = { ApplicantID: 120, Timestamp: 140, Email: 210, FullName: 170, Nickname: 115, IDNumber: 115, Course: 100, YearLevel: 110,
     Mobile: 115, Status: 135, Requirements: 145, Payment: 115, ReviewedBy: 170, LastUpdated: 140, Notes: 200, Block: 85, MBTI: 85,
     PastOrgs: 220, FirstOvernight: 140, OffsiteAvailability: 170, DataConsent: 130, GameAnswers: 160, PaymentProof: 160,
-    ReferralCode: 130, ReferredBy: 125, ReferrerID: 120 };
+    ReferralCode: 130, ReferredBy: 125, ReferrerID: 120, MessageToApplicant: 260 };
   cols.forEach((c, i) => ap.setColumnWidth(i + 1, W[c] || 240));   // the essays (not listed) get 240
   oneLine(ap, Math.max(ap.getMaxRows() - 1, 1), n);
   out.push('Applicants formatted');
@@ -152,6 +156,28 @@ function setup_formatSheets() {
   SpreadsheetApp.flush();
   console.log(out.join('\n'));
   return out;
+}
+
+/**
+ * Moves Status, Requirements, Payment and MessageToApplicant to just after FullName (the frozen columns), in that
+ * order, and widens the filter to every column. Safe: the code finds columns by header name, and dropdowns, colors
+ * and values move with their columns. Does nothing if they're already there.
+ */
+function setup_reviewLayout_(sh) {
+  const want = ['Status', 'Requirements', 'Payment', 'MessageToApplicant'];
+  let moved = 0;
+  want.forEach((name, i) => {
+    cols_.memo = null;
+    const head = cols_(), at = head.indexOf(name), dest = head.indexOf('FullName') + 2 + i;   // 1-based target
+    if (at < 0 || at + 1 === dest) return;
+    sh.moveColumns(sh.getRange(1, at + 1, sh.getMaxRows(), 1), at + 1 < dest ? dest + 1 : dest);
+    moved++;
+  });
+  cols_.memo = null;
+  const f = sh.getFilter();
+  if (f) { const r = f.getRange(); if (r.getLastColumn() < cols_().length) { f.remove(); sh.getRange(1, 1, Math.max(sh.getLastRow(), 2), cols_().length).createFilter(); } }
+  SpreadsheetApp.flush();
+  return moved ? 'Applicants: moved ' + moved + ' review column(s) next to FullName' : 'Applicants: review columns already next to FullName';
 }
 
 /**

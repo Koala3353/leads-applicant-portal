@@ -1,6 +1,6 @@
 # LEADS Applicant Portal
 
-LEADS is MEA's off-site leadership camp. Theme: **LEADS: Oversight** (fear of being watched, of being boxed in, of failing). "You are being watched. Good. Apply anyway."
+LEADS is MEA's off-site leadership camp. Title: **Eyes on LEADS** (was LEADS: Oversight; the theme is still oversight) (fear of being watched, of being boxed in, of failing). "You are being watched. Good. Apply anyway."
 
 One Google Sheet (the database) + one small Apps Script web app + the requirement Google Forms.
 
@@ -39,8 +39,11 @@ Three tracks record where each applicant is:
 
 ## How the core team work (in the Sheet)
 
+- **Review panel (fastest):** LEADS → *Open review panel*. A sidebar that follows your selection: click any cell in one or more applicant rows (Ctrl/Cmd- or Shift-click for several), tick who you mean, press *Accept* / *Verify* / *Approve*… Type a message and tick "send this with the next button" (or *Save message only*) and it shows on those applicants' hub and step pages (`MessageToApplicant` column). The first time, Google asks you to allow the sidebar.
+- **Results stay hidden until Settings › `ResultsReleased` is ticked:** set decisions in the Sheet ahead of time; until then every applicant sees UNDER REVIEW and payment stays locked.
+- **The Status / Requirements / Payment / MessageToApplicant columns sit right after FullName** (moved by `setup_formatSheets`; the code finds columns by header, so moving them is safe).
 - **LEADS menu:** select applicant rows in the Applicants tab (any cell in each row; several rows at once is fine) → LEADS → Decision / Requirements / Payment → pick a value. Each row is checked, logged, and auto-confirmed when all three tracks are done. Skipped rows are listed with the reason.
-- **Typing in the cells also works:** a change to Status / Requirements / Payment by someone in the Admins tab is checked and logged; a wrong move (e.g. SUBMITTED → CONFIRMED) or a change by a non-core team member is **undone** with a message. Pasting over many cells at once isn't checked (it's logged as a bulk edit), so prefer the menu.
+- **Typing in the cells also works:** a change to Status / Requirements / Payment by someone in the Admins tab is checked and logged; a wrong move (e.g. SUBMITTED → CONFIRMED) or a change by a non-core team member is **undone** with a message. Pasting over many cells at once isn't checked (it's logged as a bulk edit), so use the review panel for many rows.
 - The core team must be in the **Admins** tab **and** be editors of the Sheet, using an account in the same Google Workspace as the owner.
 - The core team see an "Open the Sheet" link on the portal's Home page.
 
@@ -79,7 +82,7 @@ Apps Script won't let a `.gs` and an `.html` share a name, which is why server c
 
 ## The Activity tab (is it working?)
 
-Every page view, server call, application, validation failure and error lands in the Sheet's **Activity** tab: `When | Level | Who | Page | Event | Details | ms`. ERROR rows are red, WARN rows yellow. Errors in someone's browser show up too (`client_js_error`). Use it to check the portal is working, to debug ("what happened when X tried to apply?"), and to track traffic. It never stores essays, ID numbers or phone numbers. It trims itself (oldest 5,000 rows) past 20,000 rows.
+Applications, uploads, referrals, every status change, every failure and every slow call (over 8s) land in the Sheet's **Activity** tab (routine page views and page loads go to *Extensions › Apps Script › Executions* instead, because writing a row for each made the Sheet the bottleneck in a rush; tick Settings › `ActivityVerbose` to log them in the tab while debugging): `When | Level | Who | Page | Event | Details | ms`. ERROR rows are red, WARN rows yellow. Errors in someone's browser show up too (`client_js_error`). Use it to check the portal is working, to debug ("what happened when X tried to apply?"), and to track traffic. It never stores essays, ID numbers or phone numbers. It trims itself (oldest 5,000 rows) past 20,000 rows.
 
 ## Rules for builders (details in CONTEXT.md)
 

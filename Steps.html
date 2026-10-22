@@ -72,6 +72,9 @@
     .s-tabs a{font-size:1rem;padding:6px 10px 5px;min-height:40px;display:flex;align-items:center}   /* thumb-sized */
     .s-actions .btn{flex:1 1 100%;justify-content:center}
   }
+  .cnote{margin:0 0 22px;padding:10px 12px 12px;background:#f4efe1;color:#111;border-left:5px solid var(--danger);box-shadow:4px 4px 0 #000}
+  .cnote-k{margin:0 0 4px;font:700 .68rem/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#b00000}
+  .cnote-t{margin:0;font:400 1rem/1.45 var(--type,var(--mono));white-space:pre-line;overflow-wrap:anywhere}
 </style>
 </head>
 <body data-loader-wait>
@@ -93,6 +96,7 @@
     <li><a data-tab="room" href="<?= baseUrl ?>?page=room">05 Rooms</a></li>
   </ul>
   <p class="s-msg" id="msg" role="status" aria-live="polite"></p>
+  <div class="cnote" id="note" hidden><p class="cnote-k"><?= BRAND.hub.noteLabel ?></p><p class="cnote-t" id="noteText"></p></div>
 
   <div class="card s-card state show" id="state-loading" role="status"><p class="mono">[REC] Opening your file…</p></div>
 
@@ -203,6 +207,7 @@
     const L = BRAND.lockedWhy, key = { pay: 'pay', reqs: 'req', ga: 'ga', room: 'room' }[d.page];
     if (!d.signedIn) return locked(T.guest);
     if (!d.applicant) return locked(T.noFile);
+    $('noteText').textContent = d.applicant.message || ''; $('note').hidden = !d.applicant.message;   // Applicants › MessageToApplicant
     if (d.step.state === 'stopped') return locked(T.stopped);
     if (!d.content) return locked(L[key + '_' + d.step.why] || L[d.step.why] || L.closed);
     ({ pay: renderPay, reqs: renderReqs, ga: renderGa, room: renderRoom })[d.page](d);

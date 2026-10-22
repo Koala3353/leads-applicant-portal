@@ -465,6 +465,22 @@
   .intake .error-summary{background:#fff0f0;color:#1b1b1b;border-color:#c00000}
   /* margin notes: I.R.I.S. writing on your file in red pen */
   @keyframes ink{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+  /* referral picker (RefPick) */
+  .refpick{position:relative}
+  .refpick-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:70;margin:0;padding:4px 0;list-style:none;max-height:260px;overflow:auto;
+    background:var(--win,#c0c0c0);color:#000;box-shadow:var(--bevel-out),4px 4px 0 #000}
+  .refpick-opt{padding:.6em .9em;cursor:pointer;font:700 1rem/1.2 var(--mono);letter-spacing:.08em;display:flex;align-items:center;gap:10px}
+  .refpick-opt::before{content:"";width:6px;height:6px;flex:none}
+  .refpick-opt[aria-selected="true"]::before{background:#000}
+  .refpick-opt.na{font:400 .9rem/1.2 var(--body);letter-spacing:0;border-bottom:1px dotted #777}
+  .refpick-opt.active,.refpick-opt:hover{background:var(--title-a,#000080);color:#fff}
+  .refpick-opt.active::before,.refpick-opt:hover::before{background:#fff}
+  .refpick-note{padding:.5em .9em;font:400 .78rem/1.3 var(--mono);color:#333}
+  .refpick-state{margin:.35rem 0 0;font:700 .76rem/1.3 var(--mono);letter-spacing:.06em;min-height:1em}
+  .refpick-state.ok{color:#0a7a2f}.refpick-state.ok::before{content:"\2713  "}
+  .refpick-state.warn{color:var(--danger)}
+  .refpick-state.na{color:var(--muted)}
+  .intake .refpick-state.ok{color:#0a6b2a}
 </style>
 </head>
 <body data-loader-wait>
@@ -528,7 +544,7 @@
       <svg class="b-ico" viewBox="0 0 100 100" aria-hidden="true"><path d="M10 30l58-8 6 26-58 8z" fill="#fff"/><path d="M68 22l14 6 4 18-12 2z" fill="#fff"/><circle cx="78" cy="38" r="4.5" fill="#1d2bd0"/><circle cx="22" cy="40" r="3.5" fill="#e00000"/><path d="M38 52l4 14h-8l-4-13z" fill="#fff"/><path d="M14 66h40v8H14z" fill="#fff"/><path d="M30 74h8v14h-8z" fill="#fff"/></svg>
       <p class="b-top">Intake window</p>
       <h2 class="b-big" style="font-weight:400">Closed</h2>
-      <p class="b-sub" id="closedReasonText">The intake window for LEADS: Oversight is currently shut. No new files are being accepted.</p>
+      <p class="b-sub" id="closedReasonText">The intake window for LEADS is currently shut. No new files are being accepted.</p>
       <p class="b-sub" id="closedContactText" style="margin-top:10px" hidden></p>
       <a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a>
     </div>
@@ -806,7 +822,12 @@
           <span class="q-num">OPTIONAL</span>
           <label for="f-ReferredBy"><?= BRAND.referral.label ?> <span style="color:var(--muted)"><?= BRAND.referral.tag ?></span></label>
           <p class="field-hint" id="refHint"><?= BRAND.referral.hint ?></p>
-          <input type="text" id="f-ReferredBy" name="ReferredBy" maxlength="15" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. BEA">
+          <div class="refpick" id="refPick">
+            <input type="text" id="f-ReferredBy" name="ReferredBy" maxlength="15" autocomplete="off" autocapitalize="characters" spellcheck="false"
+              placeholder="<?= BRAND.referral.placeholder ?>" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="refList">
+            <ul class="refpick-list" id="refList" role="listbox" aria-label="Referral codes" hidden></ul>
+          </div>
+          <p class="refpick-state" id="refState" aria-live="polite"></p>
           <div class="field-error" id="err-ReferredBy" role="alert" aria-live="polite"></div>
         </div>
       </div>
@@ -1021,7 +1042,7 @@
   /* Autosave, gentle on the server so a crowd can apply at once: every change saves to this browser right away,
      but the account copy only syncs after a pause in typing (6s, plus a little random spread), at most every 20s,
      only if something changed, and right away when the tab is hidden. The Proceed button always saves. */
-  const DRAFT_IDLE_MS = 6000, DRAFT_MIN_GAP_MS = 20000;
+  const DRAFT_IDLE_MS = 6000, DRAFT_MIN_GAP_MS = 45000;   // server sync at most every ~45s per person (each one is a Sheet write); this browser saves at once
   let lastServerSave = 0, lastSentJson = '', localTimer = null;
 
   function saveDraft() {
@@ -1222,6 +1243,7 @@
     });
     const refErr = fieldError('ReferredBy', data.ReferredBy, data);   // optional referral code
     if (refErr) errors.ReferredBy = refErr;
+    else if (data.ReferredBy && !RefPick.ok(data.ReferredBy)) errors.ReferredBy = BRAND.referral.pick;   // typed but never matched a real code
     return { ok: Object.keys(errors).length === 0, errors };
   }
 
@@ -1327,7 +1349,7 @@
       if (data.deadline) {
         $('closedReasonText').textContent = 'The deadline passed on ' + formatManilaDate(data.deadline) + '. Applications are now closed.';
       } else {
-        $('closedReasonText').textContent = 'Applications for LEADS: Oversight are currently closed.';
+        $('closedReasonText').textContent = 'Applications for LEADS are currently closed.';
       }
       if (data.contact) {
         const contactEl = $('closedContactText');
@@ -1371,6 +1393,7 @@
       refEl.value = refCode; refEl.classList.add('prefilled');
       $('refHint').textContent = BRAND.referral.prefilled;
     }
+    RefPick.verify();
 
     updateCounters();
     $('ihDate').textContent = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
@@ -1630,7 +1653,79 @@
   $('f-Mobile').addEventListener('input', () => {
     validateMobileField(false);
   });
-  $('f-ReferredBy').addEventListener('focusout', e => { e.target.value = e.target.value.trim().toUpperCase().replace(/\s+/g, ''); });
+
+  /* ---------- referral picker: a search box over codes that exist (apply_referralSearch), with an N/A choice ----------
+     The server only returns codes that START with 2+ typed letters (never the whole list) and rate-limits searches. */
+  const RefPick = (() => {
+    const el = $('f-ReferredBy'), list = $('refList'), state = $('refState');
+    const R = BRAND.referral, known = new Set();   // codes the server said exist
+    let opts = [], active = -1, timer = 0, seq = 0, na = false;
+    const clean = v => String(v || '').toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9-]/g, '');
+    const setState = (text, kind) => { state.textContent = text || ''; state.className = 'refpick-state' + (kind ? ' ' + kind : ''); };
+    const open = on => { list.hidden = !on; el.setAttribute('aria-expanded', on ? 'true' : 'false'); if (!on) { active = -1; el.removeAttribute('aria-activedescendant'); } };
+    function paint(codes, note) {
+      opts = [{ na: true, label: R.none }].concat(codes.map(c => ({ code: c, label: c })));
+      list.innerHTML = '';
+      opts.forEach((o, i) => {
+        const li = document.createElement('li'); li.id = 'refo' + i; li.setAttribute('role', 'option'); li.className = 'refpick-opt' + (o.na ? ' na' : '');
+        li.textContent = o.label; li.setAttribute('aria-selected', o.na ? String(na) : String(clean(el.value) === o.code));
+        li.addEventListener('mousedown', e => { e.preventDefault(); choose(i); });
+        list.appendChild(li);
+      });
+      if (note) { const li = document.createElement('li'); li.className = 'refpick-note'; li.textContent = note; list.appendChild(li); }
+      open(true);
+    }
+    function choose(i) {
+      const o = opts[i]; if (!o) return;
+      if (o.na) { na = true; el.value = ''; setState(R.noneChosen, 'na'); }
+      else { na = false; el.value = o.code; known.add(o.code); setState(R.found.replace('{code}', o.code), 'ok'); }
+      open(false); $('wrap-ReferredBy').classList.remove('has-error'); $('err-ReferredBy').textContent = '';
+      el.dispatchEvent(new Event('input', { bubbles: true, cancelable: false }));   // drafts + progress pick it up
+    }
+    function search(q, then) {
+      const my = ++seq;
+      google.script.run.withSuccessHandler(r => {
+        if (my !== seq) return;
+        (r.codes || []).forEach(c => known.add(c)); if (r.exact) known.add(q);
+        then(r);
+      }).withFailureHandler(() => { if (my === seq) then({ codes: [], failed: true }); }).apply_referralSearch(q);
+    }
+    function onType(e) {
+      if (e && e.isTrusted === false) return;   // our own re-fired input after a choice
+      na = false; const q = clean(el.value);
+      clearTimeout(timer);
+      if (!q) { setState(''); return paint([]); }
+      if (known.has(q)) setState(R.found.replace('{code}', q), 'ok'); else setState('');
+      if (q.length < 2) return paint([], R.typeMore);
+      timer = setTimeout(() => search(q, r => {
+        if (clean(el.value) !== q) return;
+        paint(r.codes || [], r.failed ? R.offline : r.slow ? R.slow : (r.codes && r.codes.length ? '' : R.noMatch));
+        if (r.exact) setState(R.found.replace('{code}', q), 'ok');
+      }), 250);
+    }
+    el.addEventListener('input', onType);
+    el.addEventListener('focus', () => { if (!clean(el.value)) paint([]); else onType(); });
+    el.addEventListener('blur', () => { setTimeout(() => open(false), 120); el.value = clean(el.value); });
+    el.addEventListener('keydown', e => {
+      if (list.hidden && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { onType(); return; }
+      if (list.hidden) return;
+      const n = opts.length;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault(); active = (active + (e.key === 'ArrowDown' ? 1 : n - 1)) % n;
+        [...list.querySelectorAll('.refpick-opt')].forEach((li, i) => li.classList.toggle('active', i === active));
+        el.setAttribute('aria-activedescendant', 'refo' + active);
+      } else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); choose(active); }
+      else if (e.key === 'Escape') open(false);
+    });
+    return {
+      ok: v => known.has(clean(v)),
+      /** a code filled in from a link or a draft: check it exists, quietly */
+      verify() {
+        const q = clean(el.value); if (q.length < 2) return;
+        search(q, r => { if (clean(el.value) === q) setState(r.exact ? R.found.replace('{code}', q) : R.notFound, r.exact ? 'ok' : 'warn'); });
+      }
+    };
+  })();
   $('f-Mobile').addEventListener('focusout', () => {
     validateMobileField(true);
   });

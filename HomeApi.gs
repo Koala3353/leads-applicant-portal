@@ -15,7 +15,7 @@ function home_getContext_() {
   const payDeadline = parseDate_(s.PaymentDeadline);
   const reqsDeadline = parseDate_(s.RequirementsDeadline);
   const camp = campStart_(s);
-  const found = email ? getApplicantByEmail_(email) : null;
+  const found = email ? getApplicantForPortal_(email) : null;
   const a = found ? found.data : null;
   const p = progress_(a);
 
@@ -44,12 +44,13 @@ function home_getContext_() {
       firstName: String(a.Nickname || a.FullName || '').trim().split(' ')[0],
       status: a.Status,
       requirements: a.Requirements || 'NONE',
-      payment: a.Payment || 'NONE'
+      payment: a.Payment || 'NONE',
+      message: String(a.MessageToApplicant || '').trim().slice(0, 1000)   // a note from the core team (Applicants › MessageToApplicant)
     } : null,
     progress: p,
     preleads: { date: String(s.PreLeadsDate || ''), time: String(s.PreLeadsTime || ''), venue: String(s.PreLeadsVenue || '') },   // the Home banner
     referral: found ? safeReferral_(found) : null,   // own code + counts (never names); Referrals.gs
-    sheetUrl: isAdmin_(email) ? ss_().getUrl() : ''   // the core team gets a link to the Sheet
+    sheetUrl: isAdmin_(email) ? sheetUrl_() : ''   // the core team gets a link to the Sheet
   };
 }
 

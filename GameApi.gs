@@ -1,6 +1,6 @@
 /**
  * GameApi.gs
- * Server implementation for Game.html (LEADS: Oversight "Threat Assessment", step 2 of applying).
+ * Server implementation for Game.html (Eyes on LEADS "Threat Assessment", step 2 of applying).
  * Handles the updated 16 questions (Fear, Random + Open-ended ghost prompt, Personality + This-or-That).
  */
 
@@ -20,7 +20,7 @@ function game_getInit() {
 
 function game_getInit_() {
   const email = currentEmail_();
-  const found = email ? getApplicantByEmail_(email) : null;
+  const found = email ? getApplicantForPortal_(email) : null;
   const draft = email && !found ? apply_getDraft_(email) : null;
   let saved = {};
   if (draft && draft.data && draft.data.GameAnswers) {

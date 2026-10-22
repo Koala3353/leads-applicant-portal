@@ -30,8 +30,13 @@
   .refcard .count b{color:var(--glow);font-size:1.4em}
   @media (max-width:560px){.refcard{transform:none}.refcard .row .btn{flex:1 1 auto;text-align:center}}
   .status .rank{margin:8px 0 0;font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--glow)}
-  .preleads-strip{margin:18px 0 0}
-  .preleads-strip a{color:#fff;text-decoration:underline;font-weight:700}
+  /* Pre-LEADS: loud on purpose (people were missing it). A live dot, a slow yellow pulse, a real button. */
+  .preleads-strip{margin:18px 0 0;padding:14px 16px;animation:plPulse 2.4s ease-in-out infinite}
+  .preleads-strip .b-top::before{content:"";display:inline-block;width:.6em;height:.6em;margin-right:.45em;border-radius:50%;background:var(--danger);vertical-align:.05em;animation:rec 1.2s steps(1) infinite}
+  .preleads-strip .pl-go{margin:4px 0 0;font-size:.95rem}
+  @keyframes plPulse{0%,100%{box-shadow:0 0 0 3px #000,0 0 0 5px #1d2bd0}50%{box-shadow:0 0 0 3px #000,0 0 0 6px var(--glow),0 0 28px color-mix(in srgb,var(--glow) 45%,transparent)}}
+  html.calm .preleads-strip{animation:none}
+  @media (prefers-reduced-motion:reduce){.preleads-strip,.preleads-strip .b-top::before{animation:none}}
   .obslog{margin-top:20px;--py:12px;--px:14px;padding:12px 14px 14px;transform:rotate(-1deg)}
   .obslog ol{list-style:none;margin:0;padding:0;display:grid;gap:4px;min-height:6.2em}
   .obslog li{font:400 1.02rem/1.25 var(--os);letter-spacing:.03em;color:#a9f0a9;overflow-wrap:anywhere}
@@ -249,7 +254,10 @@
     letter-spacing:.14em;color:var(--night);background:var(--glow);box-shadow:4px 4px 0 var(--blue)}
   h1 .kicker.shiver{animation:shiver 5s steps(1) infinite}
   @keyframes shiver{0%,86%,100%{transform:none}88%{transform:translate(-3px,1px)}90%{transform:translate(3px,-1px) skewX(-6deg)}92%{transform:translate(-1px,0)}}
-  h1 .line{display:block}
+  h1 .line{display:block;font-family:var(--title);font-weight:800;text-transform:uppercase;letter-spacing:-.05em;font-size:.74em;line-height:.95}   /* the brand book's title font, all caps */
+  .cnote{margin:14px 0 0;padding:10px 12px 12px;background:#f4efe1;color:#111;border-left:5px solid var(--danger);box-shadow:4px 4px 0 #000;rotate:-.4deg}
+  .cnote-k{margin:0 0 4px;font:700 .68rem/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#b00000}
+  .cnote-t{margin:0;font:400 1rem/1.45 var(--type,var(--mono));white-space:pre-line;overflow-wrap:anywhere}
   h1 .line em{font-style:normal;color:var(--glow)}
   .tagline{margin:0 0 14px;font-family:var(--mono);font-weight:700;font-size:clamp(.9rem,2.4vw,1.05rem);letter-spacing:.06em;text-transform:uppercase;color:var(--danger)}
   .lede{font-size:1.05rem;color:color-mix(in srgb,var(--text) 82%,var(--muted));max-width:34em}
@@ -266,12 +274,16 @@
   /* once they have a file, the hub is about their file: drop the pitch and the decoration, keep status + steps.
      The signal-light card already shows Decision/Payment/Requirements, so the status card keeps just its message. */
   body.applied .lede,body.applied .tagline,body.applied .obslog,body.applied .wall,body.applied #statusCard .tracks{display:none}
+  /* ...and the long decorative middle: the CCTV wall, the tape ticker, the progress strip (SUBJECT_STATUS.EXE already
+     shows it), and the Apply card (done). The page goes hero → your status → your steps. */
+  body.applied .feeds,body.applied .ticker,body.applied .path,body.applied #hint,body.applied .mod[data-key="apply"]{display:none}
   @media (max-width:559px){
     body.applied h1.rgb{font-size:clamp(2rem,11vw,2.6rem)}
     body.applied .rec .seen{display:none}
     body.applied .watcher{display:none}           /* no stray eyes over the cards on a small screen */
-    .preleads-strip .b-big{font-size:clamp(1.05rem,5.2vw,1.4rem)}
-    .preleads-strip .b-sub{font-size:.85rem}
+    .preleads-strip .b-big{font-size:clamp(1.25rem,6.4vw,1.7rem)}
+    .preleads-strip .b-sub{font-size:1rem}
+    .preleads-strip .pl-go{width:100%;justify-content:center}
   }
   /* manila case folders: tab, typed form fields, redaction bars, ink stamp, a clipped photo. They pile up crooked. */
   .files{display:grid;gap:30px;padding-top:22px}
@@ -672,7 +684,8 @@
   <div class="bcast strip preleads-strip" id="preleadsStrip" role="region" aria-label="Pre-LEADS announcement" hidden>
     <p class="b-top"><?= BRAND.preleadsBanner.top ?></p>
     <p class="b-big"><?= BRAND.preleadsBanner.title ?></p>
-    <p class="b-sub"><span id="preleadsSub"><?= BRAND.preleadsBanner.sub ?></span> · <a href="<?= baseUrl ?>?page=preleads" target="_top"><?= BRAND.preleadsBanner.link ?></a></p>
+    <p class="b-sub"><span id="preleadsSub"><?= BRAND.preleadsBanner.sub ?></span></p>
+    <a class="btn pl-go" href="<?= baseUrl ?>?page=preleads" target="_top"><?= BRAND.preleadsBanner.link ?></a>
   </div>
 
   <section class="hero">
@@ -737,6 +750,7 @@
         <p class="big" id="statusBig"></p>
         <p id="statusMsg"></p>
         <p class="mono rank" id="statusRank" hidden></p>
+        <div class="cnote" id="statusNote" hidden><p class="cnote-k"><?= BRAND.hub.noteLabel ?></p><p class="cnote-t" id="statusNoteText"></p></div>
         <div class="tracks">
           <div class="track"><span>Decision</span><b id="trStatus">-</b></div>
           <div class="track"><span>Payment</span><b id="trPay">-</b></div>
@@ -1544,6 +1558,8 @@
       // the made-up rank reads like a score, so it is not shown on a closed file
       const closedFile = a.status === 'REJECTED' || a.status === 'WITHDRAWN';
       $('statusRank').textContent = watchRank(a.id); $('statusRank').hidden = closedFile;
+      // a note the core team typed in Applicants › MessageToApplicant (plain text, line breaks kept)
+      $('statusNoteText').textContent = a.message || ''; $('statusNote').hidden = !a.message;
       const T = BRAND.trackLabels;
       [['trStatus', a.status, a.status], ['trReq', a.requirements, T.requirements[a.requirements]], ['trPay', a.payment, T.payment[a.payment]]].forEach(([id, v, label]) => {
         $(id).textContent = label || v;
@@ -1558,6 +1574,17 @@
       const pl = ctx.preleads || {};
       const sub = [pl.time, pl.venue].filter(Boolean).join(', ');
       if (sub) $('preleadsSub').textContent = sub;
+      // and once a day per browser, a full-screen Broadcast Card so nobody scrolls past it
+      if (!$('preleadsStrip').hidden && pb.popup) {
+        const day = new Date().toISOString().slice(0, 10);
+        let seen = ''; try { seen = localStorage.getItem('leads-pl-pop') || ''; } catch (e) { /* storage blocked: show it */ }
+        if (seen !== day) setTimeout(() => {
+          if (document.querySelector('.bcast-veil')) return;
+          try { localStorage.setItem('leads-pl-pop', day); } catch (e) { /* fine */ }
+          window.Broadcast.show({ top: pb.top, big: pb.title, sub: [pl.date, sub || pb.sub].filter(Boolean).join(' · ') + '. ' + pb.popup,
+            link: { href: $('preleadsStrip').querySelector('a').href, label: pb.link }, btn: pb.later });
+        }, 1400);
+      }
     } catch (e) { console.error(e); }
     try { renderSubjectStatus(ctx); } catch (e) { console.error(e); }
 

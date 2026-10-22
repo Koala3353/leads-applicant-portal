@@ -48,6 +48,39 @@ function checkReferral_(raw, values, email) {
   return { error: BRAND.referral.unknown };
 }
 
+/**
+ * For the Apply page's referral picker: up to 6 active codes that START with what was typed (2+ letters).
+ * Codes only, never names or IDs. A code is someone's nickname, so this is rate limited (40 searches per person per
+ * 10 minutes) to stop anyone listing every applicant; the full list never leaves the server. The submit still runs
+ * checkReferral_, so the picker is a convenience, not the check. { codes, exact } — exact = the typed code exists.
+ */
+function referralSearch_(raw, email) {
+  const q = normalizeReferral_(raw);
+  if (q.length < 2) return { codes: [], exact: false };
+  if (!bump_('refsearch:' + email, 40, 600)) return { codes: [], exact: false, slow: true };
+  const all = activeReferralCodes_();
+  const hits = all.filter(c => c.indexOf(q) === 0).sort((x, y) => x.length - y.length || (x < y ? -1 : 1));
+  return { codes: hits.slice(0, 6), exact: all.indexOf(q) >= 0 };
+}
+
+/** Every code an applicant can still use (not withdrawn). Read from two columns, cached for a minute (a rush of typing must not re-read the tab). */
+function activeReferralCodes_() {
+  const cache = CacheService.getScriptCache();
+  try { const hit = cache.get('refcodes'); if (hit) return JSON.parse(hit); } catch (e) { /* read it fresh */ }
+  const sh = sheet_(SHEET.APPLICANTS), last = sh.getLastRow(), cCode = cols_().indexOf('ReferralCode');
+  const out = [];
+  if (last >= 2 && cCode >= 0) {
+    const codes = sh.getRange(2, cCode + 1, last - 1, 1).getValues();
+    const stat = sh.getRange(2, col_('Status') + 1, last - 1, 1).getValues();
+    for (let i = 0; i < codes.length; i++) {
+      const c = String(codes[i][0] || '').trim().toUpperCase();
+      if (c && String(stat[i][0]).trim() !== 'WITHDRAWN') out.push(c);
+    }
+  }
+  try { cache.put('refcodes', JSON.stringify(out), 60); } catch (e) { /* too big: fine, just slower */ }
+  return out;
+}
+
 /** All referral codes in use (for uniqueness), from rows already read. */
 function referralCodesIn_(values) {
   const c = cols_().indexOf('ReferralCode'), set = new Set();

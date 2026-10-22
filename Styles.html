@@ -1,7 +1,7 @@
 <!-- Styles.html  (shared base styles. Every page adds BOTH lines in <head>, as force-print scriptlets:
        include_('Styles')
        brand_css_()      <- colors + fonts from Brand.gs override these defaults)
-     Look: LEADS: Oversight. A surveillance case file on a dark CRT: square corners, photocopy grain,
+     Look: Eyes on LEADS. A surveillance case file on a dark CRT: square corners, photocopy grain,
      scanlines, condensed headlines, mono labels. Palette: black, white, grey, yellow, blue, red. -->
 <style>
   :root{
@@ -21,6 +21,7 @@
     --line:#2E2E2E;
     --radius:0px;
     --display:'Anton','Archivo Narrow','Arial Narrow',sans-serif;
+    --title:'JetBrains Mono',ui-monospace,monospace;
     --kicker:'JetBrains Mono',ui-monospace,monospace;
     --body:'Inter','Arimo',system-ui,sans-serif;
     --mono:'JetBrains Mono',ui-monospace,monospace;
@@ -74,7 +75,7 @@
   /* ---------- shared page frame (PageTop.html) ---------- */
   body{min-height:100vh;background:radial-gradient(1100px 520px at 50% -12%,color-mix(in srgb,var(--blue) 22%,transparent) 0%,transparent 62%),var(--night)}
   .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 0;border-bottom:1.5px solid var(--line)}
-  .logo{font-family:var(--display);font-size:1.6rem;letter-spacing:.02em;color:var(--text);text-decoration:none;text-transform:uppercase;line-height:1}
+  .logo{font-family:var(--title,var(--display));font-weight:800;font-size:1.4rem;letter-spacing:-.02em;color:var(--text);text-decoration:none;text-transform:uppercase;line-height:1;white-space:nowrap}
   .logo span{color:var(--glow)}
   .back{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text);text-decoration:none}
   .back:hover{color:var(--glow)}
@@ -278,6 +279,7 @@
   .bcast .b-big{font-size:clamp(2.4rem,10vw,4.4rem);line-height:.9;margin:.1em 0 .15em}
   .bcast .b-sub{font:400 1.3rem/1.25 var(--os);letter-spacing:.06em;text-transform:none}
   .bcast .btn{margin-top:18px}
+  .bcast .b-acts{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
   .bcast.strip{width:100%;rotate:-.6deg;padding:10px 16px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 16px;box-shadow:0 0 0 3px #000,0 0 0 5px #1d2bd0}
   .bcast.strip .b-top{font-size:1.1rem}.bcast.strip .b-big{font-size:clamp(1.4rem,5vw,2rem);margin:0}
   .bcast-veil{position:fixed;inset:0;z-index:9350;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.82);opacity:0;transition:opacity .25s ease}
@@ -418,6 +420,9 @@
      portal:error (I.R.I.S. reacting, the report prompt) fires only on the final failure. */
   window.runServer = function (fn) {
     const args = Array.prototype.slice.call(arguments, 1);
+    // the page's first data came with the page (window.__BOOT, Code.gs pageBoot_): use it once, no round trip
+    const boot = window.__BOOT;
+    if (boot && boot.fn === fn && JSON.stringify(boot.args || []) === JSON.stringify(args)) { window.__BOOT = null; return Promise.resolve(boot.data); }
     const TRANSIENT = /too many|simultaneous|service invoked|timed out|timeout|try again|unavailable|internal error|server error|network|failed to fetch|lock/i;
     const waits = [900, 2200, 4800];
     return new Promise(function (resolve, reject) {
@@ -439,7 +444,8 @@
     });
   };
 
-  /* Broadcast.show({ top, big, sub, btn }): a full-screen Broadcast Card with one button (Esc / button closes). */
+  /* Broadcast.show({ top, big, sub, btn, link: { href, label } }): a full-screen Broadcast Card with one button
+     (Esc / button closes); `link` adds a main button that goes somewhere first. */
   window.Broadcast = (function () {
     const ICON = '<svg class="b-ico" viewBox="0 0 100 100" aria-hidden="true"><path d="M10 30l58-8 6 26-58 8z" fill="#fff"/><path d="M68 22l14 6 4 18-12 2z" fill="#fff"/><circle cx="78" cy="38" r="4.5" fill="#1d2bd0"/><circle cx="22" cy="40" r="3.5" fill="#e00000"/><path d="M38 52l4 14h-8l-4-13z" fill="#fff"/><path d="M14 66h40v8H14z" fill="#fff"/><path d="M30 74h8v14h-8z" fill="#fff"/></svg>';
     function show(o) {
@@ -448,7 +454,11 @@
       const card = document.createElement('div'); card.className = 'bcast'; card.innerHTML = ICON;
       [['b-top', o.top], ['b-big', o.big], ['b-sub', o.sub]].forEach(([c, t]) => { if (!t) return; const p = document.createElement('p'); p.className = c; p.textContent = t; card.append(p); });
       const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn ghost'; btn.textContent = o.btn || 'Continue';
-      card.append(btn); veil.append(card); document.body.append(veil);
+      if (o.link && o.link.href) {
+        const go = document.createElement('a'); go.className = 'btn'; go.href = o.link.href; go.target = '_top'; go.textContent = o.link.label || 'Open';
+        const row = document.createElement('div'); row.className = 'b-acts'; row.append(go, btn); card.append(row);
+      } else card.append(btn);
+      veil.append(card); document.body.append(veil);
       veil.setAttribute('aria-label', [o.top, o.big, o.sub].filter(Boolean).join('. '));
       const close = () => { veil.classList.remove('on'); setTimeout(() => veil.remove(), 260); document.removeEventListener('keydown', esc); if (o.onClose) o.onClose(); };
       const esc = e => { if (e.key === 'Escape') close(); };

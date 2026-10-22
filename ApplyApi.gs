@@ -1,6 +1,6 @@
 /**
  * ApplyApi.gs
- * Server implementation for Apply.html (LEADS: Oversight applicant portal).
+ * Server implementation for Apply.html (Eyes on LEADS applicant portal).
  *
  * Rules:
  * - Public functions start with apply_ (no trailing _)
@@ -22,7 +22,7 @@ function apply_getForm() {
 
 function apply_getForm_() {
   const email = currentEmail_();
-  const found = email ? getApplicantByEmail_(email) : null;
+  const found = email ? getApplicantForPortal_(email) : null;
   const deadline = parseDate_(getSetting_('Deadline'));
   const rules = formRules_();
   const contact = String(getSetting_('ContactEmail') || '').trim();
@@ -52,6 +52,13 @@ function apply_getForm_() {
     draft: draft,
     member: email && !found ? apply_memberFor_(email, '') : null
   };
+}
+
+/** The referral picker on Apply: matching codes as the applicant types (Referrals.gs referralSearch_). */
+function apply_referralSearch(q) {
+  const email = currentEmail_();
+  if (!email || !isAllowedDomain_(email)) return { codes: [], exact: false };
+  return referralSearch_(q, email);
 }
 
 /**
@@ -164,6 +171,7 @@ function apply_submit_(form) {
     return null;
   });
   if (early) return early;   // refused inside the lock (referral or ID problem)
+  forgetApplicant_(email);   // the cached "no file yet" must not outlive the submit
 
   // Outside the lock: appends and a single-row clear don't need it
   logChange_(nextId, 'status', '', 'SUBMITTED', 'system');

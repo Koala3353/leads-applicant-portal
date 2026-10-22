@@ -1,11 +1,14 @@
 /**
  * AdminMenu.gs  (integrator owns this file) — the core team works directly in the Sheet.
  *
- *  1. LEADS menu (top bar of the Sheet): select applicant rows in the Applicants tab, then
- *     LEADS → Decision / Requirements / Payment → pick the new value. Every row is checked
- *     (allowed status moves only), logged, and auto-confirmed when all three tracks are done.
- *  2. Hand edits to Status / Requirements / Payment cells are checked too: a core team member's valid
- *     change is logged; anything else (wrong order, not in Admins) is undone with a message.
+ *  1. Review panel (LEADS → Open review panel): a sidebar that follows your selection in the Applicants tab.
+ *     Click any cell in one or more rows, tick the ones you mean, press a button (Accept, Verify payment…).
+ *     Add a message and it shows on those applicants' hubs (MessageToApplicant). The fastest way for bulk changes.
+ *  2. The dropdowns in the Status / Requirements / Payment cells: pick a value for one applicant. Checked like
+ *     the panel: a core team member's valid change is logged; anything else (wrong order, not in Admins) is undone.
+ *  3. The old LEADS → Decision / Requirements / Payment submenus still work on the selected rows.
+ *  Every route uses the same rules (allowed status moves only), logs the change, and auto-confirms when all
+ *  three tracks are done.
  *
  * The core team must be in the Admins tab AND be editors of the Sheet, using an account in the same
  * Google Workspace as the owner (otherwise Google hides their email and they count as "not core team").
@@ -15,6 +18,8 @@
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('LEADS')
+    .addItem('Open review panel', 'menu_reviewPanel')
+    .addSeparator()
     .addSubMenu(ui.createMenu('Decision')
       .addItem('Under review', 'menu_underReview')
       .addItem('Accept', 'menu_accept')
@@ -78,6 +83,13 @@ function applyToSelection_(field, value) {
     ids.slice(0, 15).join(', ') + (ids.length > 15 ? ' …' : '') + final, ui.ButtonSet.YES_NO);
   if (ok !== ui.Button.YES) return;
 
+  const { done, failed } = applyToIds_(ids, field, value, by);
+  ui.alert('Updated ' + done.length + ' of ' + ids.length + '.' +
+    (failed.length ? '\n\nSkipped:\n' + failed.slice(0, 20).join('\n') + (failed.length > 20 ? '\n…' : '') : ''));
+}
+
+/** One change for many applicants (the menu and the review panel). Each row is checked on its own; returns what happened. */
+function applyToIds_(ids, field, value, by) {
   const done = [], failed = [];
   ids.forEach(id => {
     try {
@@ -88,8 +100,73 @@ function applyToSelection_(field, value) {
     }
   });
   SpreadsheetApp.flush();
-  ui.alert('Updated ' + done.length + ' of ' + ids.length + '.' +
-    (failed.length ? '\n\nSkipped:\n' + failed.slice(0, 20).join('\n') + (failed.length > 20 ? '\n…' : '') : ''));
+  return { done: done, failed: failed };
+}
+
+/* ---------------- review panel (ReviewPanel.html) ---------------- */
+
+function menu_reviewPanel() {
+  try { requireAdmin_(); } catch (e) {
+    SpreadsheetApp.getUi().alert('Only core team members listed in the Admins tab can use the review panel.');
+    return;
+  }
+  const html = HtmlService.createTemplateFromFile('ReviewPanel');
+  html.choices = REVIEW_CHOICES;
+  SpreadsheetApp.getUi().showSidebar(html.evaluate().setTitle('LEADS review'));
+}
+
+// The panel's buttons, in order: [field, value, label]. Values must be in STATUSES / REQUIREMENT_STATES / PAYMENT_STATES.
+const REVIEW_CHOICES = [
+  ['Status', 'UNDER REVIEW', 'Under review'], ['Status', 'ACCEPTED', 'Accept'], ['Status', 'WAITLISTED', 'Waitlist'],
+  ['Status', 'REJECTED', 'Reject'], ['Status', 'WITHDRAWN', 'Withdraw'],
+  ['Payment', 'SUBMITTED', 'Proof received'], ['Payment', 'VERIFIED', 'Verify'], ['Payment', 'REJECTED', 'Reject proof'],
+  ['Requirements', 'PARTIAL', 'Some files'], ['Requirements', 'SUBMITTED', 'Everything in'], ['Requirements', 'APPROVED', 'Approve'],
+  ['Requirements', 'RETURNED', 'Needs fixing']
+];
+
+/** The applicants in the current selection (up to 100), for the panel. Called every couple of seconds while it's open. */
+function review_selection() {
+  requireAdmin_();
+  const sh = ss_().getActiveSheet();
+  if (sh.getName() !== SHEET.APPLICANTS) return { sheet: sh.getName(), rows: [] };
+  const list = sh.getActiveRangeList(), last = sh.getLastRow();
+  const ranges = list ? list.getRanges() : [sh.getActiveRange()];
+  const want = [];
+  ranges.forEach(r => { for (let row = Math.max(2, r.getRow()); row <= Math.min(r.getLastRow(), last) && want.length < 100; row++) if (want.indexOf(row) < 0) want.push(row); });
+  if (!want.length) return { sheet: sh.getName(), rows: [] };
+  const lo = Math.min.apply(null, want), hi = Math.max.apply(null, want);
+  const values = sh.getRange(lo, 1, hi - lo + 1, cols_().length).getValues();
+  const rows = want.sort((a, b) => a - b).map(row => toObject_(values[row - lo])).filter(d => /^APP-\d{4,}$/.test(String(d.ApplicantID).trim()))
+    .map(d => ({ id: String(d.ApplicantID).trim(), name: String(d.FullName || ''), nick: String(d.Nickname || ''), status: String(d.Status || ''),
+      requirements: String(d.Requirements || 'NONE'), payment: String(d.Payment || 'NONE'), message: String(d.MessageToApplicant || '') }));
+  return { sheet: sh.getName(), rows: rows, released: setting_('ResultsReleased') };
+}
+
+/** Panel button: one change for the ticked applicants, plus the message for them if one was typed (null = leave it). */
+function review_apply(ids, field, value, message) {
+  const by = requireAdmin_();
+  if (!REVIEW_CHOICES.some(c => c[0] === field && c[1] === value)) throw new Error('Unknown change.');
+  ids = (ids || []).map(String).filter(id => /^APP-\d{4,}$/.test(id)).slice(0, 100);
+  const out = applyToIds_(ids, field, value, by);
+  if (message !== null && message !== undefined && out.done.length) review_setMessage(out.done, message);
+  return out;
+}
+
+/** Panel: writes (or clears, with '') the note shown on these applicants' hubs. */
+function review_setMessage(ids, message) {
+  const by = requireAdmin_();
+  const text = String(message || '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, 1000);
+  const done = [], failed = [];
+  withScriptLock_(20000, () => {
+    (ids || []).map(String).slice(0, 100).forEach(id => {
+      const found = getApplicantById_(id);
+      if (!found) { failed.push(id + ': not found'); return; }
+      updateApplicant_(found.row, { MessageToApplicant: text, ReviewedBy: by }, id);
+      done.push(id);
+    });
+  });
+  done.forEach(id => logChange_(id, 'message', '', text ? text.slice(0, 80) : '(cleared)', by));
+  return { done: done, failed: failed };
 }
 
 /** ApplicantIDs of every selected row, no duplicates, header skipped. */
@@ -114,8 +191,29 @@ function selectedIds_(sh) {
 /** Simple trigger: runs on every hand edit. Must never throw. */
 function onEdit(e) {
   try { guardTrackEdit_(e); } catch (err) { console.error('onEdit: ' + (err && err.message)); }
+  try { logMessageEdit_(e); } catch (err) { console.error('onEdit message: ' + (err && err.message)); }
+  // the portal caches each person's row for a minute (getApplicantByEmail_): a hand edit clears the edited rows
+  try {
+    const r = e && e.range, sh = r && r.getSheet();
+    if (sh && sh.getName() === SHEET.APPLICANTS && r.getLastRow() >= 2) {
+      const top = Math.max(2, r.getRow()), n = Math.min(r.getLastRow() - top + 1, 300);
+      sh.getRange(top, col_('Email') + 1, n, 1).getValues().forEach(v => forgetApplicant_(v[0]));
+    }
+  } catch (err) { /* fine: the cache runs out in a minute anyway */ }
   // config tabs are cached for 2 minutes (Utils.gs cachedTab_): an edit clears the cache right away
   try { const n = e && e.range && e.range.getSheet().getName(); if (CONFIG_TABS.indexOf(n) >= 0) clearConfigCache_(); } catch (err) { /* fine */ }
+}
+
+/** A note typed straight into Applicants › MessageToApplicant: it shows on the hub at once, so it's logged like a status change. */
+function logMessageEdit_(e) {
+  if (!e || !e.range) return;
+  const r = e.range, sh = r.getSheet();
+  if (sh.getName() !== SHEET.APPLICANTS || r.getRow() < 2 || r.getNumRows() !== 1 || r.getNumColumns() !== 1) return;
+  if (cols_()[r.getColumn() - 1] !== 'MessageToApplicant') return;
+  const id = String(sh.getRange(r.getRow(), col_('ApplicantID') + 1).getValue()).trim();
+  const to = String(r.getValue() || '').trim();
+  const who = String((e.user && e.user.getEmail && e.user.getEmail()) || currentEmail_() || 'unknown').toLowerCase();
+  logChange_(id, 'message (by hand)', '', to ? to.slice(0, 80) : '(cleared)', who);
 }
 
 function guardTrackEdit_(e) {
@@ -131,7 +229,7 @@ function guardTrackEdit_(e) {
   // Pasting / dragging over many cells: we can't tell the old values, so just log it loudly.
   if (r.getNumRows() !== 1 || r.getNumColumns() !== 1) {
     logChange_('', 'bulk hand edit (not checked)', '', r.getA1Notation(), who || 'unknown');
-    ss.toast('Bulk edits to Status/Requirements/Payment are not checked or auto-confirmed. Use the LEADS menu instead.', 'LEADS', 8);
+    ss.toast('Bulk edits to Status/Requirements/Payment are not checked or auto-confirmed. Use LEADS → Open review panel for many rows.', 'LEADS', 8);
     return;
   }
 

@@ -5,8 +5,9 @@
  */
 
 /* ---------------- Activity tab: what the portal is doing (debugging + tracking) ----------------
- * One row per event: page views, every server call (with how long it took), applications,
- * validation failures, server errors with their stack, and errors from people's browsers.
+ * One row per event: applications, uploads, referrals, status changes, validation failures, slow calls, server
+ * errors with their stack, and errors from people's browsers. Routine successful reads (page views, page loads)
+ * go to Executions only, unless Settings › ActivityVerbose is ticked (ROUTINE_EVENTS below).
  * Columns: When | Level | Who | Page | Event | Details | ms
  * Logging never breaks the portal: if writing fails, the event is dropped (and printed to Executions).
  * Never log essays, ID numbers or phone numbers here: only what's needed to see what happened.
@@ -26,6 +27,11 @@ function activitySheet_() {
   return sh;
 }
 
+/** Settings › ActivityVerbose: ticked = write routine reads to the tab too (for debugging; turn it off before a rush). */
+function verboseActivity_() {
+  try { return setting_('ActivityVerbose'); } catch (e) { return false; }
+}
+
 /**
  * activity_('apply_submit', 'APP-0012 submitted', { level: 'INFO', page: 'apply', ms: 840 })
  * level: 'INFO' (default) | 'WARN' | 'ERROR' | 'CHANGE' (status/track changes). details can be a string or any object (stored as JSON).
@@ -41,9 +47,24 @@ function activityBusy_() {
   } catch (e) { return false; }
 }
 
+// Routine reads (page views, loading a page's data). On a launch-day rush, writing a Sheet row for every one of these
+// made the spreadsheet itself the bottleneck: in a load test, 30 visitors at once left several page loads waiting
+// 5 minutes behind the Activity appends. So when they succeed they only go to the Apps Script execution log
+// (Extensions › Apps Script › Executions), unless Settings › ActivityVerbose is ticked. Failures and slow calls
+// (over SLOW_MS) still get a row. Submits, uploads, referrals and every CHANGE are always written.
+const ROUTINE_EVENTS = ['page_view', 'apply_getForm', 'apply_lookupMember', 'game_getInit', 'game_saveProgress', 'game_getSounds',
+  'home_getContext', 'preleads_getForm', 'steps_get', 'client_info'];
+const SLOW_MS = 8000;
+
 function activity_(event, details, opts) {
   opts = opts || {};
-  if ((opts.level || 'INFO') === 'INFO' && activityBusy_()) return;   // WARN, ERROR and CHANGE are always written
+  const level = opts.level || 'INFO';
+  if (level === 'INFO' && ROUTINE_EVENTS.indexOf(event) >= 0 && !verboseActivity_()) {
+    console.log(event + ' ' + (opts.page || '') + (opts.ms !== undefined ? ' ' + opts.ms + 'ms' : '') + ' ' +
+      (typeof details === 'string' ? details : JSON.stringify(details === undefined ? '' : details)).slice(0, 300));
+    return;
+  }
+  if (level === 'INFO' && activityBusy_()) return;   // WARN, ERROR and CHANGE are always written
   try {
     let who = '';
     if (opts.anon) who = 'visitor';   // page views: we don't need to know who looked, only that the page works
@@ -124,7 +145,9 @@ function traced_(event, page, fn, summarize) {
   try {
     const out = fn();
     const ok = !(out && out.ok === false);
-    activity_(event, summarize ? summarize(out) : (ok ? 'ok' : out), { level: ok ? 'INFO' : 'WARN', page: page, ms: Date.now() - t0 });
+    const ms = Date.now() - t0;
+    activity_(event + (ok && ms > SLOW_MS ? ' (slow)' : ''), summarize ? summarize(out) : (ok ? 'ok' : out),
+      { level: ok ? (ms > SLOW_MS ? 'WARN' : 'INFO') : 'WARN', page: page, ms: ms });
     return out;
   } catch (err) {
     activity_(event, (err && err.message) + (err && err.stack ? '\n' + err.stack : ''), { level: 'ERROR', page: page, ms: Date.now() - t0 });
