@@ -74,6 +74,7 @@ function activity_(event, details, opts) {
     sh.appendRow([new Date(), opts.level || 'INFO', who, opts.page || '', event,
       String(text).slice(0, 5000), opts.ms === undefined ? '' : opts.ms].map(safeCell_));
     if (sh.getLastRow() > ACTIVITY_MAX_ROWS) trimActivity_(sh);
+    if (level === 'ERROR') noteIssue_(event, text);   // the same error 3x today = an email right away (StatusReport.gs)
   } catch (err) {
     console.error('activity_ could not write: ' + err + ' | ' + event);
   }

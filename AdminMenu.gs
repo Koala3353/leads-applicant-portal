@@ -138,7 +138,8 @@ function review_selection() {
   const values = sh.getRange(lo, 1, hi - lo + 1, cols_().length).getValues();
   const rows = want.sort((a, b) => a - b).map(row => toObject_(values[row - lo])).filter(d => /^APP-\d{4,}$/.test(String(d.ApplicantID).trim()))
     .map(d => ({ id: String(d.ApplicantID).trim(), name: String(d.FullName || ''), nick: String(d.Nickname || ''), status: String(d.Status || ''),
-      requirements: String(d.Requirements || 'NONE'), payment: String(d.Payment || 'NONE'), message: String(d.MessageToApplicant || '') }));
+      requirements: String(d.Requirements || 'NONE'), payment: String(d.Payment || 'NONE'), message: String(d.MessageToApplicant || ''),
+      flag: String(d.IntegrityFlags || '') }));
   return { sheet: sh.getName(), rows: rows, released: setting_('ResultsReleased') };
 }
 

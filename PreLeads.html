@@ -407,11 +407,7 @@
 #preleadsCenterEye .reye{--s:clamp(165px,28vw,265px);-webkit-mask:radial-gradient(ellipse at 50% 50%,#000 52%,transparent 95%);mask:radial-gradient(ellipse at 50% 50%,#000 52%,transparent 95%)}
 .wrap{position:relative;z-index:1}
 /* I.R.I.S. keeps its corner TV here too (hiding #kuyaBtn left its speech window floating with no body); the background eye stays as decoration. */
-@media (hover:hover) and (pointer:fine) {
- body, body a, body button, body label {
-  cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M3 2 L3 27 L9 20 L14 30 L19 27 L14 17 L25 16 Z' fill='%23FFFF44' stroke='%23111111' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") 3 2, auto!important;
- }
-}
+/* the yellow cursor now lives in Styles.html, for every page */
 @media (prefers-reduced-motion:reduce) {#preleadsCenterEye{transform:translate(-50%,-50%)!important}}
 @media (pointer:coarse) {#preleadsCenterEye{opacity:.09}}
 
@@ -1065,7 +1061,16 @@ function review(){const items=[['Full name','FullName'],['Nickname','Nickname'],
  const root=q('ovReview');root.textContent='';for(const [label,id] of items){const el=document.createElement('div');el.className='ov-review';const b=document.createElement('b');b.textContent=label;el.appendChild(b);el.append(document.createTextNode(q(id).value||'—'));root.appendChild(el);}
  const el=document.createElement('div');el.className='ov-review';const b=document.createElement('b');b.textContent='Leadership challenges';el.appendChild(b);let selections=[...form.querySelectorAll('input[name="DauntingAspects"]:checked')].map(el=>el.value);if(selections.includes('Other'))selections=selections.map(x=>x==='Other'?'Other: '+q('OtherDaunting').value:x);el.append(document.createTextNode(selections.join(', ')));root.appendChild(el);
 }
-function animate(n,done){if(reduced.matches){done();return;}busy=true;const ov=q('ovTerminal'),bar=q('ovTerminalBar'),txt=q('ovTerminalText'),res=q('ovTerminalResult'),skip=q('ovTerminalSkip');const [a,b]=messages[n];ov.hidden=false;bar.style.width='0%';txt.textContent='';res.textContent='';let timers=[],ended=false,previous=document.activeElement;
+let lastWasTerminal=false;
+// Between sections: one of seven transitions. The six full-screen ones from Loader.html (named after the section
+// you're entering), or the ACCESSING SUBJECT PROFILE terminal, never twice in a row. The section changes while covered.
+function animate(n,done){if(reduced.matches){done();return;}
+ const useTerminal=!lastWasTerminal&&Math.random()<1/7;lastWasTerminal=useTerminal;
+ if(!useTerminal&&window.Loader){busy=true;const step=document.querySelectorAll('#oversightSteps li')[n-1];
+  Loader.show('',step?step.textContent.trim():'Next section','Section '+String(n).padStart(2,'0'));
+  setTimeout(()=>{done();window.scrollTo(0,0);},560);setTimeout(()=>{Loader.hide();busy=false;},1250);return;}
+ terminal(n,done);}
+function terminal(n,done){busy=true;const ov=q('ovTerminal'),bar=q('ovTerminalBar'),txt=q('ovTerminalText'),res=q('ovTerminalResult'),skip=q('ovTerminalSkip');const [a,b]=messages[n];ov.hidden=false;bar.style.width='0%';txt.textContent='';res.textContent='';let timers=[],ended=false,previous=document.activeElement;
  const later=(fn,delay)=>timers.push(setTimeout(fn,delay));function finish(){if(ended)return;ended=true;timers.forEach(clearTimeout);ov.hidden=true;busy=false;done();if(previous&&previous.focus)previous.blur();}
  skip.onclick=finish;skip.focus();for(let i=1;i<=a.length;i++)later(()=>txt.textContent=a.slice(0,i),i*30);later(()=>res.textContent=b,1350);later(finish,2750);later(()=>{bar.style.transition='width 2680ms linear';bar.style.width='100%';},25);}
  document.querySelectorAll('[data-ov-next]').forEach(btn=>btn.addEventListener('click',()=>{if(busy)return;const n=Number(btn.dataset.ovNext);if(!validate(n))return;if(n===3)review();animate(n+1,()=>page(n+1));}));

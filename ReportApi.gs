@@ -116,6 +116,7 @@ function report_issue_(r) {
     } catch (e) { /* bad image: send without it */ }
   }
   MailApp.sendEmail(opts);
+  noteIssue_('user_report', id + ' ' + clip(r.category, 60) + ': ' + clip(r.what, 300));   // 3 reports in a day = an alert (StatusReport.gs)
   return { ok: true, id: id, email: contact };
 }
 

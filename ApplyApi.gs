@@ -54,6 +54,32 @@ function apply_getForm_() {
   };
 }
 
+/* ---------------- essay integrity (signals only; the core team decides what they mean) ----------------
+ * Apply.html counts, per essay, how many times something was pasted in, how many characters were pasted vs typed,
+ * and how often the page lost focus (other tabs or apps), overall and while in an essay. Nothing about WHAT was
+ * pasted or which tabs. Thresholds are deliberately loose: a flag means "read this one closely", not "cheated". */
+const INTEGRITY = { pastedShare: .4, minPasted: 120, manyPastes: 3, awayCount: 8, awayInEssay: 4 };
+const ESSAY_FIELDS = ['WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership'];
+function integrityLog_(raw) {
+  try { const o = JSON.parse(String(raw || '')); return o && o.v === 1 ? JSON.stringify(o).slice(0, 2000) : ''; } catch (e) { return ''; }
+}
+function integrityFlags_(raw, clean) {
+  let o; try { o = JSON.parse(String(raw || '')); } catch (e) { return ''; }
+  if (!o || o.v !== 1) return '';
+  const num = v => Math.max(0, Math.min(1e7, Number(v) || 0));
+  const out = [];
+  ESSAY_FIELDS.forEach(f => {
+    const s = (o.essays || {})[f] || {}, len = String((clean || {})[f] || '').length;
+    const pasted = num(s.pasted), pastes = num(s.pastes);
+    if (pasted >= INTEGRITY.minPasted && len && pasted >= len * INTEGRITY.pastedShare) out.push(f + ' ~' + Math.min(100, Math.round(pasted / len * 100)) + '% pasted');
+    else if (pastes >= INTEGRITY.manyPastes) out.push(f + ' pasted into ' + pastes + 'x');
+  });
+  const away = o.away || {};
+  if (num(away.inEssay) >= INTEGRITY.awayInEssay) out.push('left the page ' + num(away.inEssay) + 'x mid-essay');
+  else if (num(away.count) >= INTEGRITY.awayCount) out.push('left the page ' + num(away.count) + 'x (' + Math.round(num(away.ms) / 60000) + ' min away)');
+  return out.length ? 'FLAG: ' + out.join('; ') : '';
+}
+
 /** The referral picker on Apply: matching codes as the applicant types (Referrals.gs referralSearch_). */
 function apply_referralSearch(q) {
   const email = currentEmail_();
@@ -154,6 +180,8 @@ function apply_submit_(form) {
       YearLevel: Number(v.clean.YearLevel),
       Mobile: String(v.clean.Mobile),
       GameAnswers: String(input.GameAnswers || '').slice(0, 5000),   // JSON of the Game page choices
+      IntegrityLog: integrityLog_(input.IntegrityLog),                // essay paste / tab-switch counts (core team only)
+      IntegrityFlags: integrityFlags_(input.IntegrityLog, v.clean),   // the short version: blank, or what looked off
       ReferralCode: referralCode,
       ReferredBy: referral.code || '',
       ReferrerID: referral.referrerId || '',
@@ -175,6 +203,8 @@ function apply_submit_(form) {
 
   // Outside the lock: appends and a single-row clear don't need it
   logChange_(nextId, 'status', '', 'SUBMITTED', 'system');
+  const flags = integrityFlags_(input.IntegrityLog, v.clean);
+  if (flags) activity_('integrity_flag', nextId + ': ' + flags, { level: 'WARN', page: 'apply' });   // in the daily report
   if (referral.referrerId) activity_('referral', nextId + ' referred by ' + referral.referrerId + ' (' + referral.code + ')', { page: 'apply' });
   apply_deleteDraft_(email);
   return { ok: true, id: nextId, referralCode: referralCode };
@@ -260,7 +290,7 @@ function apply_saveDraft(data) {
   data = data || {};
   const clean = {};
   // every Apply question in RULES, plus the Game's answers
-  const fields = Object.keys(RULES).filter(f => RULES[f].stage === 'apply').concat(['GameAnswers']);
+  const fields = Object.keys(RULES).filter(f => RULES[f].stage === 'apply').concat(['GameAnswers', 'IntegrityLog']);
   fields.forEach(f => {
     if (data[f] !== undefined && data[f] !== null) {
       clean[f] = String(data[f]).slice(0, f === 'GameAnswers' ? 5000 : 1500);

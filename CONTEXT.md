@@ -109,6 +109,8 @@ Navy headers: **never rename** them. The code finds every Applicants column by i
 | `ReferralCode` | e.g. `BEA` | Made on submit (`makeReferralCode_`): the nickname in capitals (accents and spaces dropped, max 12 letters); if taken, `BEA2`, `BEA3`… Older `BEA-7K2Q` codes still work. Applicants from before referrals get one the first time they open the hub. |
 | `ReferredBy` | a code, or blank | The code they applied with (optional field on Apply, pre-filled from `?ref=`). Checked and **locked on submit**. |
 | `ReferrerID` | ApplicantID or blank | Who that code belongs to, filled in by the server. Filter/sort by it to see who invited whom. |
+| `IntegrityFlags` | blank or `FLAG: …` | Apply's essay signals, summarised by `integrityFlags_` (ApplyApi.gs): an essay mostly pasted (≥40% and ≥120 characters), pasted into 3+ times, or the page left 4+ times mid-essay / 8+ times overall. A flag means read it closely, not proof. Shown in the review panel and the daily report. |
+| `IntegrityLog` | JSON | The raw counts behind it (per essay: pastes, characters pasted / typed, biggest paste; page left: count, minutes, mid-essay). Counts only: never what was pasted or which tabs. |
 | `RevealSeen` | date or blank | When they first watched the results reveal (set by `home_revealSeen`). Clear it to make the reveal play again for that person. |
 | `MessageToApplicant` | plain text or blank | Core team: a note shown on the applicant's hub and step pages ("Note from the core team"), e.g. what to fix. Set from the review panel or typed in the cell (logged either way). Shows at once, even before `ResultsReleased`. |
 
@@ -654,6 +656,10 @@ apply_submit(form) → { ok:false, errors } | { ok:true, id }
 - ID outside 200000–280000 → "Invalid ID number." (no range shown, on the page or by I.R.I.S.).
 - Consent "No" → can't submit; I.R.I.S. explains why.
 - MemData MBTI like `INTJ-A` → autofilled as `INTJ`; anything unrecognisable → left blank.
+
+### 9.0b Status emails (`StatusReport.gs`)
+- **Daily report**, 8 AM Manila (`status_dailyReport`, installed by `setup_statusReport` / `setup_all`) to Settings › `StatusReportEmail` (default brigadokeene@gmail.com): new applications and Pre-LEADS sign-ups in the last 24 h, decisions so far, newly flagged applications, server errors and browser errors grouped by message, issue reports, slow calls. `status_sendNow` (editor) sends one immediately.
+- **Alert** as soon as the same error (same event + first line, digits ignored) happens 3 times in a Manila day, or 3 issue reports come in: one email per problem per day (`noteIssue_`, counters in Script Properties, cleared by the daily report).
 
 ### 9.0 Results reveal (`docs/reveal/index.html` on GitHub Pages + Home.html `maybeReveal`)
 - A ~15 s code-only three.js film (no video or model files): dead CRT → the monitor wall of eyes, push in on CAM 03 → hard cut to white, the LEADS eye opens, its iris turns into a mirror with a figure in it ("Do you see yourself?") → the case file, the stamp slams → a Broadcast Card with *Open your file*. Skip at any time (button or Esc), silent until "Sound on" is tapped, a 2D version for no-WebGL / reduced motion. `?at=8.5` freezes a frame for review.

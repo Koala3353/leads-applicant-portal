@@ -123,7 +123,7 @@ function setup_formatSheets() {
   const W = { ApplicantID: 120, Timestamp: 140, Email: 210, FullName: 170, Nickname: 115, IDNumber: 115, Course: 100, YearLevel: 110,
     Mobile: 115, Status: 135, Requirements: 145, Payment: 115, ReviewedBy: 170, LastUpdated: 140, Notes: 200, Block: 85, MBTI: 85,
     PastOrgs: 220, FirstOvernight: 140, OffsiteAvailability: 170, DataConsent: 130, GameAnswers: 160, PaymentProof: 160,
-    ReferralCode: 130, ReferredBy: 125, ReferrerID: 120, MessageToApplicant: 260 };
+    ReferralCode: 130, ReferredBy: 125, ReferrerID: 120, MessageToApplicant: 260, IntegrityFlags: 260, IntegrityLog: 200 };
   cols.forEach((c, i) => ap.setColumnWidth(i + 1, W[c] || 240));   // the essays (not listed) get 240
   oneLine(ap, Math.max(ap.getMaxRows() - 1, 1), n);
   out.push('Applicants formatted');
@@ -159,12 +159,12 @@ function setup_formatSheets() {
 }
 
 /**
- * Moves Status, Requirements, Payment and MessageToApplicant to just after FullName (the frozen columns), in that
+ * Moves Status, Requirements, Payment, MessageToApplicant and IntegrityFlags to just after FullName (the frozen columns), in that
  * order, and widens the filter to every column. Safe: the code finds columns by header name, and dropdowns, colors
  * and values move with their columns. Does nothing if they're already there.
  */
 function setup_reviewLayout_(sh) {
-  const want = ['Status', 'Requirements', 'Payment', 'MessageToApplicant'];
+  const want = ['Status', 'Requirements', 'Payment', 'MessageToApplicant', 'IntegrityFlags'];
   let moved = 0;
   want.forEach((name, i) => {
     cols_.memo = null;
@@ -191,6 +191,7 @@ function setup_all() {
   step('validation', setup_applyValidation);
   step('formatting', setup_formatSheets);
   step('daily clean-up', setup_dailyMaintenance);
+  step('daily status report', setup_statusReport);
   step('Drive (proof uploads)', steps_authorizeDrive);
   step('issue report emails', report_authorize);
   console.log(out.join('\n'));

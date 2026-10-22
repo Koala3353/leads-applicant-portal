@@ -1006,6 +1006,7 @@
       data[f] = el ? el.value : '';
     });
     data.ReferredBy = $('f-ReferredBy') ? $('f-ReferredBy').value.trim().toUpperCase() : '';   // optional, outside FIELDS
+    data.IntegrityLog = JSON.stringify(INTEG);   // essay paste / tab-switch counters (see INTEG below), for the core team only
     return data;
   }
 
@@ -1019,8 +1020,50 @@
     });
     if ($('c-DataConsent')) $('c-DataConsent').checked = $('f-DataConsent').value === 'Y';
     if (data.ReferredBy && $('f-ReferredBy')) $('f-ReferredBy').value = data.ReferredBy;
+    if (data.IntegrityLog) mergeInteg(data.IntegrityLog);   // a reload keeps counting from where it was
     validateMobileField(true);
   }
+
+  /* ---------- essay integrity signals (Applicants › IntegrityFlags / IntegrityLog, core team only) ----------
+     Counts, per essay: pastes, characters pasted, characters typed; and for the whole form: how often the page lost
+     focus (switching tabs or apps) and for how long, and how often that happened while the cursor was in an essay.
+     Only counts and lengths: never what was pasted, never other tabs. The server turns these into a short flag. */
+  const ESSAYS = ['WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership'];
+  const INTEG = { v: 1, essays: {}, away: { count: 0, ms: 0, inEssay: 0 } };
+  ESSAYS.forEach(f => { INTEG.essays[f] = { pastes: 0, pasted: 0, typed: 0, biggest: 0 }; });
+  function mergeInteg(json) {
+    try {
+      const o = JSON.parse(json); if (!o || o.v !== 1) return;
+      ESSAYS.forEach(f => { const a = INTEG.essays[f], b = (o.essays || {})[f] || {};
+        ['pastes', 'pasted', 'typed'].forEach(k => { a[k] = Math.max(a[k], Number(b[k]) || 0); }); a.biggest = Math.max(a.biggest, Number(b.biggest) || 0); });
+      ['count', 'ms', 'inEssay'].forEach(k => { INTEG.away[k] = Math.max(INTEG.away[k], Number((o.away || {})[k]) || 0); });
+    } catch (e) { /* old or broken: start fresh */ }
+  }
+  ESSAYS.forEach(f => {
+    const el = $('f-' + f); if (!el) return;
+    el.addEventListener('paste', e => {
+      const n = ((e.clipboardData && e.clipboardData.getData('text')) || '').length;
+      const s = INTEG.essays[f]; s.pastes++; s.pasted += n; s.biggest = Math.max(s.biggest, n);
+    });
+    el.addEventListener('drop', e => {
+      const n = ((e.dataTransfer && e.dataTransfer.getData('text')) || '').length;
+      if (n) { const s = INTEG.essays[f]; s.pastes++; s.pasted += n; s.biggest = Math.max(s.biggest, n); }
+    });
+    el.addEventListener('beforeinput', e => {
+      if (e.inputType === 'insertText' || e.inputType === 'insertCompositionText') INTEG.essays[f].typed += (e.data || '').length || 1;
+      else if (e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph') INTEG.essays[f].typed++;
+    });
+  });
+  let awaySince = 0;
+  const goneAway = () => {
+    if (awaySince || $('state-form') && !$('state-form').classList.contains('show')) return;
+    awaySince = Date.now(); INTEG.away.count++;
+    const a = document.activeElement; if (a && ESSAYS.some(f => a.id === 'f-' + f)) INTEG.away.inEssay++;
+  };
+  const cameBack = () => { if (awaySince) { INTEG.away.ms += Date.now() - awaySince; awaySince = 0; } };
+  document.addEventListener('visibilitychange', () => { document.hidden ? goneAway() : cameBack(); });
+  window.addEventListener('blur', goneAway);    // another window or app, even when the tab stays visible
+  window.addEventListener('focus', cameBack);
 
   // the browser copy of the draft is per account (a shared laptop must never hand one student's answers to the next)
   let LOCAL_DRAFT = 'leads_apply_draft';
@@ -1424,13 +1467,6 @@
       kuya.apply(null, out);
     }
     // hesitation: focused on a field for a long time with almost nothing typed
-    const focusAt = {}, rewrites = {};
-    document.addEventListener('focusin', e => { const f = fieldOf(e.target); if (f) focusAt[f] = Date.now(); });
-    document.addEventListener('focusout', e => {
-      const f = fieldOf(e.target); if (!f || !focusAt[f]) return;
-      const secs = Math.round((Date.now() - focusAt[f]) / 1000), len = String(e.target.value || '').trim().length;
-      if (secs >= 12 && len < 25 && !said[f + ':hes']) { said[f + ':hes'] = 1; marginNote(f, 'Hesitated ' + secs + ' seconds here.'); }
-    });
     const fieldOf = el => el && el.id && el.id.indexOf('f-') === 0 ? el.id.slice(2) : '';
     function comment(f, el) {
       noteField = f;
@@ -1497,9 +1533,7 @@
         const f = fieldOf(el); if (!f) return;
         const n = String(el.value || '').length;
         if ((lastLen[f] || 0) - n > 40) {
-          rewrites[f] = (rewrites[f] || 0) + 1;
           if (!said[f + ':del']) { said[f + ':del'] = 1; say(J.deleted); }
-          if (rewrites[f] === 2) marginNote(f, 'Rewrote this twice. Noted.');
         }
         lastLen[f] = n;
         clearTimeout(pause); pause = setTimeout(() => comment(f, el), 1600);
