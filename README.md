@@ -40,6 +40,7 @@ Three tracks record where each applicant is:
 ## How the core team work (in the Sheet)
 
 - **Review panel (fastest):** LEADS → *Open review panel*. A sidebar that follows your selection: click any cell in one or more applicant rows (Ctrl/Cmd- or Shift-click for several), tick who you mean, press *Accept* / *Verify* / *Approve*… Type a message and tick "send this with the next button" (or *Save message only*) and it shows on those applicants' hub and step pages (`MessageToApplicant` column). The first time, Google asks you to allow the sidebar.
+- **The results reveal:** once results are released, an accepted applicant's first hub visit plays a ~15 s film (skippable), once. The results email should link to the portal with `?reveal=1` (it replays the film). Preview it yourself on /dev with `?reveal=1`. Details: CONTEXT.md §9.0.
 - **Results stay hidden until Settings › `ResultsReleased` is ticked:** set decisions in the Sheet ahead of time; until then every applicant sees UNDER REVIEW and payment stays locked.
 - **The Status / Requirements / Payment / MessageToApplicant columns sit right after FullName** (moved by `setup_formatSheets`; the code finds columns by header, so moving them is safe).
 - **LEADS menu:** select applicant rows in the Applicants tab (any cell in each row; several rows at once is fine) → LEADS → Decision / Requirements / Payment → pick a value. Each row is checked, logged, and auto-confirmed when all three tracks are done. Skipped rows are listed with the reason.

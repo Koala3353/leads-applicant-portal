@@ -109,6 +109,7 @@ Navy headers: **never rename** them. The code finds every Applicants column by i
 | `ReferralCode` | e.g. `BEA` | Made on submit (`makeReferralCode_`): the nickname in capitals (accents and spaces dropped, max 12 letters); if taken, `BEA2`, `BEA3`… Older `BEA-7K2Q` codes still work. Applicants from before referrals get one the first time they open the hub. |
 | `ReferredBy` | a code, or blank | The code they applied with (optional field on Apply, pre-filled from `?ref=`). Checked and **locked on submit**. |
 | `ReferrerID` | ApplicantID or blank | Who that code belongs to, filled in by the server. Filter/sort by it to see who invited whom. |
+| `RevealSeen` | date or blank | When they first watched the results reveal (set by `home_revealSeen`). Clear it to make the reveal play again for that person. |
 | `MessageToApplicant` | plain text or blank | Core team: a note shown on the applicant's hub and step pages ("Note from the core team"), e.g. what to fix. Set from the review panel or typed in the cell (logged either way). Shows at once, even before `ResultsReleased`. |
 
 `WhyLEADS`, `FearEssay`, `MEAInvolvement` and `Rumors` were retired and deleted from the Sheet (Oct 2026). `ensureApplicantHeaders_()` adds any missing `COLS` header at the end.
@@ -653,6 +654,12 @@ apply_submit(form) → { ok:false, errors } | { ok:true, id }
 - ID outside 200000–280000 → "Invalid ID number." (no range shown, on the page or by I.R.I.S.).
 - Consent "No" → can't submit; I.R.I.S. explains why.
 - MemData MBTI like `INTJ-A` → autofilled as `INTJ`; anything unrecognisable → left blank.
+
+### 9.0 Results reveal (`docs/reveal/index.html` on GitHub Pages + Home.html `maybeReveal`)
+- A ~15 s code-only three.js film (no video or model files): dead CRT → the monitor wall of eyes, push in on CAM 03 → hard cut to white, the LEADS eye opens, its iris turns into a mirror with a figure in it ("Do you see yourself?") → the case file, the stamp slams → a Broadcast Card with *Open your file*. Skip at any time (button or Esc), silent until "Sound on" is tapped, a 2D version for no-WebGL / reduced motion. `?at=8.5` freezes a frame for review.
+- Hosted at Settings › `RevealUrl` (default `https://koala3353.github.io/leads-applicant-portal/reveal/`, GitHub Pages from `docs/` on main; `off` disables). `.claspignore` keeps `docs/` out of Apps Script. Edit it in git, push, and Pages redeploys in about a minute; no Apps Script deploy needed.
+- **When it plays:** on the hub, once, full screen, for anyone the portal shows as ACCEPTED or CONFIRMED (so only after Settings › `ResultsReleased`) whose `RevealSeen` is blank; it's marked as soon as it starts. `…/exec?reveal=1` (the results email link) replays it. The core team can preview it on /dev with `?reveal=1` (nothing is recorded).
+- **Privacy:** the page never says anyone's result by itself (opened directly, the stamp reads REVIEWED). The hub sends the ID, nickname and stamp by `postMessage` to the film's origin only; nothing personal goes in its URL.
 
 ### 9.1b Referrals (`Referrals.gs`, shared)
 
