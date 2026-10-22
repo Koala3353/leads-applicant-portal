@@ -144,12 +144,12 @@ function trimActivityLocked_(sh) {
  * Runs a public server function and logs it: OK with timing, or ERROR with the message and stack
  * (then rethrows, so the page still gets the error). summarize(result) picks what to log on success.
  */
-function traced_(event, page, fn, summarize) {
+function traced_(event, page, fn, summarize, expected) {
   const t0 = Date.now();
   page = String(page || '').slice(0, 30);   // some callers pass a page name the browser sent
   try {
     const out = fn();
-    const ok = !(out && out.ok === false);
+    const ok = !(out && out.ok === false) || !!(expected && expected(out));   // expected(out): an ok:false that's normal
     const ms = Date.now() - t0;
     activity_(event + (ok && ms > SLOW_MS ? ' (slow)' : ''), summarize ? summarize(out) : (ok ? 'ok' : out),
       { level: ok ? (ms > SLOW_MS ? 'WARN' : 'INFO') : 'WARN', page: page, ms: ms });

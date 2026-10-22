@@ -287,8 +287,10 @@ function apply_deleteDraft_(email) {
 
 /** Saves the signed-in applicant's draft. Public. No script lock in the normal case (see above). */
 function apply_saveDraft(data) {
+  // no consent yet / already applied are normal answers, not problems: logged as routine, never as a WARN
   return traced_('apply_saveDraft', 'apply', () => apply_saveDraft_(data), r =>
-    r.ok ? 'saved' : r.applied ? 'already applied' : r.consent ? 'no consent yet (browser only)' : r.busy ? 'busy' : 'not saved');
+    r.ok ? 'saved' : r.applied ? 'already applied' : r.consent ? 'no consent yet (browser only)' : r.busy ? 'busy' : 'not saved',
+    r => !!(r && (r.consent || r.applied)));
 }
 /** The save itself; an error it throws is logged by the traced_ around it (apply_saveDraft / game_saveProgress). */
 function apply_saveDraft_(data) {
