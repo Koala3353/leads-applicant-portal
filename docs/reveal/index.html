@@ -47,7 +47,7 @@
   .ctl button:active,.end a:active,.end button:active{box-shadow:inset 1px 1px #0a0a0a,inset -1px -1px #fff,inset 2px 2px #808080}
   .ctl button:focus-visible,.end a:focus-visible,.end button:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
   /* the last frame: a Broadcast Card with the way out */
-  .end{position:fixed;inset:0;z-index:8;display:grid;place-items:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .5s ease}
+  .end{position:fixed;inset:0;z-index:8;display:grid;place-items:end center;padding:20px 20px max(78px,calc(env(safe-area-inset-bottom) + 70px));opacity:0;pointer-events:none;transition:opacity .5s ease}
   .end.on{opacity:1;pointer-events:auto}
   .card{width:min(560px,100%);background:var(--blue);color:#fff;text-align:center;padding:26px 22px 24px;rotate:-1deg;
     box-shadow:0 0 0 4px #000,0 0 0 7px var(--blue),0 0 70px rgba(0,15,240,.55)}
@@ -168,8 +168,8 @@ function paintStatic(level) {
    3.0  the monitor wall: eyes on every screen; the camera pushes in on CAM 03
    7.0  hard cut to white: the LEADS eye opens, the iris looks at you, then turns into a mirror
   11.0  the case file: a manila folder, the stamp slams down
-  13.6  the Broadcast Card: Open your file (stays until a tap) */
-const DUR = 15, END_AT = 13.6;
+  14.2  the Broadcast Card (low on the screen, so the stamp stays in view): Open your file (stays until a tap) */
+const DUR = 15, END_AT = 14.2;
 const FREEZE = parseFloat(params.get('at'));
 const ease = x => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
 const span = (t, a, b) => ease((t - a) / (b - a));
@@ -451,7 +451,7 @@ function build() {
       const open = t < 7.25 ? .04 : t < 7.9 ? span(t, 7.25, 7.9) : t < 8.4 ? 1 - .92 * Math.sin(span(t, 7.9, 8.4) * Math.PI) : 1;   // opens, one slow blink
       lidGroup.scale.y = Math.max(.04, open); lashes.scale.y = .6 + open * .4;
       const push = span(t, 9.4, 10.95);
-      const wide = fit(7.6, 3.9), close = .07 + fit(2.1, 2.1) * .85;
+      const wide = fit(7.8, 5.4), close = .07 + fit(2.1, 2.1) * .85;
       camera.position.set(0, 0, wide - push * (wide - close)); camera.lookAt(0, 0, 0);
       // the iris watches the pointer (or drifts), then settles dead centre: it's looking at you
       const settle = span(t, 8.6, 9.2);

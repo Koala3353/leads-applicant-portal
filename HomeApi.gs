@@ -45,8 +45,10 @@ function home_getContext_() {
       status: a.Status,
       requirements: a.Requirements || 'NONE',
       payment: a.Payment || 'NONE',
-      message: String(a.MessageToApplicant || '').trim().slice(0, 1000)   // a note from the core team (Applicants › MessageToApplicant)
+      message: String(a.MessageToApplicant || '').trim().slice(0, 1000),   // a note from the core team (Applicants › MessageToApplicant)
+      reveal: revealFor_(a)   // the results film: { url, play } once the decision is visible, else null
     } : null,
+    revealUrl: isAdmin_(email) ? revealUrl_() : '',   // the core team can preview it with ?reveal=1
     progress: p,
     preleads: { date: String(s.PreLeadsDate || ''), time: String(s.PreLeadsTime || ''), venue: String(s.PreLeadsVenue || '') },   // the Home banner
     referral: found ? safeReferral_(found) : null,   // own code + counts (never names); Referrals.gs
@@ -65,6 +67,35 @@ function campStart_(s) {
   if (!m) return null;
   const d = new Date(m[1] + ' ' + m[2] + ', ' + m[3] + ' 08:00:00 GMT+0800');
   return isNaN(d) ? null : d.toISOString();
+}
+
+/**
+ * The results reveal (docs/reveal on GitHub Pages): only for someone whose decision the portal shows as ACCEPTED or
+ * CONFIRMED, which already means Settings › ResultsReleased is ticked (getApplicantForPortal_ masks it otherwise).
+ * play = they haven't seen it yet (Applicants › RevealSeen is blank). ?reveal=1 replays it.
+ */
+function revealUrl_() {
+  const u = String(setting_('RevealUrl') || '').trim();
+  return /^off$/i.test(u) || !/^https:\/\//.test(u) ? '' : u;
+}
+function revealFor_(a) {
+  if (['ACCEPTED', 'CONFIRMED'].indexOf(String(a.Status)) < 0) return null;
+  const url = revealUrl_();
+  return url ? { url: url, play: !String(a.RevealSeen || '').trim() } : null;
+}
+
+/** Called once the reveal starts playing, so it never plays on its own again (any device). */
+function home_revealSeen() {
+  return traced_('home_revealSeen', 'home', () => {
+    const found = requireApplicant_();
+    if (!revealFor_(found.data)) return { ok: false };
+    if (String(found.data.RevealSeen || '').trim()) return { ok: true };
+    withScriptLock_(15000, () => {
+      const now = getApplicantById_(found.data.ApplicantID);
+      if (now && !String(now.data.RevealSeen || '').trim()) updateApplicant_(now.row, { RevealSeen: new Date() }, found.data.ApplicantID);
+    });
+    return { ok: true };
+  });
 }
 
 /** Referral info for the hub; a failure (busy lock, sheet hiccup) hides the card instead of breaking the whole hub. */

@@ -46,7 +46,8 @@ const COLS = [
   'GameAnswers',                                                          // Game page choices (JSON)
   'PaymentProof',                                                         // Drive link to the uploaded proof of payment
   'ReferralCode', 'ReferredBy', 'ReferrerID',                             // own code to share / code they used / who that is (Referrals.gs)
-  'MessageToApplicant'                                                    // core team: a note shown on the applicant's hub (plain text)
+  'MessageToApplicant',                                                   // core team: a note shown on the applicant's hub (plain text)
+  'RevealSeen'                                                            // when they first watched the results reveal (HomeApi.gs)
 ];
 
 /** The Applicants header row as it is in the Sheet right now (read once per run). Falls back to COLS on an empty tab. */
@@ -252,6 +253,7 @@ const SETTINGS_SCHEMA = [
   { key: 'ApplicantIdStart', type: 'int', def: 2300, help: 'Applicant IDs start above this number (default 2300) and skip ahead randomly, so IDs never show how many applied.' },
   { key: 'ContactEmail', type: 'text', def: '', help: 'Core team email shown in the footer (leave blank to hide)' },
   { key: 'ResultsReleased', type: 'bool', def: false, help: 'Tick to show decisions to applicants. Unticked = ACCEPTED, WAITLISTED, REJECTED and CONFIRMED all show as UNDER REVIEW in the portal, and payment stays locked.' },
+  { key: 'RevealUrl', type: 'text', def: 'https://koala3353.github.io/leads-applicant-portal/reveal/', help: 'The results reveal film (docs/reveal in the GitHub repo). Plays once, full screen, for ACCEPTED applicants after ResultsReleased; the email link is the portal link + ?reveal=1. Blank = the default; off = no reveal.' },
   { key: 'ActivityVerbose', type: 'bool', def: false, help: 'Tick only while debugging: also logs every page view and page load in the Activity tab. Leave unticked for launch (those writes slow the Sheet down in a rush).' },
   { key: 'IssueEmail', type: 'text', def: '', help: 'Optional. Where "Report an issue" emails go. Blank = the default in Brand.gs.' },
   // 02 payment

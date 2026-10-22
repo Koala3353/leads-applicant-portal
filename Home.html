@@ -255,6 +255,9 @@
   h1 .kicker.shiver{animation:shiver 5s steps(1) infinite}
   @keyframes shiver{0%,86%,100%{transform:none}88%{transform:translate(-3px,1px)}90%{transform:translate(3px,-1px) skewX(-6deg)}92%{transform:translate(-1px,0)}}
   h1 .line{display:block;font-family:var(--title);font-weight:800;text-transform:uppercase;letter-spacing:-.05em;font-size:.74em;line-height:.95}   /* the brand book's title font, all caps */
+  .reveal-veil{position:fixed;inset:0;z-index:9990;background:#050505;opacity:0;transition:opacity .4s ease}
+  .reveal-veil.on{opacity:1}
+  .reveal-veil iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
   .cnote{margin:14px 0 0;padding:10px 12px 12px;background:#f4efe1;color:#111;border-left:5px solid var(--danger);box-shadow:4px 4px 0 #000;rotate:-.4deg}
   .cnote-k{margin:0 0 4px;font:700 .68rem/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#b00000}
   .cnote-t{margin:0;font:400 1rem/1.45 var(--type,var(--mono));white-space:pre-line;overflow-wrap:anywhere}
@@ -636,7 +639,7 @@
   }
 </style>
 </head>
-<body data-base="<?= baseUrl ?>" data-ref="<?= ref ?>" data-loader-wait>
+<body data-base="<?= baseUrl ?>" data-ref="<?= ref ?>" data-reveal="<?= revealAsked ? '1' : '' ?>" data-loader-wait>
 <?!= include_('Loader') ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 <div class="dark" id="dark" aria-hidden="true"></div>
@@ -1579,7 +1582,7 @@
         const day = new Date().toISOString().slice(0, 10);
         let seen = ''; try { seen = localStorage.getItem('leads-pl-pop') || ''; } catch (e) { /* storage blocked: show it */ }
         if (seen !== day) setTimeout(() => {
-          if (document.querySelector('.bcast-veil')) return;
+          if (document.querySelector('.bcast-veil') || document.querySelector('.reveal-veil')) return;   // never on top of the reveal
           try { localStorage.setItem('leads-pl-pop', day); } catch (e) { /* fine */ }
           window.Broadcast.show({ top: pb.top, big: pb.title, sub: [pl.date, sub || pb.sub].filter(Boolean).join(' · ') + '. ' + pb.popup,
             link: { href: $('preleadsStrip').querySelector('a').href, label: pb.link }, btn: pb.later });
@@ -1587,6 +1590,8 @@
       }
     } catch (e) { console.error(e); }
     try { renderSubjectStatus(ctx); } catch (e) { console.error(e); }
+
+    try { maybeReveal(ctx); } catch (e) { console.error(e); }
 
     // FAQ + testimonials: only for people without a file yet
     document.body.classList.toggle('applied', !!a);
@@ -1892,6 +1897,38 @@
     const warn = $('acctWarn');
     warn.hidden = false;
     warn.textContent = BRAND.messages.loadError;   // the raw error goes to the report form (announce above), not on screen
+  }
+
+  /* ---------- the results reveal: a full-screen film from GitHub Pages (docs/reveal), once ----------
+     Plays when the server says the decision is visible and they haven't seen it (a.reveal.play), or when the link has
+     ?reveal=1 (the results email). Who they are goes in by postMessage, never in the film's URL. The core team can
+     preview it with ?reveal=1 (nothing is recorded for them). */
+  function maybeReveal(ctx) {
+    const a = ctx.applicant, asked = document.body.dataset.reveal === '1';
+    const own = a && a.reveal && (a.reveal.play || asked);
+    const preview = !own && asked && ctx.isAdmin && ctx.revealUrl;
+    if (!own && !preview) return;
+    const url = own ? a.reveal.url : ctx.revealUrl;
+    let origin = ''; try { origin = new URL(url).origin; } catch (e) { return; }
+    const veil = document.createElement('div'); veil.className = 'reveal-veil'; veil.setAttribute('role', 'dialog'); veil.setAttribute('aria-modal', 'true'); veil.setAttribute('aria-label', 'Results transmission');
+    const frame = document.createElement('iframe'); frame.title = 'Results transmission'; frame.allow = 'autoplay; fullscreen';
+    veil.append(frame); document.body.append(veil);
+    let ready = false, marked = false;
+    const close = () => { window.removeEventListener('message', onMsg); veil.classList.remove('on'); setTimeout(() => veil.remove(), 400); };
+    const onMsg = e => {
+      if (e.origin !== origin || e.source !== frame.contentWindow) return;
+      const d = e.data || {};
+      if (d.type === 'leads-reveal-ready') {
+        ready = true;
+        frame.contentWindow.postMessage({ type: 'leads-reveal-init', id: a ? a.id : 'APP-0000', nick: a ? a.firstName : 'Preview',
+          stamp: 'ACCEPTED' }, origin);   // own: the portal shows ACCEPTED/CONFIRMED; preview: the core team
+        if (own && !marked) { marked = true; window.runServer('home_revealSeen').catch(() => {}); }
+      } else if (d.type === 'leads-reveal-done') close();
+    };
+    window.addEventListener('message', onMsg);
+    frame.src = url;
+    requestAnimationFrame(() => veil.classList.add('on'));
+    setTimeout(() => { if (!ready) close(); }, 12000);   // blocked or offline: quietly drop it, they'll get it next time
   }
 
   window.runServer('home_getContext').then(render, fail);   // retries when Google is busy (a rush of visitors)

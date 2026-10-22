@@ -45,6 +45,7 @@ function doGet(e) {
   template.page = key;
   template.baseUrl = portalUrl_();
   template.ref = normalizeReferral_(e && e.parameter && e.parameter.ref);   // ...exec?ref=BEA (Referrals.gs); '' if none
+  template.revealAsked = !!(e && e.parameter && e.parameter.reveal === '1');   // ...exec?reveal=1: the results email (Home plays the reveal)
   activity_('page_view', notice ? 'unknown page, showed Home' : '', { page: key, anon: true });   // no email on page views
   PAGE_BOOT_ = notice ? null : pageBoot_(key);   // printed into the page by brand_css_() (Brand.gs)
   return template.evaluate()
