@@ -655,7 +655,6 @@
       <!-- SECTION 1: Primary Subject Identification & Data Consent -->
       <div class="form-section-head">
         <h2>Section 1 // Primary Subject Identification & Clearance</h2>
-        <p>[LEVEL 1 CLEARANCE] Personal data, privacy authorization & MEA membership records.</p>
       </div>
       <div class="about-leads">
         <p class="about-k">What is LEADS?</p>
@@ -667,7 +666,7 @@
         <div class="field full" id="wrap-DataConsent">
           <span class="q-num">Q.01 / 15</span>
           <p class="consent-title" id="consentTitle">Data Privacy Consent <span style="color:var(--muted)">[RA 10173]</span></p>
-          <p class="field-hint" id="consentHint">By submitting this form, I consent to the collection and use of the information I provide by the LEADS organizing team for participant registration, family grouping, event coordination, and communication regarding LEADS. My information will be kept confidential and accessed only by authorized organizers and facilitators who need it for these purposes.</p>
+          <p class="field-hint" id="consentHint">Only LEADS core will access this data to make the offsite event happen, saying yes is required to apply.</p>
           <!-- Only "yes" lets someone apply, so it's one checkbox. The hidden input keeps the Y / '' value every other script reads. -->
           <input type="hidden" id="f-DataConsent" name="DataConsent" value="">
           <label class="consent-box" for="c-DataConsent">
@@ -700,7 +699,7 @@
         <div class="field" id="wrap-Nickname">
           <span class="q-num">Q.04 / 15</span>
           <label for="f-Nickname">Nickname / Call-Sign <span style="color:var(--muted)">[CLASSIFIED ALIAS]</span></label>
-          <p class="field-hint">[DESIGNATION] Designated call-sign for camp monitoring (up to 30 letters).<br><span class="ex-tag">Example: Juan</span></p>
+          <p class="field-hint">[DESIGNATION] Designated call-sign in LEADS<br><span class="ex-tag">Example: Juan</span></p>
           <input type="text" id="f-Nickname" name="Nickname" autocomplete="nickname" maxlength="30" required>
           <div class="field-error" id="err-Nickname" role="alert" aria-live="polite"></div>
         </div>
@@ -709,7 +708,7 @@
         <div class="field" id="wrap-Course">
           <span class="q-num">Q.05 / 15</span>
           <label for="f-Course">Degree Program <span style="color:var(--muted)">[ACADEMIC TRACK]</span></label>
-          <p class="field-hint">[DIVISION] Your degree program. Filled in from the member list when we find you.</p>
+          <p class="field-hint">[DIVISION] Your degree program.</p>
           <input type="text" id="f-Course" name="Course" required maxlength="60" autocomplete="off" placeholder="e.g. BS Management Engineering">
           <div class="field-error" id="err-Course" role="alert" aria-live="polite"></div>
         </div>
@@ -743,7 +742,7 @@
         <div class="field" id="wrap-Mobile">
           <span class="q-num">Q.08 / 15</span>
           <label for="f-Mobile">Mobile Number <span style="color:var(--muted)">[DIRECT FREQUENCY]</span></label>
-          <p class="field-hint">[TRANSMISSION] 11 digits starting with 09. Auto-normalized upon exit.<br><span class="ex-tag">Example: 09171234567</span></p>
+          <p class="field-hint">[TRANSMISSION] 11 digits starting with 09xx.<br><span class="ex-tag">Example: 09171234567</span></p>
           <input type="tel" id="f-Mobile" name="Mobile" inputmode="tel" autocomplete="tel" maxlength="16" required>
           <div class="field-error" id="err-Mobile" role="alert" aria-live="polite"></div>
         </div>
@@ -752,7 +751,7 @@
         <div class="field" id="wrap-MBTI">
           <span class="q-num">Q.09 / 15</span>
           <label for="f-MBTI">Myers-Briggs Indicator <span style="color:var(--muted)">[MBTI PROFILE]</span></label>
-          <p class="field-hint">[BEHAVIOR CLASSIFICATION] 4-letter type. Autofilled from MEA records.<br><span class="ex-tag">Example: INTJ</span></p>
+          <p class="field-hint">[BEHAVIOR] 4-letter type. Here's my guess, correct me if I'm wrong<br><span class="ex-tag">Example: INTJ</span></p>
           <select id="f-MBTI" name="MBTI">
             <option value="">-- Select MBTI Type --</option>
             <option value="INTJ">INTJ</option><option value="INTP">INTP</option>
@@ -784,13 +783,15 @@
         <!-- Q.11 OffsiteAvailability -->
         <div class="field" id="wrap-OffsiteAvailability">
           <span class="q-num">Q.11 / 15</span>
-          <label for="f-OffsiteAvailability">Offsite Availability <span style="color:var(--muted)" id="offsiteTag">[CAMP DATES]</span></label>
+          <p class="consent-title">Offsite Availability <span style="color:var(--muted)" id="offsiteTag">[CAMP DATES]</span></p>
           <p class="field-hint">[DEPLOYMENT WINDOW] Are you available to travel offsite <span id="offsiteDates">on the camp dates</span>?</p>
-          <select id="f-OffsiteAvailability" name="OffsiteAvailability" required>
-            <option value="">-- Select Availability --</option>
-            <option value="Yes">Yes — Fully available</option>
-            <option value="No">No — Conflicting schedule</option>
-          </select>
+          <!-- Only "yes" lets someone apply, so it's one checkbox. The hidden input keeps the Yes / '' value every other script reads. -->
+          <input type="hidden" id="f-OffsiteAvailability" name="OffsiteAvailability" value="">
+          <label class="consent-box" for="c-OffsiteAvailability">
+            <input type="checkbox" id="c-OffsiteAvailability" aria-describedby="err-OffsiteAvailability" required>
+            <span class="consent-tick" aria-hidden="true"></span>
+            <span class="consent-text">I confirm I am available on the camp dates.</span>
+          </label>
           <div class="field-error" id="err-OffsiteAvailability" role="alert" aria-live="polite"></div>
         </div>
       </div>
@@ -798,7 +799,6 @@
       <!-- SECTION 2: Interrogation & Psychological Dossier -->
       <div class="form-section-head">
         <h2>Section 2 // Interrogation & Psychological Dossier</h2>
-        <p>[LEVEL 2 CLEARANCE] Subject statement of motivation, event expectations, and leadership profile.</p>
       </div>
 
       <div class="form-grid">
@@ -1061,6 +1061,7 @@
       }
     });
     if ($('c-DataConsent')) $('c-DataConsent').checked = $('f-DataConsent').value === 'Y';
+    if ($('c-OffsiteAvailability')) $('c-OffsiteAvailability').checked = $('f-OffsiteAvailability').value === 'Yes';
     syncEnvBoxes();
     if (data.ReferredBy && $('f-ReferredBy')) $('f-ReferredBy').value = data.ReferredBy;
     if (data.IntegrityLog) mergeInteg(data.IntegrityLog);   // a reload keeps counting from where it was
@@ -1853,6 +1854,13 @@
     hid.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
+  $('c-OffsiteAvailability').addEventListener('change', e => {
+    const hid = $('f-OffsiteAvailability');
+    hid.value = e.target.checked ? 'Yes' : '';
+    $('wrap-OffsiteAvailability').classList.remove('has-error'); $('err-OffsiteAvailability').textContent = '';
+    hid.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
   // Environment boxes -> the hidden "A; B" value (No particular preference clears the others, and the others clear it)
   const ENV_NONE = 'No particular preference';
   function syncEnvBoxes() {
@@ -1889,7 +1897,7 @@
     clearDraft(true);
     $('applyForm').reset();
     // reset() keeps a hidden input's value, so the consent would stay "Y" behind an unticked box
-    $('f-DataConsent').value = '';
+    $('f-DataConsent').value = ''; $('f-OffsiteAvailability').value = '';
     $('f-Environment').value = ''; syncEnvBoxes();
     document.querySelectorAll('.prefilled').forEach(el => el.classList.remove('prefilled'));
     $('draftBanner').hidden = true;

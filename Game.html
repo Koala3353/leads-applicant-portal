@@ -645,17 +645,17 @@
     const buf = audio.createBuffer(1, len, audio.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     const src = audio.createBufferSource(); src.buffer = buf;
-    const g = audio.createGain(); g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
+    const g = audio.createGain(); g.gain.setValueAtTime(0.14, t); g.gain.exponentialRampToValueAtTime(0.005, t + 0.35);
     src.connect(g); g.connect(audio.destination);
     src.start(t);
   }
 
   function scareSound(delaySec) {
     if (isMuted) return;
-    if (playFile('scare', delaySec, 0.3)) return;   // the scare file at 30%: the noise is enough
+    if (playFile('scare', delaySec, 0.1)) return;   // the scare file at 10%: a jolt, not a fright (RecSec, Oct 2026)
     if (!audio || audio.state !== 'running') return;
     const t = audio.currentTime + delaySec, out = audio.createGain();
-    out.gain.value = .5; out.connect(audio.destination);
+    out.gain.value = .15; out.connect(audio.destination);
     const env = (node, peak, len) => { const g = audio.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + len); node.connect(g); g.connect(out); };
     const thud = audio.createOscillator(); thud.type = 'sine'; thud.frequency.setValueAtTime(90, t); thud.frequency.exponentialRampToValueAtTime(38, t + .35);
     env(thud, .3, .4); thud.start(t); thud.stop(t + .45);
@@ -670,12 +670,12 @@
 
   function playKnock() {
     if (isMuted) return;
-    if (playFile('knock')) return;
+    if (playFile('knock', 0, 0.45)) return;
     if (!audio || audio.state !== 'running') return;
     const t = audio.currentTime;
     const osc = audio.createOscillator(); osc.type = 'triangle'; osc.frequency.setValueAtTime(115, t);
     osc.frequency.exponentialRampToValueAtTime(35, t + 0.08);
-    const g = audio.createGain(); g.gain.setValueAtTime(0.85, t); g.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
+    const g = audio.createGain(); g.gain.setValueAtTime(0.4, t); g.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
     osc.connect(g); g.connect(audio.destination);
     osc.start(t); osc.stop(t + 0.09);
   }
@@ -684,7 +684,7 @@
   function droneStart(vol) {
     if (isMuted || !audio || audio.state !== 'running' || drone) return;
     const t = audio.currentTime, g = audio.createGain();
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol || .13, t + 1.4); g.connect(audio.destination);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol || .06, t + 1.4); g.connect(audio.destination);
     const o1 = audio.createOscillator(), o2 = audio.createOscillator(), lfo = audio.createOscillator(), lg = audio.createGain();
     o1.type = 'sine'; o1.frequency.value = 55; o2.type = 'triangle'; o2.frequency.value = 58.4;
     lfo.frequency.value = .35; lg.gain.value = .04; lfo.connect(lg); lg.connect(g.gain);
@@ -996,6 +996,7 @@
       triggerFinalTwistSequence();
       return;
     }
+    playStaticGlitch();   // a room is done: the same burst as entering the assessment
 
     if (roomsClearedOrder.length === 1) {
       $('clearedEyebrow').textContent = 'DECISION RECORDED';

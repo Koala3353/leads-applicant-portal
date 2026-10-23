@@ -19,7 +19,7 @@ const BRAND = {
   // Fears: being watched, feeling boxed in, failing. Mood: a surveillance case file, 1984-style.
   org: 'LEADS',
   parentOrg: 'MEA',
-  portalName: 'Eyes on LEADS',            // browser tab title
+  portalName: 'EYES ON LEADS',            // browser tab title
   logoText: 'Eyes on ',
   logoAccent: 'LEADS',                    // colored part after the logo
 
@@ -29,12 +29,11 @@ const BRAND = {
     kicker: 'Case file 26/27',            // yellow tape label above the headline
     headline: 'Eyes on LEADS',
     tagline: 'Someone is already watching. Apply anyway.',
-    hint: 'About 15 minutes: the form, then a short assessment. One application per person. We will know if you try twice.',   // under the main button, before applying
+    hint: 'About 10 minutes: the form, then a short assessment. One application per person. We will know if you try twice.',   // under the main button, before applying
     redact: [],                            // words in the lede shown as black bars until hovered or tapped (empty = off)
     // the project description (RecSec, Oct 2026): also shown at the top of the Apply form as "What is LEADS?"
-    lede: 'LEADS is a leadership development project built on shared experience, meaningful connection, and honest ' +
-          'self-reflection. It encourages members to confront their fears, question what they think leadership is, and to ' +
-          'look at the person doing the leading. Because leading well starts with facing what scares you. This year, the study is you.'
+    lede: "LEADS is MEA's flagship offsite leadership formation camp. Three days. Two nights. Away from the city. " +
+          "Out of your comfort zone. People will watch you make the call and watch you grow. You'll let them watch."
   },
   buttons: {
     apply: 'Start your application',
@@ -139,16 +138,14 @@ const BRAND = {
     eyebrow: 'FAQ',
     title: 'Classified files',
     note: 'Open a file. We already read it.',
-    venueFallback: 'a venue to be announced',
-    items: [
-      { q: 'When do I pay, and how much?', a: 'Only once you are accepted. The Payment page on this portal then shows the fee and how to pay. You pay first, then upload your proof. Requirements open after your payment is verified.' },
-      { q: 'When and where is it?', a: '{dates}, at {venue}.', needs: 'dates', fallback: 'Dates and venue are still being finalized.' },
-      { q: 'Who can apply? Can freshmen join?', a: 'TODO: core team, write the eligibility rule here (year levels, courses, MEA membership).', todo: true },
-      { q: 'What should I bring?', a: 'TODO: core team, write the packing list here.', todo: true },
-      { q: "What's the leadership fear question for?", a: "It's one of four essays. Write about a fear you actually want to work on at camp. It doesn't have to be impressive. It has to be yours." },
-      { q: 'Can I edit my application after I submit it?', a: "Not from the portal. It's one application per person. If something's wrong, message the core team." },
-      { q: 'What if I close the tab halfway?', a: 'Once you tick the consent box, your draft saves to your Ateneo account as you type, so you can finish later on any device.' },
-      { q: 'Who sees my answers?', a: 'Only the LEADS core team. We use your info for LEADS and nothing else (RA 10173).' }
+    venueFallback: 'Kasile Hills Nature Resort',
+    items: [   // RecSec doc, App Portal Comments (Oct 2026)
+      { q: 'Who can join LEADS? Do I need prior leadership experience to apply?', a: 'LEADS is open to all MEAns, regardless of batch, course, or experience. No prior leadership experience is needed. As long as you want to grow and develop your leadership, you can apply!' },
+      { q: 'I attended LEADS before. Can I still apply as a participant?', a: 'Anyone who has previously participated in LEADS will not be able to join as a participant this year.' },
+      { q: 'LEADS Offsite is over the weekend. Will I have time to work on my requirements there?', a: 'While it is possible to work on requirements during designated free times, we encourage participants to finish their requirements beforehand to minimize distractions and maximize immersion.' },
+      { q: 'What if I have a late Friday class or Saturday class?', a: "We will be coordinating with your professors in the 2nd semester to make sure that you don't have to worry about cutting class to attend LEADS. For those with late Friday classes, there will be a late car that can accommodate you to bring you to the offsite event." },
+      { q: 'Why is there a notarization fee?', a: 'The Office of Student Activities (OSA) requires the Parental Notification Form (PNF) to be notarized for offsite activities. The ₱150 fee on the participant fee covers this.' },
+      { q: 'Can I edit my application after I submit it?', a: "Not from the portal. If something's wrong, message the core team." }
     ]
   },
   // Quotes from past campers. sample: true = a placeholder: only the core team sees it (with a SAMPLE stamp), so
@@ -200,11 +197,11 @@ const BRAND = {
     hi: 'Hi {name}. '
   },
   modules: {
-    apply:   { n: '01', title: 'Apply',            fix: 'An intake form, four short essays, then a threat assessment. One essay is about a fear you want to face.' },
-    pay:     { n: '02', title: 'Payment',          fix: 'Once accepted: scan the QR, pay, and upload your proof on its page. It says VERIFIED once the core team checks it.' },
-    req:     { n: '03', title: 'Requirements',     fix: 'After your payment is verified: the forms to fill in, with what each one needs.' },
-    ga:      { n: '04', title: '1st GA',           fix: 'Your first general assembly. Add it to your calendar once the date is set.' },
-    room:    { n: '05', title: 'Room booking',     fix: 'Where you sleep at camp. Opens after your requirements are approved.' },
+    apply:   { n: '01', title: 'Apply',            fix: 'Register your information and perform an assessment. Max 10 mins.' },
+    pay:     { n: '02', title: 'Confirm slot',     fix: "Once accepted, pay what you're due. Upload your proof, and move on to making it to the offsite event." },
+    req:     { n: '03', title: 'Requirements',     fix: "Ready your documents and submit onsite. Let us know if you've submitted here." },
+    ga:      { n: '04', title: '1st General Assembly', fix: 'Your first LEADS gathering. Attendance is required. How many are watching?' },
+    room:    { n: '05', title: 'Room booking',     fix: 'Choose where you sleep, and choose wisely who you sleep with.' },
     sheet:   { n: '00', title: 'Core team',        fix: 'Review applicants in the Sheet: LEADS → Open review panel, click their rows, press Accept, Verify or Approve. Add a note and they see it here.' }
   },
   /* ---------- Steps.html: the pages after acceptance (?page=pay | reqs | ga | room) ---------- */

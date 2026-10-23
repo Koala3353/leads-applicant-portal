@@ -103,7 +103,7 @@ window.Ambience = (function () {
     if (on) stop(.3);
     if (!ctx()) return;
     mode = m; on = true; chordAt = 0;
-    master = ac.createGain(); master.gain.setValueAtTime(0, ac.currentTime); master.gain.linearRampToValueAtTime(mode === 'game' ? .9 : .8, ac.currentTime + 2.5);
+    master = ac.createGain(); master.gain.setValueAtTime(0, ac.currentTime); master.gain.linearRampToValueAtTime(mode === 'game' ? .4 : .35, ac.currentTime + 2.5);   // quiet: RecSec asked for much lower (Oct 2026)
     master.connect(ac.destination);
     verb = makeVerb();
     drone(); chord();

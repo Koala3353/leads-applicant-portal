@@ -101,7 +101,7 @@ Navy headers: **never rename** them. The code finds every Applicants column by i
 | `Block` | letters/numbers, ≤30 | Apply. **Required for first years** (ID starts with `26` or YearLevel 1), optional otherwise |
 | `MBTI` | one of the 16 types (`INTJ`…) or blank | Apply. Autofilled from MemData (header "MBTI", else column AB); `INTJ-A` → `INTJ` |
 | `PastOrgs` | ≤500 chars, multiline, optional | Apply |
-| `FirstOvernight` / `OffsiteAvailability` | `Yes` / `No` | Apply. Availability question shows Settings › `EventDates` |
+| `FirstOvernight` / `OffsiteAvailability` | `Yes` / `No` | Apply. `OffsiteAvailability` is one checkbox since Oct 23 2026 (RecSec): ticking it = `Yes`, and it's required, so new rows are always `Yes` (older rows may say `No`). Shows Settings › `EventDates` |
 | `DataConsent` | `Y` (must be Y to submit) | Apply (RA 10173) |
 | `WhyParticipant` / `FirstImpression` / `TakesLeadership` / `FearLeadership` | 50–1000 chars each, multiline, required | Apply (the 4 essays). `Rumors` was dropped Oct 2026; its old column can stay in the Sheet. |
 | `GameAnswers` | JSON text (≤5000 chars) | Game page: the choices made in the 3 CCTV rooms |
@@ -666,6 +666,8 @@ apply_submit(form) → { ok:false, errors } | { ok:true, id }
 - A ~15 s code-only three.js film (no video or model files): dead CRT → the monitor wall of eyes, push in on CAM 03 → hard cut to white, the LEADS eye opens, its iris turns into a mirror with a figure in it ("Do you see yourself?") → the case file, the stamp slams → a Broadcast Card with *Open your file*. Skip at any time (button or Esc), silent until "Sound on" is tapped, a 2D version for no-WebGL / reduced motion. `?at=8.5` freezes a frame for review.
 - Hosted at Settings › `RevealUrl` (default `https://koala3353.github.io/leads-applicant-portal/reveal/`, GitHub Pages from `docs/` on main; `off` disables). `.claspignore` keeps `docs/` out of Apps Script. Edit it in git, push, and Pages redeploys in about a minute; no Apps Script deploy needed.
 - **When it plays:** on the hub, once, full screen, for anyone the portal shows as ACCEPTED or CONFIRMED (so only after Settings › `ResultsReleased`) whose `RevealSeen` is blank; it's marked as soon as it starts. `…/exec?reveal=1` (the results email link) replays it. The core team can preview it on /dev with `?reveal=1` (nothing is recorded).
+- **Voiceover:** each caption has a spoken line (`docs/reveal/vo/v*.mp3`, script in `vo/lines.json`). It only plays when the viewer turns Sound on (browsers block autoplay audio), never late, and the hum dips under it. `vo/make.sh` rebuilds the files: with no argument it uses macOS `say` (the current placeholder voice), with an ElevenLabs voice ID it uses the motion-reel skill's `tts.py` (needs a valid key in that skill's `.env`; never commit a key, `docs/` is public). The final line has two takes: `v6a` "Finding: accepted." and `v6r` "Finding: reviewed.".
+- **Results emails (sent by the core team, not the portal):** ACCEPTED gets the email plus the reveal link (`…/exec?reveal=1`). Not accepted gets the email with **no link**, and there is no film for them (the hub only plays it for ACCEPTED/CONFIRMED).
 - **Privacy:** the page never says anyone's result by itself (opened directly, the stamp reads REVIEWED). The hub sends the ID, nickname and stamp by `postMessage` to the film's origin only; nothing personal goes in its URL.
 
 ### 9.1b Referrals (`Referrals.gs`, shared)

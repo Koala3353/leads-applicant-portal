@@ -266,6 +266,7 @@
   .cnote{margin:14px 0 0;padding:10px 12px 12px;background:#f4efe1;color:#111;border-left:5px solid var(--danger);box-shadow:4px 4px 0 #000;rotate:-.4deg}
   .cnote-k{margin:0 0 4px;font:700 .68rem/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#b00000}
   .cnote-t{margin:0;font:400 1rem/1.45 var(--type,var(--mono));white-space:pre-line;overflow-wrap:anywhere}
+  h1 .line.big{font-size:calc(.74em * var(--n,1));line-height:.9}   /* "EYES ON" / "LEADS": the last word as wide as the line above */
   h1 .line em{font-style:normal;color:var(--glow)}
   .tagline{margin:0 0 14px;font-family:var(--mono);font-weight:700;font-size:clamp(.9rem,2.4vw,1.05rem);letter-spacing:.06em;text-transform:uppercase;color:var(--danger)}
   .lede{font-size:1.05rem;color:color-mix(in srgb,var(--text) 82%,var(--muted));max-width:34em}
@@ -283,7 +284,7 @@
   .sound-chip[aria-pressed="false"]{color:#555}
   .sound-chip:active{box-shadow:var(--bevel-in)}
   .sound-chip:focus-visible{outline:2px dotted #000;outline-offset:-5px}
-  /* .intel, .file and .voice belonged to the FAQ and transcripts sections (removed Oct 23 2026) and are no longer used */
+  /* ---------- FAQ as classified files (hidden once you have a file). .voice belonged to the removed transcripts section ---------- */
   .intel{margin:56px 0 0}
   body.applied .intel{display:none}
   /* once they have a file, the hub is about their file: drop the pitch and the decoration, keep status + steps.
@@ -291,7 +292,7 @@
   body.applied .lede,body.applied .tagline,body.applied .obslog,body.applied .wall,body.applied #statusCard .tracks{display:none}
   /* ...and the long decorative middle: the CCTV wall, the tape ticker, the progress strip (SUBJECT_STATUS.EXE already
      shows it), and the Apply card (done). The page goes hero → your status → your steps. */
-  body.applied .feeds,body.applied .ticker,body.applied .path,body.applied #hint,body.applied .mod[data-key="apply"]{display:none}
+  body.applied .feeds,body.applied .ticker,body.applied .path,body.applied #hint{display:none}
   @media (max-width:559px){
     body.applied h1.rgb{font-size:clamp(2rem,11vw,2.6rem)}
     body.applied .rec .seen{display:none}
@@ -718,7 +719,7 @@
   <section class="hero">
     <div>
       <p class="rec" aria-hidden="true"><span class="dot">REC</span><span>CAM 01</span><time id="recClock">--:--:--</time><span class="seen" id="seen"></span></p>
-      <h1 class="rgb"><span class="kicker<?= BRAND.effects.shiver ? ' shiver' : '' ?>"><?= BRAND.hero.kicker ?></span><span class="line"><?= BRAND.hero.headline ?></span></h1>
+      <h1 class="rgb"><span class="kicker<?= BRAND.effects.shiver ? ' shiver' : '' ?>"><?= BRAND.hero.kicker ?></span><? var hl = String(BRAND.hero.headline).split(/ (?=\S+$)/); ?><span class="line"><?= hl[0] ?></span><? if (hl[1]) { ?><span class="line big" style="--n:<?= hl[0].length / hl[1].length ?>"><?= hl[1] ?></span><? } ?></h1>
       <p class="tagline"><?= BRAND.hero.tagline ?></p>
       <p class="lede"><?= BRAND.hero.lede ?></p>
       <div class="cta">
@@ -884,6 +885,16 @@
       </li>
       <? }); ?>
     </ul>
+  </section>
+
+  <!-- only for people without a file yet: hidden once they've applied -->
+  <section class="intel" id="faq" aria-labelledby="faqTitle">
+    <div class="hub-head">
+      <p class="eyebrow"><?= BRAND.faq.eyebrow ?></p>
+      <h2 id="faqTitle"><?= BRAND.faq.title ?></h2>
+      <p><?= BRAND.faq.note ?></p>
+    </div>
+    <div class="files" id="faqList"></div>
   </section>
 
   <footer>
@@ -1134,7 +1145,8 @@
     let lastAct = Date.now();
 
     // sections reached, once each
-    const seen = [['.wall', 'SUBJECT LOOKED AT THE WALL. THE WALL LOOKED BACK.'], ['#mods', 'SUBJECT REACHED THEIR FILE.']];
+    const seen = [['.wall', 'SUBJECT LOOKED AT THE WALL. THE WALL LOOKED BACK.'], ['#mods', 'SUBJECT REACHED THEIR FILE.'],
+      ['#faq', 'SUBJECT FOUND THE CLASSIFIED FILES.']];
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver(es => es.forEach(e => {
         if (!e.isIntersecting) return;
@@ -1219,7 +1231,7 @@
       if (!audio || audio.state !== 'running') return;
       const t = audio.currentTime, g = audio.createGain(), o = audio.createOscillator();
       o.type = 'sine'; o.frequency.setValueAtTime(85, t); o.frequency.exponentialRampToValueAtTime(35, t + .4);
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.7, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + .45);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.3, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + .45);
       o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + .5);
     }
 
@@ -1485,7 +1497,7 @@
     }
 
     // event facts (hidden when blank or TBA-free)
-    const facts = { dates: ctx.event.dates, venue: ctx.event.venue };
+    const facts = { dates: ctx.event.dates, venue: ctx.event.venue || BRAND.faq.venueFallback };
     Object.keys(facts).forEach(k => {
       const li = document.querySelector('[data-fact="' + k + '"]');
       if (facts[k]) { li.querySelector('b').textContent = facts[k]; li.classList.add('show'); }
@@ -1625,6 +1637,7 @@
       if (!window.__statusPlaced) { window.__statusPlaced = 1; try { one.addEventListener('change', place); } catch (e) { /* old Safari: fine */ } }
       if (main.dataset.scroll) main.closest('.cta').hidden = true;   // "Check my status" would only scroll to the card right below
     }
+    if (!a) renderIntel(ctx);
 
     // countdown: Requirements Timer (2 nearest deadlines + panic alert)
     const pill = $('openPill');
@@ -1855,6 +1868,42 @@
     }
     tick();
 
+  }
+
+  /** FAQ "classified files". Text only (textContent), filled from Settings. */
+  function renderIntel(ctx) {
+    const ev = ctx.event || {};
+    const vals = { dates: ev.dates, venue: ev.venue || BRAND.faq.venueFallback, contact: ctx.contact };
+    const list = $('faqList');
+    list.textContent = '';
+    let fileNo = 0;
+    (BRAND.faq.items || []).forEach(it => {
+      if (it.todo && !ctx.isAdmin) return;                  // unanswered: only the core team sees the TODO
+      const n = ++fileNo;
+      const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+      const d = el('details', 'file'); d.dataset.no = 'FILE ' + String(n).padStart(2, '0') + '-A';
+      const s = el('summary');
+      const st = el('span', 'stamp', 'CLASSIFIED');
+      s.append(el('span', 'fq', it.q), st);
+      // the opened file: typed fields, the answer, decorative redaction bars and a clipped surveillance photo
+      const sheet = el('div', 'sheet');
+      const body = el('div');
+      const meta = el('p', 'meta');
+      ['Case 26/27-' + String(n * 37 % 100).padStart(2, '0'), 'Clearance: public', 'Filed by: core team'].forEach(t => meta.append(el('span', '', t)));
+      const p = el('p', 'fa' + (it.todo ? ' todo' : ''));
+      p.textContent = it.needs && !vals[it.needs] ? it.fallback : String(it.a).replace(/\{(\w+)\}/g, (_, k) => vals[k] || '');
+      const bars = el('p', 'bars'); bars.setAttribute('aria-hidden', 'true');
+      [7, 4, 9, 3].forEach((w, i) => { const b = el('span', 'redbar'); b.style.setProperty('--w', ((w + n * (i + 1)) % 8 + 3) + 'em'); bars.append(b); });
+      body.append(meta, p, bars);
+      const photo = el('div', 'photo'); photo.setAttribute('aria-hidden', 'true');
+      photo.innerHTML = '<span class="reye" style="--d:-' + n + 's"><span class="reye-ball"><i></i></span></span>';
+      photo.append(el('small', '', 'EXHIBIT ' + String.fromCharCode(64 + n)));
+      sheet.append(body, photo);
+      d.append(s, sheet);
+      d.addEventListener('toggle', () => { st.textContent = d.open ? 'DECLASSIFIED' : 'CLASSIFIED'; });
+      list.append(d);
+    });
+    $('faq').hidden = !list.children.length;
   }
 
   function fail(err) {
