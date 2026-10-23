@@ -158,7 +158,7 @@ function soundOn() {
     hiss = ac.createGain(); hiss.gain.value = .03; src.connect(hp); hp.connect(hiss); hiss.connect(master); src.start();
   }
   soundIsOn = !soundIsOn;
-  if (ac.state === 'suspended') ac.resume();   // Safari / some Chrome builds start it suspended even after a tap
+  if (ac.state === 'suspended') Promise.resolve(ac.resume()).catch(() => { /* iOS: audio device busy; stay silent */ });   // Safari / some Chrome builds start it suspended even after a tap
   master.gain.setTargetAtTime(soundIsOn ? .5 : 0, ac.currentTime, .05);   // kept low (RecSec, Oct 2026)
   if (soundIsOn) drone.gain.setTargetAtTime(.7, ac.currentTime, .3);
   return soundIsOn;
@@ -182,7 +182,7 @@ function voice(k) {
 }
 let voDuckUntil = 0;
 // [seconds, file]: the 3D film's captions, and the shorter 2D fallback's
-const VO_3D = [[.6, 'v1'], [3.4, 'v2'], [5.3, 'v3'], [7.65, 'v4'], [9.1, 'v5'], [12.3, 'v6']];
+const VO_3D = [[.6, 'v1'], [3.3, 'v2'], [5.65, 'v3'], [7.7, 'v4'], [9.1, 'v5'], [12.3, 'v6']];
 const VO_2D = [[0, 'v1'], [2.5, 'v4'], [5, 'v5'], [7.5, 'v6']];
 function voAt(list, t) {
   list.forEach(([at, k]) => { if (t >= at && t < at + .6) fireOnce('vo' + at, () => voice(k === 'v6' ? (who.stamp === 'ACCEPTED' ? 'v6a' : 'v6r') : k)); });

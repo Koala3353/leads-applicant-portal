@@ -23,7 +23,7 @@ window.Ambience = (function () {
 
   function ctx() {
     if (!AC) return null;
-    try { ac = ac || new AC(); if (ac.state === 'suspended') ac.resume(); } catch (e) { ac = null; }
+    try { ac = ac || new AC(); if (ac.state === 'suspended') Promise.resolve(ac.resume()).catch(() => { /* iOS: audio device busy; stay silent */ }); } catch (e) { ac = null; }
     return ac;
   }
   /* a long dark reverb from decaying noise (no impulse file needed) */
@@ -165,7 +165,7 @@ window.Ambience = (function () {
   // a hidden tab doesn't need a score (and phones save battery): pause the whole context, resume on return
   document.addEventListener('visibilitychange', () => {
     if (!ac || !on) return;
-    try { document.hidden ? ac.suspend() : ac.resume(); } catch (e) { /* ignore */ }
+    try { Promise.resolve(document.hidden ? ac.suspend() : ac.resume()).catch(() => { /* iOS: audio device busy; stay silent */ }); } catch (e) { /* ignore */ }
   });
   return { start: start, stop: stop, announce: announce, setTension: setTension, use: c => { if (c && !ac) ac = c; }, playing: () => on };
 })();

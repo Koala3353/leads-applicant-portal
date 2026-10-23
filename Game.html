@@ -606,7 +606,7 @@
   let audio = null;
   const soundRaw = {}, soundBuf = {};
   function openAudio() {
-    try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch (e) { audio = null; }
+    try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') Promise.resolve(audio.resume()).catch(() => { /* iOS: audio device busy; stay silent */ }); } catch (e) { audio = null; }
     decodeSounds();
   }
   function loadSounds() {
