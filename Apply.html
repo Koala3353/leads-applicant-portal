@@ -1806,7 +1806,7 @@
       clearTimeout(timer);
       if (!q) { setState(''); return paint([]); }
       if (known.has(q)) setState(R.found.replace('{code}', q), 'ok'); else setState('');
-      if (q.length < 2) return paint([], R.typeMore);
+      if (q.length < (R.minLetters || 3)) return paint([], R.typeMore);
       timer = setTimeout(() => search(q, r => {
         if (clean(el.value) !== q) return;
         paint(r.codes || [], r.failed ? R.offline : r.slow ? R.slow : (r.codes && r.codes.length ? '' : R.noMatch));
@@ -1831,7 +1831,7 @@
       ok: v => known.has(clean(v)) || unsure.has(clean(v)),
       /** a code filled in from a link or a draft: check it exists, quietly */
       verify() {
-        const q = clean(el.value); if (q.length < 2) return;
+        const q = clean(el.value); if (q.length < (R.minLetters || 3)) return;
         search(q, r => {
           if (clean(el.value) !== q) return;
           if (r.failed || r.slow) setState(r.failed ? R.offline : R.slow, 'na');   // can't check now: the server checks it on submit

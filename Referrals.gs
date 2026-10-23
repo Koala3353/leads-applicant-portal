@@ -49,19 +49,20 @@ function checkReferral_(raw, values, email) {
 }
 
 /**
- * For the Apply page's referral picker: up to 6 active codes that START with what was typed (2+ letters).
- * Codes only, never names or IDs. A code is someone's nickname, so this is rate limited (40 searches per person per
- * 10 minutes) to stop anyone listing every applicant; the full list never leaves the server. The submit still runs
+ * For the Apply page's referral picker: up to 3 active codes that START with what was typed (3+ letters, so typing
+ * one or two letters can't list who applied). Codes only, never names or IDs. A code is someone's nickname, so this
+ * is also rate limited (30 searches per person per 10 minutes); the full list never leaves the server. The submit still runs
  * checkReferral_, so the picker is a convenience, not the check. { codes, exact } — exact = the typed code exists.
  */
 function referralSearch_(raw, email) {
   const q = normalizeReferral_(raw);
-  if (q.length < 2) return { codes: [], exact: false };
-  if (!bump_('refsearch:' + email, 40, 600)) return { codes: [], exact: false, slow: true };
+  if (q.length < REF_MIN_LETTERS) return { codes: [], exact: false };
+  if (!bump_('refsearch:' + email, 30, 600)) return { codes: [], exact: false, slow: true };
   const all = activeReferralCodes_();
   const hits = all.filter(c => c.indexOf(q) === 0).sort((x, y) => x.length - y.length || (x < y ? -1 : 1));
-  return { codes: hits.slice(0, 6), exact: all.indexOf(q) >= 0 };
+  return { codes: hits.slice(0, 3), exact: all.indexOf(q) >= 0 };
 }
+const REF_MIN_LETTERS = 3;   // the Apply page uses the same number (BRAND.referral.minLetters)
 
 /** Every code an applicant can still use (not withdrawn). Read from two columns, cached for a minute (a rush of typing must not re-read the tab). */
 function activeReferralCodes_() {
