@@ -42,6 +42,8 @@
   .btn.ghost{background:transparent;color:var(--white)}
   .btn:active{transform:translate(2px,2px)}
   .btn:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+  .nums{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 4px}
+  .nums .btn{margin:0;padding:13px 0}
   .small{color:var(--grey);font-size:12.5px}
   .link{word-break:break-all;background:#000;border:1px dashed var(--grey);padding:8px 10px;font-size:12px;margin-top:10px;user-select:all}
   [hidden]{display:none!important}
@@ -71,12 +73,18 @@
     <h2>Before you enter</h2>
     <ol>
       <li>Use your <b>Ateneo account</b> (<b>@student.ateneo.edu</b>). A personal Gmail can't apply.</li>
-      <li>Signed in with a personal account too? Pick your Ateneo one when Google asks, or use the second button below.</li>
+      <li>Signed in to more than one Google account on this browser? Google opens the portal with your <b>first</b> one. Use the buttons under "More than one account?" below.</li>
       <li>On a shared computer, use a private / incognito window.</li>
     </ol>
     <a class="btn" id="enterBtn">Enter the portal</a>
-    <a class="btn ghost" id="switchBtn">Choose my Ateneo account first</a>
-    <p class="small">Still blank or "You need access"? Open it in Chrome or Safari, sign in with only your Ateneo account, and try again.</p>
+    <p class="small">"Sorry, unable to open the file" or "You need access"? That's Google mixing up your accounts, not you. Try the buttons below.</p>
+  </section>
+
+  <section class="card" id="multi">
+    <h2>More than one account?</h2>
+    <p>Google numbers the accounts on this browser in the order you signed in (the list you see when you tap your profile picture in Gmail). Tap the number of your Ateneo account:</p>
+    <div class="nums" id="nums"></div>
+    <p class="small">Not sure which number? Try them in order. Surest fix: a private / incognito window, signed in to your Ateneo account only.</p>
   </section>
 </main>
 <script>
@@ -88,7 +96,14 @@
   var $ = function (id) { return document.getElementById(id); };
 
   $('enterBtn').href = dest;
-  $('switchBtn').href = 'https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(dest);
+  // with several Google accounts signed in, /macros/ uses account 0 unless the path says which: /macros/u/N/s/<id>/exec
+  var query = dest.indexOf('?') > 0 ? dest.slice(dest.indexOf('?')) : '';
+  var DEPLOY = PORTAL.match(/\/s\/([^/]+)\/exec/)[1];
+  for (var n = 0; n < 4; n++) {
+    var a = document.createElement('a'); a.className = 'btn ghost'; a.textContent = 'Account ' + (n + 1);
+    a.href = 'https://script.google.com/macros/u/' + n + '/s/' + DEPLOY + '/exec' + query;
+    $('nums').appendChild(a);
+  }
   $('thisLink').textContent = location.href;
 
   // in-app browsers (their user agents name the app)
