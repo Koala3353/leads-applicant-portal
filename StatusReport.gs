@@ -7,15 +7,16 @@
  *  2. Alert as soon as the same problem happens 3 times in one day (noteIssue_, called from activity_ for every
  *     ERROR, even when the Activity tab can't be written, and from report_issue for every user report): one email
  *     per problem per day, at most ALERT_CAP a day, so a crash loop or fake browser errors can't flood the inbox.
- * Recipient: Settings › StatusReportEmail (default brigadokeene@gmail.com). Send a report right now from the editor
+ * Recipients: Settings › StatusReportEmail, comma-separated (default brigadokeene@gmail.com, lawrence.ng@student.ateneo.edu). Send a report right now from the editor
  * with status_sendNow. The email lists IDs and counts only: no essays, ID numbers or phone numbers.
  */
 
 const ISSUE_ALERT_AT = 3;   // the same problem this many times in a day = an email right away
 
+// one or more addresses (comma-separated); bad ones are skipped. MailApp takes the comma list as-is.
 function statusTo_() {
-  const to = String(setting_('StatusReportEmail') || '').trim();
-  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to) ? to : '';
+  return String(setting_('StatusReportEmail') || '').split(/[,;\s]+/)
+    .filter(a => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a)).join(',');
 }
 const manilaDay_ = d => Utilities.formatDate(d || new Date(), 'Asia/Manila', 'yyyyMMdd');
 

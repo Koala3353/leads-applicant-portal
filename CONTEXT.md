@@ -659,7 +659,7 @@ apply_submit(form) → { ok:false, errors } | { ok:true, id }
 - MemData MBTI like `INTJ-A` → autofilled as `INTJ`; anything unrecognisable → left blank.
 
 ### 9.0b Status emails (`StatusReport.gs`)
-- **Daily report**, 8 AM Manila (`status_dailyReport`, installed by `setup_statusReport` / `setup_all`) to Settings › `StatusReportEmail` (default brigadokeene@gmail.com): new applications and Pre-LEADS sign-ups in the last 24 h, decisions so far, newly flagged applications, server errors and browser errors grouped by message, issue reports, slow calls. `status_sendNow` (editor) sends one immediately.
+- **Daily report**, 8 AM Manila (`status_dailyReport`, installed by `setup_statusReport` / `setup_all`) to Settings › `StatusReportEmail` (comma-separated list; default brigadokeene@gmail.com, lawrence.ng@student.ateneo.edu): new applications and Pre-LEADS sign-ups in the last 24 h, decisions so far, newly flagged applications, server errors and browser errors grouped by message, issue reports, slow calls. `status_sendNow` (editor) sends one immediately.
 - **Alert** as soon as the same error (same event + first line, digits ignored) happens 3 times in a Manila day, or 3 issue reports come in: one email per problem per day and at most 8 alerts a day (`noteIssue_`, counters in CacheService, no lock, so it never slows a submit; fake browser errors can't burn the email quota). The trigger-only functions check the trigger ID is really one of the project's.
 
 ### 9.0 Results reveal (`docs/reveal/index.html` on GitHub Pages + Home.html `maybeReveal`)
