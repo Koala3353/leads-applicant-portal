@@ -137,7 +137,7 @@ Camp info (emergency contact, dietary, medical, shirt size) and requirement file
 | **Payment** | `NONE` → `SUBMITTED` → `VERIFIED`; `REJECTED` = upload again | the upload sets SUBMITTED; the core team verifies/rejects |
 | **Requirements** | `NONE` → `PARTIAL` → `SUBMITTED` → `APPROVED`; `RETURNED` = fix and resend | the core team |
 
-**Your code never changes these** (the proof upload's SUBMITTED goes through `setTrack_`). Allowed status moves (`NEXT_STATUS`, Oct 23 2026: stages can be skipped and decisions corrected): SUBMITTED → UNDER REVIEW, ACCEPTED, WAITLISTED, REJECTED, WITHDRAWN · UNDER REVIEW / WAITLISTED / ACCEPTED / REJECTED → any other decision · ACCEPTED → CONFIRMED (only if APPROVED **and** VERIFIED) · CONFIRMED → WITHDRAWN · WITHDRAWN → UNDER REVIEW.
+**Your code never changes these** (the proof upload's SUBMITTED goes through `setTrack_`). Status moves (Oct 23 2026): any status can go to any other, so a misclick is fixed by picking the right one. Only CONFIRMED is checked (Requirements APPROVED **and** Payment VERIFIED). Applicants see decisions only after Settings › `ResultsReleased`.
 
 **Unlock rules live only in `progress_(applicantData)`. Never re-implement them.**
 Every step after the decision needs Status **ACCEPTED/CONFIRMED** and opens **in order**, each only once the core team switches it on:
@@ -221,7 +221,7 @@ Functions ending in `_` are server-only. Public (browser-callable) functions: `h
 
 | Helper | Returns / does |
 |---|---|
-| **Constants** | `SHEET` (tab names: `APPLICANTS, SETTINGS, ADMINS, LISTS, REQUIREMENTS, ACTIVITY, DRAFTS`), `COLS` (the Applicants columns the portal needs; find them with `col_(name)`, never by position), `TRACK_COLS` (`['Status','Requirements','Payment']`), `STATUSES`, `REQUIREMENT_STATES`, `PAYMENT_STATES`, `NEXT_STATUS`, `RULES` (Apply field rules: `{ stage, required, requiredIfFreshman, requiredMsg, pattern, list, options, min, max, idMin, idMax, rangeMsg, phone, minLen, maxLen, multiline, msg }`; the page's `fieldError()` mirrors `validateApplication_()` from the same rules, so add new fields here, not as one-off checks), `BRAND` (copy, colors, `statusCopy`, `messages`, `buttons`, `modules`, `mascot`) |
+| **Constants** | `SHEET` (tab names: `APPLICANTS, SETTINGS, ADMINS, LISTS, REQUIREMENTS, ACTIVITY, DRAFTS`), `COLS` (the Applicants columns the portal needs; find them with `col_(name)`, never by position), `TRACK_COLS` (`['Status','Requirements','Payment']`), `STATUSES`, `REQUIREMENT_STATES`, `PAYMENT_STATES`, `RULES` (Apply field rules: `{ stage, required, requiredIfFreshman, requiredMsg, pattern, list, options, min, max, idMin, idMax, rangeMsg, phone, minLen, maxLen, multiline, msg }`; the page's `fieldError()` mirrors `validateApplication_()` from the same rules, so add new fields here, not as one-off checks), `BRAND` (copy, colors, `statusCopy`, `messages`, `buttons`, `modules`, `mascot`) |
 | `getSettings_()` / `getSetting_(key)` | Settings as `{ Key: value }` (cached per execution; values may be `Date`, number, boolean, `''`) / one value |
 | `isTrue_(v)` · `parseDate_(v)` | `true` for `true`/`"TRUE"` · `Date` or `null` (text like `2026-10-24 23:59` read as Manila time) |
 | `setting_(key)` | a Settings value with its type applied (bool / date / int / text); a blank cell gives the default in `SETTINGS_SCHEMA` (Utils.gs), which also lists every key with its help text. Use it instead of `getSetting_` for anything new |
@@ -743,7 +743,7 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 | No LEADS menu | Reload the Sheet tab |
 | "Link coming soon" on a Form button | Form URL blank or not a Google Forms link in Settings |
 | `You have not applied yet.` | No row with your email: add a TEST row (§11) |
-| `Can't go from X to Y.` | Not allowed by `NEXT_STATUS`, or someone changed it first: refresh |
+| `Status can't be X.` | Not one of the statuses in `STATUSES` (check the spelling) |
 | `Exception:` + a short rule (e.g. `6 digits, and only once in this column`) | Sheet validation rejected the write: validate and check uniqueness first |
 | Sideways scroll on phones | Run the §8.4 snippet; fix that element (`min-width:0`, `overflow-wrap:anywhere`, `minmax(min(100%,260px),1fr)`) |
 | iPhone zooms into fields | Input font under 16px |
@@ -786,7 +786,7 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 - Apply follows the RecSec masterdoc (Reg Content tab): "What is LEADS?" (BRAND.hero.lede, also the hub) + the doc's consent wording; name as *Last name, First name*; essays say "3 to 5 sentences"; new **Environment** question (pick any, saved `A; B`; *No particular preference* stands alone). *First impression* (deleted in the doc) and *First overnight* (team decision) left the form; their columns stay for old rows.
 - Game: after the passcode, **EYE SCAN REQUIRED** (`game_uploadEye`): a photo saved as `EYE_<ID>` in Settings › `EyeFolder` (made on the first upload), linked in the draft (server-side only) and then Applicants › `EyePhoto`. Filing is refused without it. The file screen shows the fee (Settings › `RegistrationFee`, default 4500; `PrimerLink` optional). Feeds are stamped CHECKED; ● SESSION RECORDING shows during the search.
 - Referrals: points = people who applied with your code + 1 if you used someone's code. The hub card shows points, the benefits, and the **first names** of who used your code (never their status).
-- Status: stages can be skipped (SUBMITTED → ACCEPTED) and decisions corrected; CONFIRMED still needs APPROVED + VERIFIED.
+- Status: any status can be set from any other; CONFIRMED still needs APPROVED + VERIFIED.
 
 ## Recent behaviour notes (Oct 2026)
 

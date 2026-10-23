@@ -75,19 +75,9 @@ const STATUSES = ['SUBMITTED', 'UNDER REVIEW', 'WAITLISTED', 'ACCEPTED', 'REJECT
 const REQUIREMENT_STATES = ['NONE', 'PARTIAL', 'SUBMITTED', 'RETURNED', 'APPROVED'];
 const PAYMENT_STATES = ['NONE', 'SUBMITTED', 'VERIFIED', 'REJECTED'];
 
-// Which status can move to which. Anything not listed here is blocked. Since Oct 23 2026 the core team can skip stages
-// (SUBMITTED straight to ACCEPTED) and correct a decision (ACCEPTED -> WAITLISTED, REJECTED -> ACCEPTED, ...).
-// Still guarded: CONFIRMED needs Requirements APPROVED + Payment VERIFIED, and SUBMITTED is only set by applying.
-const DECISIONS_ = ['UNDER REVIEW', 'ACCEPTED', 'WAITLISTED', 'REJECTED'];
-const NEXT_STATUS = {
-  'SUBMITTED':    DECISIONS_.concat('WITHDRAWN'),
-  'UNDER REVIEW': ['ACCEPTED', 'WAITLISTED', 'REJECTED', 'WITHDRAWN'],
-  'WAITLISTED':   ['UNDER REVIEW', 'ACCEPTED', 'REJECTED', 'WITHDRAWN'],
-  'ACCEPTED':     ['UNDER REVIEW', 'WAITLISTED', 'REJECTED', 'CONFIRMED', 'WITHDRAWN'],
-  'CONFIRMED':    ['WITHDRAWN'],                       // back to ACCEPTED happens by itself when Payment/Requirements move back
-  'REJECTED':     ['UNDER REVIEW', 'ACCEPTED', 'WAITLISTED'],   // undo a mistake
-  'WITHDRAWN':    ['UNDER REVIEW']                     // undo a mistake; the decision is set again from there
-};
+// Status moves: since Oct 23 2026 any status can go to any other (a misclick is fixed by picking the right one again).
+// Applicants still see a decision only once Settings › ResultsReleased is ticked (getApplicantForPortal_). The one check
+// left: CONFIRMED needs Requirements APPROVED + Payment VERIFIED (statusMoveError_).
 
 // One set of rules for the page AND the server. Pages get these from formRules_() (via apply_getForm).
 // stage 'apply' = the Apply page. (Camp info like emergency contacts is collected in the requirements Google Form.)
@@ -618,7 +608,7 @@ function setStatusLocked_(applicantId, newStatus, by) {
  * Each returns '' when the change is allowed, else the reason in plain words.
  */
 function statusMoveError_(from, to, d) {
-  if (from && (NEXT_STATUS[from] || []).indexOf(to) < 0) return 'Can\'t go from ' + from + ' to ' + (to || 'blank') + '.';
+  if (STATUSES.indexOf(to) < 0) return 'Status can\'t be ' + (to || 'blank') + '.';
   if (to === 'CONFIRMED' && !(d.Requirements === 'APPROVED' && d.Payment === 'VERIFIED')) {
     return 'Confirm only after Requirements is APPROVED and Payment is VERIFIED.';
   }
