@@ -282,6 +282,7 @@
     min-height:36px;padding:.35em .8em;border:0;cursor:pointer;font:700 .72rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;
     background:var(--win);color:#000;box-shadow:var(--bevel-out),3px 3px 0 #000}
   .sound-chip[aria-pressed="false"]{color:#555}
+  .sound-chip .snd-ic{vertical-align:-2px;margin-right:2px}
   .sound-chip:active{box-shadow:var(--bevel-in)}
   .sound-chip:focus-visible{outline:2px dotted #000;outline-offset:-5px}
   /* ---------- FAQ as classified files (hidden once you have a file). .voice belonged to the removed transcripts section ---------- */
@@ -665,7 +666,7 @@
 <body data-base="<?= baseUrl ?>" data-ref="<?= ref ?>" data-reveal="<?= revealAsked ? '1' : '' ?>" data-loader-wait>
 <?!= include_('Loader') ?>
 <?!= include_('Ambience') ?>
-<button type="button" class="sound-chip" id="soundChip" aria-pressed="true" aria-label="Background music">&#128266; Sound ON &middot; tap to mute</button>
+<button type="button" class="sound-chip" id="soundChip" aria-pressed="true" aria-label="Background music"><svg class="snd-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg> Sound ON &middot; tap to mute</button>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 <div class="dark" id="dark" aria-hidden="true"></div>
 <? if (BRAND.effects.eyes) { ?>
@@ -1958,7 +1959,7 @@
     const chip = $('soundChip');
     let want = true, film = false;
     try { want = localStorage.getItem('leads-sound') !== 'off'; } catch (e) { /* storage blocked: default on */ }
-    const paint = () => { chip.textContent = want ? '\uD83D\uDD0A Sound ON \u00B7 tap to mute' : '\uD83D\uDD07 Sound OFF \u00B7 tap to turn on'; chip.setAttribute('aria-pressed', String(want)); };
+    const paint = () => { chip.innerHTML = want ? '<svg class="snd-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg> Sound ON &middot; tap to mute' : '<svg class="snd-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><path d="M16 9l6 6M22 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg> Sound OFF &middot; tap to turn on'; chip.setAttribute('aria-pressed', String(want)); };
     const go = () => { if (want && !film && window.Ambience) Ambience.start('hub'); };
     const first = e => {
       if (e.target === chip) return;   // the chip's own click decides

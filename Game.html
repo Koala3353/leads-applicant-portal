@@ -15,6 +15,7 @@
   .g-msg.bad { color: var(--danger); }
   .g-msg.good { color: var(--glow); }
 
+  .snd-ic{vertical-align:-2px;margin-right:2px}
   /* Mute Button */
   .mute-btn {
     display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-family: var(--mono); font-size: 12px;
@@ -257,7 +258,7 @@
     <!-- Convenient Mute Toggle Button -->
     <div>
       <button type="button" id="muteBtn" class="mute-btn" aria-label="Toggle sound mute">
-        <span id="muteIcon">&#128266;</span> <span id="muteLabel">Sound ON &middot; tap to mute</span>
+        <span id="muteIcon"><svg class="snd-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg></span> <span id="muteLabel">Sound ON &middot; tap to mute</span>
       </button>
     </div>
   </section>
@@ -477,7 +478,7 @@
   function applyMuteState() {
     const btn = $('muteBtn'), icon = $('muteIcon'), lbl = $('muteLabel');
     if (btn) btn.classList.toggle('is-muted', isMuted);
-    if (icon) icon.textContent = isMuted ? '🔇' : '🔊';
+    if (icon) icon.innerHTML = isMuted ? '<svg class="snd-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><path d="M16 9l6 6M22 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg>' : '<svg class="snd-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg>';
     if (lbl) lbl.textContent = isMuted ? 'Sound OFF \u00B7 tap to turn on' : 'Sound ON \u00B7 tap to mute';
     if (isMuted && drone) droneStop();
     // the score (Ambience.html): off when muted, back on in the part of the game they are in

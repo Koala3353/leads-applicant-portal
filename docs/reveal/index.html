@@ -65,6 +65,7 @@
   #flat .eye2d{width:min(70vw,420px);aspect-ratio:2.6;position:relative}
   #flat svg{width:100%;height:100%;overflow:visible}
   @media (prefers-reduced-motion:reduce){#rec i,#cap .cur{animation:none}}
+  .snd-ic{vertical-align:-2px;margin-right:4px}
 </style>
 </head>
 <body>
@@ -78,7 +79,7 @@
 <p class="hud" id="subject">SUBJECT ----</p>
 <p id="cap" role="status" aria-live="polite"></p>
 <div class="ctl">
-  <button type="button" id="sound" aria-pressed="false">&#128263; Sound OFF &middot; tap to turn on</button>
+  <button type="button" id="sound" aria-pressed="false"><svg class="snd-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><path d="M16 9l6 6M22 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg> Sound OFF &middot; tap to turn on</button>
   <button type="button" id="skip">Skip ▸▸</button>
 </div>
 <div class="end" id="end" role="dialog" aria-modal="true" aria-labelledby="endT">
@@ -211,7 +212,7 @@ function thud() {
   o.connect(g); g.connect(master); o.start(); o.stop(ac.currentTime + .45);
   noiseBurst(.12, .9);   // the paper smack is what small speakers hear
 }
-$('sound').addEventListener('click', () => { const on = soundOn(); $('sound').textContent = on ? '\uD83D\uDD0A Sound ON \u00B7 tap to mute' : '\uD83D\uDD07 Sound OFF \u00B7 tap to turn on'; $('sound').setAttribute('aria-pressed', String(on)); noiseBurst(.15, .5); });
+$('sound').addEventListener('click', () => { const on = soundOn(); $('sound').innerHTML = on ? '<svg class="snd-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg> Sound ON &middot; tap to mute' : '<svg class="snd-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><path d="M16 9l6 6M22 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg> Sound OFF &middot; tap to turn on'; $('sound').setAttribute('aria-pressed', String(on)); noiseBurst(.15, .5); });
 
 /* ============================== static overlay ============================== */
 const st = $('static'), sx = st.getContext('2d'), simg = sx.createImageData(160, 90);
