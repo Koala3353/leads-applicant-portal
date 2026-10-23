@@ -230,6 +230,7 @@
 </head>
 <body data-loader-wait>
 <?!= include_('Loader') ?>
+<?!= include_('Ambience') ?>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 
 <div class="vignette" id="vignette" aria-hidden="true"></div>
@@ -428,7 +429,7 @@
     </div>
     <div class="fee" id="fee">
       <p class="eyebrow" style="margin:0 0 6px">REGISTRATION FEE</p>
-      <p style="margin:0">The registration fee is ₱<span id="feeAmt">4,500</span>, which covers accommodations, transportation, food, and activities for 3 days and 2 nights.<span id="feePrimer" hidden> For the full breakdown, please refer to the <a id="feePrimerLink" target="_blank" rel="noopener">primer</a>.</span></p>
+      <p style="margin:0">The registration fee is ₱<span id="feeAmt">4,500</span>, which covers accommodations, transportation, food, and activities for 3 days and 2 nights. You only pay once you are accepted; nothing is due now.<span id="feePrimer" hidden> For the full breakdown, please refer to the <a id="feePrimerLink" target="_blank" rel="noopener">primer</a>.</span></p>
     </div>
     <p class="mono db-foot" style="margin-top:16px">Your answers are recorded. Filing sends your complete profile to the core team.</p>
     <div class="actions"><button class="btn" type="button" id="submitBtn">File my application</button></div>
@@ -479,7 +480,11 @@
     if (icon) icon.textContent = isMuted ? '🔇' : '🔊';
     if (lbl) lbl.textContent = isMuted ? 'Muted' : 'Sound: ON';
     if (isMuted && drone) droneStop();
+    // the score (Ambience.html): off when muted, back on in the part of the game they are in
+    if (window.Ambience) { if (isMuted) Ambience.stop(.4); else if (scoreMode) Ambience.start(scoreMode); }
   }
+  let scoreMode = '';   // '' before BEGIN and during the jumpscare build-up, 'game' while searching, 'hub' after the passcode
+  function score(m) { scoreMode = m; if (!window.Ambience) return; if (!m || isMuted) Ambience.stop(m ? .4 : 1.2); else { if (audio) Ambience.use(audio); Ambience.start(m); } }
 
   function toggleMute() {
     isMuted = !isMuted;
@@ -979,6 +984,7 @@
     if (!roomsClearedOrder.includes(currentRoom.n)) {
       roomsClearedOrder.push(currentRoom.n);
     }
+    if (window.Ambience) Ambience.setTension(roomsClearedOrder.length / 3);   // each room: faster heartbeat, louder hum
 
     if (hadTimeout) {
       msStatus = 'SIGNAL LOST';
@@ -999,7 +1005,6 @@
       $('clearedEyebrow').textContent = 'THE OBSERVER IS STILL CONNECTED';
       $('clearedTitle').textContent = 'NO PRESENCE FOUND';
       $('clearedText').textContent = 'One camera remains. The background hum becomes slightly louder.';
-      droneStart(0.18);
     } else {
       $('clearedEyebrow').textContent = 'FEED CLEARED';
       $('clearedTitle').textContent = 'NO PRESENCE FOUND';
@@ -1014,6 +1019,7 @@
   /* Final Twist & Hallway Sequence per exact script */
   async function triggerFinalTwistSequence() {
     droneStop();
+    score('');   // the score fades out: the hallway is silent before the knock
     // pick the observer now, so its photo is surely loaded by the time the door opens
     const roll = Math.random();
     chosenMonster = MONSTERS.find(x => roll < x.upTo) || MONSTERS[0];
@@ -1098,6 +1104,7 @@
   let dbClockTimer = null;
   async function playDebrief(m) {
     show('reveal');
+    if (audio) score('hub');   // after the scare: the quieter score (only once BEGIN unlocked sound on this visit)
     const who = (window.__nick || 'Subject').toUpperCase();
     ['dbSubject', 'monsterName', 'monsterThreat', 'dbStatus'].forEach(id => { $(id).textContent = ''; });
     $('findings').textContent = ''; $('monsterLine').textContent = ''; $('monsterLine').classList.remove('in'); $('dbStamp').classList.remove('slam');
@@ -1251,7 +1258,8 @@
     setTimeout(() => {
       show('hub');
       renderFeeds();
-      droneStart(0.10);
+      score('game');
+      if (window.Ambience) Ambience.setTension(roomsClearedOrder.length / 3);
     }, 2000);
   });
 

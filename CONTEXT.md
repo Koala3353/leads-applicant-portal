@@ -788,6 +788,10 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 - Referrals: points = people who applied with your code + 1 if you used someone's code. The hub card shows points, the benefits, and the **first names** of who used your code (never their status).
 - Status: any status can be set from any other; CONFIRMED still needs APPROVED + VERIFIED.
 
+## Sound (Oct 23 2026)
+- `Ambience.html` (shared): the background score, generated with Web Audio (no music files to license or host). Hub: drone, slow minor chords, music box; starts at the first tap (browsers need one), **Sound on/off** chip bottom-left, remembered per browser, paused while the results film plays. Game: drone, chords, heartbeat + creaks that get faster each room, silent before the knock, the quieter hub score after the passcode; the Game's mute button stops it.
+- The knock and jumpscare are still the Drive MP3s (`GAME_SOUNDS` in GameApi.gs); the Executions log shows `knock ok, scare ok` when they load.
+
 ## Recent behaviour notes (Oct 2026)
 
 - **Game:** tapping an answer files it (no "Lock in" step); only open-text questions keep a Submit button. The screen darkens as each question's timer runs out (`#vignette`). There is no 2-minute search clock any more. The jumpscare plays the scare file at 30% volume (the noise layer carries it).

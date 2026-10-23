@@ -276,6 +276,13 @@
   .facts li.show{display:block}
   .facts b{color:var(--text);font-weight:700}
 
+  /* the background-music switch (Ambience.html), bottom left; I.R.I.S. has the bottom right */
+  .sound-chip{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60;
+    min-height:36px;padding:.35em .8em;border:0;cursor:pointer;font:700 .72rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;
+    background:var(--win);color:#000;box-shadow:var(--bevel-out),3px 3px 0 #000}
+  .sound-chip[aria-pressed="false"]{color:#555}
+  .sound-chip:active{box-shadow:var(--bevel-in)}
+  .sound-chip:focus-visible{outline:2px dotted #000;outline-offset:-5px}
   /* .intel, .file and .voice belonged to the FAQ and transcripts sections (removed Oct 23 2026) and are no longer used */
   .intel{margin:56px 0 0}
   body.applied .intel{display:none}
@@ -360,6 +367,8 @@
   @media (min-width:861px){
     .clock{transform:rotate(2.6deg);margin-top:18px;margin-left:-46px}
     .status{transform:rotate(-1.4deg);margin-left:14px}
+    /* with a file, the referral card fills the left column right under the countdown: no tucking into it then */
+    body.applied .clock{margin-left:0}
   }
   .hero .scrap{margin:18px 0 0 auto;--r:-5deg;font-size:.92rem}
   /* the note hints at the Threat Assessment: a scrawled red afterthought under the typed lines */
@@ -654,6 +663,8 @@
 </head>
 <body data-base="<?= baseUrl ?>" data-ref="<?= ref ?>" data-reveal="<?= revealAsked ? '1' : '' ?>" data-loader-wait>
 <?!= include_('Loader') ?>
+<?!= include_('Ambience') ?>
+<button type="button" class="sound-chip" id="soundChip" aria-pressed="true" aria-label="Background music">&#9834; Sound on</button>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 <div class="dark" id="dark" aria-hidden="true"></div>
 <? if (BRAND.effects.eyes) { ?>
@@ -1871,7 +1882,7 @@
     veil.append(frame); document.body.append(veil);
     let ready = false, marked = false, maxTimer = 0;
     const close = () => { window.removeEventListener('message', onMsg); document.removeEventListener('keydown', onKey); clearTimeout(maxTimer);
-      veil.classList.remove('on'); setTimeout(() => veil.remove(), 400); };
+      veil.classList.remove('on'); setTimeout(() => veil.remove(), 400); if (window.HubSound) HubSound.film(false); };
     const onKey = e => { if (e.key === 'Escape') close(); };
     const onMsg = e => {
       if (e.origin !== origin || e.source !== frame.contentWindow) return;
@@ -1879,6 +1890,7 @@
       if (d.type === 'leads-reveal-ready') {
         ready = true;
         veil.classList.add('on'); try { frame.focus(); } catch (err) { /* fine */ }   // only now does it cover the hub
+        if (window.HubSound) HubSound.film(true);   // the film has its own sound
         maxTimer = setTimeout(close, 45000);   // the film is ~15 s plus its end card; never strand anyone behind it
         frame.contentWindow.postMessage({ type: 'leads-reveal-init', id: a ? a.id : 'APP-0000', nick: a ? a.firstName : 'Preview',
           stamp: 'ACCEPTED' }, origin);   // own: the portal shows ACCEPTED/CONFIRMED; preview: the core team
@@ -1891,7 +1903,29 @@
     setTimeout(() => { if (!ready) close(); }, 12000);   // blocked or offline: quietly drop it, they'll get it next time
   }
 
-  window.runServer('home_getContext').then(render).catch(fail);   // .catch also covers a throw inside render   // retries when Google is busy (a rush of visitors)
+  /* background music (Ambience.html): on by default, starting at the first tap or key press (browsers only allow sound
+     after one); the chip turns it off, remembered in this browser. Paused while the results film plays. */
+  window.HubSound = (function () {
+    const chip = $('soundChip');
+    let want = true, film = false;
+    try { want = localStorage.getItem('leads-sound') !== 'off'; } catch (e) { /* storage blocked: default on */ }
+    const paint = () => { chip.textContent = want ? '\u266A Sound on' : '\u266A Sound off'; chip.setAttribute('aria-pressed', String(want)); };
+    const go = () => { if (want && !film && window.Ambience) Ambience.start('hub'); };
+    const first = e => {
+      if (e.target === chip) return;   // the chip's own click decides
+      window.removeEventListener('pointerdown', first, true); window.removeEventListener('keydown', first, true); go();
+    };
+    window.addEventListener('pointerdown', first, true); window.addEventListener('keydown', first, true);
+    chip.addEventListener('click', () => {
+      want = !want; paint();
+      try { localStorage.setItem('leads-sound', want ? 'on' : 'off'); } catch (e) { /* fine */ }
+      if (want) go(); else if (window.Ambience) Ambience.stop(.6);
+    });
+    paint();
+    return { film(on) { film = on; if (on) { if (window.Ambience) Ambience.stop(.5); } else go(); } };
+  })();
+
+  window.runServer('home_getContext').then(render).catch(fail);   // retries when Google is busy; .catch also covers a throw inside render
 </script>
 </body>
 </html>

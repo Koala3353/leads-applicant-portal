@@ -1,0 +1,132 @@
+<!-- Ambience.html (shared, integrator owns it): the background score, made in the browser with Web Audio, so there is no
+     music file to license, download or host. Included by Home.html (hub music, with a sound toggle) and Game.html (the
+     search, tension rises with each room). Browsers only allow sound after a tap or key press, so callers start it from one.
+
+     Ambience.start('hub' | 'game')   fades in (no-op if already playing; switching mode restarts it)
+     Ambience.stop(seconds)           fades out and stops every timer and node
+     Ambience.setTension(0..1)        game: faster heartbeat, louder drone, more creaks
+     Ambience.use(audioContext)       share the page's own AudioContext (the Game has one) instead of making a second
+     Ambience.playing()               true while the score is on
+
+     Layers: a low detuned drone through a slowly moving filter; slow minor chords (A minor, F, D minor, E) under a long
+     reverb; a sparse music box (hub) or a heartbeat with distant creaks and swells (game). Paused while the tab is hidden. -->
+<script>
+window.Ambience = (function () {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  let ac = null, master = null, verb = null, on = false, mode = 'hub', tension = 0, timers = [], live = [];
+  const CHORDS = [[57, 60, 64], [53, 57, 60], [50, 53, 57], [52, 56, 59]];   // MIDI: Am, F, Dm, E (the E major is the dread)
+  const BOX = [81, 84, 88, 86, 83, 80, 76, 79, 87];                           // high music-box notes: A minor with a few wrong ones
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+
+  function ctx() {
+    if (!AC) return null;
+    try { ac = ac || new AC(); if (ac.state === 'suspended') ac.resume(); } catch (e) { ac = null; }
+    return ac;
+  }
+  /* a long dark reverb from decaying noise (no impulse file needed) */
+  function makeVerb() {
+    const len = Math.floor(ac.sampleRate * 4.5), ir = ac.createBuffer(2, len, ac.sampleRate);
+    for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+    const cv = ac.createConvolver(); cv.buffer = ir;
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400;
+    cv.connect(lp); lp.connect(master);
+    return cv;
+  }
+  // while the tab is hidden the context is paused, so nothing new is queued (it would all play at once on return)
+  const later = (fn, ms) => { const t = setTimeout(() => { timers = timers.filter(x => x !== t); if (!on) return; if (document.hidden) later(fn, 2000); else fn(); }, ms); timers.push(t); };
+  const keep = n => { live.push(n); return n; };
+
+  function drone() {
+    const t = ac.currentTime, g = keep(ac.createGain()), lp = keep(ac.createBiquadFilter()), lfo = keep(ac.createOscillator()), lg = keep(ac.createGain());
+    lp.type = 'lowpass'; lp.frequency.value = 160; lp.Q.value = 6;
+    lfo.frequency.value = .06; lg.gain.value = 90; lfo.connect(lg); lg.connect(lp.frequency);
+    g.gain.value = mode === 'game' ? .07 : .045;
+    [55, 55 * 1.007, 82.4].forEach((f, i) => { const o = keep(ac.createOscillator()); o.type = i === 2 ? 'triangle' : 'sawtooth'; o.frequency.value = f; o.connect(lp); o.start(t); });
+    lp.connect(g); g.connect(master); g.connect(verb); lfo.start(t);
+    drone.gain = g;
+  }
+  let chordAt = 0;
+  function chord() {
+    const t = ac.currentTime + .05, len = mode === 'game' ? 7 : 9, notes = CHORDS[chordAt++ % CHORDS.length];
+    notes.forEach((m, i) => {
+      const o = ac.createOscillator(), g = ac.createGain(), lp = ac.createBiquadFilter();
+      o.type = 'triangle'; o.frequency.value = hz(m - 12); o.detune.value = (i - 1) * 6;
+      lp.type = 'lowpass'; lp.frequency.value = 700;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.022, t + 3); g.gain.linearRampToValueAtTime(.016, t + len - 2); g.gain.linearRampToValueAtTime(0, t + len + 1.5);
+      o.connect(lp); lp.connect(g); g.connect(verb); g.connect(master);
+      o.start(t); o.stop(t + len + 1.6);
+    });
+    later(chord, len * 1000);
+  }
+  function musicBox() {
+    const t = ac.currentTime + .02, m = BOX[Math.floor(Math.random() * BOX.length)];
+    [1, 2.01, 3.98].forEach((k, i) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine'; o.frequency.value = hz(m) * k;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime([.05, .014, .006][i], t + .006); g.gain.exponentialRampToValueAtTime(.0001, t + 2.4 - i * .6);
+      o.connect(g); g.connect(verb); g.connect(master); o.start(t); o.stop(t + 2.5);
+    });
+    later(musicBox, 1800 + Math.random() * 3800 + (Math.random() < .25 ? 4000 : 0));   // sometimes a long silence
+  }
+  function heartbeat() {
+    const t = ac.currentTime + .02;
+    [0, .26].forEach((d, i) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(62, t + d); o.frequency.exponentialRampToValueAtTime(38, t + d + .18);
+      g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime((i ? .2 : .32) * (.55 + tension * .45), t + d + .012); g.gain.exponentialRampToValueAtTime(.0001, t + d + .24);
+      o.connect(g); g.connect(master); o.start(t + d); o.stop(t + d + .3);
+    });
+    later(heartbeat, 1250 - tension * 450);
+  }
+  function creak() {   // a door or a floorboard somewhere else: a bandpassed saw that bends down
+    const t = ac.currentTime + .02, dur = 1.2 + Math.random() * 1.4;
+    const o = ac.createOscillator(), bp = ac.createBiquadFilter(), g = ac.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(140 + Math.random() * 60, t); o.frequency.linearRampToValueAtTime(70 + Math.random() * 30, t + dur);
+    bp.type = 'bandpass'; bp.frequency.value = 900 + Math.random() * 700; bp.Q.value = 14;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.05, t + .25); g.gain.linearRampToValueAtTime(0, t + dur);
+    o.connect(bp); bp.connect(g); g.connect(verb); o.start(t); o.stop(t + dur + .05);
+    later(creak, 9000 + Math.random() * 12000 - tension * 5000);
+  }
+  function swell() {   // rising filtered noise, like something taking a breath
+    const t = ac.currentTime + .02, dur = 3.5, len = Math.floor(ac.sampleRate * dur), b = ac.createBuffer(1, len, ac.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const n = ac.createBufferSource(), bp = ac.createBiquadFilter(), g = ac.createGain();
+    n.buffer = b; bp.type = 'bandpass'; bp.Q.value = 3; bp.frequency.setValueAtTime(300, t); bp.frequency.exponentialRampToValueAtTime(2200, t + dur);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.045 + tension * .03, t + dur * .85); g.gain.linearRampToValueAtTime(0, t + dur);
+    n.connect(bp); bp.connect(g); g.connect(verb); g.connect(master); n.start(t); n.stop(t + dur);
+    later(swell, 14000 + Math.random() * 12000);
+  }
+
+  function start(m) {
+    m = m === 'game' ? 'game' : 'hub';
+    if (on && m === mode) return;
+    if (on) stop(.3);
+    if (!ctx()) return;
+    mode = m; on = true; chordAt = 0;
+    master = ac.createGain(); master.gain.setValueAtTime(0, ac.currentTime); master.gain.linearRampToValueAtTime(mode === 'game' ? .9 : .8, ac.currentTime + 2.5);
+    master.connect(ac.destination);
+    verb = makeVerb();
+    drone(); chord();
+    if (mode === 'hub') later(musicBox, 2500);
+    else { later(heartbeat, 1500); later(creak, 6000); later(swell, 9000); }
+  }
+  function stop(fade) {
+    if (!on || !ac) return;
+    on = false; timers.forEach(clearTimeout); timers = [];
+    const m = master, nodes = live, f = Math.max(.05, fade === undefined ? 1.5 : fade), t = ac.currentTime;
+    live = []; master = null;
+    try { m.gain.cancelScheduledValues(t); m.gain.setValueAtTime(m.gain.value, t); m.gain.linearRampToValueAtTime(0, t + f); } catch (e) { /* ignore */ }
+    setTimeout(() => { nodes.forEach(n => { try { n.stop && n.stop(); } catch (e) { /* not started */ } try { n.disconnect(); } catch (e) { /* ignore */ } }); try { m.disconnect(); } catch (e) { /* ignore */ } }, f * 1000 + 100);
+  }
+  function setTension(x) {
+    tension = Math.max(0, Math.min(1, Number(x) || 0));
+    if (on && drone.gain && ac) drone.gain.gain.linearRampToValueAtTime(.07 + tension * .05, ac.currentTime + 2);
+  }
+  // a hidden tab doesn't need a score (and phones save battery): pause the whole context, resume on return
+  document.addEventListener('visibilitychange', () => {
+    if (!ac || !on) return;
+    try { document.hidden ? ac.suspend() : ac.resume(); } catch (e) { /* ignore */ }
+  });
+  return { start: start, stop: stop, setTension: setTension, use: c => { if (c && !ac) ac = c; }, playing: () => on };
+})();
+</script>
