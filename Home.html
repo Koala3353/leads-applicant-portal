@@ -1618,12 +1618,19 @@
 
     // FAQ + testimonials: only for people without a file yet
     document.body.classList.toggle('applied', !!a);
-    // with a file, the left column would be just the title (the pitch is hidden), so the status card (with the core
-    // team's note) and the referral card move under it; the countdown and SUBJECT_STATUS.EXE stay on the right.
-    // On a phone (one column) this puts the status first, right under the title.
+    // with a file, the left column would be just the title (the pitch is hidden), so the referral card moves under it.
+    // The status card (with the core team's note) stays on the right under SUBJECT_STATUS.EXE, so both columns are
+    // about the same height. On a phone (one column) the status card goes first, right under the title.
     if (a) {
-      const left = document.querySelector('.hero > div');
-      if (left && $('statusCard').parentNode !== left) left.append($('statusCard'), $('refCard'));
+      const left = document.querySelector('.hero > div'), right = $('substatCard') && $('substatCard').parentNode;
+      const one = matchMedia('(max-width:860px)');
+      const place = () => {
+        if (!left || !right) return;
+        if (one.matches) left.append($('statusCard'), $('refCard'));
+        else { left.append($('refCard')); $('substatCard').after($('statusCard')); }
+      };
+      place();
+      if (!window.__statusPlaced) { window.__statusPlaced = 1; try { one.addEventListener('change', place); } catch (e) { /* old Safari: fine */ } }
       if (main.dataset.scroll) main.closest('.cta').hidden = true;   // "Check my status" would only scroll to the card right below
     }
     if (!a) renderIntel(ctx);

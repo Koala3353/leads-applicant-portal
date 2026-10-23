@@ -354,10 +354,10 @@ const BRAND = {
     self: "That's your own code. Leave it blank, or use the code of whoever told you to apply.",
     inactive: "That referral code isn't active anymore. Leave it blank, or use someone else's.",
     cardTitle: 'REFERRALS.EXE',
-    cardLead: 'Know someone who should be watched too? Send them your link.',
+    cardLead: 'Know someone who should be watched too? Send them your link, or tell them to type your code in the referral field of the form.',
     pointsLabel: 'Referral points',
     perks: [   // the benefits, for both sides of a referral
-      'Each person who applies with your code: 1 point for you.',
+      'Each person who applies with your code: 1 point for you, the moment they apply. They don\'t need to be accepted.',
       'Applying with someone else\'s code: 1 point for you as well. They get theirs too.',
       'More points means an earlier pick at room booking, and other advantages at the camp itself.'
     ],
