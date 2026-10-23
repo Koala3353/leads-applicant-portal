@@ -454,7 +454,7 @@ const BRAND = {
                         E: ['happy', '{v}. You fill rooms. Camp has room.'],
                         other: ['thinking', '{v}. Filed under personality.'] },
       PastOrgs:       [['thinking', 'History recorded. Experience is a finding, not a requirement.'], ['happy', 'You have done this before. It shows.']],
-      OffsiteAvailability: { Yes: ['happy', 'Available on camp dates. Your spot is held.'], No: ['scared', 'Not available on camp dates. Message the core team before you continue.'] },
+      OffsiteAvailability: { Yes: ['happy', 'Available on camp dates. Your spot is held.'], No: ['thinking', 'Noted. If you are accepted, we will arrange something with you.'] },
       DataConsent:    { Y: ['happy', 'Consent recorded. Your file is used for LEADS and nothing else.'], N: ['scared', 'Without consent there is no file. Saying yes is required to apply.'] },
       // essays: said once each, when the answer reaches a decent length
       WhyParticipant:  [['thinking', 'Reason recorded. It sounds like you.'], ['happy', 'That is a real reason. It is going in your file.']],
