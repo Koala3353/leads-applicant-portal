@@ -7,6 +7,9 @@ Google Apps Script web app. Read `CONTEXT.md` before writing any code (rules, fi
 - **GitHub** = shared history. **Apps Script editor** = what runs. **clasp** syncs local files <-> editor.
 - `clasp push` updates the editor / test deployment only. Applicants see changes only after a manual
   *Deploy > Manage deployments > Edit > New version*. **Never publish. Tell the human to ask Keene.**
+- **One link forever.** The live deployment is `AKfycbwoL5I-i10w25U-nNqAlwfVEDF0NuQhWEHZq_EqMu9t3pszFNH72FuXhYXAH1TH2Fk`
+  (also hard-coded in `docs/go`, `docs/reveal` and every shared post). Publishing = *Edit* that deployment > *New version*.
+  Never use *New deployment* (it makes a different /exec link and breaks everything already shared).
 
 ## First time only
 1. `npm install -g @google/clasp && clasp login`
