@@ -670,6 +670,11 @@ apply_submit(form) → { ok:false, errors } | { ok:true, id }
 - **Results emails (sent by the core team, not the portal):** ACCEPTED gets the email plus the reveal link (`…/exec?reveal=1`). Not accepted gets the email with **no link**, and there is no film for them (the hub only plays it for ACCEPTED/CONFIRMED).
 - **Privacy:** the page never says anyone's result by itself (opened directly, the stamp reads REVIEWED). The hub sends the ID, nickname and stamp by `postMessage` to the film's origin only; nothing personal goes in its URL.
 
+### 9.0b The door page and the form's sound
+- **Share `https://koala3353.github.io/leads-applicant-portal/go/`, not the `/exec` link.** Google blocks sign-in inside Messenger / Instagram / Facebook in-app browsers, so the portal link shows a blank page there. The door page (`docs/go/index.html`, static, no sign-in) always loads, spots in-app browsers (Android: an "Open in Chrome" button; iPhone: "⋯ → Open in Safari" steps; both: copy link), reminds people to use their Ateneo account (with an account-chooser button), then sends them to the portal. `?ref=CODE` and `?page=pay` pass through. Personal Gmail visitors still reach the portal itself (deployment access is "Anyone with a Google account") and get its wrong-account help.
+- **GitHub Pages only hosts static files** (the door, the reveal film, the PA audio). The portal, the Sheet and sign-in run on Apps Script; Pages can't replace it.
+- **Apply sound:** `Ambience.start('form')` (dread stings, creaks, swells) plus PA announcements `Ambience.announce('p1'…'p5')`: opening the form, reaching Section 2, a minute idle, focusing the fear essay, the form reaching 100%. Each plays once, after a chime, while sound is on (the Sound chip; same `leads-sound` setting as the hub). The audio is `docs/pa/*.mp3` from GitHub Pages, script in `docs/pa/lines.json`, rebuilt by `docs/pa/make.sh` (placeholder macOS voice until an ElevenLabs key works).
+
 ### 9.1b Referrals (`Referrals.gs`, shared)
 
 - **Purpose:** referrals earn an advantage at camp, and the core team uses them to **separate friend groups**.
