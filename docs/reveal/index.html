@@ -249,7 +249,7 @@ $('skip').addEventListener('click', () => { if (embedded) { tell('leads-reveal-d
 document.addEventListener('keydown', e => { if (e.key === 'Escape') $('skip').click(); });
 $('open').addEventListener('click', () => {
   if (embedded) tell('leads-reveal-done', { open: true });
-  else location.href = params.get('back') && /^https:\/\/script\.google\.com\//.test(params.get('back')) ? params.get('back') : 'https://script.google.com/a/macros/student.ateneo.edu/s/AKfycbwoL5I-i10w25U-nNqAlwfVEDF0NuQhWEHZq_EqMu9t3pszFNH72FuXhYXAH1TH2Fk/exec';
+  else location.href = params.get('back') && /^https:\/\/script\.google\.com\//.test(params.get('back')) ? params.get('back') : 'https://script.google.com/macros/s/AKfycbwoL5I-i10w25U-nNqAlwfVEDF0NuQhWEHZq_EqMu9t3pszFNH72FuXhYXAH1TH2Fk/exec';
 });
 $('replay').addEventListener('click', () => { $('end').classList.remove('on'); start(); });
 

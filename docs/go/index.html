@@ -89,7 +89,7 @@
 </main>
 <script>
 (function () {
-  var PORTAL = 'https://script.google.com/a/macros/student.ateneo.edu/s/AKfycbwoL5I-i10w25U-nNqAlwfVEDF0NuQhWEHZq_EqMu9t3pszFNH72FuXhYXAH1TH2Fk/exec';
+  var PORTAL = 'https://script.google.com/macros/s/AKfycbwoL5I-i10w25U-nNqAlwfVEDF0NuQhWEHZq_EqMu9t3pszFNH72FuXhYXAH1TH2Fk/exec';
   var q = new URLSearchParams(location.search), ref = (q.get('ref') || '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 16);
   var page = (q.get('page') || '').replace(/[^a-z-]/g, '').slice(0, 12);
   var dest = PORTAL + (ref || page ? '?' + [ref ? 'ref=' + ref : '', page ? 'page=' + page : ''].filter(Boolean).join('&') : '');
