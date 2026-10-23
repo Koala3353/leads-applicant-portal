@@ -35,7 +35,7 @@ const PRELEADS_DAUNTING_OPTIONS = [
  */
 function preleadsRules_() {
   return {
-  FullName:   Object.assign({}, RULES.FullName, { requiredMsg: 'Full name is required.' }),
+  FullName:   Object.assign({}, RULES.FullName, { requiredMsg: 'Full name is required.', msg: 'Letters, spaces, , . \' - only (2 to 80 characters).' }),   // Apply's message asks for "Last, First"; Pre-LEADS doesn't
   Nickname:   Object.assign({}, RULES.Nickname, { requiredMsg: 'Nickname is required.', msg: 'Nickname must be letters only (up to 30 characters).' }),
   IDNumber:   Object.assign({}, RULES.IDNumber, { requiredMsg: RULES.IDNumber.msg }),
   YearLevel:  Object.assign({}, RULES.YearLevel, { requiredMsg: 'Year level must be between 1 and 5.', msg: 'Year level must be between 1 and 5.' }),

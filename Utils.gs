@@ -42,13 +42,16 @@ const COLS = [
   'Status', 'Requirements', 'Payment',                                    // the three tracks
   'ReviewedBy', 'LastUpdated', 'Notes',                                   // core team
   'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability', 'DataConsent',
-  'WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership',   // the 4 essays (Rumors was dropped Oct 2026)
+  'WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership',   // essays (Rumors dropped; FirstImpression and FirstOvernight
+                                                                          // left the form Oct 23 2026: columns kept for old rows)
   'GameAnswers',                                                          // Game page choices (JSON)
   'PaymentProof',                                                         // Drive link to the uploaded proof of payment
   'ReferralCode', 'ReferredBy', 'ReferrerID',                             // own code to share / code they used / who that is (Referrals.gs)
   'MessageToApplicant',                                                   // core team: a note shown on the applicant's hub (plain text)
   'RevealSeen',                                                           // when they first watched the results reveal (HomeApi.gs)
-  'IntegrityFlags', 'IntegrityLog'                                        // essay paste / tab-switch signals from Apply (ApplyApi.gs integrityFlags_)
+  'IntegrityFlags', 'IntegrityLog',                                       // essay paste / tab-switch signals from Apply (ApplyApi.gs integrityFlags_)
+  'Environment',                                                          // where they feel comfortable sharing (pick any, "A; B")
+  'EyePhoto'                                                              // Drive link to the eye-scan photo from the Game (GameApi.gs)
 ];
 
 /** The Applicants header row as it is in the Sheet right now (read once per run). Falls back to COLS on an empty tab. */
@@ -72,21 +75,24 @@ const STATUSES = ['SUBMITTED', 'UNDER REVIEW', 'WAITLISTED', 'ACCEPTED', 'REJECT
 const REQUIREMENT_STATES = ['NONE', 'PARTIAL', 'SUBMITTED', 'RETURNED', 'APPROVED'];
 const PAYMENT_STATES = ['NONE', 'SUBMITTED', 'VERIFIED', 'REJECTED'];
 
-// Which status can move to which. Anything not listed here is blocked.
+// Which status can move to which. Anything not listed here is blocked. Since Oct 23 2026 the core team can skip stages
+// (SUBMITTED straight to ACCEPTED) and correct a decision (ACCEPTED -> WAITLISTED, REJECTED -> ACCEPTED, ...).
+// Still guarded: CONFIRMED needs Requirements APPROVED + Payment VERIFIED, and SUBMITTED is only set by applying.
+const DECISIONS_ = ['UNDER REVIEW', 'ACCEPTED', 'WAITLISTED', 'REJECTED'];
 const NEXT_STATUS = {
-  'SUBMITTED':    ['UNDER REVIEW', 'REJECTED', 'WITHDRAWN'],
+  'SUBMITTED':    DECISIONS_.concat('WITHDRAWN'),
   'UNDER REVIEW': ['ACCEPTED', 'WAITLISTED', 'REJECTED', 'WITHDRAWN'],
-  'WAITLISTED':   ['ACCEPTED', 'REJECTED', 'WITHDRAWN'],
-  'ACCEPTED':     ['CONFIRMED', 'WITHDRAWN'],   // CONFIRMED also needs Requirements APPROVED + Payment VERIFIED
-  'CONFIRMED':    ['WITHDRAWN'],
-  'REJECTED':     [],
-  'WITHDRAWN':    []
+  'WAITLISTED':   ['UNDER REVIEW', 'ACCEPTED', 'REJECTED', 'WITHDRAWN'],
+  'ACCEPTED':     ['UNDER REVIEW', 'WAITLISTED', 'REJECTED', 'CONFIRMED', 'WITHDRAWN'],
+  'CONFIRMED':    ['WITHDRAWN'],                       // back to ACCEPTED happens by itself when Payment/Requirements move back
+  'REJECTED':     ['UNDER REVIEW', 'ACCEPTED', 'WAITLISTED'],   // undo a mistake
+  'WITHDRAWN':    ['UNDER REVIEW']                     // undo a mistake; the decision is set again from there
 };
 
 // One set of rules for the page AND the server. Pages get these from formRules_() (via apply_getForm).
 // stage 'apply' = the Apply page. (Camp info like emergency contacts is collected in the requirements Google Form.)
 const RULES = {
-  FullName:         { stage: 'apply', required: true, pattern: "^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ .'-]{1,79}$", msg: 'Letters, spaces, . \' - only (2 to 80 characters).' },
+  FullName:         { stage: 'apply', required: true, pattern: "^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ ,.'-]{1,79}$", msg: 'Last name, First name. Letters, spaces, , . \' - only (2 to 80 characters).' },
   Nickname:         { stage: 'apply', required: true, pattern: "^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ .'-]{0,29}$", msg: 'What we should call you at camp (up to 30 letters).' },
   IDNumber:         { stage: 'apply', required: true, pattern: '^\\d{6}$', msg: 'Your 6-digit Ateneo ID number, e.g. 241234.',
                       idMin: 200000, idMax: 280000, rangeMsg: 'Invalid ID number.' },   // range kept vague on purpose
@@ -97,13 +103,14 @@ const RULES = {
   Mobile:           { stage: 'apply', required: true, phone: true, pattern: '^09\\d{9}$', msg: '11 digits starting with 09, e.g. 09171234567.' },
   MBTI:             { stage: 'apply', pattern: '^[EI][NS][TF][JP]$', msg: 'Pick one of the 16 types (or leave it blank).' },
   PastOrgs:         { stage: 'apply', maxLen: 500, multiline: true, msg: 'Keep it under 500 characters.' },
-  FirstOvernight:   { stage: 'apply', required: true, options: ['Yes', 'No'], msg: 'Pick Yes or No.' },
   OffsiteAvailability: { stage: 'apply', required: true, options: ['Yes', 'No'], msg: 'Pick Yes or No.' },
   DataConsent:      { stage: 'apply', required: true, options: ['Y'], msg: 'You need to consent to data processing (RA 10173) to apply.' },
   WhyParticipant:   { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
-  FirstImpression:  { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
   TakesLeadership:  { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
   FearLeadership:   { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
+  // pick any that apply, saved as "A; B"; "No particular preference" stands alone
+  Environment:      { stage: 'apply', required: true, multi: true, maxLen: 400, msg: 'Pick at least one.',
+                      options: ['Small-group discussions', 'Individual reflection', 'Interactive games and team challenges', 'Listening to others share their experiences', 'Open discussions with the whole group', 'No particular preference'] },
   ReferredBy:       { stage: 'apply', upper: true, pattern: '^([A-Z]{1,12}[0-9]{0,3}|[A-Z]{1,4}-[A-Z0-9]{4})$', msg: "A referral code is the person's name, like BEA. Leave it blank if nobody referred you." }
 };
 
@@ -263,6 +270,9 @@ const SETTINGS_SCHEMA = [
   { key: 'PaymentDetails', type: 'text', def: '', help: 'Shown on the payment page: amount, account names, what to write in the notes. Line breaks are kept.' },
   { key: 'PaymentQRCodes', type: 'text', def: '', help: 'One QR per line: Label | link to the QR image, e.g. GCash (Juan Dela Cruz) | https://drive.google.com/file/d/... (the Drive file does not need to be shared).' },
   { key: 'PaymentDeadline', type: 'date', def: null, help: 'Last day to send proof of payment, e.g. 2026-12-01 23:59 (shown to applicants)' },
+  { key: 'RegistrationFee', type: 'int', def: 4500, help: 'Pesos, shown before filing: "covers accommodations, transportation, food, and activities for 3 days and 2 nights".' },
+  { key: 'PrimerLink', type: 'text', def: '', help: 'Optional link to the fee primer (full breakdown), shown with the fee. Blank = no link.' },
+  { key: 'EyeFolder', type: 'text', def: '', help: 'Drive folder for the Game eye scans (EYE_<ID>). Made automatically on the first upload; private to the script owner.' },
   { key: 'PaymentFolder', type: 'text', def: '', help: 'Drive folder where uploaded proofs are saved. Made automatically on the first upload; share it with the core team.' },
   // 03 requirements
   { key: 'RequirementsOpen', type: 'bool', def: false, help: 'STEP 03. Tick to open Requirements for accepted applicants whose Payment is VERIFIED. The forms are listed in the Requirements tab.' },
@@ -527,6 +537,14 @@ function validateFields_(input, rules) {
     }
     if (rule.pattern && !new RegExp(rule.pattern).test(v)) { errors[field] = rule.msg; return; }
     if (rule.idMin !== undefined && (Number(v) < rule.idMin || Number(v) > rule.idMax)) { errors[field] = rule.rangeMsg; return; }
+    if (rule.multi) {   // "A; B": every part must be an option; "No particular preference" alone wins over the rest
+      let parts = v.split(';').map(x => x.trim()).filter((x, i, a) => x && a.indexOf(x) === i);
+      if (!parts.length || parts.some(x => rule.options.indexOf(x) < 0)) { errors[field] = rule.msg; return; }
+      const none = rule.options[rule.options.length - 1];
+      if (parts.indexOf(none) >= 0) parts = [none];
+      clean[field] = parts.join('; ');
+      return;
+    }
     if (rule.options && rule.options.indexOf(v) < 0) { errors[field] = rule.msg; return; }
     if (rule.min !== undefined) {
       const n = Number(v);

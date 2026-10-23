@@ -32,6 +32,20 @@
     text-transform: uppercase; box-shadow: 0 0 12px rgba(255,0,0,.35); pointer-events: none;
   }
   .corner-notif.show { display: block; animation: g-in .3s ease-out; }
+  /* ● SESSION RECORDING while they search (RecSec doc) */
+  .sess-rec { position: fixed; top: calc(14px + env(safe-area-inset-top, 0px)); left: calc(14px + env(safe-area-inset-left, 0px)); z-index: 9400;
+    display: none; align-items: center; gap: 7px; padding: 5px 9px; background: rgba(5,5,5,.85); color: #ff3b3b;
+    font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; pointer-events: none; }
+  .sess-rec::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #ff2020; animation: ld-pulse 1.2s ease-in-out infinite; }
+  body.in-session .sess-rec { display: inline-flex; }
+  /* eye scan upload + registration fee note */
+  .eye-drop { position: relative; display: grid; place-items: center; gap: 8px; min-height: 170px; margin: 14px 0; padding: 18px; text-align: center;
+    border: 2px dashed var(--line); background: rgba(0,0,0,.25); cursor: pointer; }
+  .eye-drop:hover, .eye-drop:focus-within { border-color: var(--glow); }
+  .eye-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .eye-drop img { max-width: min(100%, 320px); max-height: 200px; object-fit: contain; border: 2px solid #000; }
+  .fee { margin-top: 18px; padding: 12px 14px; border: 1px dashed var(--glow); background: rgba(255,255,0,.05); }
+  .fee a { color: var(--glow); }
 
   /* ---- CCTV wall ---- */
   .feeds { display: grid; gap: 22px; margin: 22px 0 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); }
@@ -217,6 +231,7 @@
 
 <div class="vignette" id="vignette" aria-hidden="true"></div>
 <div class="corner-notif" id="cornerNotif" role="status" aria-live="polite"></div>
+<div class="sess-rec" aria-hidden="true">Session recording</div>
 
 <!-- JUMP SCARE -->
 <div class="jump" id="jump" aria-hidden="true">
@@ -365,6 +380,23 @@
     <p class="mono bad" id="passError" hidden>INCORRECT PASSCODE. TRY AGAIN.</p>
   </div>
 
+  <!-- 10b. EYE SCAN (after the passcode): a close-up photo of one eye, filed as EYE_<ID> in Drive (GameApi.gs game_uploadEye) -->
+  <div class="card state" id="state-eyescan">
+    <div class="winbar red"><span>EYE_SCAN.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+    <p class="eyebrow">ACCESS GRANTED.</p>
+    <h2>EYE SCAN REQUIRED</h2>
+    <p>Before you proceed, we need to verify who’s watching.</p>
+    <p>Please upload a clear, close-up photo of one of your eyes. It is filed as EYE_<span id="eyeIdNo">IDNumber</span>, so the file name doesn’t matter.</p>
+    <form id="eyeForm" novalidate>
+      <label class="eye-drop" for="eyeFile">
+        <input type="file" id="eyeFile" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif">
+        <span id="eyeInner"><b>Choose a photo</b><br><span class="mono" style="font-size:.8rem">or take one with your camera</span></span>
+      </label>
+      <div class="actions"><button class="btn" type="submit" id="eyeBtn" disabled>Upload and continue</button></div>
+    </form>
+    <p class="mono" id="eyeMsg" role="status" aria-live="polite"></p>
+  </div>
+
   <!-- 11. DEBRIEF FILE & CASE SHEET -->
   <div class="card state" id="state-reveal">
     <div class="winbar red"><span>DEBRIEF_26-27.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
@@ -386,6 +418,10 @@
         <p class="db-note" id="monsterLine"></p>
         <span class="stamp-ink db-stamp" id="dbStamp" aria-hidden="true">Observed</span>
       </div>
+    </div>
+    <div class="fee" id="fee">
+      <p class="eyebrow" style="margin:0 0 6px">REGISTRATION FEE</p>
+      <p style="margin:0">The registration fee is ₱<span id="feeAmt">4,500</span>, which covers accommodations, transportation, food, and activities for 3 days and 2 nights.<span id="feePrimer" hidden> For the full breakdown, please refer to the <a id="feePrimerLink" target="_blank" rel="noopener">primer</a>.</span></p>
     </div>
     <p class="mono db-foot" style="margin-top:16px">Your answers are recorded. Filing sends your complete profile to the core team.</p>
     <div class="actions"><button class="btn" type="button" id="submitBtn">File my application</button></div>
@@ -671,8 +707,9 @@
   }
 
   function show(name) {
-    ['loading', 'error', 'warning', 'alert', 'hub', 'room', 'cleared', 'twist', 'postjump', 'passcode', 'reveal', 'done']
+    ['loading', 'error', 'warning', 'alert', 'hub', 'room', 'cleared', 'twist', 'postjump', 'passcode', 'eyescan', 'reveal', 'done']
       .forEach(s => { const el = $('state-' + s); if (el) el.classList.toggle('show', s === name); });
+    document.body.classList.toggle('in-session', ['alert', 'hub', 'room', 'cleared', 'twist'].indexOf(name) >= 0);
     if (name !== 'loading' && window.Loader) Loader.hide();
   }
 
@@ -761,7 +798,7 @@
       b.type = 'button';
       b.className = 'feed' + (done ? ' cleared' : '');
       if (done) b.setAttribute('aria-disabled', 'true');
-      b.setAttribute('aria-label', 'Camera 0' + r.n + ', ' + r.name + (done ? ', cleared' : ', ' + r.qs.length + ' questions'));
+      b.setAttribute('aria-label', 'Camera 0' + r.n + ', ' + r.name + (done ? ', checked' : ', ' + r.qs.length + ' questions'));
       if (!done && r.n === haunted) b.classList.add('haunted');
       b.innerHTML =
         '<span class="feed-bar" aria-hidden="true"><span>CAM_0' + r.n + '.AVI</span><i><b>_</b><b>&#9633;</b><b>&#215;</b></i></span>' +
@@ -769,7 +806,7 @@
           '<svg viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice">' + SCENES[r.n] + '</svg>' +
           '<span class="osd tl">CH0' + r.n + '</span><span class="osd tr">REC</span>' +
           '<span class="osd bl">SP <span class="t" data-clock></span></span><span class="osd br" data-date></span>' +
-          '<span class="feed-nosig">NO SIGNAL</span><span class="feed-stamp">CLEARED</span>' +
+          '<span class="feed-nosig">NO SIGNAL</span><span class="feed-stamp">CHECKED</span>' +
         '</span></span>' +
         '<span class="feed-info" aria-hidden="true"><span class="feed-name">' + r.name + '</span>' +
           '<span class="feed-chips"><span class="chip">' + r.qs.length + ' QUESTIONS</span><span class="chip time">' + r.secs + 's / QUESTION' + (openSecs(r) ? ' · OPEN Q ' + openSecs(r) + 's' : '') + '</span></span>' +
@@ -1043,7 +1080,7 @@
     const input = $('passInput').value.trim().toUpperCase();
     if (input === 'LEADS') {
       $('passError').hidden = true;
-      playDebrief(chosenMonster);
+      if (hasEye) playDebrief(chosenMonster); else show('eyescan');
     } else {
       $('passError').hidden = false;
       playStaticGlitch();
@@ -1139,6 +1176,7 @@
         kuya('excited', 'File received. You are now on record as ' + res.id + '.');
         return;
       }
+      if (res && res.eye) { hasEye = false; show('eyescan'); $('eyeMsg').textContent = 'Upload your eye scan first.'; return; }
       if (res && res.errors) {
         try { sessionStorage.setItem('leads-apply-errors', JSON.stringify(res.errors)); } catch (e) {}
         go(BASE + '?page=apply', 'Fix my application', 'A few answers on the form need fixing. Your assessment is saved.');
@@ -1182,8 +1220,12 @@
       window.__nick = data.nickname || '';
       paintStatus();
 
+      hasEye = !!data.hasEye;
+      $('eyeIdNo').textContent = data.idNumber || 'IDNumber';
+      if (data.fee) $('feeAmt').textContent = Number(data.fee).toLocaleString('en-PH');
+      if (data.primer) { $('feePrimerLink').href = data.primer; $('feePrimer').hidden = false; }
       if (ROOMS.every(roomDone)) {
-        playDebrief(chosenMonster);
+        if (hasEye) playDebrief(chosenMonster); else show('eyescan');   // a reload after the passcode lands on the eye scan
       } else {
         show('warning');
       }
@@ -1232,6 +1274,59 @@
   });
   $('btnContinue').addEventListener('click', () => show('passcode'));
   $('passForm').addEventListener('submit', handlePasscode);
+
+  /* Eye scan: big photos are shrunk to 1600 px JPEG here (fast to send); HEIC goes as it is. Up to 5 MB. */
+  let hasEye = false, eyePicked = null;
+  const eyeMsg = (t, bad) => { $('eyeMsg').textContent = t || ''; $('eyeMsg').className = 'mono' + (bad ? ' bad' : ''); };
+  function eyeShrink(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image(), u = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(u);
+        const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        cv.toBlob(b => b ? resolve(new File([b], 'eye.jpg', { type: 'image/jpeg' })) : reject(), 'image/jpeg', .88);
+      };
+      img.onerror = () => { URL.revokeObjectURL(u); reject(); };
+      img.src = u;
+    });
+  }
+  $('eyeFile').addEventListener('change', e => {
+    let f = e.target.files && e.target.files[0];
+    eyePicked = null; $('eyeBtn').disabled = true; eyeMsg('');
+    if (!f) return;
+    const ext = (String(f.name).match(/\.([a-z]+)$/i) || [, ''])[1].toLowerCase();
+    if (!f.type && /^hei[cf]$/.test(ext)) f = new File([f], f.name, { type: 'image/' + ext });
+    if (!/^image\/(png|jpe?g|webp|heic|heif)$/.test(f.type)) return eyeMsg('Upload a photo (JPG, PNG, WEBP or HEIC).', true);
+    const done = x => {
+      if (x.size > 5 * 1024 * 1024) return eyeMsg('That photo is over 5 MB. Take a closer, smaller one.', true);
+      eyePicked = x; $('eyeBtn').disabled = false;
+      const inner = $('eyeInner'); inner.textContent = '';
+      if (!/hei[cf]/.test(x.type)) { const img = new Image(), u = URL.createObjectURL(x); img.onload = img.onerror = () => URL.revokeObjectURL(u); img.src = u; img.alt = 'Your eye photo'; inner.appendChild(img); }
+      const n = document.createElement('div'); n.className = 'mono'; n.style.fontSize = '.8rem'; n.textContent = 'Ready: ' + Math.ceil(x.size / 1024) + ' KB'; inner.appendChild(n);
+    };
+    if (/^image\/(png|jpe?g|webp)$/.test(f.type) && f.size > 700 * 1024) eyeShrink(f).then(done).catch(() => done(f)); else done(f);
+  });
+  $('eyeForm').addEventListener('submit', e => {
+    e.preventDefault();
+    if (!eyePicked || $('eyeBtn').disabled) return;
+    $('eyeBtn').disabled = true; eyeMsg('Scanning…');
+    if (window.Loader) Loader.show('Scanning your eye…');
+    const reader = new FileReader();
+    reader.onload = () => {
+      const s = String(reader.result), data = s.slice(s.indexOf(',') + 1);
+      call('game_uploadEye', { type: eyePicked.type, data: data }).then(r => {
+        if (window.Loader) Loader.hide();
+        if (!r || !r.ok) { $('eyeBtn').disabled = false; return eyeMsg((r && r.error) || 'That did not go through. Try again.', true); }
+        hasEye = true; eyePicked = null;
+        kuya('thinking', 'Eye scan on file. Identity confirmed.');
+        playDebrief(chosenMonster);
+      }).catch(err => { if (window.Loader) Loader.hide(); $('eyeBtn').disabled = false; eyeMsg((err && err.message) || 'That did not go through. Try again.', true); });
+    };
+    reader.onerror = () => { if (window.Loader) Loader.hide(); $('eyeBtn').disabled = false; eyeMsg('That photo could not be read. Try another one.', true); };
+    reader.readAsDataURL(eyePicked);
+  });
   $('submitBtn').addEventListener('click', submit);
   $('retry').addEventListener('click', load);
   $('muteBtn').addEventListener('click', toggleMute);

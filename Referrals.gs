@@ -81,6 +81,13 @@ function activeReferralCodes_() {
   return out;
 }
 
+/** "Dela Cruz, Juan P." -> "Juan"; "Juan P. Dela Cruz" -> "Juan" (the form asks for Last name, First name). */
+function firstName_(fullName) {
+  const s = String(fullName || '').trim();
+  const part = s.indexOf(',') >= 0 ? s.slice(s.indexOf(',') + 1) : s;
+  return (part.trim().split(/\s+/)[0] || '').slice(0, 30);
+}
+
 /** All referral codes in use (for uniqueness), from rows already read. */
 function referralCodesIn_(values) {
   const c = cols_().indexOf('ReferralCode'), set = new Set();
@@ -90,8 +97,10 @@ function referralCodesIn_(values) {
 }
 
 /**
- * For the hub: this applicant's code (made now if they applied before referrals existed) and how many people
- * applied with it. Never returns who those people are (RA 10173): counts only.
+ * For the hub: this applicant's code (made now if they applied before referrals existed), how many people applied
+ * with it and their FIRST NAMES only (core team decision, Oct 23 2026: nothing else, never their status), and points:
+ * 1 per person who applied with your code + 1 if you applied with someone else's. Points decide the advantage at room
+ * booking and at camp.
  */
 function referralInfo_(found) {
   const a = found.data;
@@ -113,19 +122,26 @@ function referralInfo_(found) {
     if (!made) return null;
     code = made;
   }
-  // Only how many applied with the code. Never their statuses: that would tell a referrer whether a friend got in
-  // (RA 10173). One read of the Status column instead of one call per referral.
+  // How many applied with the code, and their first names. Never their statuses: that would tell a referrer whether a
+  // friend got in (RA 10173). One read of three columns instead of one call per referral.
   let applied = 0;
+  const names = [];
   const sh = sheet_(SHEET.APPLICANTS), last = sh.getLastRow(), cRef = cols_().indexOf('ReferrerID');
   if (last >= 2 && cRef >= 0) {
     const refs = sh.getRange(2, cRef + 1, last - 1, 1).getValues();
     const stat = sh.getRange(2, col_('Status') + 1, last - 1, 1).getValues();
+    const full = sh.getRange(2, col_('FullName') + 1, last - 1, 1).getValues();
     for (let i = 0; i < refs.length; i++) {
-      if (String(refs[i][0]).trim() === String(a.ApplicantID) && String(stat[i][0]).trim() !== 'WITHDRAWN') applied++;
+      if (String(refs[i][0]).trim() === String(a.ApplicantID) && String(stat[i][0]).trim() !== 'WITHDRAWN') {
+        applied++;
+        names.push(firstName_(full[i][0]));
+      }
     }
   }
+  const usedCode = String(a.ReferredBy || '').trim();
   const counts = { applied: applied };
-  return { code: code, link: portalUrl_() + '?ref=' + encodeURIComponent(code), counts: counts, open: isOpen_() };
+  return { code: code, link: portalUrl_() + '?ref=' + encodeURIComponent(code), counts: counts, open: isOpen_(),
+    names: names.filter(Boolean).slice(0, 50), usedCode: usedCode, points: applied + (usedCode ? 1 : 0) };
 }
 
 /**

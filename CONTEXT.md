@@ -137,7 +137,7 @@ Camp info (emergency contact, dietary, medical, shirt size) and requirement file
 | **Payment** | `NONE` → `SUBMITTED` → `VERIFIED`; `REJECTED` = upload again | the upload sets SUBMITTED; the core team verifies/rejects |
 | **Requirements** | `NONE` → `PARTIAL` → `SUBMITTED` → `APPROVED`; `RETURNED` = fix and resend | the core team |
 
-**Your code never changes these** (the proof upload's SUBMITTED goes through `setTrack_`). Allowed status moves (`NEXT_STATUS`): SUBMITTED → UNDER REVIEW, REJECTED, WITHDRAWN · UNDER REVIEW → ACCEPTED, WAITLISTED, REJECTED, WITHDRAWN · WAITLISTED → ACCEPTED, REJECTED, WITHDRAWN · ACCEPTED → CONFIRMED (only if APPROVED **and** VERIFIED), WITHDRAWN · CONFIRMED → WITHDRAWN · REJECTED, WITHDRAWN → final.
+**Your code never changes these** (the proof upload's SUBMITTED goes through `setTrack_`). Allowed status moves (`NEXT_STATUS`, Oct 23 2026: stages can be skipped and decisions corrected): SUBMITTED → UNDER REVIEW, ACCEPTED, WAITLISTED, REJECTED, WITHDRAWN · UNDER REVIEW / WAITLISTED / ACCEPTED / REJECTED → any other decision · ACCEPTED → CONFIRMED (only if APPROVED **and** VERIFIED) · CONFIRMED → WITHDRAWN · WITHDRAWN → UNDER REVIEW.
 
 **Unlock rules live only in `progress_(applicantData)`. Never re-implement them.**
 Every step after the decision needs Status **ACCEPTED/CONFIRMED** and opens **in order**, each only once the core team switches it on:
@@ -781,6 +781,12 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 - **Activity tab:** submits, uploads, reports, every WARN / ERROR / CHANGE are always written, even in a rush (only verbose routine rows are capped at 40/min). Hand edits logged as CHANGE: Status / Requirements / Payment (bulk pastes: one row per applicant with the new value), MessageToApplicant (also pasted blocks), **every Settings value** (e.g. `setting ResultsReleased: FALSE → TRUE by …`) and the Admins tab. Draft saves and referral searches go to Executions (routine) unless `ActivityVerbose` is ticked; a failed one still gets a row.
 - **Hidden decisions** also hide Payment, Requirements and PaymentProof (they read NONE) until `ResultsReleased`.
 - **Apply autosave strip** (`#saveBar`): sticky at the top of the form, shows *saved on this device / saving / saved to your account · time / offline*, with a **Save now** button (forces a sync, at most one every 4 s).
+
+## RecSec doc sync (Oct 23 2026)
+- Apply follows the RecSec masterdoc (Reg Content tab): "What is LEADS?" (BRAND.hero.lede, also the hub) + the doc's consent wording; name as *Last name, First name*; essays say "3 to 5 sentences"; new **Environment** question (pick any, saved `A; B`; *No particular preference* stands alone). *First impression* (deleted in the doc) and *First overnight* (team decision) left the form; their columns stay for old rows.
+- Game: after the passcode, **EYE SCAN REQUIRED** (`game_uploadEye`): a photo saved as `EYE_<ID>` in Settings › `EyeFolder` (made on the first upload), linked in the draft (server-side only) and then Applicants › `EyePhoto`. Filing is refused without it. The file screen shows the fee (Settings › `RegistrationFee`, default 4500; `PrimerLink` optional). Feeds are stamped CHECKED; ● SESSION RECORDING shows during the search.
+- Referrals: points = people who applied with your code + 1 if you used someone's code. The hub card shows points, the benefits, and the **first names** of who used your code (never their status).
+- Status: stages can be skipped (SUBMITTED → ACCEPTED) and decisions corrected; CONFIRMED still needs APPROVED + VERIFIED.
 
 ## Recent behaviour notes (Oct 2026)
 

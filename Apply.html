@@ -308,6 +308,19 @@
     color: var(--muted);
     margin-top: 14px;
   }
+  /* What is LEADS? (top of Section 1) and the pick-any Environment boxes (same tick as the consent box) */
+  .about-leads { margin: 0 0 18px; padding: 14px 16px; background: var(--paper, #e6e1d1); color: var(--paper-ink, #1b1b1b);
+    font-family: var(--type, 'Courier New', monospace); line-height: 1.55; box-shadow: 4px 4px 0 #000; }
+  .about-leads .about-k { font-family: var(--mono); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-size: .76rem; margin-bottom: 6px; }
+  .env-opts { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+  .env-opt { position: relative; display: flex; align-items: flex-start; gap: 12px; min-height: 48px; padding: 12px 14px; cursor: pointer;
+    background: #060606; border: 2px inset #7a7a7a; font-weight: 400; line-height: 1.4; }
+  .env-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .env-opt input:checked + .consent-tick::after { content: ""; position: absolute; left: 7px; top: 2px; width: 7px; height: 13px;
+    border: solid #000; border-width: 0 3px 3px 0; transform: rotate(45deg); }
+  .env-opt input:focus-visible + .consent-tick { outline: 3px solid var(--sky); outline-offset: 3px; }
+  .env-opt:has(input:checked) { border-color: var(--glow); color: var(--glow); }
+  .field.has-error .env-opt { border-color: var(--danger); }
   /* the autosave strip: sticks to the top of the screen while they scroll the form, with a Save now button */
   .savebar { position: sticky; top: calc(8px + env(safe-area-inset-top, 0px)); z-index: 30; display: flex; align-items: center; gap: 10px;
     margin: 0 0 14px; padding: 6px 6px 6px 12px; background: var(--win, #c0c0c0); color: #000; box-shadow: var(--bevel-out), 3px 3px 0 #000;
@@ -482,6 +495,9 @@
   .intake .char-counter{color:#5a5240}.intake .char-counter.valid{color:#1d5a1d}.intake .char-counter.error{color:#b00000}
   .intake .consent-box{background:#fff;color:#111;border:2px inset #9a9a9a}
   .intake .consent-box:has(input:checked){border-color:#1d5a1d}
+  .intake .field label.env-opt{background:#fff;color:#111;border:2px inset #9a9a9a;text-transform:none;letter-spacing:normal;font-family:inherit;font-weight:400;font-size:1rem}
+  .intake .field label.env-opt:has(input:checked){border-color:#1d5a1d;color:#111;background:#f2f8ef}
+  .intake .field.has-error label.env-opt{border-color:#c00000}
   .intake .consent-box:has(input:checked) .consent-text{color:#1d5a1d}
   .intake .prefilled{box-shadow:inset 4px 0 0 #e0c200}
   .intake .error-summary{background:#fff0f0;color:#1b1b1b;border-color:#c00000}
@@ -611,7 +627,7 @@
         <span class="tape-title">CCTV Verification Progress</span>
         <span class="tape-pct" id="tapePercentText">0% COMPLETE</span>
       </div>
-      <div class="tape-progress" id="tapeProgressBar" data-label="00 / 16">
+      <div class="tape-progress" id="tapeProgressBar" data-label="00 / 15">
         <span id="tapeBarFill" style="--p: 0%"></span>
       </div>
     </div>
@@ -641,26 +657,30 @@
         <h2>Section 1 // Primary Subject Identification & Clearance</h2>
         <p>[LEVEL 1 CLEARANCE] Personal data, privacy authorization & MEA membership records.</p>
       </div>
+      <div class="about-leads">
+        <p class="about-k">What is LEADS?</p>
+        <p><?= BRAND.hero.lede ?></p>
+      </div>
 
       <div class="form-grid">
         <!-- Q.01 DataConsent (Moved to Q.01) -->
         <div class="field full" id="wrap-DataConsent">
-          <span class="q-num">Q.01 / 16</span>
+          <span class="q-num">Q.01 / 15</span>
           <p class="consent-title" id="consentTitle">Data Privacy Consent <span style="color:var(--muted)">[RA 10173]</span></p>
-          <p class="field-hint" id="consentHint">MEA LEADS collects and processes the details in this file only to run the camp. Only the core team sees them. Saying yes is required to apply.</p>
+          <p class="field-hint" id="consentHint">By submitting this form, I consent to the collection and use of the information I provide by the LEADS organizing team for participant registration, family grouping, event coordination, and communication regarding LEADS. My information will be kept confidential and accessed only by authorized organizers and facilitators who need it for these purposes.</p>
           <!-- Only "yes" lets someone apply, so it's one checkbox. The hidden input keeps the Y / '' value every other script reads. -->
           <input type="hidden" id="f-DataConsent" name="DataConsent" value="">
           <label class="consent-box" for="c-DataConsent">
             <input type="checkbox" id="c-DataConsent" aria-describedby="consentHint err-DataConsent" required>
             <span class="consent-tick" aria-hidden="true"></span>
-            <span class="consent-text">Yes. I consent to MEA LEADS processing my personal data for the camp (RA 10173).</span>
+            <span class="consent-text">I have read and agree to the collection and use of my information for the purposes stated above.</span>
           </label>
           <div class="field-error" id="err-DataConsent" role="alert" aria-live="polite"></div>
         </div>
 
         <!-- Q.02 IDNumber -->
         <div class="field" id="wrap-IDNumber">
-          <span class="q-num">Q.02 / 16</span>
+          <span class="q-num">Q.02 / 15</span>
           <label for="f-IDNumber">Ateneo ID Number <span style="color:var(--muted)">[DOSSIER REF]</span></label>
           <p class="field-hint">[CLEARANCE CHECK] Your 6-digit student ID.<br><span class="ex-tag">Example: 241234</span></p>
           <input type="text" id="f-IDNumber" name="IDNumber" inputmode="numeric" pattern="[0-9]*" maxlength="6" required>
@@ -669,16 +689,16 @@
 
         <!-- Q.03 FullName -->
         <div class="field" id="wrap-FullName">
-          <span class="q-num">Q.03 / 16</span>
+          <span class="q-num">Q.03 / 15</span>
           <label for="f-FullName">Full Name <span style="color:var(--muted)">[PRIMARY IDENTIFIER]</span></label>
-          <p class="field-hint">[SUBJECT NAME] Official registered name.<br><span class="ex-tag">Example: Juan P. dela Cruz</span></p>
+          <p class="field-hint">[SUBJECT NAME] Last name, First name.<br><span class="ex-tag">Example: Dela Cruz, Juan P.</span></p>
           <input type="text" id="f-FullName" name="FullName" autocomplete="name" maxlength="80" required>
           <div class="field-error" id="err-FullName" role="alert" aria-live="polite"></div>
         </div>
 
         <!-- Q.04 Nickname -->
         <div class="field" id="wrap-Nickname">
-          <span class="q-num">Q.04 / 16</span>
+          <span class="q-num">Q.04 / 15</span>
           <label for="f-Nickname">Nickname / Call-Sign <span style="color:var(--muted)">[CLASSIFIED ALIAS]</span></label>
           <p class="field-hint">[DESIGNATION] Designated call-sign for camp monitoring (up to 30 letters).<br><span class="ex-tag">Example: Juan</span></p>
           <input type="text" id="f-Nickname" name="Nickname" autocomplete="nickname" maxlength="30" required>
@@ -687,7 +707,7 @@
 
         <!-- Q.05 Course -->
         <div class="field" id="wrap-Course">
-          <span class="q-num">Q.05 / 16</span>
+          <span class="q-num">Q.05 / 15</span>
           <label for="f-Course">Degree Program <span style="color:var(--muted)">[ACADEMIC TRACK]</span></label>
           <p class="field-hint">[DIVISION] Your degree program. Filled in from the member list when we find you.</p>
           <input type="text" id="f-Course" name="Course" required maxlength="60" autocomplete="off" placeholder="e.g. BS Management Engineering">
@@ -696,7 +716,7 @@
 
         <!-- Q.06 YearLevel -->
         <div class="field" id="wrap-YearLevel">
-          <span class="q-num">Q.06 / 16</span>
+          <span class="q-num">Q.06 / 15</span>
           <label for="f-YearLevel">Year Level <span style="color:var(--muted)">[CHRONOLOGY TIER]</span></label>
           <p class="field-hint">[STANDING] Current collegiate standing.</p>
           <select id="f-YearLevel" name="YearLevel" required>
@@ -712,7 +732,7 @@
 
         <!-- Q.07 Block -->
         <div class="field" id="wrap-Block">
-          <span class="q-num">Q.07 / 16</span>
+          <span class="q-num">Q.07 / 15</span>
           <label for="f-Block">Block Section <span style="color:var(--muted)">[SECTOR GROUP]</span></label>
           <p class="field-hint">[MANDATORY FOR 1ST YEAR / ID 26-XXXX] Optional for upperclassmen.<br><span class="ex-tag">Example: 21A</span></p>
           <input type="text" id="f-Block" name="Block" placeholder="e.g. 21A" maxlength="30">
@@ -721,7 +741,7 @@
 
         <!-- Q.08 Mobile -->
         <div class="field" id="wrap-Mobile">
-          <span class="q-num">Q.08 / 16</span>
+          <span class="q-num">Q.08 / 15</span>
           <label for="f-Mobile">Mobile Number <span style="color:var(--muted)">[DIRECT FREQUENCY]</span></label>
           <p class="field-hint">[TRANSMISSION] 11 digits starting with 09. Auto-normalized upon exit.<br><span class="ex-tag">Example: 09171234567</span></p>
           <input type="tel" id="f-Mobile" name="Mobile" inputmode="tel" autocomplete="tel" maxlength="16" required>
@@ -730,7 +750,7 @@
 
         <!-- Q.09 MBTI -->
         <div class="field" id="wrap-MBTI">
-          <span class="q-num">Q.09 / 16</span>
+          <span class="q-num">Q.09 / 15</span>
           <label for="f-MBTI">Myers-Briggs Indicator <span style="color:var(--muted)">[MBTI PROFILE]</span></label>
           <p class="field-hint">[BEHAVIOR CLASSIFICATION] 4-letter type. Autofilled from MEA records.<br><span class="ex-tag">Example: INTJ</span></p>
           <select id="f-MBTI" name="MBTI">
@@ -749,7 +769,7 @@
 
         <!-- Q.10 PastOrgs -->
         <div class="field full" id="wrap-PastOrgs">
-          <span class="q-num">Q.10 / 16</span>
+          <span class="q-num">Q.10 / 15</span>
           <label for="f-PastOrgs">Past Organizations <span style="color:var(--muted)">[PRIOR AFFILIATIONS]</span></label>
           <p class="field-hint">[AFFILIATION RECORD] Student or community organizations you actively participated in previously.<br>
           <span class="ex-box">
@@ -761,22 +781,9 @@
           <div class="field-error" id="err-PastOrgs" role="alert" aria-live="polite"></div>
         </div>
 
-        <!-- Q.11 FirstOvernight -->
-        <div class="field" id="wrap-FirstOvernight">
-          <span class="q-num">Q.11 / 16</span>
-          <label for="f-FirstOvernight">First Overnight Event? <span style="color:var(--muted)">[OFFSITE HISTORY]</span></label>
-          <p class="field-hint">[EXPOSURE RISK] Is this your first time attending an overnight organizational retreat?</p>
-          <select id="f-FirstOvernight" name="FirstOvernight" required>
-            <option value="">-- Select --</option>
-            <option value="Yes">Yes — First time</option>
-            <option value="No">No — Attended before</option>
-          </select>
-          <div class="field-error" id="err-FirstOvernight" role="alert" aria-live="polite"></div>
-        </div>
-
-        <!-- Q.12 OffsiteAvailability -->
+        <!-- Q.11 OffsiteAvailability -->
         <div class="field" id="wrap-OffsiteAvailability">
-          <span class="q-num">Q.12 / 16</span>
+          <span class="q-num">Q.11 / 15</span>
           <label for="f-OffsiteAvailability">Offsite Availability <span style="color:var(--muted)" id="offsiteTag">[CAMP DATES]</span></label>
           <p class="field-hint">[DEPLOYMENT WINDOW] Are you available to travel offsite <span id="offsiteDates">on the camp dates</span>?</p>
           <select id="f-OffsiteAvailability" name="OffsiteAvailability" required>
@@ -800,24 +807,14 @@
           <p class="mono" style="color: var(--glow); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">[ SUB-DOSSIER: LEADS SPECIFIC INFO ]</p>
         </div>
 
-        <!-- Q.13 WhyParticipant -->
+        <!-- Q.12 WhyParticipant -->
         <div class="field full" id="wrap-WhyParticipant">
-          <span class="q-num">Q.13 / 16</span>
+          <span class="q-num">Q.12 / 15</span>
           <label for="f-WhyParticipant">Participation Intent <span style="color:var(--muted)">[MOTIVATION STATEMENT]</span></label>
-          <p class="field-hint">[SUBJECT STATEMENT] Why did you choose to apply for LEADS as a participant? (50 to 1000 characters)</p>
+          <p class="field-hint">[SUBJECT STATEMENT] Why did you choose to apply for LEADS as a participant? Answer in 3 to 5 sentences. (50 to 1000 characters)</p>
           <textarea id="f-WhyParticipant" name="WhyParticipant" maxlength="1000" required></textarea>
           <div class="char-counter" id="count-WhyParticipant">0 / 1000 (need 50+)</div>
           <div class="field-error" id="err-WhyParticipant" role="alert" aria-live="polite"></div>
-        </div>
-
-        <!-- Q.14 FirstImpression -->
-        <div class="field full" id="wrap-FirstImpression">
-          <span class="q-num">Q.14 / 16</span>
-          <label for="f-FirstImpression">First Impression <span style="color:var(--muted)">[INITIAL ASSESSMENT]</span></label>
-          <p class="field-hint">[SUBJECT OBSERVATION] What is your first impression of LEADS? (50 to 1000 characters)</p>
-          <textarea id="f-FirstImpression" name="FirstImpression" maxlength="1000" required></textarea>
-          <div class="char-counter" id="count-FirstImpression">0 / 1000 (need 50+)</div>
-          <div class="field-error" id="err-FirstImpression" role="alert" aria-live="polite"></div>
         </div>
 
         <!-- SUB-SECTION: LEADERSHIP -->
@@ -825,24 +822,41 @@
           <p class="mono" style="color: var(--glow); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">[ SUB-DOSSIER: LEADERSHIP EVALUATION ]</p>
         </div>
 
-        <!-- Q.15 TakesLeadership -->
+        <!-- Q.13 TakesLeadership -->
         <div class="field full" id="wrap-TakesLeadership">
-          <span class="q-num">Q.15 / 16</span>
+          <span class="q-num">Q.13 / 15</span>
           <label for="f-TakesLeadership">Leadership Profile <span style="color:var(--muted)">[DAILY ROLE]</span></label>
-          <p class="field-hint">[SELF EVALUATION] Would you consider yourself someone who often takes up a leadership role in your day-to-day life? (50 to 1000 characters)</p>
+          <p class="field-hint">[SELF EVALUATION] Would you consider yourself someone who often takes up a leadership role in your day-to-day life? Answer in 3 to 5 sentences. (50 to 1000 characters)</p>
           <textarea id="f-TakesLeadership" name="TakesLeadership" maxlength="1000" required></textarea>
           <div class="char-counter" id="count-TakesLeadership">0 / 1000 (need 50+)</div>
           <div class="field-error" id="err-TakesLeadership" role="alert" aria-live="polite"></div>
         </div>
 
-        <!-- Q.16 FearLeadership -->
+        <!-- Q.14 FearLeadership -->
         <div class="field full" id="wrap-FearLeadership">
-          <span class="q-num">Q.16 / 16</span>
+          <span class="q-num">Q.14 / 15</span>
           <label for="f-FearLeadership">Psychological Assessment <span style="color:var(--muted)">[LEADERSHIP FEAR]</span></label>
-          <p class="field-hint">[INTERNAL THREAT] What scares you the most about being a leader? (50 to 1000 characters)</p>
+          <p class="field-hint">[INTERNAL THREAT] What scares you the most about being a leader? Answer in 3 to 5 sentences. (50 to 1000 characters)</p>
           <textarea id="f-FearLeadership" name="FearLeadership" maxlength="1000" required></textarea>
           <div class="char-counter" id="count-FearLeadership">0 / 1000 (need 50+)</div>
           <div class="field-error" id="err-FearLeadership" role="alert" aria-live="polite"></div>
+        </div>
+
+        <!-- Q.15 Environment (pick any; the hidden input holds "A; B" like DataConsent's Y) -->
+        <div class="field full" id="wrap-Environment">
+          <span class="q-num">Q.15 / 15</span>
+          <p class="consent-title" id="envTitle">Comfort Conditions <span style="color:var(--muted)">[ENVIRONMENT]</span></p>
+          <p class="field-hint" id="envHint">[OBSERVATION SETTINGS] What kind of environment helps you feel most comfortable participating and sharing your thoughts with others? Pick any that apply.</p>
+          <input type="hidden" id="f-Environment" name="Environment" value="">
+          <div class="env-opts" role="group" aria-labelledby="envTitle" aria-describedby="envHint err-Environment">
+            <label class="env-opt"><input type="checkbox" value="Small-group discussions"><span class="consent-tick" aria-hidden="true"></span><span>Small-group discussions</span></label>
+            <label class="env-opt"><input type="checkbox" value="Individual reflection"><span class="consent-tick" aria-hidden="true"></span><span>Individual reflection</span></label>
+            <label class="env-opt"><input type="checkbox" value="Interactive games and team challenges"><span class="consent-tick" aria-hidden="true"></span><span>Interactive games and team challenges</span></label>
+            <label class="env-opt"><input type="checkbox" value="Listening to others share their experiences"><span class="consent-tick" aria-hidden="true"></span><span>Listening to others share their experiences</span></label>
+            <label class="env-opt"><input type="checkbox" value="Open discussions with the whole group"><span class="consent-tick" aria-hidden="true"></span><span>Open discussions with the whole group</span></label>
+            <label class="env-opt"><input type="checkbox" value="No particular preference"><span class="consent-tick" aria-hidden="true"></span><span>No particular preference</span></label>
+          </div>
+          <div class="field-error" id="err-Environment" role="alert" aria-live="polite"></div>
         </div>
 
         <!-- Referral (optional, not counted in the progress tape). Checked on submit by checkReferral_ (Referrals.gs). -->
@@ -914,12 +928,12 @@
 
   const FIELDS = [
     'DataConsent', 'IDNumber', 'FullName', 'Nickname', 'Course', 'YearLevel', 'Block',
-    'Mobile', 'MBTI', 'PastOrgs', 'FirstOvernight',
-    'OffsiteAvailability', 'WhyParticipant', 'FirstImpression',
-    'TakesLeadership', 'FearLeadership'
+    'Mobile', 'MBTI', 'PastOrgs',
+    'OffsiteAvailability', 'WhyParticipant',
+    'TakesLeadership', 'FearLeadership', 'Environment'
   ];
 
-  const ESSAY_FIELDS = ['WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership'];
+  const ESSAY_FIELDS = ['WhyParticipant', 'TakesLeadership', 'FearLeadership'];
 
   let serverRules = {};
   let serverLists = {};
@@ -1047,6 +1061,7 @@
       }
     });
     if ($('c-DataConsent')) $('c-DataConsent').checked = $('f-DataConsent').value === 'Y';
+    syncEnvBoxes();
     if (data.ReferredBy && $('f-ReferredBy')) $('f-ReferredBy').value = data.ReferredBy;
     if (data.IntegrityLog) mergeInteg(data.IntegrityLog);   // a reload keeps counting from where it was
     validateMobileField(true);
@@ -1056,7 +1071,7 @@
      Counts, per essay: pastes, characters pasted, characters typed; and for the whole form: how often the page lost
      focus (switching tabs or apps) and for how long, and how often that happened while the cursor was in an essay.
      Only counts and lengths: never what was pasted, never other tabs. The server turns these into a short flag. */
-  const ESSAYS = ['WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership'];
+  const ESSAYS = ['WhyParticipant', 'TakesLeadership', 'FearLeadership'];
   // touch: on a phone, the screen locking or a notification also counts as "left the page", so flags say (phone)
   const INTEG = { v: 1, touch: !!(window.matchMedia && matchMedia('(pointer: coarse)').matches), essays: {}, away: { count: 0, ms: 0, inEssay: 0 } };
   ESSAYS.forEach(f => { INTEG.essays[f] = { pastes: 0, pasted: 0, typed: 0, biggest: 0 }; });
@@ -1279,6 +1294,7 @@
     }
     if (r.pattern && !new RegExp(r.pattern).test(v)) return r.msg || 'Invalid format.';
     if (r.idMin !== undefined && (Number(v) < r.idMin || Number(v) > r.idMax)) return r.rangeMsg || 'Invalid.';
+    if (r.multi) return v.split(';').map(x => x.trim()).filter(Boolean).every(x => r.options.indexOf(x) >= 0) ? '' : r.msg;
     if (r.options && r.options.indexOf(v) < 0) return r.msg;
     if (r.min !== undefined) { const n = Number(v); if (!Number.isInteger(n) || n < r.min || n > r.max) return r.msg; }
     if ((r.minLen && v.length < r.minLen) || (r.maxLen && v.length > r.maxLen)) return r.msg + ' (you have ' + v.length + ')';
@@ -1558,9 +1574,8 @@
     const LABEL = {
       DataConsent: 'the consent box', FullName: 'your name', Nickname: 'a nickname', IDNumber: 'your ID',
       Course: 'your course', YearLevel: 'your year level', Mobile: 'your number',
-      WhyParticipant: 'essay 1', FirstImpression: 'essay 2',
-      TakesLeadership: 'essay 3', FearLeadership: 'essay 4',
-      Block: 'your block', MBTI: 'your MBTI', PastOrgs: 'your past orgs', FirstOvernight: 'one yes-or-no',
+      WhyParticipant: 'essay 1', TakesLeadership: 'essay 2', FearLeadership: 'essay 3', Environment: 'your comfort conditions',
+      Block: 'your block', MBTI: 'your MBTI', PastOrgs: 'your past orgs',
       OffsiteAvailability: 'your availability'
     };
 
@@ -1838,6 +1853,21 @@
     hid.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
+  // Environment boxes -> the hidden "A; B" value (No particular preference clears the others, and the others clear it)
+  const ENV_NONE = 'No particular preference';
+  function syncEnvBoxes() {
+    const have = String(($('f-Environment') || {}).value || '').split(';').map(x => x.trim());
+    document.querySelectorAll('#wrap-Environment input[type=checkbox]').forEach(b => { b.checked = have.indexOf(b.value) >= 0; });
+  }
+  document.querySelectorAll('#wrap-Environment input[type=checkbox]').forEach(box => box.addEventListener('change', () => {
+    const all = [...document.querySelectorAll('#wrap-Environment input[type=checkbox]')];
+    if (box.checked) all.forEach(b => { if (b !== box && (box.value === ENV_NONE || b.value === ENV_NONE)) b.checked = false; });
+    const hid = $('f-Environment');
+    hid.value = all.filter(b => b.checked).map(b => b.value).join('; ');
+    $('wrap-Environment').classList.remove('has-error'); $('err-Environment').textContent = '';
+    hid.dispatchEvent(new Event('input', { bubbles: true }));
+  }));
+
   $('applyForm').addEventListener('input', e => {
     updateCounters();
     updateProgress();
@@ -1860,6 +1890,7 @@
     $('applyForm').reset();
     // reset() keeps a hidden input's value, so the consent would stay "Y" behind an unticked box
     $('f-DataConsent').value = '';
+    $('f-Environment').value = ''; syncEnvBoxes();
     document.querySelectorAll('.prefilled').forEach(el => el.classList.remove('prefilled'));
     $('draftBanner').hidden = true;
     lastSentJson = ''; lastSavedShort = '';

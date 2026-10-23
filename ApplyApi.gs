@@ -59,7 +59,7 @@ function apply_getForm_() {
  * and how often the page lost focus (other tabs or apps), overall and while in an essay. Nothing about WHAT was
  * pasted or which tabs. Thresholds are deliberately loose: a flag means "read this one closely", not "cheated". */
 const INTEGRITY = { pastedShare: .4, minPasted: 120, manyPastes: 3, awayCount: 8, awayInEssay: 4 };
-const ESSAY_FIELDS = ['WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership'];
+const ESSAY_FIELDS = ['WhyParticipant', 'TakesLeadership', 'FearLeadership'];
 function integrityLog_(raw) {
   try { const o = JSON.parse(String(raw || '')); return o && o.v === 1 ? JSON.stringify(o).slice(0, 2000) : ''; } catch (e) { return ''; }
 }
@@ -184,6 +184,7 @@ function apply_submit_(form) {
       GameAnswers: String(input.GameAnswers || '').slice(0, 5000),   // JSON of the Game page choices
       IntegrityLog: integrityLog_(input.IntegrityLog),                // essay paste / tab-switch counts (core team only)
       IntegrityFlags: integrityFlags_(input.IntegrityLog, v.clean),   // the short version: blank, or what looked off
+      EyePhoto: /^https:\/\/drive\.google\.com\//.test(String(input.EyePhoto || '')) ? String(input.EyePhoto) : '',   // set by game_uploadEye only
       ReferralCode: referralCode,
       ReferredBy: referral.code || '',
       ReferrerID: referral.referrerId || '',
@@ -293,7 +294,7 @@ function apply_saveDraft(data) {
     r => !!(r && (r.consent || r.applied)));
 }
 /** The save itself; an error it throws is logged by the traced_ around it (apply_saveDraft / game_saveProgress). */
-function apply_saveDraft_(data) {
+function apply_saveDraft_(data, internal) {   // internal: fields only the server sets (the eye scan link), never from the page
   const email = currentEmail_();
   if (!email || !isAllowedDomain_(email)) return { ok: false };
   data = data || {};
@@ -305,6 +306,8 @@ function apply_saveDraft_(data) {
       clean[f] = String(data[f]).slice(0, f === 'GameAnswers' ? 5000 : 1500);
     }
   });
+
+  Object.assign(clean, internal || {});
 
   // Already applied? (A guard only: apply_submit_ re-checks inside its lock and clears the draft.)
   if (getApplicantByEmail_(email)) return { ok: false, applied: true };

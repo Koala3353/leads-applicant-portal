@@ -122,7 +122,7 @@ function setup_formatSheets() {
   // wide enough that each header fits next to its filter button without breaking mid-word
   const W = { ApplicantID: 120, Timestamp: 140, Email: 210, FullName: 170, Nickname: 115, IDNumber: 115, Course: 100, YearLevel: 110,
     Mobile: 115, Status: 135, Requirements: 145, Payment: 115, ReviewedBy: 170, LastUpdated: 140, Notes: 200, Block: 85, MBTI: 85,
-    PastOrgs: 220, FirstOvernight: 140, OffsiteAvailability: 170, DataConsent: 130, GameAnswers: 160, PaymentProof: 160,
+    PastOrgs: 220, FirstOvernight: 140, Environment: 240, EyePhoto: 160, OffsiteAvailability: 170, DataConsent: 130, GameAnswers: 160, PaymentProof: 160,
     ReferralCode: 130, ReferredBy: 125, ReferrerID: 120, MessageToApplicant: 260, IntegrityFlags: 260, IntegrityLog: 200 };
   cols.forEach((c, i) => ap.setColumnWidth(i + 1, W[c] || 240));   // the essays (not listed) get 240
   oneLine(ap, Math.max(ap.getMaxRows() - 1, 1), n);

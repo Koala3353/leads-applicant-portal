@@ -31,9 +31,10 @@ const BRAND = {
     tagline: 'Someone is already watching. Apply anyway.',
     hint: 'About 15 minutes: the form, then a short assessment. One application per person. We will know if you try twice.',   // under the main button, before applying
     redact: [],                            // words in the lede shown as black bars until hovered or tapped (empty = off)
-    lede: 'LEADS is MEA\'s off-site leadership camp. For a few days, people watch you make calls, ' +
-          'and sometimes they watch you get them wrong. That\'s how the training works. ' +
-          'Most people who apply are scared of exactly that part.'
+    // the project description (RecSec, Oct 2026): also shown at the top of the Apply form as "What is LEADS?"
+    lede: 'LEADS is a leadership development project built on shared experience, meaningful connection, and honest ' +
+          'self-reflection. It encourages members to confront their fears, question what they think leadership is, and to ' +
+          'look at the person doing the leading. Because leading well starts with facing what scares you. This year, the study is you.'
   },
   buttons: {
     apply: 'Start your application',
@@ -337,7 +338,7 @@ const BRAND = {
   referral: {
     label: 'Referral code',
     tag: '[WHO SENT YOU?]',
-    hint: 'Optional. If someone told you to apply, start typing their code (their name, like BEA) and pick it from the list. Nobody? Pick N/A.',
+    hint: 'Optional. If someone told you to apply, start typing their code (their name, like BEA) and pick it from the list. Using a code earns you both a referral point toward room booking. Nobody? Pick N/A.',
     placeholder: 'Type 2+ letters, e.g. BE',
     none: 'N/A: nobody referred me',
     noneChosen: 'No referral. That is fine.',
@@ -353,14 +354,23 @@ const BRAND = {
     self: "That's your own code. Leave it blank, or use the code of whoever told you to apply.",
     inactive: "That referral code isn't active anymore. Leave it blank, or use someone else's.",
     cardTitle: 'REFERRALS.EXE',
-    cardLead: 'Know someone who should be watched too? Send them your link. Everyone who applies with your code counts toward an advantage at camp.',
+    cardLead: 'Know someone who should be watched too? Send them your link.',
+    pointsLabel: 'Referral points',
+    perks: [   // the benefits, for both sides of a referral
+      'Each person who applies with your code: 1 point for you.',
+      'Applying with someone else\'s code: 1 point for you as well. They get theirs too.',
+      'More points means an earlier pick at room booking, and other advantages at the camp itself.'
+    ],
+    usedTheirs: 'You applied with {code}\'s code: 1 point.',
+    namesLabel: 'Used your code',
+    noNames: 'Nobody has used your code yet. Send the link to whoever should be watched next.',
     copy: 'Copy my link',
     copied: 'Link copied',
     share: 'Share',
     shareText: 'Apply to LEADS with my code {code}: {link}',
     applied: 'applied with your code',
     closed: "Applications are closed, so your code can't bring anyone new in. Your count is final.",
-    gameDone: 'Your referral code is {code}. Send it to whoever should apply next; it counts toward an advantage at camp.'
+    gameDone: 'Your referral code is {code}. Every person who applies with it earns you a point toward room booking and other advantages at camp. Send it to whoever should apply next.'
   },
 
   footer: {
@@ -443,12 +453,11 @@ const BRAND = {
                         E: ['happy', '{v}. You fill rooms. Camp has room.'],
                         other: ['thinking', '{v}. Filed under personality.'] },
       PastOrgs:       [['thinking', 'History recorded. Experience is a finding, not a requirement.'], ['happy', 'You have done this before. It shows.']],
-      FirstOvernight: { Yes: ['thinking', 'First overnight. Noted. You will not be alone.'], No: ['thinking', 'Not your first overnight. You know how the nights go.'] },
       OffsiteAvailability: { Yes: ['happy', 'Available on camp dates. Your spot is held.'], No: ['scared', 'Not available on camp dates. Message the core team before you continue.'] },
       DataConsent:    { Y: ['happy', 'Consent recorded. Your file is used for LEADS and nothing else.'], N: ['scared', 'Without consent there is no file. Saying yes is required to apply.'] },
       // essays: said once each, when the answer reaches a decent length
       WhyParticipant:  [['thinking', 'Reason recorded. It sounds like you.'], ['happy', 'That is a real reason. It is going in your file.']],
-      FirstImpression: [['thinking', 'First impression recorded. We will compare it at the end of camp.'], ['wink', 'Hold on to that picture. It will change.']],
+      Environment:     [['thinking', 'Preference recorded. We will set the room up accordingly.'], ['happy', 'Noted. We will make space for that.']],
       TakesLeadership: [['thinking', 'Example recorded. You have done this before.'], ['happy', 'Specific. That is rare. Noted.']],
       FearLeadership:  [['sad', 'Thank you for writing that down. It stays in your file, and with us.'], ['thinking', 'Naming it is the hard part. Camp is for the rest.']],
       essayShort:     ['thinking', "At least 50 characters. Take your time. I'll wait."],

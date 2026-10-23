@@ -34,6 +34,10 @@ function game_getInit_() {
     allowedDomain: email ? isAllowedDomain_(email) : false,
     alreadyApplied: found ? { id: found.data.ApplicantID, status: found.data.Status } : null,
     hasDraft: !!(draft && draft.data),
+    hasEye: !!(draft && draft.data && draft.data.EyePhoto),   // the eye scan after the passcode is on file
+    idNumber: draft && draft.data ? String(draft.data.IDNumber || '').replace(/\D/g, '').slice(0, 6) : '',
+    fee: setting_('RegistrationFee'),
+    primer: /^https:\/\//.test(setting_('PrimerLink')) ? setting_('PrimerLink') : '',
     isOpen: isOpen_(),   // closed: the page says so instead of letting them play a game they can't file
     nickname: draft && draft.data ? String(draft.data.Nickname || '').slice(0, 30) : '',
     saved: saved
@@ -96,6 +100,8 @@ function game_submitFinal(answers) {
       throw new Error('No saved application found. Fill in the application form first.');
     }
 
+    if (!String(draft.data.EyePhoto || '')) return { ok: false, eye: true };   // the eye scan comes before filing
+
     const clean = game_cleanAnswers_(answers);
     if (Object.keys(clean).length < GAME_QUESTION_IDS.length) {
       throw new Error('The assessment is not finished yet. Complete all three rooms first.');
@@ -113,7 +119,64 @@ function game_submitFinal(answers) {
       }
       throw err;
     }
-  }, r => r.ok ? r.id + ' submitted' : 'needs fixing: ' + Object.keys(r.errors || {}).join(', '));
+  }, r => r.ok ? r.id + ' submitted' : r.eye ? 'no eye scan yet' : 'needs fixing: ' + Object.keys(r.errors || {}).join(', '));
+}
+
+/* ---------------- Eye scan (after the passcode) ----------------
+ * A close-up photo of one eye, saved in the Drive folder in Settings › EyeFolder (made the first time, owned by the
+ * script owner, shared with nobody) as EYE_<IDNumber>.<ext>. The link goes into the applicant's draft (server-side only:
+ * apply_saveDraft never accepts it from the page) and from there into Applicants › EyePhoto when they file.
+ * A new upload replaces the old file (the old one is trashed). Up to 6 uploads per person per day.
+ */
+const EYE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif'];
+const EYE_MAX_BYTES = 5 * 1024 * 1024;
+
+function game_uploadEye(file) {
+  return traced_('game_uploadEye', 'game', () => game_uploadEye_(file || {}), r => r.ok ? 'eye scan saved' : 'not saved: ' + r.error);
+}
+function game_uploadEye_(file) {
+  const email = currentEmail_();
+  if (!email || !isAllowedDomain_(email)) throw new Error('Sign in with your Ateneo account first.');
+  if (getApplicantByEmail_(email)) return { ok: false, error: 'You already applied. Your file is on record.' };
+  const draft = apply_getDraft_(email);
+  if (!draft || !draft.data) return { ok: false, error: 'Fill in the application form first.' };
+
+  const type = String(file.type || '').toLowerCase();
+  if (EYE_TYPES.indexOf(type) < 0) return { ok: false, error: 'Upload a photo (JPG, PNG, WEBP or HEIC).' };
+  let bytes;
+  try { bytes = Utilities.base64Decode(String(file.data || '')); } catch (e) { return { ok: false, error: 'That photo could not be read. Try again.' }; }
+  if (!bytes.length) return { ok: false, error: 'That photo is empty.' };
+  if (bytes.length > EYE_MAX_BYTES) return { ok: false, error: 'That photo is over 5 MB. Take a closer, smaller one.' };
+  if (!steps_looksLike_(bytes, type)) return { ok: false, error: 'That file does not look like a photo. Try another one.' };
+  if (!bump_('eye:' + email + ':' + Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyyMMdd'), 6, 90000)) {
+    return { ok: false, error: 'That is enough uploads for today. If something is wrong, message the core team.' };
+  }
+
+  const idNo = String(draft.data.IDNumber || '').replace(/\D/g, '').slice(0, 6) || 'NOID';
+  const saved = game_eyeFolder_().createFile(Utilities.newBlob(bytes, type, 'EYE_' + idNo + '.' + PROOF_EXT[type]));
+  saved.setDescription('Eye scan uploaded by ' + email + ' through the LEADS portal.');
+  const r = apply_saveDraft_({}, { EyePhoto: saved.getUrl() });
+  if (!r || !r.ok) {
+    try { saved.setTrashed(true); } catch (e) { /* best effort */ }
+    return { ok: false, error: r && r.consent ? 'Tick the data-privacy consent on the form first.' : 'Your file is busy. Try again in a moment.' };
+  }
+  const old = (String(draft.data.EyePhoto || '').match(/\/d\/([\w-]{20,})/) || [])[1];
+  if (old && old !== saved.getId()) { try { DriveApp.getFileById(old).setTrashed(true); } catch (e) { /* gone already */ } }
+  return { ok: true };
+}
+
+/** Settings › EyeFolder, or a new "<EventName> - Eye Scans" folder owned by the script owner (saved there). */
+function game_eyeFolder_() {
+  const id = (String(setting_('EyeFolder') || '').match(/folders\/([\w-]{20,})/) || [])[1];
+  if (id) { try { const f = DriveApp.getFolderById(id); if (!f.isTrashed()) return f; } catch (e) { /* gone: make a new one */ } }
+  return withScriptLock_(20000, () => {
+    clearConfigCache_(); getSettings_.cache = null; cachedTab_.memo = {};
+    const again = (String(getSetting_('EyeFolder') || '').match(/folders\/([\w-]{20,})/) || [])[1];
+    if (again && again !== id) return DriveApp.getFolderById(again);
+    const folder = DriveApp.createFolder((getSetting_('EventName') || 'LEADS') + ' - Eye Scans');
+    writeSetting_('EyeFolder', folder.getUrl());
+    return folder;
+  });
 }
 /* ---------------- Game sounds ----------------
  * The knock and the jumpscare scream are audio files in Google Drive. A Drive link can't be used as an <audio> src
