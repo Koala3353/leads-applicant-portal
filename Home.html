@@ -665,7 +665,7 @@
 <body data-base="<?= baseUrl ?>" data-ref="<?= ref ?>" data-reveal="<?= revealAsked ? '1' : '' ?>" data-loader-wait>
 <?!= include_('Loader') ?>
 <?!= include_('Ambience') ?>
-<button type="button" class="sound-chip" id="soundChip" aria-pressed="true" aria-label="Background music">&#9834; Sound on</button>
+<button type="button" class="sound-chip" id="soundChip" aria-pressed="true" aria-label="Background music">&#128266; Sound ON &middot; tap to mute</button>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 <div class="dark" id="dark" aria-hidden="true"></div>
 <? if (BRAND.effects.eyes) { ?>
@@ -1958,7 +1958,7 @@
     const chip = $('soundChip');
     let want = true, film = false;
     try { want = localStorage.getItem('leads-sound') !== 'off'; } catch (e) { /* storage blocked: default on */ }
-    const paint = () => { chip.textContent = want ? '\u266A Sound on' : '\u266A Sound off'; chip.setAttribute('aria-pressed', String(want)); };
+    const paint = () => { chip.textContent = want ? '\uD83D\uDD0A Sound ON \u00B7 tap to mute' : '\uD83D\uDD07 Sound OFF \u00B7 tap to turn on'; chip.setAttribute('aria-pressed', String(want)); };
     const go = () => { if (want && !film && window.Ambience) Ambience.start('hub'); };
     const first = e => {
       if (e.target === chip) return;   // the chip's own click decides

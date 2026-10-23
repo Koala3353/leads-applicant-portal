@@ -257,7 +257,7 @@
     <!-- Convenient Mute Toggle Button -->
     <div>
       <button type="button" id="muteBtn" class="mute-btn" aria-label="Toggle sound mute">
-        <span id="muteIcon">&#128266;</span> <span id="muteLabel">Sound: ON</span>
+        <span id="muteIcon">&#128266;</span> <span id="muteLabel">Sound ON &middot; tap to mute</span>
       </button>
     </div>
   </section>
@@ -478,7 +478,7 @@
     const btn = $('muteBtn'), icon = $('muteIcon'), lbl = $('muteLabel');
     if (btn) btn.classList.toggle('is-muted', isMuted);
     if (icon) icon.textContent = isMuted ? '🔇' : '🔊';
-    if (lbl) lbl.textContent = isMuted ? 'Muted' : 'Sound: ON';
+    if (lbl) lbl.textContent = isMuted ? 'Sound OFF \u00B7 tap to turn on' : 'Sound ON \u00B7 tap to mute';
     if (isMuted && drone) droneStop();
     // the score (Ambience.html): off when muted, back on in the part of the game they are in
     if (window.Ambience) { if (isMuted) Ambience.stop(.4); else if (scoreMode) Ambience.start(scoreMode); }

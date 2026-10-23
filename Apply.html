@@ -531,7 +531,7 @@
 <body data-loader-wait>
 <?!= include_('Loader') ?>
 <?!= include_('Ambience') ?>
-<button type="button" class="sound-chip" id="soundChip" aria-pressed="true" aria-label="Sound">&#9834; Sound on</button>
+<button type="button" class="sound-chip" id="soundChip" aria-pressed="true" aria-label="Sound">&#128266; Sound ON &middot; tap to mute</button>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 
 <div id="irisWakeStage" class="iris-wake-stage" hidden>
@@ -1930,7 +1930,7 @@
     const chip = $('soundChip');
     let want = true, idle = null;
     try { want = localStorage.getItem('leads-sound') !== 'off'; } catch (e) { /* storage blocked: default on */ }
-    const paint = () => { chip.textContent = want ? '\u266A Sound on' : '\u266A Sound off'; chip.setAttribute('aria-pressed', String(want)); };
+    const paint = () => { chip.textContent = want ? '\uD83D\uDD0A Sound ON \u00B7 tap to mute' : '\uD83D\uDD07 Sound OFF \u00B7 tap to turn on'; chip.setAttribute('aria-pressed', String(want)); };
     const say = k => { if (want && window.Ambience && Ambience.playing()) Ambience.announce(k); };
     const go = () => { if (!want || !window.Ambience) return; Ambience.start('form'); setTimeout(() => say('p1'), 2500); quiet(); };
     // gone quiet for a minute mid-form: one reminder

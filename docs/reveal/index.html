@@ -78,7 +78,7 @@
 <p class="hud" id="subject">SUBJECT ----</p>
 <p id="cap" role="status" aria-live="polite"></p>
 <div class="ctl">
-  <button type="button" id="sound" aria-pressed="false">Sound off</button>
+  <button type="button" id="sound" aria-pressed="false">&#128263; Sound OFF &middot; tap to turn on</button>
   <button type="button" id="skip">Skip ▸▸</button>
 </div>
 <div class="end" id="end" role="dialog" aria-modal="true" aria-labelledby="endT">
@@ -211,7 +211,7 @@ function thud() {
   o.connect(g); g.connect(master); o.start(); o.stop(ac.currentTime + .45);
   noiseBurst(.12, .9);   // the paper smack is what small speakers hear
 }
-$('sound').addEventListener('click', () => { const on = soundOn(); $('sound').textContent = on ? 'Sound on' : 'Sound off'; $('sound').setAttribute('aria-pressed', String(on)); noiseBurst(.15, .5); });
+$('sound').addEventListener('click', () => { const on = soundOn(); $('sound').textContent = on ? '\uD83D\uDD0A Sound ON \u00B7 tap to mute' : '\uD83D\uDD07 Sound OFF \u00B7 tap to turn on'; $('sound').setAttribute('aria-pressed', String(on)); noiseBurst(.15, .5); });
 
 /* ============================== static overlay ============================== */
 const st = $('static'), sx = st.getContext('2d'), simg = sx.createImageData(160, 90);
