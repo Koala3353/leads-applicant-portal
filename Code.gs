@@ -75,14 +75,18 @@ function pageBoot_(key) {
 }
 
 /**
- * The portal's own link, always the plain form (Keene, Oct 23 2026: one link everywhere):
- *   https://script.google.com/macros/s/<id>/exec
- * People with several Google accounts in one browser use the door page's account buttons (docs/go, /macros/u/N/).
+ * The portal's own link, pinned to the school domain:
+ *   https://script.google.com/a/macros/student.ateneo.edu/s/<id>/exec
+ * With several Google accounts signed in, the plain /macros/s/... link opens with the browser's
+ * default (often personal) account and Google shows "file not found". The /a/macros/<domain>/ form
+ * makes Google use the school account instead. Domain = first AllowedEmailDomains entry.
  */
 function portalUrl_() {
   const url = ScriptApp.getService().getUrl() || '';
+  let domain = 'student.ateneo.edu';
+  try { domain = allowedDomains_()[0] || domain; } catch (e) { /* Settings missing: use the default */ }
   const m = url.match(/\/s\/([^/]+)\/(exec|dev)/);
-  return m ? 'https://script.google.com/macros/s/' + m[1] + '/' + m[2] : url;
+  return m ? 'https://script.google.com/a/macros/' + domain + '/s/' + m[1] + '/' + m[2] : url;
 }
 
 /** Lets any page pull in shared files: <?!= include_('Styles') ?> */
