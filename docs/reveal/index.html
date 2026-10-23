@@ -143,7 +143,6 @@ let ac = null, master = null, drone = null, hiss = null, soundIsOn = false;
 function soundOn() {
   if (!ac) {
     ac = new (window.AudioContext || window.webkitAudioContext)();
-    setTimeout(decodeVo, 0);
     master = ac.createGain(); master.gain.value = 0; master.connect(ac.destination);
     drone = ac.createGain(); drone.gain.value = 0; drone.connect(master);
     const hum = ac.createBiquadFilter(); hum.type = 'lowpass'; hum.frequency.value = 1400; hum.connect(drone);
@@ -164,24 +163,43 @@ function soundOn() {
   return soundIsOn;
 }
 const live = () => ac && soundIsOn;
-/* voiceover: one file per caption (vo/lines.json; vo/make.sh rebuilds them). Fetched now, decoded once sound is on.
-   A line only plays if sound is on when its moment comes (never late), and the bed dips under it. */
-const VO_KEYS = ['v1', 'v2', 'v3', 'v4', 'v5', 'v6a', 'v6r'], voRaw = {}, voBuf = {};
-VO_KEYS.forEach(k => fetch('vo/' + k + '.mp3').then(r => r.ok ? r.arrayBuffer() : null).then(b => { if (b) { voRaw[k] = b; decodeVo(); } }).catch(() => { /* no voice: captions only */ }));
-function decodeVo() {
-  if (!ac) return;
-  Object.keys(voRaw).forEach(k => { const b = voRaw[k]; delete voRaw[k]; ac.decodeAudioData(b, d => { voBuf[k] = d; }, () => {}); });
+/* eerie cues: no voice, just a sound at each caption, made here with Web Audio (no files). Each plays only if sound is on
+   when its moment comes (never late), and the bed dips under it.
+   bell: a distant, slightly wrong bell   breath: a rising breath of noise   fall: two notes a half step apart, sagging
+   swell: a reversed-sounding swell cut off dead   glass: a high glassy whine that beats   verdict: a low hit + cluster */
+function cueTone(f, type, at, len, peak, bend, dest) {
+  const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f, at);
+  if (bend) o.frequency.linearRampToValueAtTime(f * bend, at + len);
+  g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(peak, at + Math.min(.03, len / 4)); g.gain.exponentialRampToValueAtTime(.0001, at + len);
+  o.connect(g); g.connect(dest || master); o.start(at); o.stop(at + len + .05);
+  return g;
+}
+function cueNoise(at, len, f0, f1, peak, curve) {
+  const b = ac.createBuffer(1, Math.floor(ac.sampleRate * len), ac.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const n = ac.createBufferSource(), bp = ac.createBiquadFilter(), g = ac.createGain();
+  n.buffer = b; bp.type = 'bandpass'; bp.Q.value = 6; bp.frequency.setValueAtTime(f0, at); bp.frequency.exponentialRampToValueAtTime(f1, at + len);
+  g.gain.setValueAtTime(.0001, at);
+  if (curve === 'cut') { g.gain.exponentialRampToValueAtTime(peak, at + len - .02); g.gain.linearRampToValueAtTime(0, at + len); }
+  else { g.gain.linearRampToValueAtTime(peak, at + len * .7); g.gain.linearRampToValueAtTime(0, at + len); }
+  n.connect(bp); bp.connect(g); g.connect(master); n.start(at); n.stop(at + len);
 }
 function voice(k) {
-  if (!live() || !voBuf[k]) return;
-  const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = voBuf[k]; g.gain.value = 1.1;
-  s.connect(g); g.connect(master); s.start();
-  const dur = voBuf[k].duration;
-  hiss.gain.value = .012; drone.gain.value = .25;   // the bed dips while the voice speaks (tick() restores it after)
+  if (!live()) return;
+  const t = ac.currentTime + .02;
+  let dur = 2;
+  if (k === 'v1') { [1, 2.76, 5.4, 8.93].forEach((m, i) => cueTone(196 * m, 'sine', t, 4 - i * .7, [.14, .06, .035, .02][i])); dur = 3; }
+  else if (k === 'v2') { cueNoise(t, 2.2, 300, 2600, .35); }
+  else if (k === 'v3') { cueTone(220, 'triangle', t, 1.4, .12, .985); cueTone(207.65, 'triangle', t + .7, 1.8, .12, .97); }
+  else if (k === 'v4') { cueNoise(t, 1.3, 600, 4000, .4, 'cut'); cueTone(110, 'sawtooth', t, 1.3, .05, 1.06); dur = 1.4; }
+  else if (k === 'v5') { cueTone(1318.5, 'sine', t, 2.6, .05, .995); cueTone(1324, 'sine', t, 2.6, .05, .995); }
+  else { cueTone(55, 'sine', t, 1.8, .5, .6);   // the verdict: a low hit, then an unresolved cluster
+    (k === 'v6a' ? [220, 261.6, 329.6, 349.2] : [220, 233.1, 311.1]).forEach((f, i) => cueTone(f, 'triangle', t + .15 + i * .05, 2.4, .045)); dur = 2.4; }
+  hiss.gain.value = .012; drone.gain.value = .25;   // the bed dips under the cue (tick() restores it after)
   voDuckUntil = performance.now() + dur * 1000;
 }
 let voDuckUntil = 0;
-// [seconds, file]: the 3D film's captions, and the shorter 2D fallback's
+// [seconds, cue]: the 3D film's captions, and the shorter 2D fallback's
 const VO_3D = [[.6, 'v1'], [3.3, 'v2'], [5.65, 'v3'], [7.7, 'v4'], [9.1, 'v5'], [12.3, 'v6']];
 const VO_2D = [[0, 'v1'], [2.5, 'v4'], [5, 'v5'], [7.5, 'v6']];
 function voAt(list, t) {
