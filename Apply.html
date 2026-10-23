@@ -322,6 +322,13 @@
   .env-opt:has(input:checked) { border-color: var(--glow); color: var(--glow); }
   .field.has-error .env-opt { border-color: var(--danger); }
   /* the autosave strip: sticks to the top of the screen while they scroll the form, with a Save now button */
+  /* the sound switch (Ambience.html form score + PA announcements), bottom left; I.R.I.S. has the bottom right */
+  .sound-chip{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60;
+    min-height:36px;padding:.35em .8em;border:0;cursor:pointer;font:700 .72rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;
+    background:var(--win);color:#000;box-shadow:var(--bevel-out),3px 3px 0 #000}
+  .sound-chip[aria-pressed="false"]{color:#555}
+  .sound-chip:active{box-shadow:var(--bevel-in)}
+  .sound-chip:focus-visible{outline:2px dotted #000;outline-offset:-5px}
   .savebar { position: sticky; top: calc(8px + env(safe-area-inset-top, 0px)); z-index: 30; display: flex; align-items: center; gap: 10px;
     margin: 0 0 14px; padding: 6px 6px 6px 12px; background: var(--win, #c0c0c0); color: #000; box-shadow: var(--bevel-out), 3px 3px 0 #000;
     font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -523,6 +530,8 @@
 </head>
 <body data-loader-wait>
 <?!= include_('Loader') ?>
+<?!= include_('Ambience') ?>
+<button type="button" class="sound-chip" id="soundChip" aria-pressed="true" aria-label="Sound">&#9834; Sound on</button>
 <?!= includeOptional_('Mascot', { BRAND: BRAND, page: page }) ?>
 
 <div id="irisWakeStage" class="iris-wake-stage" hidden>
@@ -797,7 +806,7 @@
       </div>
 
       <!-- SECTION 2: Interrogation & Psychological Dossier -->
-      <div class="form-section-head">
+      <div class="form-section-head" id="sec2Head">
         <h2>Section 2 // Interrogation & Psychological Dossier</h2>
       </div>
 
@@ -1329,6 +1338,7 @@
     if (intake) {
       intake.style.setProperty('--res', (pct / 100).toFixed(2));
       intake.classList.toggle('resolved', pct >= 100);
+      if (pct >= 100 && window.FormSound) FormSound.say('p5');
       $('idpPct').textContent = pct + '%';
       const v = id => (($('f-' + id) || {}).value || '').trim();
       $('ihName').textContent = v('FullName');
@@ -1912,6 +1922,37 @@
 
   // Initial load
   load();
+
+  /* sound (Ambience.html 'form' mode): a low score with dread stings, and PA announcements at a few moments, each once.
+     On by default from the first tap or key press (browsers block sound before one); the chip turns it off, shared
+     with the hub's setting in this browser. */
+  window.FormSound = (function () {
+    const chip = $('soundChip');
+    let want = true, idle = null;
+    try { want = localStorage.getItem('leads-sound') !== 'off'; } catch (e) { /* storage blocked: default on */ }
+    const paint = () => { chip.textContent = want ? '\u266A Sound on' : '\u266A Sound off'; chip.setAttribute('aria-pressed', String(want)); };
+    const say = k => { if (want && window.Ambience && Ambience.playing()) Ambience.announce(k); };
+    const go = () => { if (!want || !window.Ambience) return; Ambience.start('form'); setTimeout(() => say('p1'), 2500); quiet(); };
+    // gone quiet for a minute mid-form: one reminder
+    const quiet = () => { clearTimeout(idle); idle = setTimeout(() => { if (!document.hidden) say('p3'); }, 60000); };
+    ['input', 'pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, () => { if (idle) quiet(); }, true));
+    const first = e => {
+      if (e.target === chip) return;
+      window.removeEventListener('pointerdown', first, true); window.removeEventListener('keydown', first, true); go();
+    };
+    window.addEventListener('pointerdown', first, true); window.addEventListener('keydown', first, true);
+    chip.addEventListener('click', () => {
+      want = !want; paint();
+      try { localStorage.setItem('leads-sound', want ? 'on' : 'off'); } catch (e) { /* fine */ }
+      if (want) go(); else { clearTimeout(idle); if (window.Ambience) Ambience.stop(.6); }
+    });
+    paint();
+    const h2 = $('sec2Head');
+    if (h2 && 'IntersectionObserver' in window) new IntersectionObserver((es, io) => es.forEach(e => { if (e.isIntersecting) { say('p2'); io.disconnect(); } }), { threshold: .6 }).observe(h2);
+    const fear = $('f-FearLeadership');
+    if (fear) fear.addEventListener('focus', () => say('p4'), { once: false });
+    return { say: say };
+  })();
 </script>
 </body>
 </html>

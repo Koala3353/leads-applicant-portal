@@ -2,14 +2,17 @@
      music file to license, download or host. Included by Home.html (hub music, with a sound toggle) and Game.html (the
      search, tension rises with each room). Browsers only allow sound after a tap or key press, so callers start it from one.
 
-     Ambience.start('hub' | 'game')   fades in (no-op if already playing; switching mode restarts it)
+     Ambience.start('hub' | 'game' | 'form')   fades in (no-op if already playing; switching mode restarts it)
      Ambience.stop(seconds)           fades out and stops every timer and node
      Ambience.setTension(0..1)        game: faster heartbeat, louder drone, more creaks
      Ambience.use(audioContext)       share the page's own AudioContext (the Game has one) instead of making a second
      Ambience.playing()               true while the score is on
+     Ambience.announce('p1')          a PA announcement (chime, then the voice; the score dips under it). Files are
+                                      docs/pa/<key>.mp3 on GitHub Pages (docs/pa/make.sh). Only while the score is on.
 
      Layers: a low detuned drone through a slowly moving filter; slow minor chords (A minor, F, D minor, E) under a long
-     reverb; a sparse music box (hub) or a heartbeat with distant creaks and swells (game). Paused while the tab is hidden. -->
+     reverb; a sparse music box (hub), a heartbeat with distant creaks and swells (game), or dread stings, creaks and
+     swells with PA announcements (form: the Apply page). Paused while the tab is hidden. -->
 <script>
 window.Ambience = (function () {
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -40,7 +43,7 @@ window.Ambience = (function () {
     const t = ac.currentTime, g = keep(ac.createGain()), lp = keep(ac.createBiquadFilter()), lfo = keep(ac.createOscillator()), lg = keep(ac.createGain());
     lp.type = 'lowpass'; lp.frequency.value = 160; lp.Q.value = 6;
     lfo.frequency.value = .06; lg.gain.value = 90; lfo.connect(lg); lg.connect(lp.frequency);
-    g.gain.value = mode === 'game' ? .07 : .045;
+    g.gain.value = mode === 'game' ? .07 : mode === 'form' ? .06 : .045;
     [55, 55 * 1.007, 82.4].forEach((f, i) => { const o = keep(ac.createOscillator()); o.type = i === 2 ? 'triangle' : 'sawtooth'; o.frequency.value = f; o.connect(lp); o.start(t); });
     lp.connect(g); g.connect(master); g.connect(verb); lfo.start(t);
     drone.gain = g;
@@ -97,8 +100,44 @@ window.Ambience = (function () {
     later(swell, 14000 + Math.random() * 12000);
   }
 
+  function dread() {   // the form's sting: a high minor-second cluster that fades in and sags, like a held breath going wrong
+    const t = ac.currentTime + .02, dur = 5 + Math.random() * 3, base = hz(76 + Math.floor(Math.random() * 6));
+    [1, 1.0595, 1.4142].forEach((k, i) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = i === 2 ? 'triangle' : 'sine'; o.frequency.setValueAtTime(base * k, t); o.frequency.linearRampToValueAtTime(base * k * .97, t + dur);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime([.016, .014, .006][i], t + dur * .6); g.gain.linearRampToValueAtTime(0, t + dur);
+      o.connect(g); g.connect(verb); g.connect(master); o.start(t); o.stop(t + dur + .05);
+    });
+    later(dread, 16000 + Math.random() * 14000);
+  }
+
+  /* PA announcements (form). Fetched from GitHub Pages (CORS is open there) and decoded once. */
+  const PA_BASE = 'https://koala3353.github.io/leads-applicant-portal/pa/', paBuf = {}, paSaid = {};
+  function chime(t) {   // the two-note "ding dong" before an announcement
+    [[659.3, 0], [523.3, .5]].forEach(([f, d]) => {
+      const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(.08, t + d + .01); g.gain.exponentialRampToValueAtTime(.0001, t + d + 1.1);
+      o.connect(g); g.connect(verb); g.connect(master); o.start(t + d); o.stop(t + d + 1.2);
+    });
+  }
+  function announce(key) {
+    if (!on || mode !== 'form' || paSaid[key] || !ac) return;
+    paSaid[key] = 1;
+    const play = buf => {
+      if (!on || !master) return;
+      const t = ac.currentTime + .05, s = ac.createBufferSource(), g = ac.createGain();
+      chime(t);
+      s.buffer = buf; g.gain.value = 1.6; s.connect(g); g.connect(master); g.connect(verb); s.start(t + 1.3);
+      if (drone.gain) { drone.gain.gain.setTargetAtTime(.02, t, .3); drone.gain.gain.setTargetAtTime(.06, t + 1.3 + buf.duration, .8); }
+    };
+    if (paBuf[key]) return play(paBuf[key]);
+    fetch(PA_BASE + key + '.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject())
+      .then(b => new Promise((ok, no) => ac.decodeAudioData(b, ok, no))).then(buf => { paBuf[key] = buf; play(buf); })
+      .catch(() => { /* offline or blocked: no announcement */ });
+  }
+
   function start(m) {
-    m = m === 'game' ? 'game' : 'hub';
+    m = m === 'game' || m === 'form' ? m : 'hub';
     if (on && m === mode) return;
     if (on) stop(.3);
     if (!ctx()) return;
@@ -108,6 +147,7 @@ window.Ambience = (function () {
     verb = makeVerb();
     drone(); chord();
     if (mode === 'hub') later(musicBox, 2500);
+    else if (mode === 'form') { later(dread, 7000); later(creak, 12000); later(swell, 20000); }
     else { later(heartbeat, 1500); later(creak, 6000); later(swell, 9000); }
   }
   function stop(fade) {
@@ -127,6 +167,6 @@ window.Ambience = (function () {
     if (!ac || !on) return;
     try { document.hidden ? ac.suspend() : ac.resume(); } catch (e) { /* ignore */ }
   });
-  return { start: start, stop: stop, setTension: setTension, use: c => { if (c && !ac) ac = c; }, playing: () => on };
+  return { start: start, stop: stop, announce: announce, setTension: setTension, use: c => { if (c && !ac) ac = c; }, playing: () => on };
 })();
 </script>
