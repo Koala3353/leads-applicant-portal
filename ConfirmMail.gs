@@ -41,6 +41,7 @@ function confirmMail_apply_(a) {
   // "₱4,000 of the ₱4,200 fee; the last ₱200 comes later, for possible notarization."
   const feeLine = php(total - later) + ' of the ' + php(total) + ' fee' + (later ? '; the last ' + php(later) + ' comes later, for possible notarization.' : '.');
   const facts = [['FILE NO.', a.ApplicantID], ['STATUS', 'SUBMITTED'], ['CAMP', String(s.EventDates || 'January 29 to 31, 2027')],
+    ['WHERE', String(s.EventVenue || '').trim() || 'Kasile Hills Nature Resort'],
     ['FEE', php(total) + ' (' + php(total - later) + ' once accepted, ' + php(later) + ' later)'], ['YOUR CODE', a.ReferralCode || '—', true]];
   const next = [
     ['01', 'Review', 'The core team reads every file. Results come out on the portal; we will email you when they do.', true],
@@ -52,7 +53,7 @@ function confirmMail_apply_(a) {
   return confirmSend_(a.Email, {
     subject: 'File received: ' + a.ApplicantID + ' · Eyes on LEADS',
     preheader: 'Your LEADS application is on record. Your answers are inside.',
-    style: 'intake', subjectNo: a.ApplicantID, struck: 'NOT ON FILE',
+    style: 'intake', subjectNo: a.ApplicantID, struck: 'NOT ON FILE', venue: String(s.EventVenue || '').trim(),   // the same venue as the portal (Settings › EventVenue)
     nick: nick, tag: 'CASE FILE 26//27 · ' + a.ApplicantID, headline: 'File<br>received.',
     tagline: 'ON RECORD', finding: 'subject wrote it down. That is the hard part. Observation continues.',
     intro: 'Hi ' + nick + ', your application to LEADS is filed. This is what you sent us. Keep it: you can\'t change it anymore, and you don\'t need to.',
@@ -174,7 +175,6 @@ function confirmIntakeHtml_(o) {
   const clock = Utilities.formatDate(now, 'Asia/Manila', 'HH:mm:ss');
   const dotted = 'border:2px dotted ' + C.ink + ';';
   const stamp = (t, rot) => `<span class="t-red" style="display:inline-block;transform:rotate(${rot || -6}deg);border:3px solid ${C.red};padding:3px 10px;font-family:${M};font-size:13px;line-height:17px;font-weight:800;letter-spacing:3px;color:${C.red};">${t}</span>`;
-  const redact = w => `<span class="bg-black" style="display:inline-block;width:${w}px;height:12px;background-color:${C.black};vertical-align:middle;"></span>`;
   // a section: dotted header frame (like the brand book's page titles), then numbered questions on a ruled grid
   let qn = 0;
   const section = (title, items) => `
@@ -259,7 +259,7 @@ function confirmIntakeHtml_(o) {
           </tr></table></td></tr>
         <tr><td class="pad t-ink" style="padding:26px 30px 0 30px;font-family:${M};font-size:18px;line-height:26px;font-weight:800;color:${C.ink};text-transform:uppercase;">${o.closing}</td></tr>
         <tr><td class="pad t-grey" style="padding:24px 30px 24px 30px;font-family:${M};font-size:10px;line-height:16px;letter-spacing:1px;color:${C.grey};">
-          <div style="border-top:2px dotted ${C.rule};padding-top:12px;">CASE FILE 26/27 &middot; EYES ON LEADS &middot; A LEADERSHIP DEVELOPMENT PROJECT OF MEA &middot; LOCATION ${redact(56)}<br>THIS IS AN AUTOMATIC CONFIRMATION. REPLY IF SOMETHING LOOKS WRONG.</div></td></tr>
+          <div style="border-top:2px dotted ${C.rule};padding-top:12px;">CASE FILE 26/27 &middot; EYES ON LEADS &middot; A LEADERSHIP DEVELOPMENT PROJECT OF MEA &middot; LOCATION ${E(o.venue || 'Kasile Hills Nature Resort').toUpperCase()}<br>THIS IS AN AUTOMATIC CONFIRMATION. REPLY IF SOMETHING LOOKS WRONG.</div></td></tr>
       </table>
     </td></tr>
   </table>
