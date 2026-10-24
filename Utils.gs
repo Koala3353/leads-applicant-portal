@@ -262,6 +262,7 @@ const SETTINGS_SCHEMA = [
   { key: 'PaymentDeadline', type: 'date', def: null, help: 'Last day to send proof of payment, e.g. 2026-12-01 23:59 (shown to applicants)' },
   { key: 'RegistrationFee', type: 'int', def: 4500, help: 'Pesos, shown before filing: "covers accommodations, transportation, food, and activities for 3 days and 2 nights".' },
   { key: 'PrimerLink', type: 'text', def: '', help: 'Optional link to the fee primer (full breakdown), shown with the fee. Blank = no link.' },
+  { key: 'PortalContacts', type: 'text', def: '', help: 'Who to contact about portal problems, one per line: Name | email (Alt+Enter for a new line). Blank = the list in Brand.gs.' },
   { key: 'EyeFolder', type: 'text', def: '', help: 'Drive folder for the Game eye scans (EYE_<ID>). Made automatically on the first upload; private to the script owner.' },
   { key: 'PaymentFolder', type: 'text', def: '', help: 'Drive folder where uploaded proofs are saved. Made automatically on the first upload; share it with the core team.' },
   // 03 requirements
@@ -454,9 +455,9 @@ function toObject_(rowValues, cols) {
  * they were: numbering starts at Settings › ApplicantIdStart (default 2300) and each new ID skips ahead by a
  * random 1-9. Existing IDs are never renumbered (forms, referrals and the Log point at them).
  */
-function nextApplicantId_() {
-  const sh = sheet_(SHEET.APPLICANTS);
-  const ids = sh.getRange(2, col_('ApplicantID') + 1, Math.max(sh.getLastRow() - 1, 1), 1).getValues().flat();
+function nextApplicantId_(rows) {   // rows: the submit's own read (apply_lockRows_), so the ID column isn't read twice
+  const sh = sheet_(SHEET.APPLICANTS), c = col_('ApplicantID');
+  const ids = rows ? rows.slice(1).map(r => r[c]) : sh.getRange(2, c + 1, Math.max(sh.getLastRow() - 1, 1), 1).getValues().flat();
   const max = ids.reduce((m, id) => {
     const n = parseInt(String(id).replace('APP-', ''), 10);
     return isNaN(n) ? m : Math.max(m, n);
@@ -600,6 +601,12 @@ function setStatusLocked_(applicantId, newStatus, by) {
   if (by && by !== 'system') fields.ReviewedBy = by;
   updateApplicant_(found.row, fields, applicantId);
   logChange_(applicantId, 'status', from, newStatus, by);
+  // accepted again with payment verified and requirements approved already: straight to CONFIRMED, like a hand edit
+  if (newStatus === 'ACCEPTED' && shouldConfirm_(Object.assign({}, found.data, fields))) {
+    updateApplicant_(found.row, { Status: 'CONFIRMED' }, applicantId);
+    logChange_(applicantId, 'status', 'ACCEPTED', 'CONFIRMED', 'system');
+    return 'CONFIRMED';
+  }
   return newStatus;
 }
 
@@ -624,7 +631,7 @@ function trackChangeError_(field, to, d) {
 
 /** Records a status/track change as a CHANGE row in Activity (never skipped in a rush, never trimmed). */
 function logChange_(applicantId, action, from, to, by) {
-  activity_('change_' + action, applicantId + ': ' + (from || '(none)') + ' → ' + (to || '(none)') + ' by ' + (by || currentEmail_() || 'system'),
+  activity_('change_' + action, (applicantId ? applicantId + ': ' : '') + (from || '(none)') + ' → ' + (to || '(none)') + ' by ' + (by || currentEmail_() || 'system'),
     { level: 'CHANGE' });
 }
 

@@ -1997,10 +1997,11 @@
     const paint = () => { chip.innerHTML = want ? '<svg class="snd-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg> Sound ON &middot; tap to mute' : '<svg class="snd-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><path d="M16 9l6 6M22 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg> Sound OFF &middot; tap to turn on'; chip.setAttribute('aria-pressed', String(want)); };
     const go = () => { if (want && !film && window.Ambience) Ambience.start('hub'); };
     const first = e => {
-      if (e.target === chip) return;   // the chip's own click decides
-      window.removeEventListener('pointerdown', first, true); window.removeEventListener('keydown', first, true); go();
+      if (chip.contains(e.target)) return;   // the chip's own click decides
+      window.removeEventListener('click', first, true); window.removeEventListener('touchend', first, true); window.removeEventListener('keydown', first, true); go();
     };
-    window.addEventListener('pointerdown', first, true); window.addEventListener('keydown', first, true);
+    // click / touchend / keydown count as the gesture browsers need for sound (a touch's pointerdown doesn't)
+    window.addEventListener('click', first, true); window.addEventListener('touchend', first, true); window.addEventListener('keydown', first, true);
     chip.addEventListener('click', () => {
       want = !want; paint();
       try { localStorage.setItem('leads-sound', want ? 'on' : 'off'); } catch (e) { /* fine */ }

@@ -39,6 +39,8 @@
     font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; pointer-events: none; }
   .sess-rec::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #ff2020; animation: ld-pulse 1.2s ease-in-out infinite; }
   body.in-session .sess-rec { display: inline-flex; }
+  /* short phones: I.R.I.S.'s speech bubble would sit on the answers during the 10-second questions */
+  @media (max-width: 560px), (max-height: 700px) { body.in-session .kuya-bubble { display: none !important; } }
   /* eye scan upload + registration fee note */
   .eye-drop { position: relative; display: grid; place-items: center; gap: 8px; min-height: 170px; margin: 14px 0; padding: 18px; text-align: center;
     border: 2px dashed var(--line); background: rgba(0,0,0,.25); cursor: pointer; }
@@ -398,7 +400,7 @@
     </figure>
     <form id="eyeForm" novalidate>
       <label class="eye-drop" for="eyeFile">
-        <input type="file" id="eyeFile" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif">
+        <input type="file" id="eyeFile" accept="image/*">
         <span id="eyeInner"><b>Choose a photo</b><br><span class="mono" style="font-size:.8rem">or take one with your camera</span></span>
       </label>
       <div class="actions"><button class="btn" type="submit" id="eyeBtn" disabled>Upload and continue</button></div>
@@ -627,7 +629,7 @@
       const raw = soundRaw[k];
       if (!raw || soundBuf[k]) return;
       soundRaw[k] = null;
-      audio.decodeAudioData(raw, b => { soundBuf[k] = b; }, () => {});
+      try { Promise.resolve(audio.decodeAudioData(raw, b => { soundBuf[k] = b; }, () => {})).catch(() => { /* bad file: the synthesized sound plays */ }); } catch (e) { /* old Safari */ }
     });
   }
   /** Plays a loaded sound file; false if it isn't ready (the caller then synthesizes one). */

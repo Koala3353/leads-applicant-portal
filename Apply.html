@@ -1441,7 +1441,9 @@
 
     // 2. Save Draft to Account & Redirect to Game Page
     try {
-      const res = await call('apply_saveDraft', data);
+      clearTimeout(draftSaveTimer); draftSaveTimer = null;   // no autosave racing this save
+      let res = await call('apply_saveDraft', data);
+      if (res && res.busy) { await new Promise(r => setTimeout(r, 1500)); res = await call('apply_saveDraft', data); }   // an autosave held their lock: once more
       if (res && res.applied) { go(BASE, 'Go to the hub', 'You already applied. Your file is on record.'); return; }
       if (!res || res.ok === false) throw new Error('save failed');    // #7: don't send them on without a saved draft
 
@@ -1956,10 +1958,11 @@
     const say = k => { if (want && window.Ambience && Ambience.playing()) Ambience.announce(k); };
     const go = () => { if (!want || !window.Ambience) return; Ambience.start('form'); setTimeout(() => say('p1'), 2500); };
     const first = e => {
-      if (e.target === chip) return;
-      window.removeEventListener('pointerdown', first, true); window.removeEventListener('keydown', first, true); go();
+      if (chip.contains(e.target)) return;
+      window.removeEventListener('click', first, true); window.removeEventListener('touchend', first, true); window.removeEventListener('keydown', first, true); go();
     };
-    window.addEventListener('pointerdown', first, true); window.addEventListener('keydown', first, true);
+    // click / touchend / keydown count as the gesture browsers need for sound (a touch's pointerdown doesn't)
+    window.addEventListener('click', first, true); window.addEventListener('touchend', first, true); window.addEventListener('keydown', first, true);
     chip.addEventListener('click', () => {
       want = !want; paint();
       try { localStorage.setItem('leads-sound', want ? 'on' : 'off'); } catch (e) { /* fine */ }

@@ -135,7 +135,7 @@ function apply_submit_(form) {
 
   // 5. Data integrity lock and atomic write. Keep the time inside the lock short: every applicant's submit waits on it.
   // One read covers both duplicate checks; the Log row and draft clean-up happen after the lock is released.
-  let nextId, referralCode = '', referral = {};
+  let nextId, referralCode = '', referral = {}, idConflictRow = 0;
   // a submit is rare and precious: wait longer rather than fail during a rush
   const early = withScriptLock_(30000, () => {
     // Re-verify applications open status inside lock
@@ -145,7 +145,7 @@ function apply_submit_(form) {
 
     ensureApplicantHeaders_();   // adds headers for any new COLS the first time
     const idCol = col_('IDNumber'), emailCol = col_('Email');
-    const values = sheet_(SHEET.APPLICANTS).getDataRange().getValues();
+    const values = apply_lockRows_();   // 5 columns, not the whole tab (essays, game answers): keeps the lock short
     for (let i = 1; i < values.length; i++) {
       // Re-verify applicant has not already applied inside lock
       if (String(values[i][emailCol]).trim().toLowerCase() === email) {
@@ -156,12 +156,12 @@ function apply_submit_(form) {
     // Referral first: the code must belong to someone else who applied and hasn't withdrawn (Referrals.gs).
     // Checked before the ID so a bogus code can't be used to ask "has this ID applied?" without filing anything.
     const ref = checkReferral_(v.clean.ReferredBy, values, email);
-    if (ref.error) return failed({ ReferredBy: ref.error });
+    if (ref.error) return { ok: false, errors: { ReferredBy: ref.error } };   // a typo in a code isn't probing: the picker is rate limited
 
     // Check Ateneo IDNumber uniqueness across all applicant rows
     for (let i = 1; i < values.length; i++) {
       if (String(values[i][idCol]).trim() === candidateIdStr) {
-        activity_('id_conflict', 'submit with an ID already on file (row ' + (i + 1) + ')', { level: 'WARN', page: 'apply' });   // for the core team to check
+        idConflictRow = i + 1;   // logged after the lock is released
         return failed({ IDNumber: "That ID number can't be used for a new application. If it's yours, message the core team." });
       }
     }
@@ -169,7 +169,7 @@ function apply_submit_(form) {
     referral = ref;
 
     // Generate next sequential ApplicantID
-    nextId = nextApplicantId_();
+    nextId = nextApplicantId_(values);
     const now = new Date();
 
     // Each value goes under its header, wherever that column is in the Sheet. Every Apply answer comes straight from
@@ -201,7 +201,9 @@ function apply_submit_(form) {
     SpreadsheetApp.flush();   // the row is written before the next submit reads the sheet
     return null;
   });
+  if (idConflictRow) activity_('id_conflict', 'submit with an ID already on file (row ' + idConflictRow + ')', { level: 'WARN', page: 'apply' });   // for the core team to check
   if (early) return early;   // refused inside the lock (referral or ID problem)
+  if (referral.referrerId) forgetReferralMap_();   // the referrer's hub shows the new name on their next load
   forgetApplicant_(email);   // the cached "no file yet" must not outlive the submit
 
   // Outside the lock: appends and a single-row clear don't need it
@@ -211,6 +213,24 @@ function apply_submit_(form) {
   if (referral.referrerId) activity_('referral', nextId + ' referred by ' + referral.referrerId + ' (' + referral.code + ')', { page: 'apply' });
   apply_deleteDraft_(email);
   return { ok: true, id: nextId, referralCode: referralCode };
+}
+
+/**
+ * Inside the submit lock: only the columns the checks need (ApplicantID, Email, IDNumber, ReferralCode, Status), laid out
+ * like full rows so checkReferral_, referralCodesIn_ and nextApplicantId_ work unchanged. With hundreds of applicants,
+ * reading every essay and game answer here made each submit hold the lock for seconds.
+ */
+function apply_lockRows_() {
+  const sh = sheet_(SHEET.APPLICANTS), n = sh.getLastRow(), head = cols_();
+  const rows = [];
+  for (let i = 0; i < Math.max(n, 1); i++) rows.push(new Array(head.length).fill(''));
+  if (n < 2) return rows;
+  ['ApplicantID', 'Email', 'IDNumber', 'ReferralCode', 'Status', 'ReferrerID'].forEach(name => {
+    const c = head.indexOf(name);
+    if (c < 0) return;
+    sh.getRange(2, c + 1, n - 1, 1).getValues().forEach((v, i) => { rows[i + 1][c] = v[0]; });
+  });
+  return rows;
 }
 
 /* ---------------- drafts, saved per Google account ----------------
@@ -248,12 +268,14 @@ function apply_draftRow_(sh, email) {
 function apply_ensureDraftRow_(sh, email) {
   let row = apply_draftRow_(sh, email);
   if (row) return row;
-  row = withScriptLock_(15000, () => {
+  // the document lock, not the script lock: a new applicant's first save must not queue behind everyone's submits
+  const lock = LockService.getDocumentLock();
+  if (!lock.tryLock(15000)) return 0;   // the caller answers "busy" and the page keeps the draft in the browser
+  try {
     const again = apply_findDraftRow_(sh, email);   // someone (another tab) may have added it while we waited
-    if (again) return again;
-    sh.appendRow([email, '', '']); SpreadsheetApp.flush();
-    return sh.getLastRow();
-  });
+    if (again) row = again;
+    else { sh.appendRow([email, '', '']); SpreadsheetApp.flush(); row = sh.getLastRow(); }
+  } finally { lock.releaseLock(); }
   CacheService.getScriptCache().put('draftrow:' + email, String(row), 21600);
   return row;
 }
@@ -314,6 +336,10 @@ function apply_saveDraft_(data, internal) {   // internal: fields only the serve
   // Nothing is stored on our side until they've ticked the data-privacy consent (RA 10173). Before that the page
   // keeps the draft in this browser only. Unticking it later deletes what we had.
   if ('DataConsent' in clean && clean.DataConsent !== 'Y') {
+    try {   // the eye scan goes too: nothing of theirs stays without consent (RA 10173)
+      const d = apply_getDraft_(email), id = (String(d && d.data && d.data.EyePhoto || '').match(/\/d\/([\w-]{20,})/) || [])[1];
+      if (id) DriveApp.getFileById(id).setTrashed(true);
+    } catch (e) { /* already gone */ }
     apply_deleteDraft_(email);
     return { ok: false, consent: true };
   }
@@ -331,6 +357,7 @@ function apply_saveDraft_(data, internal) {   // internal: fields only the serve
     if (!('DataConsent' in clean) && stored.DataConsent !== 'Y') return { ok: false, consent: true };
     const now = new Date();
     const row = have || apply_ensureDraftRow_(sh, email);
+    if (!row) return { ok: false, busy: true };
     sh.getRange(row, 2, 1, 2).setValues([[now, JSON.stringify(Object.assign({}, stored, clean))]]);
     return { ok: true, savedAt: now.toISOString() };
   } finally { lock.releaseLock(); }

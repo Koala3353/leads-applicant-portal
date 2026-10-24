@@ -171,8 +171,12 @@ function traced_(event, page, fn, summarize, expected) {
 function bump_(key, max, ttl, peek) {
   const cache = CacheService.getScriptCache();
   if (peek) return Number(cache.get(key) || 0) < max;
-  const lock = key.indexOf('@') >= 0 ? LockService.getUserLock() : LockService.getScriptLock();
-  if (!lock.tryLock(3000)) return false;
+  // a person's own counter: their user lock, and busy = refuse. A shared counter (clog:anon, rep:day:...): the document
+  // lock (never the script lock submits wait on), and busy = let it through: those are soft caps, and refusing would
+  // tell someone they're over a limit they never reached.
+  const shared = key.indexOf('@') < 0;
+  const lock = shared ? LockService.getDocumentLock() : LockService.getUserLock();
+  if (!lock.tryLock(3000)) return shared;
   try {
     const n = Number(cache.get(key) || 0) + 1;
     if (n > max) return false;

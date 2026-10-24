@@ -45,6 +45,19 @@
   .small{color:var(--grey);font-size:12.5px}
   .link{word-break:break-all;background:#000;border:1px dashed var(--grey);padding:8px 10px;font-size:12px;margin-top:10px;user-select:all}
   [hidden]{display:none!important}
+  /* "opening the portal": the Apps Script page can take 5 to 20 s before the browser shows anything, so the door says so */
+  .go{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:24px 18px;background:var(--black);text-align:center;background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.035) 2px 4px)}
+  .go .box{width:min(100%,420px)}
+  .go .eye{width:64px;height:64px;margin:0 auto 18px;border-radius:50%;background:radial-gradient(circle,var(--black) 0 22%,var(--yellow) 23% 38%,var(--white) 39% 100%);
+    box-shadow:0 0 0 3px var(--white);animation:look 2.4s ease-in-out infinite}
+  @keyframes look{0%,100%{transform:scaleY(1)}46%{transform:scaleY(1)}50%{transform:scaleY(.08)}54%{transform:scaleY(1)}}
+  .go h2{margin:0 0 6px;font:800 18px/1.3 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase}
+  .go .msg{min-height:3em;margin:0 0 16px;color:var(--grey)}
+  .go .bar{height:10px;border:2px solid var(--white);padding:1px;overflow:hidden}
+  .go .bar i{display:block;height:100%;width:0;background:var(--yellow);transition:width .6s linear}
+  .go .t{margin:10px 0 0;font-size:12px;letter-spacing:.14em;color:var(--grey)}
+  .go .late{margin-top:18px}
+  @media (prefers-reduced-motion:reduce){.go .eye{animation:none}.go .bar i{transition:none}}
 </style>
 </head>
 <body>
@@ -87,7 +100,23 @@
       <li><b>Sign out of the others</b> on this browser, then tap Enter the portal again.</li>
     </ol>
     <button class="btn ghost" type="button" id="copyBtn2">Copy the link</button>
+  </section>
 </main>
+
+<div class="go" id="going" role="status" aria-live="polite" hidden>
+  <div class="box">
+    <div class="eye" aria-hidden="true"></div>
+    <h2>Opening your file</h2>
+    <p class="msg" id="goMsg">Connecting to the camera feed.</p>
+    <div class="bar" aria-hidden="true"><i id="goBar"></i></div>
+    <p class="t" id="goT">00:00</p>
+    <div class="late" id="goLate" hidden>
+      <p class="small">Still nothing? Google can be slow when many people sign in at once. Tap below to try again, or check that you are signed in with your Ateneo account.</p>
+      <a class="btn" id="goAgain">Try again</a>
+      <button class="btn ghost" type="button" id="goBack">Back</button>
+    </div>
+  </div>
+</div>
 <script>
 (function () {
   var PORTAL = 'https://script.google.com/a/macros/student.ateneo.edu/s/AKfycbwoL5I-i10w25U-nNqAlwfVEDF0NuQhWEHZq_EqMu9t3pszFNH72FuXhYXAH1TH2Fk/exec';
@@ -120,6 +149,37 @@
   }
   $('copyBtn').addEventListener('click', copyLink);
   $('copyBtn2').addEventListener('click', copyLink);
+
+  /* tapping Enter: show that the portal is loading until the browser swaps the page (Apps Script answers in 5 to 20 s) */
+  var STAGES = [[0, 'Connecting to the camera feed.'], [3, 'Checking your Ateneo account with Google.'],
+    [7, 'Pulling your file from the archive. This part is slow.'], [13, 'Still loading. Keep this tab open.'],
+    [22, 'Taking longer than usual. Many people are applying right now.']];
+  var goTimer = null;
+  function going(on) {
+    clearInterval(goTimer);
+    $('going').hidden = !on;
+    if (!on) return;
+    var t0 = Date.now();
+    $('goLate').hidden = true; $('goBar').style.width = '0';
+    function paint() {
+      var s = (Date.now() - t0) / 1000, msg = STAGES[0][1];
+      for (var i = 0; i < STAGES.length; i++) if (s >= STAGES[i][0]) msg = STAGES[i][1];
+      $('goMsg').textContent = msg;
+      $('goBar').style.width = Math.min(95, 100 * (1 - Math.exp(-s / 9))) + '%';   // never reaches the end on its own
+      $('goT').textContent = pad(Math.floor(s / 60)) + ':' + pad(Math.floor(s % 60));
+      if (s > 25) $('goLate').hidden = false;
+    }
+    paint(); goTimer = setInterval(paint, 500);
+  }
+  $('enterBtn').addEventListener('click', function (e) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;   // opening in a new tab: nothing to wait for here
+    going(true);
+  });
+  $('goAgain').href = dest;
+  $('goAgain').addEventListener('click', function () { going(true); });
+  $('goBack').addEventListener('click', function () { going(false); });
+  // coming back with the browser's Back button shows this page from memory: don't leave the overlay up
+  window.addEventListener('pageshow', function (e) { if (e.persisted) going(false); });
 
   var pad = function (n) { return (n < 10 ? '0' : '') + n; };
   (function tick() { var d = new Date(); $('clock').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); setTimeout(tick, 1000); })();

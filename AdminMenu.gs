@@ -78,7 +78,8 @@ function applyToSelection_(field, value) {
 
   const ids = selectedIds_(sh);
   if (!ids.length) { ui.alert('Select at least one applicant row (any cell in the row works).'); return; }
-  const final = (field === 'Status' && (value === 'REJECTED' || value === 'WITHDRAWN')) ? '\n\nThis is final and can\'t be undone.' : '';
+  const final = field !== 'Status' ? '' : value === 'REJECTED' ? '\n\nApplicants see it once Settings › ResultsReleased is ticked. A misclick can be changed back.'
+    : value === 'WITHDRAWN' ? '\n\nThey see this right away. A misclick can be changed back.' : '';
   const ok = ui.alert('Set ' + field + ' to ' + value + ' for ' + ids.length + ' applicant(s)?\n\n' +
     ids.slice(0, 15).join(', ') + (ids.length > 15 ? ' …' : '') + final, ui.ButtonSet.YES_NO);
   if (ok !== ui.Button.YES) return;
@@ -270,7 +271,10 @@ function logConfigEdit_(e) {
   const single = r.getNumRows() === 1 && r.getNumColumns() === 1;
   rows.forEach(x => {
     const key = String(x[0]).trim();
-    if (key) logChange_('', 'setting ' + key, single ? String(e.oldValue === undefined ? '' : e.oldValue) : '?', String(x[1]), who);
+    if (!key) return;
+    const from = single ? String(e.oldValue === undefined ? '' : e.oldValue) : '?';
+    if (single && from.trim().toLowerCase() === String(x[1]).trim().toLowerCase()) return;   // re-typed the same value (or clicked in and out)
+    logChange_('', 'setting ' + key, from, String(x[1]), who);
   });
 }
 

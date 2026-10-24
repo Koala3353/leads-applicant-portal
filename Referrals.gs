@@ -82,6 +82,29 @@ function activeReferralCodes_() {
   return out;
 }
 
+/**
+ * { referrerApplicantId: [first names of the people who applied with their code] }, withdrawn left out. Built from three
+ * columns once a minute (cached), so a rush of hub loads doesn't re-read the tab each time. A submit with a code clears it.
+ */
+function referralMap_() {
+  const cache = CacheService.getScriptCache();
+  try { const hit = cache.get('refmap'); if (hit) return JSON.parse(hit); } catch (e) { /* read it fresh */ }
+  const out = {}, sh = sheet_(SHEET.APPLICANTS), last = sh.getLastRow(), cRef = cols_().indexOf('ReferrerID');
+  if (last >= 2 && cRef >= 0) {
+    const refs = sh.getRange(2, cRef + 1, last - 1, 1).getValues();
+    const stat = sh.getRange(2, col_('Status') + 1, last - 1, 1).getValues();
+    const full = sh.getRange(2, col_('FullName') + 1, last - 1, 1).getValues();
+    for (let i = 0; i < refs.length; i++) {
+      const by = String(refs[i][0]).trim();
+      if (!by || String(stat[i][0]).trim() === 'WITHDRAWN') continue;
+      (out[by] = out[by] || []).push(firstName_(full[i][0]));
+    }
+  }
+  try { cache.put('refmap', JSON.stringify(out), 60); } catch (e) { /* too big: fine, just slower */ }
+  return out;
+}
+function forgetReferralMap_() { try { CacheService.getScriptCache().remove('refmap'); } catch (e) { /* runs out in a minute */ } }
+
 /** "Dela Cruz, Juan P." -> "Juan"; "Juan P. Dela Cruz" -> "Juan" (the form asks for Last name, First name). */
 function firstName_(fullName) {
   const s = String(fullName || '').trim();
@@ -125,20 +148,8 @@ function referralInfo_(found) {
   }
   // How many applied with the code, and their first names. Never their statuses: that would tell a referrer whether a
   // friend got in (RA 10173). One read of three columns instead of one call per referral.
-  let applied = 0;
-  const names = [];
-  const sh = sheet_(SHEET.APPLICANTS), last = sh.getLastRow(), cRef = cols_().indexOf('ReferrerID');
-  if (last >= 2 && cRef >= 0) {
-    const refs = sh.getRange(2, cRef + 1, last - 1, 1).getValues();
-    const stat = sh.getRange(2, col_('Status') + 1, last - 1, 1).getValues();
-    const full = sh.getRange(2, col_('FullName') + 1, last - 1, 1).getValues();
-    for (let i = 0; i < refs.length; i++) {
-      if (String(refs[i][0]).trim() === String(a.ApplicantID) && String(stat[i][0]).trim() !== 'WITHDRAWN') {
-        applied++;
-        names.push(firstName_(full[i][0]));
-      }
-    }
-  }
+  const names = (referralMap_()[String(a.ApplicantID)] || []).slice();
+  const applied = names.length;
   const usedCode = String(a.ReferredBy || '').trim();
   const counts = { applied: applied };
   return { code: code, link: portalUrl_() + '?ref=' + encodeURIComponent(code), counts: counts, open: isOpen_(),

@@ -211,7 +211,7 @@ function preleads_submit_(form) {
     // Re-verify no duplicate submission inside the lock. Your own account: say so. Someone else's ID: the
     // generic message, so the reply never confirms whether a given ID registered.
     const dup = preleads_isDuplicateLocked_(sh, email, clean.IDNumber);
-    if (dup === 'email') return { ok: false, errors: { form: 'You have already registered for THE LEADS UP with this account.' } };
+    if (dup === 'email') return { ok: true, already: true };   // a retried submit that went through the first time: still a success
     if (dup === 'id') { bump_(failKey, 99, 3600); return idTaken; }
 
     // Each value goes under its header (so the core team can reorder or add columns safely). Missing headers are added.

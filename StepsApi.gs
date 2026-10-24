@@ -153,7 +153,7 @@ function steps_uploadProof_(file) {
   if (!bytes.length) return { ok: false, error: 'That file is empty.' };
   if (bytes.length > PROOF_MAX_BYTES) return { ok: false, error: 'That file is over 8 MB. Send a smaller photo or a screenshot.' };
   if (!steps_looksLike_(bytes, type)) return { ok: false, error: 'That file does not look like a photo or a PDF. Send a screenshot of the receipt.' };
-  const dayKey = 'proof:' + a.ApplicantID + ':' + Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyyMMdd');
+  const dayKey = 'proof:' + String(a.Email || '').toLowerCase() + ':' + Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyyMMdd');
   if (!bump_(dayKey, PROOF_PER_DAY, 90000)) return { ok: false, error: 'That is enough uploads for today. If the wrong file went in, message the core team.' };
 
   const ext = PROOF_EXT[type];   // from the checked type, never from the uploaded filename

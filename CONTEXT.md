@@ -801,6 +801,14 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 - `Ambience.html` (shared): the background score, generated with Web Audio (no music files to license or host). Hub: drone, slow minor chords, music box; starts at the first tap (browsers need one), **Sound on/off** chip bottom-left, remembered per browser, paused while the results film plays. Game: drone, chords, heartbeat + creaks that get faster each room, silent before the knock, the quieter hub score after the passcode; the Game's mute button stops it.
 - The knock and jumpscare are still the Drive MP3s (`GAME_SOUNDS` in GameApi.gs); the Executions log shows `knock ok, scare ok` when they load.
 
+## Launch hardening (Oct 24 2026)
+- Submit lock reads only ApplicantID, Email, IDNumber, ReferralCode, Status, ReferrerID (`apply_lockRows_`), not the whole tab; the ID-conflict log row is written after the lock.
+- A new applicant's first Drafts row uses the document lock, not the script lock, so it never queues behind submits. `bump_`: shared counters use the document lock and let a request through when merely busy (soft caps); a person's own counter uses their user lock.
+- Hub referral names/counts come from a 60 s cached map (`referralMap_`), cleared when someone files with a code.
+- Accepting someone whose payment and requirements are already done (menu / review panel) auto-confirms, like a hand edit. Un-ticking consent also trashes the eye-scan photo.
+- Pages: sound starts on click / touchend / key press (a touch's pointerdown doesn't unlock audio on phones); THE LEADS UP checks step 2 with the final rules and jumps back to the step holding an error; eye scan accepts `image/*` so iPhones send a JPEG.
+- `docs/go`: tapping Enter shows an "Opening your file" screen (staged messages, Try again after 25 s) while Google loads the portal.
+
 ## Recent behaviour notes (Oct 2026)
 
 - **Game:** tapping an answer files it (no "Lock in" step); only open-text questions keep a Submit button. The screen darkens as each question's timer runs out (`#vignette`). There is no 2-minute search clock any more. The jumpscare plays the scare file at 30% volume (the noise layer carries it).

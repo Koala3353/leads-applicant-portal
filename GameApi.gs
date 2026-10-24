@@ -155,7 +155,8 @@ function game_uploadEye_(file) {
   const idNo = String(draft.data.IDNumber || '').replace(/\D/g, '').slice(0, 6) || 'NOID';
   const saved = game_eyeFolder_().createFile(Utilities.newBlob(bytes, type, 'EYE_' + idNo + '.' + PROOF_EXT[type]));
   saved.setDescription('Eye scan uploaded by ' + email + ' through the LEADS portal.');
-  const r = apply_saveDraft_({}, { EyePhoto: saved.getUrl() });
+  let r = null;
+  try { r = apply_saveDraft_({}, { EyePhoto: saved.getUrl() }); } catch (e) { r = null; }   // never leave a photo no draft points to
   if (!r || !r.ok) {
     try { saved.setTrashed(true); } catch (e) { /* best effort */ }
     return { ok: false, error: r && r.consent ? 'Tick the data-privacy consent on the form first.' : 'Your file is busy. Try again in a moment.' };

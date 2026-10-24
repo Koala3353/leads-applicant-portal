@@ -163,6 +163,10 @@ window.Ambience = (function () {
     if (on && drone.gain && ac) drone.gain.gain.linearRampToValueAtTime(.07 + tension * .05, ac.currentTime + 2);
   }
   // a hidden tab doesn't need a score (and phones save battery): pause the whole context, resume on return
+  // On a phone a touch's pointerdown doesn't count as a gesture, so a score started then stays silent. Every later tap,
+  // click or key press tries to wake the context until it is running (cheap: one check when it already is).
+  const wake = () => { if (!ac || !on || ac.state === 'running' || document.hidden) return; try { Promise.resolve(ac.resume()).catch(() => { /* not yet */ }); } catch (e) { /* ignore */ } };
+  ['click', 'touchend', 'keydown'].forEach(t => document.addEventListener(t, wake, true));
   document.addEventListener('visibilitychange', () => {
     if (!ac || !on) return;
     try { Promise.resolve(document.hidden ? ac.suspend() : ac.resume()).catch(() => { /* iOS: audio device busy; stay silent */ }); } catch (e) { /* ignore */ }

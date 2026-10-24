@@ -938,19 +938,20 @@
       }
     });
 
-    if (firstField) {
-      firstField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    // the field may sit in an earlier step (hidden at the review step): go back to that step first, so the error is
+    // actually on screen; with no field to show (a server message), the summary box at the top is the place
+    const step = firstField && firstField.closest('.ov-step');
+    if (step && step.hidden && window.__plPage) window.__plPage(Number(step.id.replace('ovStep', '')));
+    setTimeout(() => (firstField && firstField.offsetParent ? firstField : summaryBox).scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
   }
 
-  $('preleadsForm').addEventListener('submit', function (e) {
-    e.preventDefault();
-
+  /** the answers as the server wants them (also used by the step check, so step 2 uses the same rules as the final one) */
+  function plPayload() {
     const form = $('preleadsForm');
     const dauntingChecked = Array.from(form.querySelectorAll('input[name="DauntingAspects"]:checked')).map(cb => cb.value);
     const otherText = (form.querySelector('#OtherDaunting').value || '').trim();
 
-    const payload = {
+    return {
       Consent: form.querySelector('#Consent').checked ? 'Y' : '',
       FullName: form.querySelector('#FullName').value.trim(),
       Nickname: form.querySelector('#Nickname').value.trim(),
@@ -963,7 +964,12 @@
       DauntingAspects: dauntingChecked,
       OtherDaunting: otherText
     };
+  }
+  window.__plCheck = () => validateClient(plPayload());
 
+  $('preleadsForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const payload = plPayload();
     const clientErrors = validateClient(payload);
     if (Object.keys(clientErrors).length > 0) {
       displayErrors(clientErrors);
@@ -1042,6 +1048,7 @@ function scheduleIris() {
     scheduleIris();
   }, delay);
 }
+window.__plPage = n => page(n);   // the submit's error display (first script) jumps back to the step holding the error
 function page(n){stage=n;irisQueue=irisQueue.filter(m=>m.atStage===n);for(let i=1;i<=4;i++)q('ovStep'+i).hidden=i!==n;
   document.querySelectorAll('#oversightSteps li').forEach((el,i)=>{el.classList.toggle('current',i+1===n);el.classList.toggle('passed',i+1<n);if(i+1===n)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
   window.scrollTo({top:0,behavior:reduced.matches?'auto':'smooth'});
@@ -1054,7 +1061,9 @@ function validate(n){const ids=n===1?['Consent']:n===2?['FullName','Nickname','I
  if(n===2){for(const x of ['FullName','Nickname','IDNumber','YearLevel','Course'])if(!f(x))errors[x]='This field is required.';
   if(f('IDNumber')&&!/^\d{6}$/.test(f('IDNumber')))errors.IDNumber='Enter a valid 6-digit ID.';
   if(f('YearLevel')==='1'&&!f('Block'))errors.Block='Block is required for first-year students.';
-  if(f('Mobile')&&!/^(09\d{9}|\+639\d{9}|639\d{9})$/.test(f('Mobile').replace(/[\s().-]/g,'')))errors.Mobile='Enter a valid Philippine mobile number.';}
+  if(f('Mobile')&&!/^(09\d{9}|\+639\d{9}|639\d{9})$/.test(f('Mobile').replace(/[\s().-]/g,'')))errors.Mobile='Enter a valid Philippine mobile number.';
+  // then the final submit's own rules (name characters, ID range, block for 26xxxx IDs...), so nothing new turns up at step 4
+  if(window.__plCheck){const all=window.__plCheck();ids.forEach(k=>{if(all[k]&&!errors[k])errors[k]=all[k];});}}
  if(n===3){if(f('HopeToGainPreLEADS').length<10)errors.HopeToGainPreLEADS='Please write at least 10 characters.';
   const checked=[...form.querySelectorAll('input[name="DauntingAspects"]:checked')];if(!checked.length)errors.DauntingAspects='Choose at least one option.';
   if(checked.some(el=>el.value==='Other')&&!f('OtherDaunting'))errors.OtherDaunting='Please specify Other.';}
