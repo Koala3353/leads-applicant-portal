@@ -809,6 +809,10 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 - Pages: sound starts on click / touchend / key press (a touch's pointerdown doesn't unlock audio on phones); THE LEADS UP checks step 2 with the final rules and jumps back to the step holding an error; eye scan accepts `image/*` so iPhones send a JPEG.
 - `docs/go`: tapping Enter shows an "Opening your file" screen (staged messages, Try again after 25 s) while Google loads the portal.
 
+## Confirmation emails (Oct 24 2026)
+- `ConfirmMail.gs`: after a LEADS submit (`apply_submit_`) and a THE LEADS UP registration (`preleads_submit_`), the person gets their answers by email (not the Game, not the eye scan), in the email-blast look (CRT / surveillance, 600px tables, dark-mode proofed, plain-text version). Sent after the lock; a failure is a WARN `confirm_mail` row and never blocks the submit. Inline GIFs (REC, CCTV monitors, peek) come from `MailGifs.gs`, copied from the blast project. Reply-to = Settings › ContactEmail; sender name = Settings › EventName.
+- Test: run `confirm_testEmails()` from the editor (owner only): sends both to you with sample answers.
+
 ## Recent behaviour notes (Oct 2026)
 
 - **Game:** tapping an answer files it (no "Lock in" step); only open-text questions keep a Submit button. The screen darkens as each question's timer runs out (`#vignette`). There is no 2-minute search clock any more. The jumpscare plays the scare file at 30% volume (the noise layer carries it).

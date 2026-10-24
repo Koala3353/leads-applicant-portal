@@ -135,7 +135,7 @@ function apply_submit_(form) {
 
   // 5. Data integrity lock and atomic write. Keep the time inside the lock short: every applicant's submit waits on it.
   // One read covers both duplicate checks; the Log row and draft clean-up happen after the lock is released.
-  let nextId, referralCode = '', referral = {}, idConflictRow = 0;
+  let nextId, referralCode = '', referral = {}, idConflictRow = 0, filed = null;
   // a submit is rare and precious: wait longer rather than fail during a rush
   const early = withScriptLock_(30000, () => {
     // Re-verify applications open status inside lock
@@ -196,6 +196,7 @@ function apply_submit_(form) {
       Notes: ''
     });
 
+    filed = rowMap;   // for the confirmation email, sent after the lock
     const row = cols_().map(col => textCell_(rowMap[col] !== undefined ? rowMap[col] : ''));   // text stays text (Utils.gs)
     sheet_(SHEET.APPLICANTS).appendRow(row);
     SpreadsheetApp.flush();   // the row is written before the next submit reads the sheet
@@ -212,6 +213,7 @@ function apply_submit_(form) {
   if (flags) activity_('integrity_flag', nextId + ': ' + flags, { level: 'WARN', page: 'apply' });   // in the daily report
   if (referral.referrerId) activity_('referral', nextId + ' referred by ' + referral.referrerId + ' (' + referral.code + ')', { page: 'apply' });
   apply_deleteDraft_(email);
+  if (filed) confirmMail_apply_(filed);   // their answers by email (ConfirmMail.gs); a failure is logged, never blocks the submit
   return { ok: true, id: nextId, referralCode: referralCode };
 }
 

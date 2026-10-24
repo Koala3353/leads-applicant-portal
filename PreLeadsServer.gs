@@ -204,7 +204,8 @@ function preleads_submit_(form) {
   if (apply_idBelongsToOther_(clean.IDNumber, email)) { bump_(failKey, 99, 3600); return idTaken; }
 
   // 4. Data integrity lock and atomic write
-  return withScriptLock_(25000, () => {
+  let saved = null;
+  const res = withScriptLock_(25000, () => {
     const sh = preleads_ensureSheet_();
 
     if (!preleads_isOpen_()) throw new Error('THE LEADS UP registration just closed.');
@@ -225,8 +226,11 @@ function preleads_submit_(form) {
     };
     const head = preleads_headers_(sh);
     sh.appendRow(head.map(h => textCell_(h in values ? values[h] : '')));
+    saved = values;
     return { ok: true };
   });
+  if (saved) confirmMail_preleads_(saved, email);   // their answers by email (ConfirmMail.gs), after the lock; never blocks
+  return res;
 }
 
 /**
