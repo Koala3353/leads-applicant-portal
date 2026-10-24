@@ -432,7 +432,7 @@
     </div>
     <div class="fee" id="fee">
       <p class="eyebrow" style="margin:0 0 6px">REGISTRATION FEE</p>
-      <p style="margin:0">The registration fee is ₱<span id="feeAmt">4,500</span>, which covers accommodations, transportation, food, and activities for 3 days and 2 nights. You only pay once you are accepted; nothing is due now.<span id="feePrimer" hidden> For the full breakdown, please refer to the <a id="feePrimerLink" target="_blank" rel="noopener">primer</a>.</span></p>
+      <p style="margin:0">The total registration fee is ₱<span id="feeAmt">4,200</span>, which covers accommodations, transportation, food, and activities for 3 days and 2 nights. Nothing is due now. Once you are accepted, you pay ₱<span id="feeNow">4,000</span>; the remaining ₱<span id="feeLater">200</span> comes later, for possible notarization.<span id="feePrimer" hidden> For the full breakdown, please refer to the <a id="feePrimerLink" target="_blank" rel="noopener">primer</a>.</span></p>
     </div>
     <p class="mono db-foot" style="margin-top:16px">Your answers are recorded. Filing sends your complete profile to the core team.</p>
     <div class="actions"><button class="btn" type="button" id="submitBtn">File my application</button></div>
@@ -1240,7 +1240,10 @@
 
       hasEye = !!data.hasEye;
       $('eyeIdNo').textContent = data.idNumber || 'IDNumber';
-      if (data.fee) $('feeAmt').textContent = Number(data.fee).toLocaleString('en-PH');
+      if (data.fee) {
+        const total = Number(data.fee), later = Math.max(0, Math.min(total, Number(data.feeLater) || 0)), php = n => n.toLocaleString('en-PH');
+        $('feeAmt').textContent = php(total); $('feeNow').textContent = php(total - later); $('feeLater').textContent = php(later);
+      }
       if (data.primer) { $('feePrimerLink').href = data.primer; $('feePrimer').hidden = false; }
       if (ROOMS.every(roomDone)) {
         if (hasEye) playDebrief(chosenMonster); else show('eyescan');   // a reload after the passcode lands on the eye scan

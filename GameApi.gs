@@ -37,6 +37,7 @@ function game_getInit_() {
     hasEye: !!(draft && draft.data && draft.data.EyePhoto),   // the eye scan after the passcode is on file
     idNumber: draft && draft.data ? String(draft.data.IDNumber || '').replace(/\D/g, '').slice(0, 6) : '',
     fee: setting_('RegistrationFee'),
+    feeLater: setting_('FeeLater'),   // paid later, for possible notarization; the rest is paid once accepted
     primer: /^https:\/\//.test(setting_('PrimerLink')) ? setting_('PrimerLink') : '',
     isOpen: isOpen_(),   // closed: the page says so instead of letting them play a game they can't file
     nickname: draft && draft.data ? String(draft.data.Nickname || '').slice(0, 30) : '',

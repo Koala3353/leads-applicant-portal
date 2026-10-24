@@ -793,7 +793,7 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 
 ## RecSec doc sync (Oct 23 2026)
 - Apply follows the RecSec masterdoc (Reg Content tab): "What is LEADS?" (BRAND.hero.lede, also the hub) + the doc's consent wording; name as *Last name, First name*; essays say "3 to 5 sentences"; new **Environment** question (pick any, saved `A; B`; *No particular preference* stands alone). *First impression* (deleted in the doc) and *First overnight* (team decision) left the form; their columns stay for old rows.
-- Game: after the passcode, **EYE SCAN REQUIRED** (`game_uploadEye`): a photo saved as `EYE_<ID>` in Settings › `EyeFolder` (made on the first upload), linked in the draft (server-side only) and then Applicants › `EyePhoto`. Filing is refused without it. The file screen shows the fee (Settings › `RegistrationFee`, default 4500; `PrimerLink` optional). Feeds are stamped CHECKED; ● SESSION RECORDING shows during the search.
+- Game: after the passcode, **EYE SCAN REQUIRED** (`game_uploadEye`): a photo saved as `EYE_<ID>` in Settings › `EyeFolder` (made on the first upload), linked in the draft (server-side only) and then Applicants › `EyePhoto`. Filing is refused without it. The file screen shows the fee (Settings › `RegistrationFee` (total, default 4200) and `FeeLater` (default 200, for possible notarization; the rest is paid once accepted); `PrimerLink` optional). Feeds are stamped CHECKED; ● SESSION RECORDING shows during the search.
 - Referrals: points = people who applied with your code + 1 if you used someone's code. The hub card shows points, the benefits, and the **first names** of who used your code (never their status).
 - Status: any status can be set from any other; CONFIRMED still needs APPROVED + VERIFIED.
 

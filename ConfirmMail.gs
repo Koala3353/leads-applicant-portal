@@ -36,11 +36,15 @@ function confirmMail_apply_(a) {
       ['What kind of environment helps you feel most comfortable participating and sharing your thoughts with others?', a.Environment]
     ]]
   ];
+  const total = Number(setting_('RegistrationFee')) || 0, later = Math.max(0, Math.min(total, Number(setting_('FeeLater')) || 0));
+  const php = n => '₱' + n.toLocaleString('en-PH');
+  // "₱4,000 of the ₱4,200 fee; the last ₱200 comes later, for possible notarization."
+  const feeLine = php(total - later) + ' of the ' + php(total) + ' fee' + (later ? '; the last ' + php(later) + ' comes later, for possible notarization.' : '.');
   const facts = [['FILE NO.', a.ApplicantID], ['STATUS', 'SUBMITTED'], ['CAMP', String(s.EventDates || 'January 29 to 31, 2027')],
-    ['YOUR CODE', a.ReferralCode || '—', true]];
+    ['FEE', php(total) + ' (' + php(total - later) + ' once accepted, ' + php(later) + ' later)'], ['YOUR CODE', a.ReferralCode || '—', true]];
   const next = [
     ['01', 'Review', 'The core team reads every file. Results come out on the portal; we will email you when they do.', true],
-    ['02', 'Proof of payment', 'Once accepted: scan the QR, pay, upload your proof. Nothing is due before that.', false],
+    ['02', 'Proof of payment', 'Once accepted: pay ' + feeLine + ' Nothing is due before that.', false],
     ['03', 'Requirements', 'After payment is verified: the forms to fill in.', false],
     ['04', '1st GA', 'Your first general assembly. Date to be set.', false],
     ['05', 'Room booking', 'Where you sleep at camp. Earlier picks for more referral points.', false]
