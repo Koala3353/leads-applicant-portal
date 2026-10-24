@@ -58,8 +58,8 @@ function confirmMail_apply_(a) {
     intro: 'Hi ' + nick + ', your application to LEADS is filed. This is what you sent us. Keep it: you can\'t change it anymore, and you don\'t need to.',
     facts: facts, sections: sections,
     referral: a.ReferralCode ? 'Your referral code is <b>' + confirmEsc_(a.ReferralCode) + '</b>. Each person who applies with it earns you a point toward room booking and other advantages at camp.' : '',
-    notice: { title: 'ONE MORE THING // ADDITIONAL REQUIREMENTS',
-      text: 'Your application is not complete without the additional requirements posted in the LEADS Facebook group. Open the group, read the latest post, and do what it asks before the deadline.',
+    notice: { title: 'ONE MORE THING // OPTIONAL REQUIREMENTS',
+      text: 'The LEADS Facebook group has optional requirements. Your application is complete without them, but doing them boosts your chances of being accepted. Open the group, read the latest post, and send them before the deadline.',
       link: ['Open the LEADS Facebook group', LEADS_FB_GROUP_] },
     next: next, button: ['Check your file on the portal', portalUrl_()],
     closing: 'We have been watching.<br><span style="color:#e50000;">Now we are reading.</span>'
@@ -240,7 +240,7 @@ function confirmIntakeHtml_(o) {
         </td></tr>
         ${o.notice ? `<tr><td class="pad" style="padding:24px 30px 0 30px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-soft" bgcolor="${C.soft}" style="background-color:${C.soft};border:2px solid ${C.red};">
-            <tr><td class="t-red" style="padding:10px 14px 0 14px;font-family:${M};font-size:12px;line-height:17px;font-weight:800;letter-spacing:2px;color:${C.red};text-transform:uppercase;">&#9888; ${E(o.notice.title)}</td></tr>
+            <tr><td class="t-red" style="padding:10px 14px 0 14px;font-family:${M};font-size:12px;line-height:17px;font-weight:800;letter-spacing:2px;color:${C.red};text-transform:uppercase;">+ ${E(o.notice.title)}</td></tr>
             <tr><td class="t-ink" style="padding:8px 14px 0 14px;font-family:${M};font-size:14px;line-height:22px;color:${C.ink};">${E(o.notice.text)}</td></tr>
             <tr><td style="padding:12px 14px 14px 14px;"><a href="${E(o.notice.link[1])}" target="_blank" class="t-red" style="font-family:${M};font-size:13px;line-height:18px;font-weight:800;letter-spacing:1px;color:${C.red};text-decoration:underline;text-transform:uppercase;">${E(o.notice.link[0])} &rarr;</a></td></tr>
           </table></td></tr>` : ''}

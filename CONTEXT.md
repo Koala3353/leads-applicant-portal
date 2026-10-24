@@ -812,7 +812,7 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 
 ## Confirmation emails (Oct 24 2026)
 - `ConfirmMail.gs`: after a LEADS submit (`apply_submit_`) and a THE LEADS UP registration (`preleads_submit_`), the person gets their answers by email (not the Game, not the eye scan). Two looks from the brand book's layouts, on purpose unlike the email blast: LEADS = **Case File / intake record** (white paper, dotted frames, ruled answer grid, red RECEIVED stamp, typed finding); THE LEADS UP = **Broadcast Card** (solid #000ff0 field, THIS IS NOT A TEST / SEAT RESERVED, white transcript, yellow button). Brand palette only, no images. Sent after the lock; a failure is a WARN `confirm_mail` row and never blocks the submit. Reply-to = Settings › ContactEmail; sender name = Settings › EventName.
-- The LEADS email also reminds them to do the additional requirements posted in the LEADS Facebook group (`LEADS_FB_GROUP_` in ConfirmMail.gs).
+- The LEADS email also points to the OPTIONAL requirements in the LEADS Facebook group (not required; they boost the chances of acceptance) (`LEADS_FB_GROUP_` in ConfirmMail.gs).
 - Test: run `confirm_testEmails()` from the editor (owner only): sends both to you with sample answers.
 
 ## Recent behaviour notes (Oct 2026)
