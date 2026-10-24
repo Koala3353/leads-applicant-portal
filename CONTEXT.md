@@ -807,10 +807,12 @@ Server-only: `function test_mine() { console.log(JSON.stringify(home_getContext(
 - Hub referral names/counts come from a 60 s cached map (`referralMap_`), cleared when someone files with a code.
 - Accepting someone whose payment and requirements are already done (menu / review panel) auto-confirms, like a hand edit. Un-ticking consent also trashes the eye-scan photo.
 - Pages: sound starts on click / touchend / key press (a touch's pointerdown doesn't unlock audio on phones); THE LEADS UP checks step 2 with the final rules and jumps back to the step holding an error; eye scan accepts `image/*` so iPhones send a JPEG.
+- First-visit lookups: MemData has a cached email -> row index (`apply_memIndex_`, 1 h, cleared by an edit in MemData) and Drafts a 10-min one (`apply_draftIndex_`), plus a 5-min "no draft yet" marker per person. Load test (Oct 24, /dev, owner-only page): 0 failures; 100 simultaneous first visits ~4.6 s median, 150 ~4.2 s (max 7.2 s); 100 hub loads 1.6 s; 100 Apply loads 2.1 s; 30 submits at the same instant all filed (worst wait ~35 s with retries).
 - `docs/go`: tapping Enter shows an "Opening your file" screen (staged messages, Try again after 25 s) while Google loads the portal.
 
 ## Confirmation emails (Oct 24 2026)
 - `ConfirmMail.gs`: after a LEADS submit (`apply_submit_`) and a THE LEADS UP registration (`preleads_submit_`), the person gets their answers by email (not the Game, not the eye scan), in the email-blast look (CRT / surveillance, 600px tables, dark-mode proofed, plain-text version). Sent after the lock; a failure is a WARN `confirm_mail` row and never blocks the submit. Inline GIFs (REC, CCTV monitors, peek) come from `MailGifs.gs`, copied from the blast project. Reply-to = Settings › ContactEmail; sender name = Settings › EventName.
+- The LEADS email also reminds them to do the additional requirements posted in the LEADS Facebook group (`LEADS_FB_GROUP_` in ConfirmMail.gs).
 - Test: run `confirm_testEmails()` from the editor (owner only): sends both to you with sample answers.
 
 ## Recent behaviour notes (Oct 2026)

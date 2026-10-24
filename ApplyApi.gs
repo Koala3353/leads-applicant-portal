@@ -249,20 +249,36 @@ function apply_draftSheet_() {
 function apply_findDraftRow_(sh, email) {
   const n = sh.getLastRow() - 1;
   if (n < 1) return 0;
-  const emails = sh.getRange(2, 1, n, 1).getValues();
-  for (let i = 0; i < n; i++) {
-    if (String(emails[i][0]).toLowerCase() === email) return i + 2;
-  }
-  return 0;
+  const hit = sh.getRange(2, 1, n, 1).createTextFinder(email).matchEntireCell(true).matchCase(false).findNext();   // searched by Sheets itself
+  return hit ? hit.getRow() : 0;
+}
+
+/** { email: row } for the Drafts tab, cached 10 minutes (or null if it doesn't fit the cache). */
+function apply_draftIndex_(sh) {
+  const cache = CacheService.getScriptCache();
+  try { const hitIdx = cache.get('draftidx'); if (hitIdx) return JSON.parse(hitIdx); } catch (e) { /* rebuild */ }
+  const n = sh.getLastRow() - 1, idx = {};
+  if (n >= 1) sh.getRange(2, 1, n, 1).getValues().forEach((v, i) => { const e = String(v[0] || '').trim().toLowerCase(); if (e && !idx[e]) idx[e] = i + 2; });
+  try { const json = JSON.stringify(idx); if (json.length > 95000) return null; cache.put('draftidx', json, 600); } catch (e) { return null; }
+  return idx;
 }
 
 /** Row number of this account's draft (cached, verified), or 0. */
 function apply_draftRow_(sh, email) {
   const cache = CacheService.getScriptCache(), key = 'draftrow:' + email;
-  const hit = Number(cache.get(key) || 0);
+  const raw = cache.get(key);
+  // '0' = searched a moment ago, no row: only this person's own first save adds their row (and replaces this marker)
+  if (raw === '0') return 0;
+  const hit = Number(raw || 0);
   if (hit && hit <= sh.getLastRow() && String(sh.getRange(hit, 1).getValue()).toLowerCase() === email) return hit;
-  const row = apply_findDraftRow_(sh, email);
-  if (row) cache.put(key, String(row), 21600);
+  // not cached: the shared email -> row index (10 min) answers most first visits without searching the tab; a row it
+  // names is still checked, and a row added after it was built is this person's own (cached when they added it)
+  let row = 0;
+  const idx = hit ? null : apply_draftIndex_(sh);
+  if (idx && !idx[email]) row = 0;
+  else if (idx && String(sh.getRange(idx[email], 1).getValue()).toLowerCase() === email) row = idx[email];
+  else row = apply_findDraftRow_(sh, email);
+  cache.put(key, String(row), row ? 21600 : 300);
   return row;
 }
 
@@ -393,9 +409,17 @@ const MEMDATA_MBTI_FALLBACK = 27;   // the member form's MBTI answer has a long 
 
 /** MemData header + the rows where this email appears (found by a server-side search, not by reading every member). */
 function apply_memRows_(sh, email) {
+  const target = String(email || '').toLowerCase().trim();
+  // fast path: the cached email -> rows index (one read of the two email columns per hour for everyone, instead of two
+  // searches per new visitor; at launch that search was ~0.6-1 s of every first page load)
+  const idx = apply_memIndex_(sh);
+  if (idx) {
+    const out = [idx.head];
+    if (target) (idx.rows[target] || []).forEach(r => out.push(sh.getRange(r, 1, 1, idx.head.length).getDisplayValues()[0]));
+    return out;
+  }
   const lastCol = sh.getLastColumn(), lastRow = sh.getLastRow();
   const head = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
-  const target = String(email || '').toLowerCase().trim();
   if (!target || lastRow < 2) return [head];
   // search only the email columns (the whole 100+ column sheet took ~1.3 s on every Apply / Pre-LEADS load)
   const mailCols = [headerIndex_(head, MEMDATA_COLS.semail), headerIndex_(head, MEMDATA_COLS.email)].filter(i => i >= 0);
@@ -408,6 +432,36 @@ function apply_memRows_(sh, email) {
     out.push(sh.getRange(r, 1, 1, lastCol).getDisplayValues()[0]);
   });
   return out;
+}
+
+/**
+ * { head: MemData header row, rows: { email: [sheet row numbers] } }, cached an hour (onEdit of MemData clears it), or
+ * null when it doesn't fit the cache (then apply_memRows_ searches the sheet as before).
+ */
+function apply_memIndex_(sh) {
+  const cache = CacheService.getScriptCache();
+  try { const hit = cache.get('memidx'); if (hit) return JSON.parse(hit); } catch (e) { /* rebuild */ }
+  const lastCol = sh.getLastColumn(), lastRow = sh.getLastRow();
+  if (!lastCol) return null;
+  const head = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+  const rows = {};
+  if (lastRow >= 2) {
+    [headerIndex_(head, MEMDATA_COLS.semail), headerIndex_(head, MEMDATA_COLS.email)].filter(i => i >= 0).forEach(c => {
+      sh.getRange(2, c + 1, lastRow - 1, 1).getDisplayValues().forEach((v, i) => {
+        const e = String(v[0] || '').trim().toLowerCase();
+        if (!e) return;
+        const list = rows[e] = rows[e] || [];
+        if (list.indexOf(i + 2) < 0) list.push(i + 2);
+      });
+    });
+  }
+  const idx = { head: head, rows: rows };
+  try {
+    const json = JSON.stringify(idx);
+    if (json.length > 95000) return null;   // too big for one cache value: use the sheet search
+    cache.put('memidx', json, MEMBER_TTL);
+  } catch (e) { return null; }
+  return idx;
 }
 
 /** True when MemData lists this ID number only under other email addresses (never this account). */

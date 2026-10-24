@@ -18,6 +18,8 @@ const MAIL_C_ = {
   text: '#d8d8d3', muted: '#85858a', headline: '#f0efe9', line: '#3a3a3f', windowBar: '#b9b9b5', windowText: '#171717'
 };
 const MAIL_MONO_ = "'JetBrains Mono', Menlo, Consolas, 'SF Mono', 'Courier New', monospace";
+// The LEADS Facebook group, where the additional requirements are posted (reminder in the LEADS confirmation)
+const LEADS_FB_GROUP_ = 'https://www.facebook.com/groups/1617514465872930';
 
 /** LEADS application filed. a = the saved row (RULES fields + ApplicantID, Email, ReferralCode, ReferredBy). */
 function confirmMail_apply_(a) {
@@ -58,6 +60,9 @@ function confirmMail_apply_(a) {
     intro: 'Hi ' + nick + ', your application to LEADS is filed. This is what you sent us. Keep it: you can\'t change it anymore, and you don\'t need to.',
     facts: facts, folderTab: 'CASE FILE ' + a.ApplicantID + ' · YOUR ANSWERS', sections: sections,
     referral: a.ReferralCode ? 'Your referral code is <b>' + confirmEsc_(a.ReferralCode) + '</b>. Each person who applies with it earns you a point toward room booking and other advantages at camp.' : '',
+    notice: { title: 'ONE MORE THING // ADDITIONAL REQUIREMENTS',
+      text: 'Your application is not complete without the additional requirements posted in the LEADS Facebook group. Open the group, read the latest post, and do what it asks before the deadline.',
+      link: ['Open the LEADS Facebook group', LEADS_FB_GROUP_] },
     next: next, button: ['Check your file on the portal', portalUrl_()],
     closing: 'We have been watching.<br><span style="color:' + MAIL_C_.red + ';">Now we are reading.</span>'
   }, 'apply');
@@ -238,6 +243,16 @@ function confirmHtml_(o) {
             <tr><td style="padding:6px 14px 0 14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${o.facts.map(f => fact(f[0], f[1])).join('')}</table></td></tr>
             ${o.referral ? `<tr><td class="t-text" style="padding:12px 14px 0 14px;font-family:${MONO};font-size:13px;line-height:21px;color:${C.text};">${o.referral}</td></tr>` : ''}
             <tr><td style="padding:16px 14px 8px 14px;">${button(o.button[0], o.button[1])}</td></tr></table>`), 24)}
+        ${o.notice ? row(`
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-paper" bgcolor="${C.paper}" style="background-color:${C.paper};border-left:6px solid ${C.red};border-top:2px solid #f7f2e2;border-bottom:4px solid #9d957c;border-right:3px solid #9d957c;box-shadow:6px 6px 0 ${C.blue};">
+            <tr><td bgcolor="${C.yellow}" class="bg-yellow t-yellow" style="background-color:${C.yellow};padding:5px 14px;border-bottom:2px solid #111100;font-family:${MONO};font-size:11px;line-height:16px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:${C.yellowText};">&#9888; ${E(o.notice.title)}</td></tr>
+            <tr><td class="body-copy t-paper" style="padding:12px 16px 4px 16px;font-family:${MONO};font-size:14px;line-height:22px;color:${C.paperText};">${E(o.notice.text)}</td></tr>
+            <tr><td style="padding:10px 16px 14px 16px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" class="btn-table"><tr>
+                <td class="btn-cell" align="center" bgcolor="#2a2b30" style="background-color:#2a2b30;border-top:3px solid #7b7c84;border-left:3px solid #7b7c84;border-bottom:3px solid #050506;border-right:3px solid #050506;box-shadow:4px 4px 0 #050505;">
+                  <a href="${E(o.notice.link[1])}" target="_blank" class="btn-link t-head" style="display:inline-block;padding:12px 18px;font-family:${MONO};font-size:13px;line-height:18px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:${C.headline};text-decoration:none;">${E(o.notice.link[0])} &rarr;</a></td></tr></table>
+            </td></tr>
+          </table>`, 24) : ''}
         <tr><td style="padding:24px 0 0 0;"></td></tr>
         <tr><td bgcolor="${C.yellow}" class="bg-yellow t-yellow" style="background-color:${C.yellow};padding:7px 30px;font-family:${MONO};font-size:13px;line-height:18px;font-weight:bold;letter-spacing:2px;color:${C.yellowText};text-transform:uppercase;white-space:nowrap;overflow:hidden;">I.R.I.S. IS WATCHING /// YOUR ANSWERS ARE ON RECORD /// I.R.I.S. IS WATCHING</td></tr>
         ${row(folder(o.folderTab, pages), 24)}
@@ -266,6 +281,7 @@ function confirmText_(o) {
   const out = ['EYES ON LEADS  |  ' + o.tag, strip(o.headline).toUpperCase(), '', o.intro, ''];
   o.facts.forEach(f => out.push(f[0] + ': ' + f[1]));
   if (o.referral) out.push('', strip(o.referral));
+  if (o.notice) out.push('', o.notice.title, o.notice.text, o.notice.link[0] + ': ' + o.notice.link[1]);
   o.sections.forEach(sec => { out.push('', '== ' + sec[0] + ' =='); sec[1].forEach(x => out.push('', x[0], String(x[1] === undefined || x[1] === '' ? '—' : x[1]))); });
   out.push('', 'NEXT STEPS');
   o.next.forEach(x => out.push(x[0] + ' ' + x[1] + ': ' + x[2]));

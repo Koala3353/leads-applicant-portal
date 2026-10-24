@@ -214,6 +214,7 @@ function onEdit(e) {
       const top = Math.max(2, r.getRow()), n = Math.min(r.getLastRow() - top + 1, 300);
       [headerIndex_(head, MEMDATA_COLS.semail), headerIndex_(head, MEMDATA_COLS.email)].filter(i => i >= 0)
         .forEach(c => sh.getRange(top, c + 1, n, 1).getValues().forEach(v => forgetMember_(v[0])));
+      CacheService.getScriptCache().remove('memidx');   // the email -> row index (apply_memIndex_) is rebuilt on the next lookup
     }
   } catch (err) { /* fine: the cache runs out in an hour anyway */ }
   // the portal caches each person's row for a minute (getApplicantByEmail_): a hand edit clears the edited rows
