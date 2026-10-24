@@ -452,9 +452,7 @@ function apply_memberLookup_(email, idNumber) {
     if (!row) return null;
 
     const first = cell(row, c.first), last = cell(row, c.last);
-    let mi = cell(row, c.mi).replace(/\.+$/, '');
-    if (mi && mi.length <= 2) mi = mi.toUpperCase() + '.';
-    const tidy = s => s.replace(/\s+/g, ' ').toLowerCase().replace(/(^|[\s-])\S/g, m => m.toUpperCase());
+    const tidy =s => s.replace(/\s+/g, ' ').toLowerCase().replace(/(^|[\s-])\S/g, m => m.toUpperCase());
     
     let mobile = cell(row, c.mobile).replace(/\D/g, '');
     if (mobile.length === 10 && mobile[0] === '9') mobile = '0' + mobile;
@@ -470,7 +468,7 @@ function apply_memberLookup_(email, idNumber) {
     const validId = /^\d{6}$/.test(foundId) && Number(foundId) >= idRule.idMin && Number(foundId) <= idRule.idMax ? foundId : '';
 
     return {
-      FullName: [tidy(first), mi, tidy(last)].filter(Boolean).join(' '),
+      FullName: [tidy(last), tidy(first)].filter(Boolean).join(', '),   // "Last, First" (no middle initial), the format both forms ask for
       Nickname: tidy(first).split(' ')[0],
       IDNumber: validId,
       Course: course,

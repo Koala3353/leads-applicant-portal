@@ -4,7 +4,7 @@
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pre-LEADS Preview · Eyes on LEADS</title>
+<title>THE LEADS UP · Eyes on LEADS</title>
 <?!= include_('Styles') ?>
 <?!= brand_css_() ?>
 <style>
@@ -425,7 +425,7 @@
   <!-- State 1: Loading -->
   <div class="card state show" id="state-loading">
     <p class="eyebrow">TRANSMISSION DOSSIER</p>
-    <h2>Accessing Pre-LEADS File...</h2>
+    <h2>Accessing THE LEADS UP File...</h2>
     <p>Verifying identity credentials against the observer registry.</p>
   </div>
 
@@ -444,7 +444,7 @@
   <div class="card state" id="state-guest">
     <p class="eyebrow">AUTHENTICATION REQUIRED</p>
     <h2>Identity Unverified</h2>
-    <p>Sign in with your Ateneo student account (@student.ateneo.edu) to access the Pre-LEADS registration form.</p>
+    <p>Sign in with your Ateneo student account (@student.ateneo.edu) to access the registration form for THE LEADS UP.</p>
     <div class="actions">
       <a class="btn" id="guestSignInBtn" href="#" target="_top">Sign in</a>
       <a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a>
@@ -455,7 +455,7 @@
   <div class="card state" id="state-wrong-domain">
     <p class="eyebrow">UNAUTHORIZED DOMAIN</p>
     <h2>Non-Ateneo Account Detected</h2>
-    <p>You are signed in as <b id="wrongDomainEmail"></b>. Only registered Ateneo accounts are authorized to register for Pre-LEADS.</p>
+    <p>You are signed in as <b id="wrongDomainEmail"></b>. Only registered Ateneo accounts are authorized to register for THE LEADS UP.</p>
     <div class="actions">
       <a class="btn" id="switchAccountBtn" href="#" target="_top">Switch account</a>
       <a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a>
@@ -465,20 +465,20 @@
   <!-- Closed: Settings › PreLeadsOpen is off or PreLeadsDeadline has passed -->
   <div class="card state" id="state-closed">
     <p class="eyebrow">TRANSMISSION ENDED</p>
-    <h2>Pre-LEADS registration is closed</h2>
-    <p>Registration for Pre-LEADS is no longer open. If you think this is a mistake, message the core team.</p>
+    <h2>THE LEADS UP registration is closed</h2>
+    <p>Registration for THE LEADS UP is no longer open. If you think this is a mistake, message the core team.</p>
     <div class="actions"><a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a></div>
   </div>
 
   <!-- State 5: Already Submitted -->
   <div class="card state" id="state-already-submitted">
     <p class="eyebrow">TRANSMISSION LOGGED</p>
-    <h2>Pre-LEADS Registration on Record</h2>
-    <p>Your responses for Pre-LEADS have already been received and verified under your account:</p>
+    <h2>THE LEADS UP Registration on Record</h2>
+    <p>Your responses for THE LEADS UP have already been received and verified under your account:</p>
     <div><span class="confirm-stamp">TRANSMITTED</span></div>
     <p>Subject: <strong id="registeredName" style="color:var(--text);"></strong></p>
     <p>Event Date: <strong style="color:var(--glow);">November 5, 2026 (5:00 PM – 7:30 PM)</strong></p>
-    <p class="field-hint" style="margin-top: 14px;">The Pre-LEADS team will be in touch with activity coordination details. We look forward to seeing you there.</p>
+    <p class="field-hint" style="margin-top: 14px;">The organizing team for THE LEADS UP will be in touch with activity coordination details. We look forward to seeing you there.</p>
     <div class="actions">
       <a class="btn" href="<?= baseUrl ?>" target="_top">Back to the hub</a>
     </div>
@@ -487,8 +487,8 @@
   <!-- State 6: Success (Immediately after submission) -->
   <div class="card state" id="state-success">
     <p class="eyebrow">FILE ARCHIVED</p>
-    <h2>Pre-LEADS Registration Received</h2>
-    <p>Your responses have been logged into the Pre-LEADS registry. The observer team has noted your participation.</p>
+    <h2>THE LEADS UP Registration Received</h2>
+    <p>Your responses have been logged into the registry for THE LEADS UP. The observer team has noted your participation.</p>
     <div><span class="confirm-stamp">CONFIRMED</span></div>
     <div class="overview-card" style="margin-top: 14px;">
       <p><strong>Date & Time:</strong> November 5, 2026 · 5:00 PM – 7:30 PM</p>
@@ -509,7 +509,7 @@
         <span>DOSSIER SUBJECT: <strong id="userEmailDisplay" style="color:var(--text);"></strong></span>
       </div>
       <div class="event-badge">
-        <span>PRE-LEADS // NOV 5 · 5:00–7:30 PM</span>
+        <span>THE LEADS UP // NOV 5 · 5:00–7:30 PM</span>
       </div>
     </div>
 
@@ -522,22 +522,22 @@
     <form id="preleadsForm" novalidate autocomplete="on">
 
       <section class="ov-step" id="ovStep1">
-      <!-- SECTION 1: WHAT IS PRE-LEADS & CONSENT -->
+      <!-- SECTION 1: WHAT IS THE LEADS UP & CONSENT -->
       <div class="form-section-head" style="margin-top: 12px;">
         <h2>Section 1 // Overview & Consent Clearance</h2>
-        <p>Review the scope of the Pre-LEADS preview and authorize identity verification.</p>
+        <p>Review the scope of THE LEADS UP and authorize identity verification.</p>
       </div>
 
       <div class="overview-card">
-        <p><strong>What is Pre-LEADS?</strong></p>
-        <p>Pre-LEADS is a one-day, onsite preview of the <strong>Leadership Enhancement and Development Seminar (LEADS)</strong>, MEA's flagship leadership formation project. Happening on <strong>November 5 from 5:00 to 7:30 PM</strong>, Pre-LEADS offers a glimpse into the LEADS experience through fun activities, meaningful discussions, and opportunities for self-reflection.</p>
-        <p>Whether you're still deciding if LEADS is for you or are unable to attend the actual camp, Pre-LEADS gives you the opportunity to experience what LEADS has to offer, challenge your understanding of leadership, and connect with others.</p>
+        <p><strong>What is THE LEADS UP?</strong></p>
+        <p>THE LEADS UP is a one-day, onsite preview of the <strong>Leadership Enhancement and Development Seminar (LEADS)</strong>, MEA's flagship leadership formation project. Happening on <strong>November 5 from 5:00 to 7:30 PM</strong>, THE LEADS UP offers a glimpse into the LEADS experience through fun activities, meaningful discussions, and opportunities for self-reflection.</p>
+        <p>Whether you're still deciding if LEADS is for you or are unable to attend the actual camp, THE LEADS UP gives you the opportunity to experience what LEADS has to offer, challenge your understanding of leadership, and connect with others.</p>
       </div>
 
       <div class="field" id="field-Consent">
         <label>Consent & Authorization *</label>
         <p class="field-hint">
-          By submitting this form, I consent to the collection and use of the information I provide by the Pre-LEADS organizing team for participant registration, activity coordination, and communication regarding Pre-LEADS. My information will be kept confidential and accessed only by authorized organizers and facilitators who need it for these purposes.
+          By submitting this form, I consent to the collection and use of the information I provide by the organizing team of THE LEADS UP for participant registration, activity coordination, and communication regarding THE LEADS UP. My information will be kept confidential and accessed only by authorized organizers and facilitators who need it for these purposes.
         </p>
         <label class="consent-box" for="Consent">
           <input type="checkbox" id="Consent" name="Consent" value="Y" required>
@@ -553,7 +553,7 @@
       <!-- SECTION 2: GENERAL INFORMATION -->
       <div class="form-section-head">
         <h2>Section 2 // General Subject Information</h2>
-        <p>Provide your institutional identity details. Pre-filled data is sourced from MEA records.</p>
+        <p>Provide your institutional identity details.</p>
       </div>
 
       <div class="form-grid">
@@ -572,7 +572,6 @@
         <div class="field" id="field-IDNumber">
           <label for="IDNumber">ID Number *</label>
           <input type="text" id="IDNumber" name="IDNumber" required pattern="\d{6}" maxlength="6" inputmode="numeric" placeholder="e.g. 241234">
-          <p class="field-hint">Your 6-digit Ateneo student ID number.</p>
           <span class="err" id="err-IDNumber">Enter a valid 6-digit Ateneo ID number.</span>
         </div>
 
@@ -619,7 +618,7 @@
 
       <!-- Hope To Gain Essay -->
       <div class="field" id="field-HopeToGainPreLEADS">
-        <label for="HopeToGainPreLEADS">What do you hope to gain from your Pre-LEADS experience? *</label>
+        <label for="HopeToGainPreLEADS">What do you hope to gain from your experience at THE LEADS UP? *</label>
         <p class="field-hint">Answer in 1–2 sentences.</p>
         <textarea id="HopeToGainPreLEADS" name="HopeToGainPreLEADS" required maxlength="500" placeholder="Type your response here..."></textarea>
         <div class="char-counter" id="count-HopeToGainPreLEADS">0 / 500 characters</div>
@@ -648,7 +647,7 @@
         <div id="ovReview" aria-live="polite"></div>
         <div class="ov-actions"><button class="btn ghost" type="button" data-ov-back="3">← EDIT ANSWERS</button></div>
       <div class="actions">
-        <button type="submit" class="btn" id="submitBtn">Transmit File // Register for Pre-LEADS</button>
+        <button type="submit" class="btn" id="submitBtn">Transmit File // Register for THE LEADS UP</button>
         <a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a>
       </div>
 
@@ -677,6 +676,14 @@
   ];
 
   let currentContext = null;
+
+  // The red error list at the top names the field, so "Letters, spaces and ... only" reads "Full name: Letters, ...".
+  const FIELD_LABELS = {
+    Consent: 'Consent', FullName: 'Full name', Nickname: 'Nickname', IDNumber: 'ID number', YearLevel: 'Year level',
+    Course: 'Course', Block: 'Block', Mobile: 'Mobile number', HopeToGainPreLEADS: 'What you hope to gain',
+    DauntingAspects: 'Leadership challenges', OtherDaunting: 'Other challenge'
+  };
+  function summaryLine(key, msg) { return FIELD_LABELS[key] ? FIELD_LABELS[key] + ': ' + msg : msg; }
 
   function showState(id) {
     document.querySelectorAll('.state').forEach(el => el.classList.remove('show'));
@@ -851,8 +858,9 @@
       errors.Consent = 'You must agree to the data collection and consent statement to proceed.';
     }
 
-    if (!data.FullName || !/^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ .'-]{1,79}$/.test(data.FullName)) {
-      errors.FullName = 'Letters, spaces, and . \' - only (2 to 80 characters).';
+    // Same rule as the server (preleadsRules_ in PreLeadsServer.gs): starts with a letter; letters (accents ok), spaces and , . ' ’ ‘ ` - ( ) / after
+    if (!data.FullName || !/^[A-Za-zÀ-ɏḀ-ỿ][A-Za-zÀ-ɏḀ-ỿ̀-ͯ ,.'’‘`()\/-]{1,79}$/.test(data.FullName)) {
+      errors.FullName = 'Letters, spaces, and , . \' ’ - ( ) / only (2 to 80 characters).';
     }
 
     if (!data.Nickname || !/^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ .'-]{0,29}$/.test(data.Nickname)) {
@@ -918,7 +926,7 @@
     keys.forEach(key => {
       const msg = errors[key];
       const li = document.createElement('li');
-      li.textContent = msg;
+      li.textContent = summaryLine(key, msg);
       summaryList.appendChild(li);
 
       const fieldEl = $('field-' + key);
@@ -969,7 +977,7 @@
 
     window.runServer('preleads_submit', payload).then(res => {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Transmit File // Register for Pre-LEADS';
+        submitBtn.textContent = 'Transmit File // Register for THE LEADS UP';
         if (res && res.ok) {
           showState('state-success');
         } else if (res && res.errors) {
@@ -979,7 +987,7 @@
         }
       }, err => {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Transmit File // Register for Pre-LEADS';
+        submitBtn.textContent = 'Transmit File // Register for THE LEADS UP';
         displayErrors({ form: err && err.message ? err.message : 'A server error occurred during transmission.' });
       });
   });
@@ -1052,7 +1060,7 @@ function validate(n){const ids=n===1?['Consent']:n===2?['FullName','Nickname','I
   if(checked.some(el=>el.value==='Other')&&!f('OtherDaunting'))errors.OtherDaunting='Please specify Other.';}
  document.querySelectorAll('.field').forEach(el=>el.classList.remove('has-error'));
  const keys=Object.keys(errors),box=q('errorSummaryBox'),list=q('errorSummaryList');list.textContent='';box.hidden=!keys.length;
- for(const key of keys){const li=document.createElement('li');li.textContent=errors[key];list.appendChild(li);q('field-'+key)?.classList.add('has-error');const err=q('err-'+key);if(err)err.textContent=errors[key];}
+ for(const key of keys){const li=document.createElement('li');li.textContent=summaryLine(key,errors[key]);list.appendChild(li);q('field-'+key)?.classList.add('has-error');const err=q('err-'+key);if(err)err.textContent=errors[key];}
  if(keys.length) (q('field-'+keys[0])||box).scrollIntoView({block:'center'});
  return !keys.length;
 }

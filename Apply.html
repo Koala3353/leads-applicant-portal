@@ -435,26 +435,24 @@
     .iris-wake-prompt { top: calc(50% + 68px); font-size: 0.7rem; letter-spacing: 0.08em; padding: 10px 12px; }
   }
 
-  .kuya.iris-docked-left {
+  /* I.R.I.S. rests in the bottom-right corner on Apply, like every other page (the sound switch has the bottom left) */
+  .kuya.iris-docked {
     position: fixed !important;
-    left: calc(18px + env(safe-area-inset-left, 0px)) !important;
+    right: calc(18px + env(safe-area-inset-right, 0px)) !important;
     bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
-    right: auto !important;
+    left: auto !important;
     top: auto !important;
     transform: none !important;
-    align-items: flex-start !important;
+    align-items: flex-end !important;
     pointer-events: auto !important;
     z-index: 60 !important;
-    transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-                left 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-                top 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-                bottom 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
-  .kuya.iris-docked-left .kuya-btn { cursor: pointer !important; }
-  .kuya.iris-docked-left .kuya-bubble { margin: 0 0 0 6px !important; transform-origin: bottom left !important; }
+  .kuya.iris-docked .kuya-btn { cursor: pointer !important; }
+  .kuya.iris-docked .kuya-bubble { margin: 0 6px 0 0 !important; transform-origin: bottom right !important; }
   @media (max-width: 560px) {
-    .kuya.iris-docked-left {
-      left: calc(10px + env(safe-area-inset-left, 0px)) !important;
+    .kuya.iris-docked {
+      right: calc(10px + env(safe-area-inset-right, 0px)) !important;
       bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
     }
   }
@@ -917,6 +915,28 @@
   const REF = <?!= JSON.stringify(String(ref || '')) ?>;   // from ...exec?ref=CODE (already cleaned on the server)
   try { if (REF) localStorage.setItem('leads-ref', REF); } catch (e) { /* ignore */ }
   const $ = id => document.getElementById(id);
+  /** "Portal issues? Contact any of the following people:" + one mailto line per person (BRAND.contacts in Brand.gs). */
+  function renderContacts(el) {
+    const people = (BRAND.contacts || []).filter(c => c && c.email);
+    el.textContent = '';
+    if (!people.length) { el.textContent = BRAND.footer.contact; return; }
+    const head = document.createElement('span');
+    head.style.display = 'block';
+    head.style.marginBottom = '4px';
+    head.textContent = BRAND.footer.contactTitle || BRAND.footer.contact;
+    el.appendChild(head);
+    people.forEach(c => {
+      const row = document.createElement('span');
+      row.style.display = 'block';
+      row.style.overflowWrap = 'anywhere';
+      row.appendChild(document.createTextNode(c.name + ' | '));
+      const a = document.createElement('a');
+      a.href = 'mailto:' + c.email;
+      a.textContent = c.email;
+      row.appendChild(a);
+      el.appendChild(row);
+    });
+  }
 
   // Server calls go through runServer (Styles.html): retries when Google is busy, fires portal:error on final failure
   function call(fn, ...args) { return window.runServer(fn, ...args); }
@@ -1480,9 +1500,9 @@
       } else {
         $('closedReasonText').textContent = 'Applications for LEADS are currently closed.';
       }
-      if (data.contact) {
+      {
         const contactEl = $('closedContactText');
-        contactEl.textContent = 'Portal issues? Email ' + data.contact;
+        renderContacts(contactEl);
         contactEl.hidden = false;
       }
       showState('closed');
@@ -1643,7 +1663,7 @@
 
     if (hiddenByUser || noMotion || store('leads-iris-awake') === '1') {
       irisAwake = true;
-      if (!hiddenByUser) kuyaEl.classList.add('iris-docked-left');
+      if (!hiddenByUser) kuyaEl.classList.add('iris-docked');
       return;
     }
 
@@ -1652,7 +1672,7 @@
       wakeStage.style.opacity = '1';
       wakeStage.hidden = false;
     }
-    kuyaEl.classList.remove('iris-docked-left');
+    kuyaEl.classList.remove('iris-docked');
     kuyaEl.classList.add('iris-centered');
     kuyaEl.dataset.mood = 'off';
     kuyaEl.hidden = false;
@@ -1676,7 +1696,7 @@
 
       setTimeout(() => {
         kuyaEl.classList.remove('iris-centered');
-        kuyaEl.classList.add('iris-docked-left');
+        kuyaEl.classList.add('iris-docked');
         document.body.classList.remove('iris-wake-active');
         const first = document.querySelector('#applyForm input, #applyForm select, #applyForm textarea');
         if (first) first.focus({ preventScroll: true });

@@ -454,7 +454,7 @@
       drag = null; root.classList.remove('dragging');
     }
     btn.addEventListener('pointerdown', function (e) {
-      if (PAGE === 'apply') return;   // docked bottom-left on Apply (see Apply.html)
+      if (PAGE === 'apply') return;   // docked bottom-right on Apply (see Apply.html)
       if (e.button !== 0 || drag) return;   // left button only; ignore a second finger
       const r = btn.getBoundingClientRect();
       drag = { id: e.pointerId, dx: e.clientX - r.left, dy: e.clientY - r.top, sx: e.clientX, sy: e.clientY };

@@ -13,11 +13,46 @@
  *   - Fonts must exist on Google Fonts; update `googleFontsUrl` to match.
  *   - Keys in `statusCopy` must match STATUSES in Utils.gs. `modules` are the hub's cards (Home.html).
  */
+/**
+ * Who people can contact about portal problems (Home footer, Apply "closed" page, a few messages).
+ * The live list is the Sheet: Settings > PortalContacts, one person per line as "Name | email" (Alt+Enter for a new
+ * line inside the cell). This list is only the fallback for when that cell is blank or has no valid email.
+ */
+const PORTAL_CONTACTS = [
+  { name: 'Keene Brigado', email: 'keene.xander.brigado@student.ateneo.edu' },
+  { name: 'Kristen Chua', email: 'kristen.mikayla.chua@student.ateneo.edu' },
+  { name: 'Lawrence Ng', email: 'lawrence.ng@student.ateneo.edu' }
+];
+
+/** Settings > PortalContacts parsed into [{ name, email }] (max 8), or PORTAL_CONTACTS if it is blank or unusable. */
+function portalContacts_() {
+  let raw = '';
+  try { raw = String(getSetting_('PortalContacts') || ''); } catch (e) { raw = ''; }
+  const out = [];
+  raw.split(/[\n\r;]+/).forEach(function (line) {
+    const m = line.match(/[^\s|,;<>()"']+@[^\s|,;<>()"']+\.[A-Za-z]{2,}/);
+    if (!m || out.length >= 8) return;
+    const name = line.replace(m[0], '').replace(/[|<>()\-\u2013\u2014:,]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+    out.push({ name: name || m[0], email: m[0] });
+  });
+  return out.length ? out : PORTAL_CONTACTS;
+}
+/** "Keene Brigado (a@x), Kristen Chua (b@x) or Lawrence Ng (c@x)" for one-line messages. */
+function contactsInline_(list) {
+  list = (list || PORTAL_CONTACTS).map(function (c) { return c.name + ' (' + c.email + ')'; });
+  return list.length > 1 ? list.slice(0, -1).join(', ') + ' or ' + list[list.length - 1] : list.join('');
+}
+function signInContactLine_(list) { return 'Still not working? Contact ' + contactsInline_(list) + ' and tell them what you see.'; }
+function loadErrorLine_(list) {
+  return "Something went wrong. The portal couldn't load your file. Reload the page. If it happens again, contact " + contactsInline_(list) + '.';
+}
+
 const BRAND = {
   /* ---------- identity ---------- */
   // Title: Eyes on LEADS (was LEADS: Oversight). Theme: oversight = (1) watchful supervision, (2) an inadvertent error.
   // Fears: being watched, feeling boxed in, failing. Mood: a surveillance case file, 1984-style.
   org: 'LEADS',
+  contacts: PORTAL_CONTACTS,
   parentOrg: 'MEA',
   portalName: 'EYES ON LEADS',            // browser tab title
   logoText: 'Eyes on ',
@@ -122,11 +157,11 @@ const BRAND = {
   // Pre-LEADS banner on Home. Hidden after `until` (Manila time) and for confirmed campers. Set show: false to hide it.
   preleadsBanner: {
     show: true,
-    until: '2026-11-05T19:30:00+08:00',
+    until: '2026-11-05T17:00:00+08:00',
     top: 'SPECIAL TRANSMISSION',
-    title: 'Pre-LEADS Preview // Nov 5',
+    title: 'THE LEADS UP // Nov 5',
     sub: '5:00–7:30 PM, onsite',          // fallback: Settings › PreLeadsTime + PreLeadsVenue show instead when filled in
-    link: 'Open the Pre-LEADS file →',
+    link: 'Open the THE LEADS UP file →',
     popup: 'Registration is open until the file closes. Come see what it is about.',   // the once-a-day pop-up on Home (blank = no pop-up)
     later: 'Later'
   },
@@ -264,7 +299,7 @@ const BRAND = {
       'Or sign out of every Google account, then sign in with your Ateneo account first.',
       'On your phone? Open the link in your browser, not inside Messenger or Instagram.'
     ],
-    contact: 'Still not working? Message the core team and tell them what you see.',
+    contact: signInContactLine_(),
     close: 'Got it',
     trigger: 'Trouble signing in?'
   },
@@ -316,8 +351,8 @@ const BRAND = {
     cancel: 'Cancel',
     sending: 'Sending…',
     sent: "Report sent. Case {id}. We'll reply to {email} if we need anything else.",
-    failed: "That didn't send. Try again, or email {to} directly.",
-    tooMany: "You've sent a few reports already. Give it a few minutes, or email {to} directly.",
+    failed: "That didn't send. Try again, or contact {to} directly.",
+    tooMany: "You've sent a few reports already. Give it a few minutes, or contact {to} directly.",
     // pop-up when the page hits an error (once per page load): asks before opening the report form
     errorTitle: 'Signal lost // something broke',
     errorLead: "Something went wrong on this page. Want to send a report to the core team? We'll include the error details so you don't have to explain the technical part.",
@@ -328,7 +363,7 @@ const BRAND = {
   messages: {
     notSignedIn: "We can't see your Google account. Sign in with your Ateneo email, then reload this page.",
     wrongDomain: "Switch to your Ateneo account to apply. You're signed in as ",
-    loadError: "Something went wrong. The portal couldn't load your file. Reload the page. If it happens again, message the core team.",
+    loadError: loadErrorLine_(),
     comingSoon: 'That page is still being built. Check back soon.'
   },
   /* ---------- referrals (Referrals.gs, Home card, Apply field) ---------- */
@@ -372,8 +407,9 @@ const BRAND = {
   },
 
   footer: {
-    contact: 'Portal issues? Message the LEADS core team.',   // shown when Settings > ContactEmail is blank
-    contactEmail: 'Portal issues? Email {contact}',
+    contactTitle: 'Portal issues? Contact any of the following people:',   // above the list in PORTAL_CONTACTS
+    contact: 'Portal issues? Contact any of the following people:',
+    contactEmail: 'Portal issues? Contact any of the following people:',
     privacy: 'We only use your info for LEADS, and only core team can see it (RA 10173).'
   },
 
@@ -594,6 +630,13 @@ function mascotJson_() {
 function brand_json_() {
   let contact = '';
   try { contact = String(getSetting_('ContactEmail') || '').trim(); } catch (e) { /* Settings missing */ }
-  const out = Object.assign({}, BRAND, { report: Object.assign({}, BRAND.report, { to: contact }) });
+  const list = portalContacts_();   // Settings > PortalContacts, else the list at the top of this file
+  const people = list.map(function (c) { return c.name + ' (' + c.email + ')'; }).join(', ');
+  const out = Object.assign({}, BRAND, {
+    contacts: list,
+    report: Object.assign({}, BRAND.report, { to: people || contact }),
+    signInHelp: Object.assign({}, BRAND.signInHelp, { contact: signInContactLine_(list) }),
+    messages: Object.assign({}, BRAND.messages, { loadError: loadErrorLine_(list) })
+  });
   return JSON.stringify(out).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
 }

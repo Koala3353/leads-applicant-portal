@@ -35,7 +35,13 @@ const PRELEADS_DAUNTING_OPTIONS = [
  */
 function preleadsRules_() {
   return {
-  FullName:   Object.assign({}, RULES.FullName, { requiredMsg: 'Full name is required.', msg: 'Letters, spaces, , . \' - only (2 to 80 characters).' }),   // Apply's message asks for "Last, First"; Pre-LEADS doesn't
+  // Names are wider here than in Apply (RULES.FullName) so different names fit: it must start with a letter (accents ok),
+  // then letters, spaces and , . ' ’ ‘ ` - ( ) / (up to 80 in all). The pattern is a plain string: validateFields_ builds it with no regex flags.
+  FullName:   Object.assign({}, RULES.FullName, {
+    pattern: "^[A-Za-z\\u00C0-\\u024F\\u1E00-\\u1EFF][A-Za-z\\u00C0-\\u024F\\u1E00-\\u1EFF\\u0300-\\u036F ,.'’‘`()/\\-]{1,79}$",
+    requiredMsg: 'Full name is required.',
+    msg: 'Letters, spaces, and , . \' ’ - ( ) / only (2 to 80 characters).'
+  }),
   Nickname:   Object.assign({}, RULES.Nickname, { requiredMsg: 'Nickname is required.', msg: 'Nickname must be letters only (up to 30 characters).' }),
   IDNumber:   Object.assign({}, RULES.IDNumber, { requiredMsg: RULES.IDNumber.msg }),
   YearLevel:  Object.assign({}, RULES.YearLevel, { requiredMsg: 'Year level must be between 1 and 5.', msg: 'Year level must be between 1 and 5.' }),
@@ -104,7 +110,7 @@ function preleads_getForm_() {
       daunting: PRELEADS_DAUNTING_OPTIONS
     },
     eventInfo: {
-      title: 'Pre-LEADS Preview · Eyes on LEADS',
+      title: 'THE LEADS UP · Eyes on LEADS',
       date: setting_('PreLeadsDate'),
       time: setting_('PreLeadsTime'),
       location: setting_('PreLeadsVenue')
@@ -132,7 +138,7 @@ function preleads_submit_(form) {
   if (!isAllowedDomain_(email)) {
     throw new Error('Use your Ateneo account to submit.');
   }
-  if (!preleads_isOpen_()) throw new Error('Pre-LEADS registration is closed.');
+  if (!preleads_isOpen_()) throw new Error('THE LEADS UP registration is closed.');
 
   // Someone who keeps hitting "that ID can't be used" is probably trying other people's IDs: stop after 6 an hour
   const failKey = probeKey_(email);   // the same counter as Apply, so the two forms together still allow only 6
@@ -201,11 +207,11 @@ function preleads_submit_(form) {
   return withScriptLock_(25000, () => {
     const sh = preleads_ensureSheet_();
 
-    if (!preleads_isOpen_()) throw new Error('Pre-LEADS registration just closed.');
+    if (!preleads_isOpen_()) throw new Error('THE LEADS UP registration just closed.');
     // Re-verify no duplicate submission inside the lock. Your own account: say so. Someone else's ID: the
     // generic message, so the reply never confirms whether a given ID registered.
     const dup = preleads_isDuplicateLocked_(sh, email, clean.IDNumber);
-    if (dup === 'email') return { ok: false, errors: { form: 'You have already registered for Pre-LEADS with this account.' } };
+    if (dup === 'email') return { ok: false, errors: { form: 'You have already registered for THE LEADS UP with this account.' } };
     if (dup === 'id') { bump_(failKey, 99, 3600); return idTaken; }
 
     // Each value goes under its header (so the core team can reorder or add columns safely). Missing headers are added.

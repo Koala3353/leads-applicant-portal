@@ -298,9 +298,12 @@
     body.applied h1.rgb{font-size:clamp(2rem,11vw,2.6rem)}
     body.applied .rec .seen{display:none}
     body.applied .watcher{display:none}           /* no stray eyes over the cards on a small screen */
-    .preleads-strip .b-big{font-size:clamp(1.25rem,6.4vw,1.7rem)}
-    .preleads-strip .b-sub{font-size:1rem}
-    .preleads-strip .pl-go{width:100%;justify-content:center}
+    /* the announcement ranks below the title and the apply button: smaller headline, quieter small print, tighter box */
+    .preleads-strip{padding:12px 14px}
+    .preleads-strip .b-top{font-size:.8rem;letter-spacing:.1em}
+    .preleads-strip .b-big{font-size:clamp(1.1rem,5.2vw,1.35rem)}
+    .preleads-strip .b-sub{font-size:.85rem}
+    .preleads-strip .pl-go{width:100%;justify-content:center;font-size:.85rem}
   }
   /* manila case folders: tab, typed form fields, redaction bars, ink stamp, a clipped photo. They pile up crooked. */
   .files{display:grid;gap:30px;padding-top:22px}
@@ -599,6 +602,11 @@
   .mod .why{margin:0;font-family:var(--mono);font-size:.72rem;color:var(--muted);min-height:1.2em}
 
   /* ---------- footer ---------- */
+  #contact{display:block;line-height:1.6}
+  #contact[hidden]{display:none}
+  #contact .ct-head{display:block;margin-bottom:4px}
+  #contact .ct-row{display:block;overflow-wrap:anywhere}
+  #contact a{color:var(--sky)}
   footer{margin:46px 0 30px;padding-top:20px;border-top:1.5px solid var(--line);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
     font-family:var(--mono);font-size:.74rem;letter-spacing:.04em;color:var(--muted)}
 
@@ -628,8 +636,14 @@
     .who .report-btn::before{margin-right:.35em}
     .rec{font-size:.62rem;gap:4px 12px;margin-bottom:14px}
     h1{font-size:clamp(2.6rem,13vw,3.4rem);line-height:.9}
+    /* title: "EYES ON LEADS" on ONE line and the biggest thing on the page. It is 13 monospace characters (about 7.15em wide),
+       so the size just follows the screen width: (width - the 20px page padding each side) / 7.4, with a little spare for the shadow.
+       The applied view (body.applied h1.rgb, above) keeps its own smaller size. */
+    h1.rgb{font-size:calc((100vw - 40px) / 7.4 / .74);line-height:1;white-space:nowrap}
+    h1.rgb .line,h1.rgb .line.big{display:inline;font-size:.74em;line-height:1}
+    h1.rgb .line.big::before{content:" "}
     h1 .kicker{font-size:.72rem;margin-bottom:.6em}
-    .tagline{font-size:.82rem;line-height:1.4}
+    .tagline{font-size:.9rem;line-height:1.4}
     .lede{font-size:1rem;line-height:1.6}
     .hint{font-size:.7rem;line-height:1.5;padding-right:72px}
     .hero{padding:16px 0 8px}
@@ -710,7 +724,7 @@
   <div class="bcast strip" id="closingStrip" role="status" hidden><p class="b-top"><?= BRAND.broadcast.closingTop ?></p><p class="b-big"></p></div>
 
   <!-- Pre-LEADS Preview Transmission -->
-  <div class="bcast strip preleads-strip" id="preleadsStrip" role="region" aria-label="Pre-LEADS announcement" hidden>
+  <div class="bcast strip preleads-strip" id="preleadsStrip" role="region" aria-label="THE LEADS UP announcement" hidden>
     <p class="b-top"><?= BRAND.preleadsBanner.top ?></p>
     <p class="b-big"><?= BRAND.preleadsBanner.title ?></p>
     <p class="b-sub"><span id="preleadsSub"><?= BRAND.preleadsBanner.sub ?></span></p>
@@ -907,6 +921,27 @@
 <script>
   const BRAND = <?!= brand_json_() ?>;
   const $ = id => document.getElementById(id);
+
+  /** "Portal issues? Contact any of the following people:" + one mailto line per person (BRAND.contacts in Brand.gs). */
+  function renderContacts(el) {
+    const people = (BRAND.contacts || []).filter(c => c && c.email);
+    el.textContent = '';
+    if (!people.length) { el.textContent = BRAND.footer.contact; return; }
+    const head = document.createElement('span');
+    head.className = 'ct-head';
+    head.textContent = BRAND.footer.contactTitle || BRAND.footer.contact;
+    el.appendChild(head);
+    people.forEach(c => {
+      const row = document.createElement('span');
+      row.className = 'ct-row';
+      row.appendChild(document.createTextNode(c.name + ' | '));
+      const a = document.createElement('a');
+      a.href = 'mailto:' + c.email;
+      a.textContent = c.email;
+      row.appendChild(a);
+      el.appendChild(row);
+    });
+  }
   /** I.R.I.S., the mascot (§7.2). Guarded: I.R.I.S. can be hidden or turned off. */
   const kuya = (face, text) => { try { if (window.Iris) window.Iris.say([face, text]); } catch (e) { /* never break the page */ } };
 
@@ -1488,7 +1523,7 @@
     if (a && $('youBox')) $('youBox').dataset.id = 'ID: ' + a.id;   // CAM 03 tags you with your file number once you have one
     try { broadcastMoments(ctx); } catch (e) { console.error(e); }
     $('hint').hidden = !(ctx.signedIn && !a && ctx.isOpen && ctx.allowedDomain);
-    $('contact').textContent = ctx.contact ? BRAND.footer.contactEmail.replace('{contact}', ctx.contact) : BRAND.footer.contact;
+    renderContacts($('contact'));
     $('contact').hidden = false;
     if (ctx.isAdmin && ctx.sheetUrl) {
       $('adminChip').href = ctx.sheetUrl;
