@@ -1,22 +1,15 @@
 /**
  * ConfirmMail.gs  (integrator owns this file)
  * The confirmation emails: one when someone files their LEADS application (apply_submit_, ApplyApi.gs), one when someone
- * registers for THE LEADS UP (preleads_submit_, PreLeadsServer.gs). Each shows their answers (not the Game) in the same
- * CRT / surveillance look as the Eyes on LEADS email blast (the standalone "email blast" Apps Script project): a 600px
- * table layout, Win95 title bars, a manila folder of paper pages, JetBrains Mono with system monospace fallbacks, colors
- * re-declared for dark mode so mail apps don't invert them, and a plain-text version for clients without HTML.
+ * registers for THE LEADS UP (preleads_submit_, PreLeadsServer.gs). Each shows their answers (not the Game), in two
+ * looks from the LEADS 2627 brand book's layouts (see "the two looks" below), deliberately unlike the email blast,
+ * plus a plain-text version for clients without HTML.
  *
  * Sending never breaks a submit: it runs after the lock, any failure is logged (WARN) and the application stands.
  * MailApp quota (school account): about 1,500 recipients a day; one email per submit.
  * Run confirm_testEmails() from the editor (owner only) to send both to yourself with sample answers.
  */
 
-const MAIL_C_ = {
-  outer: '#08090b', card: '#0d0e12', panel: '#17181c', panel2: '#101114',
-  paper: '#e6dfc9', paperText: '#211f19', tan: '#cdbb8a',
-  yellow: '#f2ea00', yellowText: '#111100', red: '#ff3038', blue: '#263fd4',
-  text: '#d8d8d3', muted: '#85858a', headline: '#f0efe9', line: '#3a3a3f', windowBar: '#b9b9b5', windowText: '#171717'
-};
 const MAIL_MONO_ = "'JetBrains Mono', Menlo, Consolas, 'SF Mono', 'Courier New', monospace";
 // The LEADS Facebook group, where the additional requirements are posted (reminder in the LEADS confirmation)
 const LEADS_FB_GROUP_ = 'https://www.facebook.com/groups/1617514465872930';
@@ -43,8 +36,8 @@ function confirmMail_apply_(a) {
       ['What kind of environment helps you feel most comfortable participating and sharing your thoughts with others?', a.Environment]
     ]]
   ];
-  const facts = [['FILE NO.', a.ApplicantID], ['STATUS', 'SUBMITTED'], ['WHEN', String(s.EventDates || 'January 29 to 31, 2027')],
-    ['YOUR CODE', a.ReferralCode || '—']];
+  const facts = [['FILE NO.', a.ApplicantID], ['STATUS', 'SUBMITTED'], ['CAMP', String(s.EventDates || 'January 29 to 31, 2027')],
+    ['YOUR CODE', a.ReferralCode || '—', true]];
   const next = [
     ['01', 'Review', 'The core team reads every file. Results come out on the portal; we will email you when they do.', true],
     ['02', 'Proof of payment', 'Once accepted: scan the QR, pay, upload your proof. Nothing is due before that.', false],
@@ -55,16 +48,17 @@ function confirmMail_apply_(a) {
   return confirmSend_(a.Email, {
     subject: 'File received: ' + a.ApplicantID + ' · Eyes on LEADS',
     preheader: 'Your LEADS application is on record. Your answers are inside.',
-    nick: nick, tag: 'CASE FILE 26//27 · ' + a.ApplicantID, headline: 'FILE<br>RECEIVED',
-    tagline: 'YOU ARE NOW ON RECORD.',
+    style: 'intake', subjectNo: a.ApplicantID, struck: 'NOT ON FILE',
+    nick: nick, tag: 'CASE FILE 26//27 · ' + a.ApplicantID, headline: 'File<br>received.',
+    tagline: 'ON RECORD', finding: 'subject wrote it down. That is the hard part. Observation continues.',
     intro: 'Hi ' + nick + ', your application to LEADS is filed. This is what you sent us. Keep it: you can\'t change it anymore, and you don\'t need to.',
-    facts: facts, folderTab: 'CASE FILE ' + a.ApplicantID + ' · YOUR ANSWERS', sections: sections,
+    facts: facts, sections: sections,
     referral: a.ReferralCode ? 'Your referral code is <b>' + confirmEsc_(a.ReferralCode) + '</b>. Each person who applies with it earns you a point toward room booking and other advantages at camp.' : '',
     notice: { title: 'ONE MORE THING // ADDITIONAL REQUIREMENTS',
       text: 'Your application is not complete without the additional requirements posted in the LEADS Facebook group. Open the group, read the latest post, and do what it asks before the deadline.',
       link: ['Open the LEADS Facebook group', LEADS_FB_GROUP_] },
     next: next, button: ['Check your file on the portal', portalUrl_()],
-    closing: 'We have been watching.<br><span style="color:' + MAIL_C_.red + ';">Now we are reading.</span>'
+    closing: 'We have been watching.<br><span style="color:#e50000;">Now we are reading.</span>'
   }, 'apply');
 }
 
@@ -86,15 +80,15 @@ function confirmMail_preleads_(r, email) {
   return confirmSend_(email, {
     subject: 'Registered: THE LEADS UP · ' + (when || 'November 5'),
     preheader: 'Your seat at THE LEADS UP is on record. Your answers are inside.',
-    nick: nick, tag: 'FILE 02-A // THE LEADS UP', headline: 'SEAT<br>RESERVED',
-    tagline: 'SEE YOU THERE. WE WILL SEE YOU FIRST.',
+    style: 'broadcast', nick: nick, tag: 'THE LEADS UP · ' + [when, time].filter(Boolean).join(' · '), headline: 'Seat<br>reserved',
+    tagline: 'I.R.I.S. is expecting you.',
     intro: 'Hi ' + nick + ', you are registered for THE LEADS UP, a one-day, onsite preview of LEADS. This is what you sent us.',
     facts: [['WHEN', [when, time].filter(Boolean).join(' · ')], ['WHERE', where || 'Onsite'], ['WHAT', 'A preview of LEADS']],
-    folderTab: 'FILE 02-A · YOUR ANSWERS', sections: sections, referral: '',
+    sections: sections, referral: '',
     next: [['01', 'Show up', 'Come on time. Bring yourself; the rest is provided.', true],
       ['02', 'Apply to LEADS', 'Applications for the camp itself are open on the portal.', false]],
     button: ['Open the portal', portalUrl_()],
-    closing: 'We have been watching.<br><span style="color:' + MAIL_C_.red + ';">See you on the inside.</span>'
+    closing: 'We have been watching.<br><span style="color:#000ff0;">See you on the inside.</span>'
   }, 'preleads');
 }
 
@@ -103,7 +97,7 @@ function confirmSend_(to, o, page) {
   try {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(to || ''))) return false;
     if (MailApp.getRemainingDailyQuota() < 1) { activity_('confirm_mail', 'daily email quota used up: not sent to ' + to, { level: 'WARN', page: page }); return false; }
-    const opts = { name: String(getSetting_('EventName') || 'LEADS').trim() || 'LEADS', htmlBody: confirmHtml_(o), inlineImages: mailGifs_() };
+    const opts = { name: String(getSetting_('EventName') || 'LEADS').trim() || 'LEADS', htmlBody: confirmHtml_(o) };
     const reply = String(getSetting_('ContactEmail') || '').trim();
     if (/@/.test(reply)) opts.replyTo = reply;
     MailApp.sendEmail(to, o.subject, confirmText_(o), opts);
@@ -118,157 +112,202 @@ function confirmEsc_(v) {
   return String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function confirmHtml_(o) {
-  const C = MAIL_C_, MONO = MAIL_MONO_, E = confirmEsc_;
-  const now = Utilities.formatDate(new Date(), 'Asia/Manila', 'HH:mm:ss');
-  const bev = up => up
-    ? 'border-top:2px solid #86878f;border-left:2px solid #86878f;border-bottom:2px solid #030304;border-right:2px solid #030304;'
-    : 'border-top:2px solid #030304;border-left:2px solid #030304;border-bottom:2px solid #86878f;border-right:2px solid #86878f;';
-  const gif = (name, w, h, alt, style) =>
-    `<img src="cid:live_${name}" width="${w}" height="${h}" alt="${alt || ''}" style="display:block;border:0;outline:none;width:${w}px;max-width:100%;height:auto;${style || ''}">`;
-  const winBtns = () => ['_', '&#9633;', '&times;'].map(b =>
-    `<span style="display:inline-block;background-color:#b9b9b5;border-top:2px solid #e4e4e0;border-left:2px solid #e4e4e0;border-bottom:2px solid #030304;border-right:2px solid #030304;padding:0 5px;margin-left:3px;font-family:${MONO};font-size:10px;line-height:12px;font-weight:bold;color:#171717;">${b}</span>`).join('');
-  const row = (html, top) => `<tr><td class="pad" style="padding:${top}px 30px 0 30px;">${html}</td></tr>`;
-  const stamp = t => `<span style="display:inline-block;transform:rotate(-4deg);border:2px solid #a32620;padding:1px 6px;font-family:${MONO};font-size:10px;line-height:14px;font-weight:bold;letter-spacing:2px;color:#a32620;">${t}</span>`;
-  const monitor = (label, kind) => {
-    const dark = kind === 'nosig', frame = dark ? '#1d1e22' : '#cfc8b4', hi = dark ? '#55565c' : '#f1ecde', lo = dark ? '#050506' : '#8d8670';
-    const screen = kind === 'eye_g' ? '#5f6064' : kind === 'eye_r' ? '#8f5b53' : '#4d4e52', lab = dark ? '#d8d8d3' : '#211f19';
-    return `<td width="33%" valign="top" style="padding:0 5px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${frame}" style="background-color:${frame};border-top:2px solid ${hi};border-left:2px solid ${hi};border-bottom:3px solid ${lo};border-right:3px solid ${lo};border-radius:12px;box-shadow:4px 5px 0 #020203;">
-        <tr><td style="padding:7px 7px 2px 7px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-          <td align="center" bgcolor="${screen}" style="padding:0;background-color:${screen};border-top:3px solid #0a0a0b;border-left:3px solid #0a0a0b;border-bottom:2px solid #9a9ba0;border-right:2px solid #9a9ba0;border-radius:10px;font-size:0;line-height:0;">${gif(kind, 150, 76, dark ? 'NO SIGNAL' : 'Watching eye', 'width:100%;')}</td>
-        </tr></table></td></tr>
-        <tr><td style="padding:1px 10px 7px 10px;font-family:${MONO};font-size:9px;line-height:12px;font-weight:bold;letter-spacing:2px;color:${lab};"><span style="color:#d6262d;">&#9679;</span> ${label}</td></tr>
-      </table></td>`;
-  };
-  const fact = (label, value) => `<tr>
-      <td width="120" valign="top" class="fact-label t-red" style="width:120px;padding:9px 14px 9px 0;border-bottom:1px dashed ${C.line};font-family:${MONO};font-size:12px;line-height:24px;font-weight:bold;letter-spacing:3px;color:${C.red};">${E(label)}</td>
-      <td valign="top" style="padding:9px 0;border-bottom:1px dashed ${C.line};font-family:${MONO};font-size:14px;line-height:24px;font-weight:bold;"><span class="t-head" style="color:${C.headline};border-bottom:3px solid ${C.red};padding-bottom:1px;">${E(value)}</span></td></tr>`;
-  const win = (title, inner) => `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-panel" bgcolor="${C.panel}" style="background-color:${C.panel};${bev(true)}box-shadow:6px 6px 0 ${C.blue};">
-        <tr><td bgcolor="#a3141a" style="background-color:#a3141a;background-image:linear-gradient(180deg,#a3141a,#5e0b0f);padding:4px 8px;border-bottom:2px solid #050505;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-            <td style="font-family:${MONO};font-size:10px;line-height:14px;font-weight:bold;letter-spacing:1px;color:#f0e8df;text-transform:uppercase;">${title}</td>
-            <td align="right" class="mobile-hide" style="white-space:nowrap;">${winBtns()}</td></tr></table></td></tr>
-        <tr><td>${inner}</td></tr></table>`;
-  // one Q/A on a paper page: the question small and red-brown, the answer as typed (line breaks kept)
-  const qa = (q, ans) => `
-      <div class="t-paper" style="font-family:${MONO};font-size:10px;line-height:15px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#7a2a20;padding-top:10px;">${E(q)}</div>
-      <div class="t-paper" style="font-family:${MONO};font-size:14px;line-height:22px;color:${C.paperText};padding:3px 0 10px 0;border-bottom:1px dashed #b4ab90;word-break:break-word;overflow-wrap:anywhere;">${E(ans === undefined || ans === null || ans === '' ? '—' : ans).replace(/\r?\n/g, '<br>')}</div>`;
-  const pg = (label, items, flip) => `
-      <tr><td style="padding:0 ${flip ? 0 : 8}px 12px ${flip ? 8 : 0}px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-paper" bgcolor="${C.paper}" style="background-color:${C.paper};border-top:1px solid #f7f2e2;border-bottom:3px solid #b8b096;border-right:2px solid #b8b096;box-shadow:3px 4px 0 rgba(0,0,0,0.28);">
-          <tr><td style="padding:6px 14px;border-bottom:1px dashed #8c856f;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-            <td class="t-paper" style="font-family:${MONO};font-size:10px;line-height:16px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:${C.paperText};">${E(label)}</td>
-            <td align="right" style="white-space:nowrap;">${stamp('ON RECORD')}</td></tr></table></td></tr>
-          <tr><td class="body-copy" style="padding:4px 18px 12px 18px;">${items.map(x => qa(x[0], x[1])).join('')}</td></tr>
-        </table></td></tr>`;
-  const folder = (tab, pages) => `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td class="bg-tan t-paper" bgcolor="${C.tan}" style="background-color:${C.tan};padding:5px 16px 4px 16px;border-top:2px solid #e8dcb4;border-left:2px solid #e8dcb4;border-right:3px solid #8f8258;border-radius:8px 8px 0 0;font-family:${MONO};font-size:11px;line-height:15px;font-weight:bold;letter-spacing:2px;color:${C.paperText};text-transform:uppercase;">${E(tab)}</td></tr></table>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-tan" bgcolor="${C.tan}" style="background-color:${C.tan};background-image:linear-gradient(180deg,#dccb9c,${C.tan});border-top:2px solid #e8dcb4;border-left:2px solid #e8dcb4;border-bottom:5px solid #8f8258;border-right:3px solid #8f8258;box-shadow:6px 6px 0 #020203;">
-        <tr><td style="padding:12px 12px 2px 12px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${pages}</table></td></tr></table>`;
-  const step = (n, name, desc, open, last) => `<tr>
-      <td style="padding:8px 14px;${last ? '' : 'border-bottom:1px dashed ' + C.line + ';'}">
-        <div class="t-head" style="font-family:${MONO};font-size:13px;line-height:18px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:${open ? C.yellow : C.headline};">${n} &nbsp;${E(name)}</div>
-        <div class="t-muted" style="font-family:${MONO};font-size:12px;line-height:18px;color:${C.muted};">${E(desc)}</div></td>
-      <td align="right" valign="top" style="padding:9px 14px 8px 0;${last ? '' : 'border-bottom:1px dashed ' + C.line + ';'}white-space:nowrap;">${open
-        ? `<span style="display:inline-block;background-color:${C.yellow};padding:2px 7px;font-family:${MONO};font-size:10px;font-weight:bold;letter-spacing:2px;color:${C.yellowText};">NOW</span>`
-        : `<span style="display:inline-block;border:1px solid #6c6c72;padding:2px 7px;font-family:${MONO};font-size:10px;letter-spacing:2px;color:${C.muted};">LOCKED</span>`}</td></tr>`;
-  const button = (label, href) => `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="btn-table" style="width:100%;margin:0 0 10px 0;"><tr>
-        <td class="btn-cell" align="center" bgcolor="${C.red}" style="background-color:${C.red};background-image:linear-gradient(180deg,#ff8a8e,${C.red} 40%);border-top:3px solid #ff8a8e;border-left:3px solid #ff8a8e;border-bottom:3px solid #7a0a10;border-right:3px solid #7a0a10;box-shadow:5px 5px 0 #050505;">
-          <a href="${E(href)}" target="_blank" class="btn-link" style="display:block;padding:18px 14px;font-family:${MONO};font-size:17px;line-height:22px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#ffffff;text-decoration:none;">${E(label)}</a></td></tr></table>`;
+/* ============================== the two looks (LEADS 2627 brand book, "Layouts") ==============================
+ * Both use only the brand palette and JetBrains Mono, and both differ on purpose from the email blast (dark CRT, Win95
+ * windows, GIFs): they are documents you keep, not an announcement.
+ *   intake     (LEADS application)   the CASE FILE template: a printed intake record on white paper, dotted frames like
+ *              the brand book's own headers, a ruled answer grid, red stamps, a crossed-out status, a typed finding.
+ *   broadcast  (THE LEADS UP)        the BROADCAST CARD template: a solid #000ff0 field with bold centered caps
+ *              ("THIS IS NOT A TEST"), then a white transcript of the answers.
+ * Light designs: color-scheme is pinned to light, and the same colors are re-declared for dark mode (and Outlook's
+ * data-ogsc / data-ogsb) so mail apps don't invert them. No images at all: nothing to load or block.
+ */
+const BRAND_C_ = { yellow: '#fffc04', blue: '#000ff0', black: '#050505', white: '#fefffe', grey: '#808080', red: '#e50000',
+  paper: '#fefffe', desk: '#e8e6e0', rule: '#c9c6bd', ink: '#050505', soft: '#f3f1ea' };
 
-  const pages = o.sections.map((sec, i) => pg(sec[0], sec[1], i % 2 === 1)).join('');
-  const nextRows = o.next.map((x, i) => step(x[0], x[1], x[2], x[3], i === o.next.length - 1)).join('');
+function confirmHtml_(o) { return o.style === 'broadcast' ? confirmBroadcastHtml_(o) : confirmIntakeHtml_(o); }
 
+/** <head> shared by both: fonts, light-only color scheme, the same colors again for dark mode, phone tweaks. */
+function confirmHead_(o, extra) {
+  const C = BRAND_C_;
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="x-apple-disable-message-reformatting"><meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
   <meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only">
-  <title>${E(o.subject)}</title>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <title>${confirmEsc_(o.subject)}</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,700;0,800;1,400&display=swap');
     :root { color-scheme: light only; supported-color-schemes: light only; }
     body, table, td, a { -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
     table, td { mso-table-lspace:0pt; mso-table-rspace:0pt; }
     table { border-collapse:separate; border-spacing:0; }
-    img { -ms-interpolation-mode:bicubic; border:0; outline:none; text-decoration:none; }
     a { text-decoration:none; }
     @media (prefers-color-scheme: dark) {
-      body, .body, .bg-outer { background-color:${C.outer} !important; }
-      .bg-card { background-color:${C.card} !important; } .bg-panel { background-color:${C.panel} !important; } .bg-panel2 { background-color:${C.panel2} !important; }
-      .bg-paper { background-color:${C.paper} !important; } .bg-tan { background-color:${C.tan} !important; } .bg-yellow { background-color:${C.yellow} !important; }
-      .t-text { color:${C.text} !important; } .t-head { color:${C.headline} !important; } .t-muted { color:${C.muted} !important; }
-      .t-red { color:${C.red} !important; } .t-paper { color:${C.paperText} !important; } .t-yellow { color:${C.yellowText} !important; }
+      .bg-desk { background-color:${C.desk} !important; } .bg-paper { background-color:${C.paper} !important; } .bg-soft { background-color:${C.soft} !important; }
+      .bg-blue { background-color:${C.blue} !important; } .bg-black { background-color:${C.black} !important; } .bg-yellow { background-color:${C.yellow} !important; }
+      .t-ink { color:${C.ink} !important; } .t-grey { color:${C.grey} !important; } .t-red { color:${C.red} !important; } .t-white { color:${C.white} !important; } .t-blue { color:${C.blue} !important; }
     }
-    [data-ogsc] .t-text { color:${C.text} !important; } [data-ogsc] .t-head { color:${C.headline} !important; } [data-ogsc] .t-muted { color:${C.muted} !important; }
-    [data-ogsc] .t-red { color:${C.red} !important; } [data-ogsc] .t-paper { color:${C.paperText} !important; } [data-ogsc] .t-yellow { color:${C.yellowText} !important; }
-    [data-ogsb] .bg-outer { background-color:${C.outer} !important; } [data-ogsb] .bg-card { background-color:${C.card} !important; }
-    [data-ogsb] .bg-panel { background-color:${C.panel} !important; } [data-ogsb] .bg-panel2 { background-color:${C.panel2} !important; }
-    [data-ogsb] .bg-paper { background-color:${C.paper} !important; } [data-ogsb] .bg-tan { background-color:${C.tan} !important; } [data-ogsb] .bg-yellow { background-color:${C.yellow} !important; }
+    [data-ogsc] .t-ink { color:${C.ink} !important; } [data-ogsc] .t-grey { color:${C.grey} !important; } [data-ogsc] .t-red { color:${C.red} !important; }
+    [data-ogsc] .t-white { color:${C.white} !important; } [data-ogsc] .t-blue { color:${C.blue} !important; }
+    [data-ogsb] .bg-desk { background-color:${C.desk} !important; } [data-ogsb] .bg-paper { background-color:${C.paper} !important; } [data-ogsb] .bg-soft { background-color:${C.soft} !important; }
+    [data-ogsb] .bg-blue { background-color:${C.blue} !important; } [data-ogsb] .bg-black { background-color:${C.black} !important; } [data-ogsb] .bg-yellow { background-color:${C.yellow} !important; }
     @media only screen and (max-width:480px) {
       .container { width:100% !important; } .pad { padding-left:16px !important; padding-right:16px !important; }
-      .h1 { font-size:44px !important; line-height:42px !important; letter-spacing:-2px !important; }
-      .h2 { font-size:18px !important; line-height:24px !important; } .body-copy { font-size:14px !important; line-height:22px !important; }
-      .btn-link { font-size:15px !important; } .mobile-hide { display:none !important; } .fact-label { width:92px !important; } .peek-pad { padding-right:40px !important; }
+      .big { font-size:40px !important; line-height:42px !important; } .mega { font-size:46px !important; line-height:46px !important; }
+      .qnum { width:30px !important; } .hide-sm { display:none !important; }
     }
+    ${extra || ''}
   </style>
-</head>
-<body class="body bg-outer" bgcolor="${C.outer}" style="margin:0;padding:0;background-color:${C.outer};">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${C.outer};">${E(o.preheader)} &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-outer" bgcolor="${C.outer}" style="background-color:${C.outer};background-image:linear-gradient(180deg,#0a0c1a,${C.outer} 420px);">
-    <tr><td align="center" style="padding:16px 10px 30px 10px;">
-      <table role="presentation" class="container bg-card" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.card}" style="width:600px;max-width:600px;background-color:${C.card};${bev(true)}box-shadow:10px 10px 0 #020203, 0 0 40px rgba(38,63,212,0.25);">
-        <tr><td bgcolor="${C.windowBar}" style="background-color:${C.windowBar};background-image:linear-gradient(180deg,#d2d2ce,#9d9d99);padding:0;border-bottom:3px solid #080808;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-            <td class="pad" style="padding:6px 12px;font-family:${MONO};font-size:11px;line-height:14px;font-weight:bold;letter-spacing:1px;color:${C.windowText};text-transform:uppercase;">&#9673;&nbsp; EYES ON LEADS</td>
-            <td align="right" class="mobile-hide" style="padding:4px 9px;white-space:nowrap;">${winBtns()}</td></tr></table></td></tr>
-        <tr><td class="pad bg-panel2" bgcolor="${C.panel2}" style="padding:8px 26px;background-color:${C.panel2};border-bottom:1px solid ${C.line};font-family:${MONO};font-size:10px;line-height:17px;letter-spacing:2px;text-transform:uppercase;">
-          <img src="cid:live_rec" width="14" height="14" alt="&#9679;" style="display:inline-block;vertical-align:middle;border:0;width:14px;height:14px;">
-          <span class="t-red" style="color:${C.red};font-weight:bold;">REC</span>
-          <span class="t-muted" style="color:${C.muted};">&nbsp;&nbsp; CAM 01 &nbsp;&nbsp;<strong style="color:${C.headline};">${now}</strong>&nbsp;&nbsp;//&nbsp;&nbsp;SUBJECT: ${E(o.nick)}</span></td></tr>
-        <tr><td class="pad" style="padding:22px 30px 0 30px;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="transform:rotate(-2deg);"><tr>
-            <td class="bg-yellow" bgcolor="${C.yellow}" style="background-color:${C.yellow};padding:4px 10px;border-top:2px solid #fffc9a;border-left:2px solid #fffc9a;border-bottom:2px solid #9b9700;border-right:2px solid #9b9700;box-shadow:4px 4px 0 ${C.blue};font-family:${MONO};font-size:12px;line-height:15px;font-weight:bold;letter-spacing:2px;color:${C.yellowText};text-transform:uppercase;"><span class="t-yellow" style="color:${C.yellowText};">${E(o.tag)}</span></td></tr></table>
-          <div class="h1 t-head" style="padding-top:10px;font-family:${MONO};font-size:56px;line-height:54px;font-weight:800;text-transform:uppercase;color:${C.headline};letter-spacing:-2px;text-shadow:1px 1px 0 ${C.blue},2px 2px 0 ${C.blue},3px 3px 0 ${C.blue},4px 4px 0 #1a2a9a,-2px -2px 0 ${C.red};">${o.headline}</div>
-          <div class="t-red" style="padding-top:16px;font-family:${MONO};font-size:14px;line-height:20px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:${C.red};">${E(o.tagline)}</div>
-          <div class="t-text body-copy" style="padding-top:14px;font-family:${MONO};font-size:14px;line-height:23px;color:${C.text};">${E(o.intro)}</div></td></tr>
-        <tr><td class="pad" style="padding:20px 25px 0 25px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-          ${monitor('CH 03', 'eye_g')}${monitor('CH 04', 'nosig')}${monitor('CH 07', 'eye_r')}</tr></table></td></tr>
-        ${row(win('FILE_RECEIVED.EXE', `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-            <tr><td style="padding:6px 14px 0 14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${o.facts.map(f => fact(f[0], f[1])).join('')}</table></td></tr>
-            ${o.referral ? `<tr><td class="t-text" style="padding:12px 14px 0 14px;font-family:${MONO};font-size:13px;line-height:21px;color:${C.text};">${o.referral}</td></tr>` : ''}
-            <tr><td style="padding:16px 14px 8px 14px;">${button(o.button[0], o.button[1])}</td></tr></table>`), 24)}
-        ${o.notice ? row(`
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-paper" bgcolor="${C.paper}" style="background-color:${C.paper};border-left:6px solid ${C.red};border-top:2px solid #f7f2e2;border-bottom:4px solid #9d957c;border-right:3px solid #9d957c;box-shadow:6px 6px 0 ${C.blue};">
-            <tr><td bgcolor="${C.yellow}" class="bg-yellow t-yellow" style="background-color:${C.yellow};padding:5px 14px;border-bottom:2px solid #111100;font-family:${MONO};font-size:11px;line-height:16px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:${C.yellowText};">&#9888; ${E(o.notice.title)}</td></tr>
-            <tr><td class="body-copy t-paper" style="padding:12px 16px 4px 16px;font-family:${MONO};font-size:14px;line-height:22px;color:${C.paperText};">${E(o.notice.text)}</td></tr>
-            <tr><td style="padding:10px 16px 14px 16px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" class="btn-table"><tr>
-                <td class="btn-cell" align="center" bgcolor="#2a2b30" style="background-color:#2a2b30;border-top:3px solid #7b7c84;border-left:3px solid #7b7c84;border-bottom:3px solid #050506;border-right:3px solid #050506;box-shadow:4px 4px 0 #050505;">
-                  <a href="${E(o.notice.link[1])}" target="_blank" class="btn-link t-head" style="display:inline-block;padding:12px 18px;font-family:${MONO};font-size:13px;line-height:18px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:${C.headline};text-decoration:none;">${E(o.notice.link[0])} &rarr;</a></td></tr></table>
-            </td></tr>
-          </table>`, 24) : ''}
-        <tr><td style="padding:24px 0 0 0;"></td></tr>
-        <tr><td bgcolor="${C.yellow}" class="bg-yellow t-yellow" style="background-color:${C.yellow};padding:7px 30px;font-family:${MONO};font-size:13px;line-height:18px;font-weight:bold;letter-spacing:2px;color:${C.yellowText};text-transform:uppercase;white-space:nowrap;overflow:hidden;">I.R.I.S. IS WATCHING /// YOUR ANSWERS ARE ON RECORD /// I.R.I.S. IS WATCHING</td></tr>
-        ${row(folder(o.folderTab, pages), 24)}
+</head>`;
+}
+
+function confirmIntakeHtml_(o) {
+  const C = BRAND_C_, M = MAIL_MONO_, E = confirmEsc_;
+  const now = new Date(), stampDate = Utilities.formatDate(now, 'Asia/Manila', 'MMM dd yyyy').toUpperCase();
+  const clock = Utilities.formatDate(now, 'Asia/Manila', 'HH:mm:ss');
+  const dotted = 'border:2px dotted ' + C.ink + ';';
+  const stamp = (t, rot) => `<span class="t-red" style="display:inline-block;transform:rotate(${rot || -6}deg);border:3px solid ${C.red};padding:3px 10px;font-family:${M};font-size:13px;line-height:17px;font-weight:800;letter-spacing:3px;color:${C.red};">${t}</span>`;
+  const redact = w => `<span class="bg-black" style="display:inline-block;width:${w}px;height:12px;background-color:${C.black};vertical-align:middle;"></span>`;
+  // a section: dotted header frame (like the brand book's page titles), then numbered questions on a ruled grid
+  let qn = 0;
+  const section = (title, items) => `
+      <tr><td class="pad" style="padding:26px 30px 0 30px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${dotted}"><tr>
+          <td class="t-ink" style="padding:8px 12px;font-family:${M};font-size:15px;line-height:20px;font-weight:800;color:${C.ink};border-right:2px dotted ${C.ink};white-space:nowrap;">${E(title.split('//')[0].trim())}</td>
+          <td class="t-ink" style="padding:8px 12px;font-family:${M};font-size:15px;line-height:20px;font-style:italic;color:${C.ink};">${E((title.split('//')[1] || '').trim())}</td>
+        </tr></table>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-left:1px solid ${C.rule};border-right:1px solid ${C.rule};">
+          ${items.map(x => { qn++; const ans = x[1] === undefined || x[1] === null || x[1] === '' ? '—' : x[1]; return `
+          <tr>
+            <td valign="top" class="qnum t-grey" style="width:38px;padding:10px 0 10px 12px;border-bottom:1px solid ${C.rule};font-family:${M};font-size:11px;line-height:18px;color:${C.grey};">${String(qn).padStart(2, '0')}</td>
+            <td valign="top" style="padding:10px 12px 10px 6px;border-bottom:1px solid ${C.rule};">
+              <div class="t-grey" style="font-family:${M};font-size:11px;line-height:16px;letter-spacing:.5px;text-transform:uppercase;color:${C.grey};">${E(x[0])}</div>
+              <div class="t-ink" style="padding-top:4px;font-family:${M};font-size:14px;line-height:22px;color:${C.ink};word-break:break-word;overflow-wrap:anywhere;">${E(ans).replace(/\r?\n/g, '<br>')}</div>
+            </td>
+          </tr>`; }).join('')}
+        </table>
+      </td></tr>`;
+  const factRow = (k, v, hl) => `<tr>
+      <td class="t-grey" style="padding:8px 12px;border-bottom:1px solid ${C.ink};border-right:1px solid ${C.ink};font-family:${M};font-size:11px;line-height:16px;letter-spacing:2px;color:${C.grey};white-space:nowrap;">${E(k)}</td>
+      <td class="t-ink" style="padding:8px 12px;border-bottom:1px solid ${C.ink};font-family:${M};font-size:14px;line-height:20px;font-weight:700;color:${C.ink};">${hl ? `<span class="bg-yellow" style="background-color:${C.yellow};padding:1px 5px;">${E(v)}</span>` : E(v)}</td></tr>`;
+  const steps = o.next.map((x, i) => `<tr>
+      <td valign="top" class="t-ink" style="width:34px;padding:7px 0;font-family:${M};font-size:14px;line-height:20px;color:${C.ink};">${x[3] ? '[&#10003;]' : '[&nbsp;&nbsp;]'}</td>
+      <td valign="top" style="padding:7px 0;${i < o.next.length - 1 ? 'border-bottom:1px dashed ' + C.rule + ';' : ''}">
+        <div class="t-ink" style="font-family:${M};font-size:13px;line-height:19px;font-weight:700;color:${C.ink};text-transform:uppercase;">${x[0]} &nbsp;${E(x[1])}</div>
+        <div class="t-grey" style="font-family:${M};font-size:12px;line-height:18px;color:${C.grey};">${E(x[2])}</div></td></tr>`).join('');
+
+  return confirmHead_(o) + `
+<body class="bg-desk" bgcolor="${C.desk}" style="margin:0;padding:0;background-color:${C.desk};">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${C.desk};">${E(o.preheader)} &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-desk" bgcolor="${C.desk}" style="background-color:${C.desk};">
+    <tr><td align="center" style="padding:22px 10px 32px 10px;">
+      <table role="presentation" class="container bg-paper" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.paper}" style="width:600px;max-width:600px;background-color:${C.paper};border:1px solid ${C.rule};box-shadow:0 2px 0 ${C.rule},0 14px 30px rgba(5,5,5,.12);">
+        <!-- header frame: LEADS | Intake Record (the brand book's dotted page header) -->
         <tr><td class="pad" style="padding:26px 30px 0 30px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#2a2b30" style="background-color:#2a2b30;background-image:linear-gradient(180deg,#3a3b41,#222328);${bev(true)}box-shadow:6px 6px 0 #050505;">
-            <tr><td align="center" style="padding:12px 16px 10px 16px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td class="bg-paper t-paper" bgcolor="${C.paper}" style="background-color:${C.paper};border:2px solid #8c856f;padding:5px 16px;font-family:${MONO};font-size:12px;line-height:16px;font-weight:bold;letter-spacing:3px;color:${C.paperText};text-transform:uppercase;">NEXT STEPS</td></tr></table></td></tr>
-            <tr><td style="padding:0 12px 12px 12px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.panel2}" class="bg-panel2" style="background-color:${C.panel2};${bev(false)}">${nextRows}</table></td></tr>
-          </table></td></tr>
-        <tr><td class="pad" style="padding:28px 30px 0 30px;">
-          <div class="h2 t-head" style="font-family:${MONO};font-size:22px;line-height:29px;font-weight:800;text-transform:uppercase;color:${C.headline};border-left:5px solid ${C.red};padding-left:15px;">${o.closing}</div></td></tr>
-        <tr><td align="right" class="peek-pad" style="padding:6px 60px 0 30px;font-size:0;line-height:0;">${gif('peek', 90, 48, 'One last eye', 'margin:0 0 -22px auto;')}</td></tr>
-        <tr><td class="pad bg-panel" bgcolor="${C.panel}" style="padding:12px 30px;background-color:${C.panel};border-top:2px solid #55565c;font-family:${MONO};font-size:9px;line-height:16px;letter-spacing:1px;color:${C.muted};">
-          <span class="t-muted" style="color:${C.muted};">EYES ON LEADS &middot; A LEADERSHIP DEVELOPMENT PROJECT OF MEA &middot; CASE FILE 26//27 &middot; THIS IS AN AUTOMATIC CONFIRMATION. REPLY IF SOMETHING LOOKS WRONG.</span></td></tr>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${dotted}"><tr>
+            <td class="t-ink" style="padding:10px 14px;font-family:${M};font-size:24px;line-height:28px;font-weight:800;letter-spacing:-.5px;color:${C.ink};border-right:2px dotted ${C.ink};white-space:nowrap;">LEADS</td>
+            <td class="t-ink" style="padding:10px 14px;font-family:${M};font-size:18px;line-height:24px;font-style:italic;color:${C.ink};">Intake Record</td>
+            <td align="right" class="hide-sm t-grey" style="padding:10px 14px;font-family:${M};font-size:11px;line-height:16px;color:${C.grey};white-space:nowrap;">26 / 27</td>
+          </tr></table>
+        </td></tr>
+        <!-- micro-details: REC, timestamp, subject number -->
+        <tr><td class="pad t-grey" style="padding:10px 30px 0 30px;font-family:${M};font-size:11px;line-height:16px;letter-spacing:2px;color:${C.grey};text-transform:uppercase;">
+          <span class="t-red" style="color:${C.red};">&#9679; REC</span> &nbsp;${clock} &nbsp;/&nbsp; SUBJECT ${E(o.subjectNo || '')} &nbsp;/&nbsp; ${E(o.nick)}</td></tr>
+        <!-- title + stamp -->
+        <tr><td class="pad" style="padding:22px 30px 0 30px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td valign="bottom">
+              <div class="big t-ink" style="font-family:${M};font-size:48px;line-height:48px;font-weight:800;letter-spacing:-2px;color:${C.ink};text-transform:uppercase;">${o.headline}</div>
+              <div class="t-grey" style="padding-top:12px;font-family:${M};font-size:13px;line-height:18px;letter-spacing:2px;color:${C.grey};text-transform:uppercase;"><s>${E(o.struck || 'NOT ON FILE')}</s> &nbsp;<span class="t-ink" style="color:${C.ink};font-weight:700;">${E(o.tagline)}</span></div>
+            </td>
+            <td valign="top" align="right" class="hide-sm" style="padding-left:10px;">${stamp('RECEIVED<br>' + stampDate, 8)}</td>
+          </tr></table>
+        </td></tr>
+        <tr><td class="pad t-ink" style="padding:18px 30px 0 30px;font-family:${M};font-size:14px;line-height:23px;color:${C.ink};">${E(o.intro)}</td></tr>
+        <!-- the file's facts, as a ruled form -->
+        <tr><td class="pad" style="padding:20px 30px 0 30px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${C.ink};border-left:1px solid ${C.ink};border-right:1px solid ${C.ink};">
+            ${o.facts.map(f => factRow(f[0], f[1], f[2])).join('')}
+          </table>
+          ${o.referral ? `<div class="t-ink" style="padding-top:10px;font-family:${M};font-size:12px;line-height:19px;color:${C.ink};">${o.referral}</div>` : ''}
+        </td></tr>
+        ${o.notice ? `<tr><td class="pad" style="padding:24px 30px 0 30px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-soft" bgcolor="${C.soft}" style="background-color:${C.soft};border:2px solid ${C.red};">
+            <tr><td class="t-red" style="padding:10px 14px 0 14px;font-family:${M};font-size:12px;line-height:17px;font-weight:800;letter-spacing:2px;color:${C.red};text-transform:uppercase;">&#9888; ${E(o.notice.title)}</td></tr>
+            <tr><td class="t-ink" style="padding:8px 14px 0 14px;font-family:${M};font-size:14px;line-height:22px;color:${C.ink};">${E(o.notice.text)}</td></tr>
+            <tr><td style="padding:12px 14px 14px 14px;"><a href="${E(o.notice.link[1])}" target="_blank" class="t-red" style="font-family:${M};font-size:13px;line-height:18px;font-weight:800;letter-spacing:1px;color:${C.red};text-decoration:underline;text-transform:uppercase;">${E(o.notice.link[0])} &rarr;</a></td></tr>
+          </table></td></tr>` : ''}
+        ${o.sections.map(s => section(s[0], s[1])).join('')}
+        <!-- the finding: a typed note under the answers -->
+        <tr><td class="pad" style="padding:20px 30px 0 30px;">
+          <div class="t-red" style="font-family:${M};font-size:14px;line-height:22px;font-style:italic;color:${C.red};border-left:3px solid ${C.red};padding-left:12px;">Finding: ${E(o.finding || 'answers on record. Observation continues.')}</div></td></tr>
+        <!-- next steps, as a checklist -->
+        <tr><td class="pad" style="padding:26px 30px 0 30px;">
+          <div class="t-ink" style="font-family:${M};font-size:12px;line-height:17px;font-weight:800;letter-spacing:3px;color:${C.ink};text-transform:uppercase;padding-bottom:6px;border-bottom:2px dotted ${C.ink};">Next steps</div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${steps}</table></td></tr>
+        <tr><td class="pad" style="padding:22px 30px 0 30px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td align="center" class="bg-black" bgcolor="${C.black}" style="background-color:${C.black};">
+              <a href="${E(o.button[1])}" target="_blank" class="t-white" style="display:block;padding:16px 14px;font-family:${M};font-size:15px;line-height:20px;font-weight:800;letter-spacing:2px;color:${C.white};text-transform:uppercase;text-decoration:none;">${E(o.button[0])} &rarr;</a></td>
+          </tr></table></td></tr>
+        <tr><td class="pad t-ink" style="padding:26px 30px 0 30px;font-family:${M};font-size:18px;line-height:26px;font-weight:800;color:${C.ink};text-transform:uppercase;">${o.closing}</td></tr>
+        <tr><td class="pad t-grey" style="padding:24px 30px 24px 30px;font-family:${M};font-size:10px;line-height:16px;letter-spacing:1px;color:${C.grey};">
+          <div style="border-top:2px dotted ${C.rule};padding-top:12px;">CASE FILE 26/27 &middot; EYES ON LEADS &middot; A LEADERSHIP DEVELOPMENT PROJECT OF MEA &middot; LOCATION ${redact(56)}<br>THIS IS AN AUTOMATIC CONFIRMATION. REPLY IF SOMETHING LOOKS WRONG.</div></td></tr>
       </table>
-      <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;"><tr>
-        <td align="center" style="padding:10px 10px 0 10px;font-family:${MONO};font-size:8px;line-height:13px;letter-spacing:2px;color:#515156;text-transform:uppercase;">CAM 01 // RECORDING ACTIVE // ${now} // CASE 26/27</td></tr></table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function confirmBroadcastHtml_(o) {
+  const C = BRAND_C_, M = MAIL_MONO_, E = confirmEsc_;
+  const fact = (k, v) => `<tr>
+      <td class="t-blue" style="padding:9px 0;border-bottom:2px solid ${C.blue};font-family:${M};font-size:11px;line-height:18px;font-weight:800;letter-spacing:3px;color:${C.blue};white-space:nowrap;width:90px;">${E(k)}</td>
+      <td class="t-ink" style="padding:9px 0 9px 10px;border-bottom:2px solid ${C.blue};font-family:${M};font-size:15px;line-height:20px;font-weight:700;color:${C.ink};">${E(v)}</td></tr>`;
+  const answers = o.sections.map(s => `
+      <div class="t-blue" style="padding-top:18px;font-family:${M};font-size:11px;line-height:16px;font-weight:800;letter-spacing:3px;color:${C.blue};text-transform:uppercase;">${E(s[0].split('//')[1] || s[0])}</div>
+      ${s[1].map(x => `<div style="padding-top:10px;">
+        <div class="t-grey" style="font-family:${M};font-size:11px;line-height:16px;color:${C.grey};">&gt; ${E(x[0])}</div>
+        <div class="t-ink" style="padding:3px 0 0 14px;font-family:${M};font-size:14px;line-height:22px;color:${C.ink};word-break:break-word;overflow-wrap:anywhere;">${E(x[1] === undefined || x[1] === '' ? '—' : x[1]).replace(/\r?\n/g, '<br>')}</div></div>`).join('')}`).join('');
+  return confirmHead_(o) + `
+<body class="bg-black" bgcolor="${C.black}" style="margin:0;padding:0;background-color:${C.black};">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${C.black};">${E(o.preheader)} &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-black" bgcolor="${C.black}" style="background-color:${C.black};">
+    <tr><td align="center" style="padding:22px 10px 32px 10px;">
+      <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
+        <!-- the broadcast card: solid blue, bold centered caps -->
+        <tr><td align="center" class="bg-blue pad" bgcolor="${C.blue}" style="background-color:${C.blue};padding:34px 30px 32px 30px;">
+          <div class="t-white" style="font-family:${M};font-size:13px;line-height:18px;font-weight:800;letter-spacing:4px;color:${C.white};text-transform:uppercase;">This is not a test</div>
+          <div class="mega t-white" style="padding-top:14px;font-family:${M};font-size:58px;line-height:56px;font-weight:800;letter-spacing:-2px;color:${C.white};text-transform:uppercase;">${o.headline}</div>
+          <div class="t-white" style="padding-top:14px;font-family:${M};font-size:15px;line-height:21px;color:${C.white};">${E(o.tag)}</div>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;"><tr>
+            <td class="t-white" style="font-family:${M};font-size:30px;line-height:30px;color:${C.white};padding-right:12px;">&#9673;</td>
+            <td class="t-white" align="left" style="font-family:${M};font-size:14px;line-height:18px;font-weight:800;letter-spacing:2px;color:${C.white};text-transform:uppercase;">${E(o.tagline)}</td>
+          </tr></table>
+        </td></tr>
+        <tr><td class="bg-yellow" bgcolor="${C.yellow}" style="background-color:${C.yellow};height:8px;line-height:8px;font-size:0;">&nbsp;</td></tr>
+        <!-- the transcript: details + answers on white -->
+        <tr><td class="bg-paper pad" bgcolor="${C.white}" style="background-color:${C.white};padding:26px 30px 8px 30px;">
+          <div class="t-ink" style="font-family:${M};font-size:14px;line-height:23px;color:${C.ink};">${E(o.intro)}</div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;border-top:2px solid ${C.blue};">${o.facts.map(f => fact(f[0], f[1])).join('')}</table>
+          ${answers}
+          <div style="padding-top:22px;">
+            <div class="t-blue" style="font-family:${M};font-size:11px;line-height:16px;font-weight:800;letter-spacing:3px;color:${C.blue};text-transform:uppercase;padding-bottom:6px;">Next</div>
+            ${o.next.map(x => `<div class="t-ink" style="padding:5px 0;font-family:${M};font-size:13px;line-height:20px;color:${C.ink};"><b>${x[0]} ${E(x[1])}.</b> <span class="t-grey" style="color:${C.grey};">${E(x[2])}</span></div>`).join('')}
+          </div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;"><tr>
+            <td align="center" class="bg-yellow" bgcolor="${C.yellow}" style="background-color:${C.yellow};border:2px solid ${C.black};">
+              <a href="${E(o.button[1])}" target="_blank" class="t-ink" style="display:block;padding:15px 14px;font-family:${M};font-size:15px;line-height:20px;font-weight:800;letter-spacing:2px;color:${C.black};text-transform:uppercase;text-decoration:none;">${E(o.button[0])} &rarr;</a></td>
+          </tr></table>
+          <div class="t-ink" style="padding-top:22px;font-family:${M};font-size:17px;line-height:25px;font-weight:800;color:${C.ink};text-transform:uppercase;">${o.closing}</div>
+        </td></tr>
+        <tr><td class="bg-blue pad t-white" bgcolor="${C.blue}" style="background-color:${C.blue};padding:12px 30px;font-family:${M};font-size:10px;line-height:16px;letter-spacing:1px;color:${C.white};">
+          EMERGENCY BROADCAST // THE LEADS UP &middot; EYES ON LEADS &middot; MEA &middot; AUTOMATIC CONFIRMATION, REPLY IF SOMETHING LOOKS WRONG.</td></tr>
+      </table>
     </td></tr>
   </table>
 </body>
