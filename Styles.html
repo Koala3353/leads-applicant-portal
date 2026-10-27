@@ -801,7 +801,7 @@
     let asked = false, ask = null;
     function prompt(msg) {
       const c = R(); if (!c || asked) return;
-      if (/ResizeObserver loop|Script error\.?$/i.test(String(msg))) return;   // browser noise, not a real problem
+      if (/ResizeObserver loop|Script error\.?$|duplicate variable: 'FormFields'/i.test(String(msg))) return;   // browser noise, not a real problem
       asked = true;
       setTimeout(() => {
         if (document.querySelector('dialog[open]')) { asked = false; return; }   // don't stack on another pop-up
@@ -886,9 +886,13 @@
   (function () {
     let sent = 0;
     const page = (location.search.match(/[?&]page=([^&]+)/) || [])[1] || 'home';
+    // not our bugs: ResizeObserver warnings; "Script error." (a cross-origin script, no details to act on); and
+    // "duplicate variable 'FormFields'" from Opera for iPad's autofill script, injected twice into the Apps Script frames
+    // (seen Oct 26 2026; the page kept working). Logged errors are for problems in the portal's own code.
+    const BROWSER_NOISE = /ResizeObserver loop|^Script error\.?$|duplicate variable: 'FormFields'/i;
     function report(kind, message, where) {
       if (sent >= 5 || !(window.google && google.script && google.script.run)) return;
-      if (/ResizeObserver loop/.test(String(message))) return;   // harmless browser warning, not a bug
+      if (BROWSER_NOISE.test(String(message))) return;
       sent++;
       try { google.script.run.withFailureHandler(function () {}).log_client({ kind: kind, message: String(message || ''), where: String(where || ''), page: page, ua: navigator.userAgent }); }
       catch (e) { /* never break the page */ }
