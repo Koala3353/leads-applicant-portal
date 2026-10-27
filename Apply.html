@@ -74,6 +74,27 @@
     color: var(--glow);
     white-space: nowrap;
   }
+  /* process + fee notes: bold, tinted, with a stripe so they aren't skimmed past */
+  .tape-note {
+    margin: 22px 0 0;
+    padding: 8px 12px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1.45;
+    color: var(--glow);
+    background: rgba(255,255,0,.08);
+    border-left: 3px solid var(--glow);
+  }
+  .fee-note {
+    margin: 10px 0 0;
+    padding: 8px 12px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1.45;
+    color: var(--glow);
+    background: rgba(255,255,0,.08);
+    border-left: 3px solid var(--glow);
+  }
   .tape-title {
     font-family: var(--mono);
     font-size: 0.72rem;
@@ -489,6 +510,7 @@
   .intake .field label span[style],.intake .consent-title span[style]{color:#6b5a35!important}
   .intake .field .field-hint,.intake .draft-status{color:#4a4538}
   .intake .q-num{color:#a00000}
+  .intake .fee-note{color:#8a0000;background:rgba(160,0,0,.07);border-left-color:#a00000}
   .intake .ex-tag,.intake .ex-box{color:#8a0000;border-color:#8a0000;background:rgba(160,0,0,.04)}
   .intake p.mono[style]{color:#8a0000!important}
   .intake .field input,.intake .field textarea,.intake .cs-btn{background:#fff;color:#111;border:2px inset #9a9a9a}
@@ -638,6 +660,7 @@
       <div class="tape-progress" id="tapeProgressBar" data-label="00 / 15">
         <span id="tapeBarFill" style="--p: 0%"></span>
       </div>
+      <p class="tape-note">[PROCESS] Applying takes two steps: answer this form, then answer the assessment.</p>
     </div>
 
     <div class="error-summary" id="errorSummaryBox" role="alert" hidden>
@@ -758,7 +781,7 @@
         <!-- Q.09 MBTI -->
         <div class="field" id="wrap-MBTI">
           <span class="q-num">Q.09 / 15</span>
-          <label for="f-MBTI">Myers-Briggs Indicator <span style="color:var(--muted)">[MBTI PROFILE]</span></label>
+          <label for="f-MBTI">Myers-Briggs Indicator <span style="color:var(--muted)">[MBTI PROFILE]</span> <a href="https://www.16personalities.com/free-personality-test" target="_blank" rel="noopener noreferrer">[LINK]</a></label>
           <p class="field-hint">[BEHAVIOR] 4-letter type. Here's my guess, correct me if I'm wrong<br><span class="ex-tag">Example: INTJ</span></p>
           <select id="f-MBTI" name="MBTI">
             <option value="">-- Select MBTI Type --</option>
@@ -800,6 +823,7 @@
             <span class="consent-tick" aria-hidden="true"></span>
             <span class="consent-text">I confirm I am available on the camp dates.</span>
           </label>
+          <p class="fee-note">[FEE NOTICE] The participant fee is &#8369;4,000, with another &#8369;200 later if notarization is needed.</p>
           <div class="field-error" id="err-OffsiteAvailability" role="alert" aria-live="polite"></div>
         </div>
       </div>

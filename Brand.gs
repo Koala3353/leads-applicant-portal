@@ -179,8 +179,8 @@ const BRAND = {
       { q: 'I attended LEADS before. Can I still apply as a participant?', a: 'Anyone who has previously participated in LEADS will not be able to join as a participant this year.' },
       { q: 'LEADS Offsite is over the weekend. Will I have time to work on my requirements there?', a: 'While it is possible to work on requirements during designated free times, we encourage participants to finish their requirements beforehand to minimize distractions and maximize immersion.' },
       { q: 'What if I have a late Friday class or Saturday class?', a: "We will be coordinating with your professors in the 2nd semester to make sure that you don't have to worry about cutting class to attend LEADS. For those with late Friday classes, there will be a late car that can accommodate you to bring you to the offsite event." },
-      { q: 'Why is there a notarization fee?', a: 'The Office of Student Activities (OSA) requires the Parental Notification Form (PNF) to be notarized for offsite activities. The ₱150 fee on the participant fee covers this.' },
-      { q: 'Can I edit my application after I submit it?', a: "Not from the portal. If something's wrong, message the core team." }
+      { q: 'Why is there a notarization fee?', a: 'The Office of Student Activities (OSA) may require the Parental Notification Form (PNF) to be notarized for offsite activities. The ₱200 fee on the participant fee covers this.' },
+      { q: 'Can I edit my application after I submit it?', a: "Not from the portal. If something's wrong, message any of the following people: {contacts}." }
     ]
   },
   // Quotes from past campers. sample: true = a placeholder: only the core team sees it (with a SAMPLE stamp), so
@@ -370,7 +370,7 @@ const BRAND = {
   referral: {
     label: 'Referral code',
     tag: '[WHO SENT YOU?]',
-    hint: 'Optional. If someone told you to apply, start typing their code (their name, like BEA) and pick it from the list. Using a code earns you both a referral point toward room booking. Nobody? Pick N/A.',
+    hint: 'Optional. Type out the Name/Code of the person that referred you and pick it from the list. The applicant with the most referrals will get a ₱500 discount.',
     placeholder: 'Type 3+ letters, e.g. BEA',
     minLetters: 3,                          // suggestions only after this many letters (Referrals.gs REF_MIN_LETTERS)
     none: 'N/A: nobody referred me',
@@ -632,8 +632,13 @@ function brand_json_() {
   try { contact = String(getSetting_('ContactEmail') || '').trim(); } catch (e) { /* Settings missing */ }
   const list = portalContacts_();   // Settings > PortalContacts, else the list at the top of this file
   const people = list.map(function (c) { return c.name + ' (' + c.email + ')'; }).join(', ');
+  // FAQ answers can say {contacts}: filled with the same Settings > PortalContacts list as the footer
+  const faq = Object.assign({}, BRAND.faq, { items: (BRAND.faq.items || []).map(function (it) {
+    return Object.assign({}, it, { a: String(it.a).replace(/\{contacts\}/g, contactsInline_(list)) });
+  }) });
   const out = Object.assign({}, BRAND, {
     contacts: list,
+    faq: faq,
     report: Object.assign({}, BRAND.report, { to: people || contact }),
     signInHelp: Object.assign({}, BRAND.signInHelp, { contact: signInContactLine_(list) }),
     messages: Object.assign({}, BRAND.messages, { loadError: loadErrorLine_(list) })

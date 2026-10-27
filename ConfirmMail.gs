@@ -12,6 +12,8 @@
 
 const MAIL_MONO_ = "'JetBrains Mono', Menlo, Consolas, 'SF Mono', 'Courier New', monospace";
 // The LEADS Facebook group, where the additional requirements are posted (reminder in the LEADS confirmation)
+/** The portal button in both confirmation emails opens this short link, so it keeps working even if the deployment link ever changes. */
+const PORTAL_SHORT_LINK_ = 'https://tinyurl.com/LEADS2627Apps';
 const LEADS_FB_GROUP_ = 'https://www.facebook.com/groups/1617514465872930';
 
 /** LEADS application filed. a = the saved row (RULES fields + ApplicantID, Email, ReferralCode, ReferredBy). */
@@ -42,7 +44,7 @@ function confirmMail_apply_(a) {
   const feeLine = php(total - later) + ' of the ' + php(total) + ' fee' + (later ? '; the last ' + php(later) + ' comes later, for possible notarization.' : '.');
   const facts = [['FILE NO.', a.ApplicantID], ['STATUS', 'SUBMITTED'], ['CAMP', String(s.EventDates || 'January 29 to 31, 2027')],
     ['WHERE', String(s.EventVenue || '').trim() || 'Kasile Hills Nature Resort'],
-    ['FEE', php(total) + ' (' + php(total - later) + ' once accepted, ' + php(later) + ' later)'], ['YOUR CODE', a.ReferralCode || '—', true]];
+    ['FEE 1', php(total - later) + ' once accepted']].concat(later ? [['FEE 2', php(later) + ' if notarization is needed']] : [], [['YOUR CODE', a.ReferralCode || '—', true]]);
   const next = [
     ['01', 'Review', 'The core team reads every file. Results come out on the portal; we will email you when they do.', true],
     ['02', 'Proof of payment', 'Once accepted: pay ' + feeLine + ' Nothing is due before that.', false],
@@ -55,15 +57,15 @@ function confirmMail_apply_(a) {
     preheader: 'Your LEADS application is on record. Your answers are inside.',
     style: 'intake', subjectNo: a.ApplicantID, struck: 'NOT ON FILE', venue: String(s.EventVenue || '').trim(),   // the same venue as the portal (Settings › EventVenue)
     nick: nick, tag: 'CASE FILE 26//27 · ' + a.ApplicantID, headline: 'File<br>received.',
-    tagline: 'ON RECORD', finding: 'subject wrote it down. That is the hard part. Observation continues.',
+    tagline: 'ON RECORD',
     intro: 'Hi ' + nick + ', your application to LEADS is filed. This is what you sent us. Keep it: you can\'t change it anymore, and you don\'t need to.',
     facts: facts, sections: sections,
     referral: a.ReferralCode ? 'Your referral code is <b>' + confirmEsc_(a.ReferralCode) + '</b>. Each person who applies with it earns you a point toward room booking and other advantages at camp.' : '',
-    notice: { title: 'ONE MORE THING // OPTIONAL REQUIREMENTS',
-      text: 'The LEADS Facebook group has optional requirements. Your application is complete without them, but doing them boosts your chances of being accepted. Open the group, read the latest post, and send them before the deadline.',
-      link: ['Open the LEADS Facebook group', LEADS_FB_GROUP_] },
-    next: next, button: ['Check your file on the portal', portalUrl_()],
-    closing: 'We have been watching.<br><span style="color:#e50000;">Now we are reading.</span>'
+    notice: { title: 'ONE MORE THING // ADDREQS',
+      text: 'The MOREmea III Facebook group is hosting optional requirements for you to complete. Your application is complete without them, but doing the addreqs helps boost your chances of being accepted. Check the post, and submit your addreqs before the deadline.',
+      link: ['Open the MOREmea III FB Group', LEADS_FB_GROUP_] },
+    next: next, button: ['Check your file on the portal', PORTAL_SHORT_LINK_],
+    closing: 'We have been watching.'
   }, 'apply');
 }
 
@@ -92,7 +94,7 @@ function confirmMail_preleads_(r, email) {
     sections: sections, referral: '',
     next: [['01', 'Show up', 'Come on time. Bring yourself; the rest is provided.', true],
       ['02', 'Apply to LEADS', 'Applications for the camp itself are open on the portal.', false]],
-    button: ['Open the portal', portalUrl_()],
+    button: ['Open the portal', PORTAL_SHORT_LINK_],
     closing: 'We have been watching.<br><span style="color:#000ff0;">See you on the inside.</span>'
   }, 'preleads');
 }
@@ -102,7 +104,7 @@ function confirmSend_(to, o, page) {
   try {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(to || ''))) return false;
     if (MailApp.getRemainingDailyQuota() < 1) { activity_('confirm_mail', 'daily email quota used up: not sent to ' + to, { level: 'WARN', page: page }); return false; }
-    const opts = { name: String(getSetting_('EventName') || 'LEADS').trim() || 'LEADS', htmlBody: confirmHtml_(o) };
+    const opts = { name: 'I.R.I.S. // LEADS 2627', htmlBody: confirmHtml_(o) };   // the sender name inboxes show
     const reply = String(getSetting_('ContactEmail') || '').trim();
     if (/@/.test(reply)) opts.replyTo = reply;
     MailApp.sendEmail(to, o.subject, confirmText_(o), opts);
@@ -121,9 +123,9 @@ function confirmEsc_(v) {
  * Both use only the brand palette and JetBrains Mono, and both differ on purpose from the email blast (dark CRT, Win95
  * windows, GIFs): they are documents you keep, not an announcement.
  *   intake     (LEADS application)   the CASE FILE template: a printed intake record on white paper, dotted frames like
- *              the brand book's own headers, a ruled answer grid, red stamps, a crossed-out status, a typed finding.
- *   broadcast  (THE LEADS UP)        the BROADCAST CARD template: a solid #000ff0 field with bold centered caps
- *              ("THIS IS NOT A TEST"), then a white transcript of the answers.
+ *              the brand book's own headers, a ruled answer grid, red stamps, a crossed-out status.
+ *   broadcast  (THE LEADS UP)        a retro desktop: the brand blue #000ff0 behind stacked gray windows (status, answers,
+ *              next steps) with navy title bars, beveled borders and a taskbar.
  * Light designs: color-scheme is pinned to light, and the same colors are re-declared for dark mode (and Outlook's
  * data-ogsc / data-ogsb) so mail apps don't invert them. No images at all: nothing to load or block.
  */
@@ -245,9 +247,6 @@ function confirmIntakeHtml_(o) {
             <tr><td style="padding:12px 14px 14px 14px;"><a href="${E(o.notice.link[1])}" target="_blank" class="t-red" style="font-family:${M};font-size:13px;line-height:18px;font-weight:800;letter-spacing:1px;color:${C.red};text-decoration:underline;text-transform:uppercase;">${E(o.notice.link[0])} &rarr;</a></td></tr>
           </table></td></tr>` : ''}
         ${o.sections.map(s => section(s[0], s[1])).join('')}
-        <!-- the finding: a typed note under the answers -->
-        <tr><td class="pad" style="padding:20px 30px 0 30px;">
-          <div class="t-red" style="font-family:${M};font-size:14px;line-height:22px;font-style:italic;color:${C.red};border-left:3px solid ${C.red};padding-left:12px;">Finding: ${E(o.finding || 'answers on record. Observation continues.')}</div></td></tr>
         <!-- next steps, as a checklist -->
         <tr><td class="pad" style="padding:26px 30px 0 30px;">
           <div class="t-ink" style="font-family:${M};font-size:12px;line-height:17px;font-weight:800;letter-spacing:3px;color:${C.ink};text-transform:uppercase;padding-bottom:6px;border-bottom:2px dotted ${C.ink};">Next steps</div>
@@ -267,52 +266,67 @@ function confirmIntakeHtml_(o) {
 </html>`;
 }
 
+/** THE LEADS UP confirmation: a blue desktop with stacked retro windows (status, answers, next steps) and a taskbar. */
 function confirmBroadcastHtml_(o) {
   const C = BRAND_C_, M = MAIL_MONO_, E = confirmEsc_;
+  const W = { gray: '#c0c0c0', dark: '#404040', navy: '#000080' };            // classic window chrome
+  const raised = 'border-top:2px solid #ffffff;border-left:2px solid #ffffff;border-right:2px solid ' + W.dark + ';border-bottom:2px solid ' + W.dark + ';';
+  const sunken = 'border-top:2px solid ' + W.dark + ';border-left:2px solid ' + W.dark + ';border-right:2px solid #ffffff;border-bottom:2px solid #ffffff;';
+  const ctl = ch => `<td class="bg-win" bgcolor="${W.gray}" align="center" style="background-color:${W.gray};${raised}width:14px;height:12px;font-family:${M};font-size:11px;line-height:12px;font-weight:800;color:${C.black};">${ch}</td><td style="width:2px;font-size:0;">&nbsp;</td>`;
+  // one window: a navy title bar with _ [] x buttons, then a gray body that holds whatever `inner` is
+  const win = (title, inner) => `
+        <tr><td style="padding:0 0 16px 0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-win" bgcolor="${W.gray}" style="background-color:${W.gray};${raised}">
+            <tr><td style="padding:3px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td class="bg-title t-white" bgcolor="${W.navy}" style="background-color:${W.navy};padding:4px 8px;font-family:${M};font-size:12px;line-height:16px;font-weight:800;letter-spacing:1px;color:${C.white};text-transform:uppercase;">&#9632; ${E(title)}</td>
+                <td class="bg-title" bgcolor="${W.navy}" align="right" style="background-color:${W.navy};padding:3px 4px 3px 0;width:56px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>${ctl('_')}${ctl('&#9633;')}${ctl('&times;')}</tr></table></td>
+              </tr></table>
+            </td></tr>
+            <tr><td class="pad" style="padding:12px 14px 14px 14px;">${inner}</td></tr>
+          </table></td></tr>`;
   const fact = (k, v) => `<tr>
-      <td class="t-blue" style="padding:9px 0;border-bottom:2px solid ${C.blue};font-family:${M};font-size:11px;line-height:18px;font-weight:800;letter-spacing:3px;color:${C.blue};white-space:nowrap;width:90px;">${E(k)}</td>
-      <td class="t-ink" style="padding:9px 0 9px 10px;border-bottom:2px solid ${C.blue};font-family:${M};font-size:15px;line-height:20px;font-weight:700;color:${C.ink};">${E(v)}</td></tr>`;
+      <td class="t-grey" style="padding:6px 8px;border-bottom:1px solid ${C.grey};font-family:${M};font-size:11px;line-height:18px;font-weight:800;letter-spacing:2px;color:${C.grey};white-space:nowrap;width:84px;">${E(k)}</td>
+      <td class="t-ink" style="padding:6px 8px;border-bottom:1px solid ${C.grey};font-family:${M};font-size:14px;line-height:20px;font-weight:700;color:${C.ink};">${E(v)}</td></tr>`;
   const answers = o.sections.map(s => `
-      <div class="t-blue" style="padding-top:18px;font-family:${M};font-size:11px;line-height:16px;font-weight:800;letter-spacing:3px;color:${C.blue};text-transform:uppercase;">${E(s[0].split('//')[1] || s[0])}</div>
-      ${s[1].map(x => `<div style="padding-top:10px;">
+      <div class="t-blue" style="padding-top:12px;font-family:${M};font-size:11px;line-height:16px;font-weight:800;letter-spacing:3px;color:${C.blue};text-transform:uppercase;">${E(s[0].split('//')[1] || s[0])}</div>
+      ${s[1].map(x => `<div style="padding-top:8px;">
         <div class="t-grey" style="font-family:${M};font-size:11px;line-height:16px;color:${C.grey};">&gt; ${E(x[0])}</div>
-        <div class="t-ink" style="padding:3px 0 0 14px;font-family:${M};font-size:14px;line-height:22px;color:${C.ink};word-break:break-word;overflow-wrap:anywhere;">${E(x[1] === undefined || x[1] === '' ? '—' : x[1]).replace(/\r?\n/g, '<br>')}</div></div>`).join('')}`).join('');
-  return confirmHead_(o) + `
-<body class="bg-black" bgcolor="${C.black}" style="margin:0;padding:0;background-color:${C.black};">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${C.black};">${E(o.preheader)} &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-black" bgcolor="${C.black}" style="background-color:${C.black};">
-    <tr><td align="center" style="padding:22px 10px 32px 10px;">
+        <div class="t-ink" style="padding:2px 0 0 14px;font-family:${M};font-size:14px;line-height:22px;color:${C.ink};word-break:break-word;overflow-wrap:anywhere;">${E(x[1] === undefined || x[1] === '' ? '—' : x[1]).replace(/\r?\n/g, '<br>')}</div></div>`).join('')}`).join('');
+  const inset = inner => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-paper" bgcolor="${C.white}" style="background-color:${C.white};${sunken}"><tr><td style="padding:10px 12px;">${inner}</td></tr></table>`;
+  const win1 = `
+          <div class="t-ink" style="font-family:${M};font-size:13px;line-height:20px;color:${C.ink};padding-bottom:8px;">${E(o.tag)}</div>
+          <div class="mega t-ink" style="font-family:${M};font-size:44px;line-height:44px;font-weight:800;letter-spacing:-2px;color:${C.ink};text-transform:uppercase;padding-bottom:8px;">${o.headline}</div>
+          <div class="t-blue" style="font-family:${M};font-size:13px;line-height:18px;font-weight:800;letter-spacing:2px;color:${C.blue};text-transform:uppercase;padding-bottom:12px;">&#9673; ${E(o.tagline)}</div>
+          ${inset(`<div class="t-ink" style="font-family:${M};font-size:13px;line-height:21px;color:${C.ink};">${E(o.intro)}</div>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px;border-top:1px solid ${C.grey};">${o.facts.map(f => fact(f[0], f[1])).join('')}</table>`)}`;
+  const win2 = inset(answers);
+  const win3 = `
+          ${o.next.map(x => `<div class="t-ink" style="padding:4px 0;font-family:${M};font-size:13px;line-height:20px;color:${C.ink};"><b>${x[0]} ${E(x[1])}.</b> <span class="t-ink" style="color:${W.dark};">${E(x[2])}</span></div>`).join('')}
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;"><tr>
+            <td align="center" class="bg-yellow" bgcolor="${C.yellow}" style="background-color:${C.yellow};${raised}">
+              <a href="${E(o.button[1])}" target="_blank" class="t-ink" style="display:block;padding:13px 12px;font-family:${M};font-size:14px;line-height:20px;font-weight:800;letter-spacing:2px;color:${C.black};text-transform:uppercase;text-decoration:none;">${E(o.button[0])} &rarr;</a></td>
+          </tr></table>`;
+  return confirmHead_(o, `
+    .bg-win { background-color:${W.gray} !important; } .bg-title { background-color:${W.navy} !important; }
+    [data-ogsb] .bg-win { background-color:${W.gray} !important; } [data-ogsb] .bg-title { background-color:${W.navy} !important; }`) + `
+<body class="bg-blue" bgcolor="${C.blue}" style="margin:0;padding:0;background-color:${C.blue};">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${C.blue};">${E(o.preheader)} &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-blue" bgcolor="${C.blue}" style="background-color:${C.blue};">
+    <tr><td align="center" style="padding:22px 10px 0 10px;">
       <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
-        <!-- the broadcast card: solid blue, bold centered caps -->
-        <tr><td align="center" class="bg-blue pad" bgcolor="${C.blue}" style="background-color:${C.blue};padding:34px 30px 32px 30px;">
-          <div class="t-white" style="font-family:${M};font-size:13px;line-height:18px;font-weight:800;letter-spacing:4px;color:${C.white};text-transform:uppercase;">This is not a test</div>
-          <div class="mega t-white" style="padding-top:14px;font-family:${M};font-size:58px;line-height:56px;font-weight:800;letter-spacing:-2px;color:${C.white};text-transform:uppercase;">${o.headline}</div>
-          <div class="t-white" style="padding-top:14px;font-family:${M};font-size:15px;line-height:21px;color:${C.white};">${E(o.tag)}</div>
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;"><tr>
-            <td class="t-white" style="font-family:${M};font-size:30px;line-height:30px;color:${C.white};padding-right:12px;">&#9673;</td>
-            <td class="t-white" align="left" style="font-family:${M};font-size:14px;line-height:18px;font-weight:800;letter-spacing:2px;color:${C.white};text-transform:uppercase;">${E(o.tagline)}</td>
-          </tr></table>
-        </td></tr>
-        <tr><td class="bg-yellow" bgcolor="${C.yellow}" style="background-color:${C.yellow};height:8px;line-height:8px;font-size:0;">&nbsp;</td></tr>
-        <!-- the transcript: details + answers on white -->
-        <tr><td class="bg-paper pad" bgcolor="${C.white}" style="background-color:${C.white};padding:26px 30px 8px 30px;">
-          <div class="t-ink" style="font-family:${M};font-size:14px;line-height:23px;color:${C.ink};">${E(o.intro)}</div>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;border-top:2px solid ${C.blue};">${o.facts.map(f => fact(f[0], f[1])).join('')}</table>
-          ${answers}
-          <div style="padding-top:22px;">
-            <div class="t-blue" style="font-family:${M};font-size:11px;line-height:16px;font-weight:800;letter-spacing:3px;color:${C.blue};text-transform:uppercase;padding-bottom:6px;">Next</div>
-            ${o.next.map(x => `<div class="t-ink" style="padding:5px 0;font-family:${M};font-size:13px;line-height:20px;color:${C.ink};"><b>${x[0]} ${E(x[1])}.</b> <span class="t-grey" style="color:${C.grey};">${E(x[2])}</span></div>`).join('')}
-          </div>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;"><tr>
-            <td align="center" class="bg-yellow" bgcolor="${C.yellow}" style="background-color:${C.yellow};border:2px solid ${C.black};">
-              <a href="${E(o.button[1])}" target="_blank" class="t-ink" style="display:block;padding:15px 14px;font-family:${M};font-size:15px;line-height:20px;font-weight:800;letter-spacing:2px;color:${C.black};text-transform:uppercase;text-decoration:none;">${E(o.button[0])} &rarr;</a></td>
-          </tr></table>
-          <div class="t-ink" style="padding-top:22px;font-family:${M};font-size:17px;line-height:25px;font-weight:800;color:${C.ink};text-transform:uppercase;">${o.closing}</div>
-        </td></tr>
-        <tr><td class="bg-blue pad t-white" bgcolor="${C.blue}" style="background-color:${C.blue};padding:12px 30px;font-family:${M};font-size:10px;line-height:16px;letter-spacing:1px;color:${C.white};">
-          EMERGENCY BROADCAST // THE LEADS UP &middot; EYES ON LEADS &middot; MEA &middot; AUTOMATIC CONFIRMATION, REPLY IF SOMETHING LOOKS WRONG.</td></tr>
+        ${win('THE_LEADS_UP.EXE', win1)}
+        ${win('ANSWERS.TXT', win2)}
+        ${win('NEXT_STEPS.EXE', win3)}
+        <tr><td class="pad t-white" style="padding:2px 4px 18px 4px;font-family:${M};font-size:16px;line-height:24px;font-weight:800;color:${C.white};text-transform:uppercase;">${o.closing}</td></tr>
       </table>
     </td></tr>
+    <!-- the taskbar -->
+    <tr><td class="bg-win" bgcolor="${W.gray}" style="background-color:${W.gray};border-top:2px solid #ffffff;padding:5px 8px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td class="bg-win t-ink" bgcolor="${W.gray}" style="background-color:${W.gray};${raised}padding:3px 10px;width:70px;font-family:${M};font-size:12px;line-height:16px;font-weight:800;color:${C.black};text-transform:uppercase;white-space:nowrap;">&#9654; Start</td>
+        <td class="t-ink" style="padding:0 0 0 12px;font-family:${M};font-size:10px;line-height:15px;letter-spacing:1px;color:${C.ink};text-transform:uppercase;">THE LEADS UP &middot; EYES ON LEADS &middot; MEA &middot; AUTOMATIC CONFIRMATION, REPLY IF SOMETHING LOOKS WRONG.</td>
+      </tr></table></td></tr>
   </table>
 </body>
 </html>`;

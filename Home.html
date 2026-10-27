@@ -276,6 +276,7 @@
   .facts li{display:none}
   .facts li.show{display:block}
   .facts b{color:var(--text);font-weight:700}
+  .facts li.fact-pay{flex-basis:100%}
 
   /* the background-music switch (Ambience.html), bottom left; I.R.I.S. has the bottom right */
   .sound-chip{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60;
@@ -768,6 +769,7 @@
         <ul class="facts" id="facts">
           <li data-fact="dates">When <b></b></li>
           <li data-fact="venue">Where <b></b></li>
+          <li class="show fact-pay">Payment <b>&#8369;4,000 initial</b> <b>+ &#8369;200 later for possible notarization</b></li>
         </ul>
       </div>
       <!-- the observation log: what you actually do on this page, typed back at you. Built in the browser, never sent anywhere. -->
