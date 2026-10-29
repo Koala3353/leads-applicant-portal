@@ -51,7 +51,8 @@ const COLS = [
   'RevealSeen',                                                           // when they first watched the results reveal (HomeApi.gs)
   'IntegrityFlags', 'IntegrityLog',                                       // essay paste / tab-switch signals from Apply (ApplyApi.gs integrityFlags_)
   'Environment',                                                          // where they feel comfortable sharing (pick any, "A; B")
-  'EyePhoto'                                                              // Drive link to the eye-scan photo from the Game (GameApi.gs)
+  'EyePhoto',                                                             // Drive link to the eye-scan photo from the Game (GameApi.gs)
+  'OnsiteSubmitted'                                                       // requirements the applicant says they dropped off onsite, "PNF; DNU" (StepsApi.gs)
 ];
 
 /** The Applicants header row as it is in the Sheet right now (read once per run). Falls back to COLS on an empty tab. */

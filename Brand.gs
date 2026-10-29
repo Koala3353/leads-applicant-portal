@@ -252,6 +252,8 @@ const BRAND = {
     reqs: { n: '03', file: 'REQUIREMENTS.EXE', title: 'Requirements',
             lead: 'Fill in every form below. Each one says what it needs. The core team marks your file APPROVED once everything is in.',
             empty: 'The forms are not posted yet. Check back here.',
+            // Requirements tab rows with Link = onsite: handed in on paper; the applicant ticks the box once dropped off
+            onsite: { box: 'I dropped this off onsite', saved: 'Saved. The core team will check the paper.', unsaved: 'Not saved. Try again.' },
             states: { NONE: 'Nothing received yet.', PARTIAL: 'Some of your forms are in. Finish the rest.', SUBMITTED: 'Everything is in. The core team is checking it.',
                       RETURNED: 'Something needs fixing. Check your email, then send it again.', APPROVED: 'Approved. Your requirements are complete.' } },
     ga:   { n: '04', file: 'ASSEMBLY.EXE', title: '1st GA',

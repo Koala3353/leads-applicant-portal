@@ -67,7 +67,9 @@ function steps_get_(page) {
       proof: String(a.PaymentProof || '') ? true : false
     };
   } else if (key === 'reqs') {
-    out.content = { note: String(s.RequirementsNote || ''), deadline: iso(s.RequirementsDeadline), forms: steps_forms_(a.ApplicantID) };
+    const done = steps_onsiteDone_(a);
+    out.content = { note: String(s.RequirementsNote || ''), deadline: iso(s.RequirementsDeadline),
+      forms: steps_forms_(a.ApplicantID).map(f => f.onsite ? Object.assign(f, { done: done.indexOf(f.title) >= 0 }) : f) };
   } else if (key === 'ga') {
     out.content = { link: gaLink_(), details: String(s.GADetails || '') };
   } else if (key === 'room') {
@@ -76,7 +78,44 @@ function steps_get_(page) {
   return out;
 }
 
-/** The Requirements tab: Form | Link | What to do | Due. Rows without a title are skipped. */
+/** Requirements tab rows whose Link says "onsite": paper requirements dropped off in person (titles). */
+function steps_onsiteList_() {
+  return steps_forms_('').filter(f => f.onsite).map(f => f.title);
+}
+function steps_onsiteDone_(a) {
+  return String(a.OnsiteSubmitted || '').split(';').map(x => x.trim()).filter(Boolean);
+}
+
+/**
+ * The applicant ticks (or unticks) "I dropped off <name> onsite". Only records what they say: the core team still
+ * checks the paper and sets Requirements themselves. Saved in Applicants › OnsiteSubmitted as "PNF; DNU" (the Requirements tab titles).
+ */
+function steps_markOnsite(name, done) {
+  return traced_('steps_markOnsite', 'reqs', () => {
+    const found = requireApplicant_();
+    const a = found.data;
+    const p = progress_(a);
+    if (!p.requirements.unlocked && p.requirements.state !== 'done') return { ok: false, error: 'Requirements are not open for you yet.' };
+    const list = steps_onsiteList_();
+    name = String(name || '').trim();
+    if (list.indexOf(name) < 0) return { ok: false, error: 'That requirement is not on the list.' };
+    if (!bump_('onsite:' + String(a.Email || '').toLowerCase(), 30, 600)) return { ok: false, error: 'Too many changes. Wait a few minutes.' };
+    let marked = [];
+    withScriptLock_(15000, () => {
+      const now = getApplicantById_(a.ApplicantID);
+      if (!now) throw new Error('Your file could not be found. Message the core team.');
+      const have = steps_onsiteDone_(now.data).filter(x => x !== name);
+      if (done) have.push(name);
+      marked = list.filter(x => have.indexOf(x) >= 0);   // keep the Settings order
+      updateApplicant_(now.row, { OnsiteSubmitted: marked.join('; ') }, a.ApplicantID);
+    });
+    logChange_(a.ApplicantID, 'onsite', done ? 'not marked' : 'marked', (done ? 'dropped off: ' : 'unmarked: ') + name, 'applicant');
+    return { ok: true, done: marked };
+  }, r => r.ok ? 'onsite ' + (r.done || []).join('; ') : 'not saved: ' + r.error);
+}
+
+/** The Requirements tab: Form | Link | What to do | Due. Rows without a title are skipped. Link = "onsite": a paper
+ * requirement dropped off in person (no form; the applicant ticks it on the page, steps_markOnsite). */
 function steps_forms_(applicantId) {
   const sh = ss_().getSheetByName(SHEET.REQUIREMENTS);
   if (!sh) return [];
@@ -90,6 +129,7 @@ function steps_forms_(applicantId) {
     const due = c.due >= 0 ? parseDate_(r[c.due]) : null;
     return {
       title: String(r[c.title]).trim(),
+      onsite: /^on-?site$/i.test(raw),
       link: link,
       embed: steps_embedUrl_(link),
       what: c.what >= 0 ? String(r[c.what]).trim() : '',

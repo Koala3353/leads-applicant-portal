@@ -56,6 +56,12 @@
   .s-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
 
   /* requirement forms: manila case folders */
+  /* Requirements rows with Link = onsite: an "I dropped this off" box instead of a form button */
+  .onsite{margin:12px 0 0;display:flex;align-items:center;gap:12px;min-height:44px;padding:8px 12px;border:2px solid var(--line,#444);cursor:pointer;font-family:var(--mono);font-size:.9rem}
+  .onsite input{width:22px;height:22px;flex:none;accent-color:var(--glow,#fffc04);cursor:pointer}
+  .onsite input:checked + span{color:var(--glow,#fffc04)}
+  .onsite input:focus-visible{outline:3px solid var(--sky,#6cf);outline-offset:2px}
+  .onsite-msg{margin:10px 0 0;font-size:.78rem;min-height:1.2em;color:var(--muted)}
   .forms{display:grid;gap:26px;margin:0;padding:0;list-style:none;counter-reset:f}
   .form{position:relative;padding:22px clamp(14px,3vw,26px) 20px;background:#d9c08a;color:#1b1b1b;box-shadow:5px 5px 0 #000;counter-increment:f}
   .form::before{content:"FORM " counter(f, decimal-leading-zero);position:absolute;top:-18px;left:16px;padding:3px 12px 2px;background:#d9c08a;font-family:var(--type);font-size:.85rem;letter-spacing:.12em}
@@ -338,6 +344,20 @@
           b.textContent = 'Close preview'; b.setAttribute('aria-expanded', 'true');
         });
         act.appendChild(b);
+      }
+      if (f.onsite) {   // a paper requirement dropped off in person: one box, saved as soon as it's ticked
+        const O = T.reqs.onsite, lab = document.createElement('label'), box = document.createElement('input'), sp = document.createElement('span'), msg = document.createElement('p');
+        lab.className = 'onsite'; box.type = 'checkbox'; box.checked = !!f.done; sp.textContent = O.box;
+        msg.className = 'mono onsite-msg'; msg.setAttribute('role', 'status');
+        box.addEventListener('change', () => {
+          box.disabled = true; msg.textContent = '';
+          call('steps_markOnsite', f.title, box.checked).then(r => {
+            box.disabled = false;
+            if (!r || !r.ok) { box.checked = !box.checked; msg.textContent = (r && r.error) || O.unsaved; return; }
+            msg.textContent = box.checked ? O.saved : '';
+          }).catch(() => { box.disabled = false; box.checked = !box.checked; msg.textContent = O.unsaved; });
+        });
+        lab.append(box, sp); li.append(lab, msg);
       }
       if (act.children.length) li.appendChild(act);
       list.appendChild(li);

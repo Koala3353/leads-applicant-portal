@@ -21,7 +21,7 @@
 | **Application form** | `.../exec?page=apply` | `Apply.html`, `ApplyApi.gs` | **Member A** |
 | **Threat assessment game** (step 2 of applying) | `.../exec?page=game` | `Game.html`, `GameApi.gs` | **Nathan** |
 | **Home (the hub)** | `.../exec` | `Home.html`, `HomeApi.gs` | **Member B**, shared with Keene |
-| Steps after acceptance: proof of payment (upload to Drive), requirements (Google Forms listed in the Requirements tab), 1st GA, room booking | `.../exec?page=pay` · `reqs` · `ga` · `room` | `Steps.html`, `StepsApi.gs` | payment view: **Member B**, rest: Keene |
+| Steps after acceptance: proof of payment (upload to Drive), requirements (Google Forms listed in the Requirements tab; a row whose Link is `onsite` is a paper requirement dropped off in person, e.g. PNF and DNU, and shows an "I dropped this off onsite" box instead of a form button), 1st GA, room booking | `.../exec?page=pay` · `reqs` · `ga` · `room` | `Steps.html`, `StepsApi.gs` | payment view: **Member B**, rest: Keene |
 | **Pre-LEADS registration** | `.../exec?page=preleads` (or `pre-leads`) | `PreLeads.html`, `PreLeadsServer.gs` (never name it `PreLeadsApi`) | **Selina**, shared with Keene |
 | Core team side | **the Sheet itself**, with a **LEADS** menu | `AdminMenu.gs` | Keene (done) |
 
@@ -112,6 +112,7 @@ Navy headers: **never rename** them. The code finds every Applicants column by i
 | `IntegrityFlags` | blank or `FLAG: …` | Apply's essay signals, summarised by `integrityFlags_` (ApplyApi.gs): an essay mostly pasted (≥40% and ≥120 characters), pasted into 3+ times, or the page left 4+ times mid-essay / 8+ times overall. A flag means read it closely, not proof; on a phone it says so (screen locks count as leaving). Shown in the review panel and the daily report. |
 | `IntegrityLog` | JSON | The raw counts behind it (per essay: pastes, characters pasted / typed, biggest paste; page left: count, minutes, mid-essay). Counts only: never what was pasted or which tabs. |
 | `RevealSeen` | date or blank | When they first watched the results reveal (set by `home_revealSeen`). Clear it to make the reveal play again for that person. |
+| `OnsiteSubmitted` | `PNF; DNU` or blank | Paper requirements the applicant **says** they dropped off onsite (ticked on the Requirements page, `steps_markOnsite`). Names = the Requirements tab titles, so renaming a title un-ticks it for everyone. The core team still checks the paper and sets `Requirements` themselves. |
 | `MessageToApplicant` | plain text or blank | Core team: a note shown on the applicant's hub and step pages ("Note from the core team"), e.g. what to fix. Set from the review panel or typed in the cell (logged either way). Shows at once for SUBMITTED / UNDER REVIEW files; for a decision that's still hidden (before `ResultsReleased`) the note is held back too, so it can't give the decision away. |
 
 `WhyLEADS`, `FearEssay`, `MEAInvolvement` and `Rumors` were retired and deleted from the Sheet (Oct 2026). `ensureApplicantHeaders_()` adds any missing `COLS` header at the end.
