@@ -160,7 +160,7 @@ const BRAND = {
     until: '2026-11-05T17:00:00+08:00',
     top: 'SPECIAL TRANSMISSION',
     title: 'THE LEADS UP // Nov 5',
-    sub: '5:00–7:30 PM, onsite',          // fallback: Settings › PreLeadsTime + PreLeadsVenue show instead when filled in
+    sub: '5:00–7:30 PM, Faura AVR',         // fallback: Settings › PreLeadsTime + PreLeadsVenue show instead when filled in
     link: 'Open the THE LEADS UP file →',
     popup: 'Registration is open until the file closes. Come see what it is about.',   // the once-a-day pop-up on Home (blank = no pop-up)
     later: 'Later'

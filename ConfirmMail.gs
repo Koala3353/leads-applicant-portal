@@ -90,7 +90,7 @@ function confirmMail_preleads_(r, email) {
     style: 'broadcast', nick: nick, tag: 'THE LEADS UP · ' + [when, time].filter(Boolean).join(' · '), headline: 'Seat<br>reserved',
     tagline: 'I.R.I.S. is expecting you.',
     intro: 'Hi ' + nick + ', you are registered for THE LEADS UP, a one-day, onsite preview of LEADS. This is what you sent us.',
-    facts: [['WHEN', [when, time].filter(Boolean).join(' · ')], ['WHERE', where || 'Onsite'], ['WHAT', 'A preview of LEADS']],
+    facts: [['WHEN', [when, time].filter(Boolean).join(' · ')], ['WHERE', where || 'Faura AVR'], ['WHAT', 'A preview of LEADS']],
     sections: sections, referral: '',
     next: [['01', 'Show up', 'Come on time. Bring yourself; the rest is provided.', true],
       ['02', 'Apply to LEADS', 'Applications for the camp itself are open on the portal.', false]],

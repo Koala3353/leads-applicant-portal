@@ -280,7 +280,7 @@ const SETTINGS_SCHEMA = [
   { key: 'PreLeadsDeadline', type: 'date', def: '2026-11-05 17:00', help: 'When Pre-LEADS registration closes, e.g. 2026-11-05 17:00. Blank = Nov 5, 2026, 5 PM.' },
   { key: 'PreLeadsDate', type: 'text', def: 'November 5, 2026', help: 'Shown on the Pre-LEADS page. Blank = November 5, 2026.' },
   { key: 'PreLeadsTime', type: 'text', def: '5:00 PM – 7:30 PM', help: 'Shown on the Pre-LEADS page. Blank = 5:00 PM – 7:30 PM.' },
-  { key: 'PreLeadsVenue', type: 'text', def: 'Onsite (Ateneo de Manila University)', help: 'Shown on the Pre-LEADS page. Blank = Onsite (Ateneo de Manila University).' }
+  { key: 'PreLeadsVenue', type: 'text', def: 'Faura AVR', help: 'Shown on the Pre-LEADS page. Blank = Faura AVR.' }
 ];
 
 /** A Settings value with its type applied; a blank (or missing) cell gives the schema's default. */
