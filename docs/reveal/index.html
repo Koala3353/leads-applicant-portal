@@ -86,7 +86,9 @@ const frozen = !isNaN(FREEZE);
 const PORTAL = 'https://script.google.com/a/macros/student.ateneo.edu/s/AKfycbwoL5I-i10w25U-nNqAlwfVEDF0NuQhWEHZq_EqMu9t3pszFNH72FuXhYXAH1TH2Fk/exec';
 
 /* ============================== who is watching (from the portal) ============================== */
-const who = { stamp: 'REVIEWED' };
+const who = { id: '', nick: '', stamp: 'REVIEWED' };
+const clean = (v, n) => String(v || '').replace(/[^\w .'ñÑ-]/g, '').trim().slice(0, n);
+const num = () => who.id.replace(/^APP-/, '');
 let gotInit = null;
 const initArrived = new Promise(r => { gotInit = r; });
 window.addEventListener('message', e => {
@@ -94,7 +96,9 @@ window.addEventListener('message', e => {
   if (d.type !== 'leads-reveal-init') return;
   // only the portal (Apps Script serves it from *.googleusercontent.com) may say who this is, so nobody can frame
   // this page elsewhere and fake an acceptance
-  if (!/^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(e.origin)) return;
+  const local = location.hostname === 'localhost' && e.origin === location.origin;   // for testing on this machine only
+  if (!local && !/^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(e.origin)) return;
+  who.id = clean(d.id, 12).toUpperCase(); who.nick = clean(d.nick, 18);
   who.stamp = d.stamp === 'ACCEPTED' ? 'ACCEPTED' : 'REVIEWED';   // only two words are ever drawn
   paintIdentity(); makeStamp();
   if (d.sound) trySound();
@@ -103,7 +107,8 @@ window.addEventListener('message', e => {
 const tell = (type, extra) => { if (embedded) try { parent.postMessage(Object.assign({ type }, extra || {}), '*'); } catch (e) { /* fine */ } };
 function paintIdentity() {
   // the card says "You're in." only when the portal said ACCEPTED; opened alone it never states a result
-  $('endT').textContent = who.stamp === 'ACCEPTED' ? "You're in." : 'Your file.';
+  $('endT').textContent = who.stamp === 'ACCEPTED' ? "You're in" + (who.nick ? ', ' + who.nick + '.' : '.') : 'Your file.';
+  $('endK').textContent = 'LEADS 26/27  ·  ' + (who.id ? 'SUBJECT ' + num() : 'FINDING');
 }
 
 /* ============================== sound, captions ============================== */
@@ -223,9 +228,9 @@ function page(t, b, lit, warm) {
   const pc = mix(PAL.chalk, PAL.lamp, warm), g = ctx.createLinearGradient(px, 0, px + pw, 0);
   for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, rgba(pc, .3 + .5 * lit(lerp(px, px + pw, i / 6))));
   wline(st, [[px, py], [px + pw, py], [px + pw, py + ph], [px, py + ph]], 50, b, { close: true, fill: g, col: PAL.red, a: .8 });
-  wtext(st, 'LEADS 26/27  ·  INTAKE', px + pw * .05, py + ph * .13, 51, b, { still: true, col: ink, font: `700 ${Math.round(pw * .04)}px ${mono}` });
+  wtext(st, 'LEADS 26/27  ·  ' + (who.id ? 'FILE ' + num() : 'INTAKE'), px + pw * .05, py + ph * .13, 51, b, { still: true, col: ink, font: `700 ${Math.round(pw * .04)}px ${mono}` });
   wline(st, [[px + pw * .05, py + ph * .19], [px + pw * .66, py + ph * .19]], 52, b, { col: PAL.red });
-  const rows = [['SUBJECT', typed(t, 'you', 6.9, .1), .55], ['LAST SEEN', typed(t, 'just now', 7.35, .08), .72], ['FINDING', '', .89]];
+  const rows = [['SUBJECT', typed(t, who.nick || 'you', 6.9, .3 / (who.nick || 'you').length), .55], ['LAST SEEN', typed(t, 'just now', 7.35, .08), .72], ['FINDING', '', .89]];
   rows.forEach(([label, val, k], i) => {
     const y = py + ph * k;
     wtext(st, label, px + pw * .05, y, 55 + i, b, { still: true, col: pre, font: `700 ${Math.round(pw * .034)}px ${mono}` });
