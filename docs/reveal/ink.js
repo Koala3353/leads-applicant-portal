@@ -159,11 +159,11 @@ export function wordEye(s, o) {
     ctx.globalAlpha = ga(a * k); ctx.fillStyle = PAL.chalk; ctx.fillText(word[i], 0, 0); ctx.restore();
   }
   ctx.restore();
-  if (years && open > .6) {   // 26 / 27 and "oversight", like the wordmark
+  if (years && open > .6) {   // 26 / 27 and the campaign name, like the wordmark
     const q = a * Math.min(1, (open - .6) * 3) * .55, mono = `"JetBrains Mono", monospace`;
     wtext(s, '26', cx - w * 1.02, cy - h * .95, id + 300, b, { a: q, font: `700 ${Math.round(w * .12)}px ${mono}` });
     wtext(s, '27', cx + w * 1.02, cy - h * .95, id + 301, b, { a: q, align: 'right', font: `700 ${Math.round(w * .12)}px ${mono}` });
-    wtext(s, 'o v e r s i g h t', cx, cy + h * 1.75, id + 302, b, { a: q, align: 'center', font: `400 ${Math.round(w * .075)}px ${mono}` });
+    wtext(s, 'e y e s   o n   l e a d s', cx, cy + h * 1.75, id + 302, b, { a: q, align: 'center', font: `400 ${Math.round(w * .068)}px ${mono}` });
   }
 }
 

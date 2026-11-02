@@ -67,7 +67,7 @@
 </div>
 <div class="end" id="end" role="dialog" aria-modal="true" aria-labelledby="endT" aria-describedby="endS" inert>
   <div class="card">
-    <p class="k" id="endK">LEADS 26/27 &nbsp;·&nbsp; FINDING</p>
+    <p class="k" id="endK">EYES ON LEADS &nbsp;·&nbsp; FINDING</p>
     <p class="t" id="endT">Your file.</p>
     <p class="s" id="endS">The rest of your file is inside. Come read it.</p>
     <div class="row"><button type="button" class="go" id="open">Open your file</button><button type="button" id="replay">Replay</button></div>
@@ -108,7 +108,7 @@ const tell = (type, extra) => { if (embedded) try { parent.postMessage(Object.as
 function paintIdentity() {
   // the card says "You're in." only when the portal said ACCEPTED; opened alone it never states a result
   $('endT').textContent = who.stamp === 'ACCEPTED' ? "You're in" + (who.nick ? ', ' + who.nick + '.' : '.') : 'Your file.';
-  $('endK').textContent = 'LEADS 26/27  ·  ' + (who.id ? 'SUBJECT ' + num() : 'FINDING');
+  $('endK').textContent = 'EYES ON LEADS  ·  ' + (who.id ? 'SUBJECT ' + num() : 'FINDING');
 }
 
 /* ============================== sound, captions ============================== */
@@ -228,7 +228,7 @@ function page(t, b, lit, warm) {
   const pc = mix(PAL.chalk, PAL.lamp, warm), g = ctx.createLinearGradient(px, 0, px + pw, 0);
   for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, rgba(pc, .3 + .5 * lit(lerp(px, px + pw, i / 6))));
   wline(st, [[px, py], [px + pw, py], [px + pw, py + ph], [px, py + ph]], 50, b, { close: true, fill: g, col: PAL.red, a: .8 });
-  wtext(st, 'LEADS 26/27  ·  ' + (who.id ? 'FILE ' + num() : 'INTAKE'), px + pw * .05, py + ph * .13, 51, b, { still: true, col: ink, font: `700 ${Math.round(pw * .04)}px ${mono}` });
+  wtext(st, 'EYES ON LEADS · ' + (who.id ? 'FILE ' + num() : 'INTAKE'), px + pw * .05, py + ph * .13, 51, b, { still: true, col: ink, font: `700 ${Math.round(pw * .04)}px ${mono}` });
   wline(st, [[px + pw * .05, py + ph * .19], [px + pw * .66, py + ph * .19]], 52, b, { col: PAL.red });
   const rows = [['SUBJECT', typed(t, who.nick || 'you', 6.9, .3 / (who.nick || 'you').length), .55], ['LAST SEEN', typed(t, 'just now', 7.35, .08), .72], ['FINDING', '', .89]];
   rows.forEach(([label, val, k], i) => {
