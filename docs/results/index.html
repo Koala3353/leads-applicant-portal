@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>EYES ON LEADS // Transmission</title>
+<meta name="description" content="Case file 26/27. Your file is ready. Open it with your Ateneo account.">
+<meta property="og:title" content="EYES ON LEADS // Transmission">
+<meta property="og:description" content="Case file 26/27. Your file is ready.">
+<!--
+  The link in the acceptance email (GitHub Pages, public, no Google sign-in), Act 1 of the results film.
+  Email links open in all sorts of places (the Gmail app's browser, a phone signed in to a personal Gmail, a laptop
+  with three Google accounts), and the portal only opens for the applicant's Ateneo account. So this page always
+  loads, plays Act 1 in the party video's style (red field, the watching eye, the scribble glitch, the LEADS eye
+  opening), then gets them into the portal the right way: in-app browsers are told to switch, the account rules are
+  spelled out, and "Open your file" goes to the portal with ?reveal=1, where Act 2 (docs/reveal) plays with their
+  result. The link is public, so this page never says what the result is. Nothing is stored or sent anywhere.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Special+Elite&display=swap">
+<link rel="modulepreload" href="../reveal/ink.js">
+<style>
+  :root{--black:#050505;--white:#fefffe;--grey:#9a9a9a;--blue:#000ff0;--yellow:#fffc04;--red:#e50000;--field:#d4260a;--purple:#8b2be2}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--field);color:var(--white);font:400 15px/1.55 'JetBrains Mono',ui-monospace,monospace}
+  body{min-height:100vh}
+  #film{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+  [hidden]{display:none!important}
+  .hud{position:fixed;z-index:2;margin:0;font:700 12px/1.2 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;pointer-events:none}
+  #rec{top:max(16px,env(safe-area-inset-top));left:16px}
+  #rec i{display:inline-block;width:.75em;height:.75em;border-radius:50%;background:var(--white);margin-right:.5em;vertical-align:-.05em;animation:blink 1.1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  #clock{top:max(16px,env(safe-area-inset-top));right:16px;font-variant-numeric:tabular-nums}
+  #cap{position:fixed;z-index:2;left:50%;bottom:calc(max(14px,env(safe-area-inset-bottom)) + 70px);transform:translateX(-50%);max-width:min(92vw,720px);margin:0;
+    text-align:center;pointer-events:none;font:800 clamp(17px,3.6vw,28px)/1.2 'JetBrains Mono',monospace;text-transform:uppercase;color:var(--black)}
+  #cap:not(:empty){padding:.25em .6em;background:var(--white);box-shadow:4px 4px 0 var(--black)}
+  #cap .cur{display:inline-block;width:.55em;height:.95em;background:currentColor;vertical-align:-.1em;margin-left:.1em;animation:blink .8s steps(1) infinite}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  /* buttons: retro OS bevel, like the rest of the portal */
+  .btn,.ctl button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:0 18px;border:0;cursor:pointer;text-decoration:none;
+    font:800 13px/1 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#000;background:#c0c0c0;
+    box-shadow:inset -1px -1px #0a0a0a,inset 1px 1px #fff,inset -2px -2px #808080,inset 2px 2px #dfdfdf,3px 3px 0 #000}
+  .btn:active,.ctl button:active{box-shadow:inset 1px 1px #0a0a0a,inset -1px -1px #fff,inset 2px 2px #808080}
+  .btn:focus-visible,.ctl button:focus-visible,summary:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+  .btn.go{background:var(--yellow);width:100%;min-height:54px;font-size:15px}
+  .btn.wide{width:100%}
+  .snd-ic{vertical-align:-2px}
+  .ctl{position:fixed;z-index:3;bottom:max(14px,env(safe-area-inset-bottom));right:14px;display:flex;gap:8px;transition:opacity .3s}
+  .ctl.gone{opacity:0;pointer-events:none}
+
+  /* the glitch title: two offset copies in the scribble colours, sliced, firing in short bursts */
+  .glitch{position:relative;display:inline-block}
+  .glitch::before,.glitch::after{content:attr(data-text);position:absolute;inset:0;pointer-events:none;opacity:0}
+  .glitch::before{color:var(--blue);animation:gA 3.6s steps(1) infinite}
+  .glitch::after{color:var(--yellow);animation:gB 3.6s steps(1) infinite}
+  @keyframes gA{0%,86%,100%{opacity:0;transform:none;clip-path:none}
+    88%{opacity:.9;transform:translate(-5px,1px);clip-path:inset(10% 0 55% 0)}
+    91%{opacity:.9;transform:translate(4px,-1px);clip-path:inset(60% 0 8% 0)}
+    94%{opacity:.9;transform:translate(-3px,0);clip-path:inset(35% 0 40% 0)}}
+  @keyframes gB{0%,86%,100%{opacity:0;transform:none;clip-path:none}
+    88%{opacity:.85;transform:translate(5px,-1px);clip-path:inset(55% 0 12% 0)}
+    92%{opacity:.85;transform:translate(-4px,1px);clip-path:inset(5% 0 70% 0)}
+    95%{opacity:.85;transform:translate(3px,0);clip-path:inset(40% 0 30% 0)}}
+
+  /* the gate: one tap to receive (it also lets the sound play) */
+  .gate{position:fixed;inset:0;z-index:4;display:grid;place-items:center;padding:24px 18px;text-align:center}
+  .gate .k{display:inline-block;margin:0 0 14px;padding:.3em .6em;background:var(--yellow);color:var(--black);font:800 12px/1 'JetBrains Mono',monospace;letter-spacing:.16em;text-transform:uppercase;box-shadow:4px 4px 0 var(--blue)}
+  .gate h1{margin:0 0 10px;font:800 clamp(2.2rem,11vw,4.2rem)/.92 'JetBrains Mono',monospace;letter-spacing:-.05em;text-transform:uppercase}
+  .gate p{margin:0 auto 22px;max-width:30ch}
+  .gate .row{display:flex;flex-direction:column;gap:12px;align-items:center}
+  .gate .quiet{background:none;border:0;color:var(--white);font:700 12px/1 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;text-decoration:underline;text-underline-offset:4px;cursor:pointer;padding:10px}
+
+  /* after the film: the way in. The LEADS eye stays drawn at the top of the canvas behind this */
+  .door{position:relative;z-index:3;min-height:100vh;padding:calc(max(16px,env(safe-area-inset-top)) + 34vh) 16px 48px;opacity:0;transition:opacity .5s ease}
+  .door.on{opacity:1}
+  .door main{max-width:540px;margin:0 auto}
+  .win{background:#c0c0c0;color:var(--black);box-shadow:inset -1px -1px #0a0a0a,inset 1px 1px #fff,inset -2px -2px #808080,inset 2px 2px #dfdfdf,6px 6px 0 #000;margin:0 0 18px}
+  .win .bar{display:flex;justify-content:space-between;align-items:center;background:var(--blue);color:#fff;padding:5px 8px;font:800 12px/1.2 'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase}
+  .win .bar span:last-child{font-weight:400;opacity:.8}
+  .win .body{padding:18px 16px 18px}
+  .win h2{margin:0 0 8px;font:800 clamp(1.6rem,7vw,2.3rem)/1 'JetBrains Mono',monospace;letter-spacing:-.04em;text-transform:uppercase}
+  .win p{margin:0 0 14px}
+  .win ol{margin:0 0 6px;padding-left:1.3em}
+  .win li{margin:.35em 0}
+  .win b{background:var(--yellow);font-weight:800;padding:0 .15em}
+  .win.warn .bar{background:var(--black)}
+  .win.warn h2{color:#b10000;font-size:1.25rem;letter-spacing:-.02em}
+  .link{word-break:break-all;background:#fff;border:1px dashed #555;padding:8px 10px;font-size:12px;margin-top:10px;user-select:all}
+  details{margin-top:4px}
+  summary{cursor:pointer;font-weight:800;text-transform:uppercase;letter-spacing:.08em;font-size:13px;padding:6px 0}
+  .btn+.btn{margin-top:10px}
+
+  /* "opening your file": the portal can take 5 to 20 s before the browser shows anything */
+  .going{position:fixed;inset:0;z-index:6;display:grid;place-items:end center;padding:24px 18px max(40px,env(safe-area-inset-bottom));text-align:center}
+  .going .box{width:min(100%,420px);background:var(--black);padding:18px 16px;box-shadow:6px 6px 0 #000}
+  .going h2{margin:0 0 6px;font:800 18px/1.3 'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase}
+  .going .msg{min-height:3em;margin:0 0 14px;color:#cfcfcf}
+  .going .meter{height:10px;border:2px solid var(--white);padding:1px;overflow:hidden}
+  .going .meter i{display:block;height:100%;width:0;background:var(--yellow);transition:width .6s linear}
+  .going .t{margin:10px 0 0;font-size:12px;letter-spacing:.14em;color:#cfcfcf}
+  .going .late{margin-top:16px}
+  .going .late p{color:#cfcfcf;font-size:12.5px}
+  @media (prefers-reduced-motion:reduce){#rec i,#cap .cur,.glitch::before,.glitch::after{animation:none}.door,.going .meter i{transition:none}}
+</style>
+</head>
+<body>
+<canvas id="film" aria-hidden="true"></canvas>
+<p class="hud" id="rec" aria-hidden="true"><i></i>REC &nbsp;CAM 03</p>
+<p class="hud" id="clock" aria-hidden="true">--:--:--</p>
+<p id="cap" aria-hidden="true"></p>
+<p class="sr" id="capLive" role="status" aria-live="polite"></p>
+
+<section class="gate" id="gate" aria-labelledby="gateT">
+  <div>
+    <p class="k">Case file 26/27</p>
+    <h1 id="gateT"><span class="glitch" data-text="Incoming">Incoming</span><br><span class="glitch" data-text="transmission">transmission</span></h1>
+    <p>Ten seconds. Sound helps. Then your file.</p>
+    <div class="row">
+      <button class="btn go" type="button" id="play" style="max-width:320px">Receive ▸</button>
+      <button class="quiet" type="button" id="toDoor">Skip to your file</button>
+    </div>
+  </div>
+</section>
+
+<div class="ctl gone" id="ctl">
+  <button type="button" id="sound" aria-pressed="false"></button>
+  <button type="button" id="skip">Skip ▸▸</button>
+</div>
+
+<div class="door" id="door" hidden>
+  <main>
+    <!-- Messenger / Instagram / Gmail and other in-app browsers: Google won't let anyone sign in there -->
+    <section class="win warn" id="inapp" hidden>
+      <div class="bar"><span>Warning</span><span>×</span></div>
+      <div class="body">
+        <h2>This app's browser can't open your file</h2>
+        <p>Google blocks sign-in inside <span id="appName">this app</span>, so the portal shows a blank page here. Open this page in your phone's real browser.</p>
+        <a class="btn wide" id="chromeBtn" hidden>Open in Chrome</a>
+        <ol id="iosSteps" hidden>
+          <li>Tap <b>⋯</b> or the share icon at the top or bottom of this screen.</li>
+          <li>Choose <b>Open in Safari</b> or <b>Open in browser</b>.</li>
+        </ol>
+        <button class="btn wide" type="button" id="copyBtn">Copy the link instead</button>
+        <div class="link" id="thisLink"></div>
+      </div>
+    </section>
+
+    <section class="win" aria-labelledby="doorT">
+      <div class="bar"><span>Transmission 26/27</span><span>File ready</span></div>
+      <div class="body">
+        <h2 id="doorT"><span class="glitch" data-text="Your file is ready.">Your file is ready.</span></h2>
+        <p>What we found is inside. Open it with your <b>Ateneo account</b> (@student.ateneo.edu), and give it a few seconds to load.</p>
+        <a class="btn go" id="enterBtn">Open your file</a>
+        <details>
+          <summary>Can't open it?</summary>
+          <ol>
+            <li><b>"You need access"</b> or <b>"Sorry, unable to open the file"</b>: Google opened the portal with another account. Open a private / incognito window, sign in with your Ateneo account only, and paste this link there.</li>
+            <li>Or use a browser where only your Ateneo account is signed in, or sign out of the others and tap Open your file again.</li>
+            <li>On a shared computer, always use a private window.</li>
+          </ol>
+          <button class="btn wide" type="button" id="copyBtn2">Copy the link</button>
+        </details>
+      </div>
+    </section>
+    <button class="btn wide" type="button" id="again">Replay the transmission</button>
+  </main>
+</div>
+
+<div class="going" id="going" role="status" aria-live="polite" hidden>
+  <div class="box">
+    <h2>Opening your file</h2>
+    <p class="msg" id="goMsg">Connecting to the camera feed.</p>
+    <div class="meter" aria-hidden="true"><i id="goBar"></i></div>
+    <p class="t" id="goT">00:00</p>
+    <div class="late" id="goLate" hidden>
+      <p>Still nothing? Google can be slow when many people sign in at once. Try again, or check that you are signed in with your Ateneo account.</p>
+      <a class="btn wide" id="goAgain">Try again</a>
+      <button class="btn wide" type="button" id="goBack">Back</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { C, reduced, boil, span, backOut, stage, partyEye, wordEye, scribble, grain, glitch, makeSound, SPEAKER, captions, fontsReady } from '../reveal/ink.js';
+
+const $ = id => document.getElementById(id);
+const PORTAL = 'https://script.google.com/a/macros/student.ateneo.edu/s/AKfycbwoL5I-i10w25U-nNqAlwfVEDF0NuQhWEHZq_EqMu9t3pszFNH72FuXhYXAH1TH2Fk/exec';
+const dest = PORTAL + '?reveal=1';   // the portal plays Act 2 for an accepted applicant (and replays it with this flag)
+const SEEN = 'leads-act1-seen';
+const remember = () => { try { sessionStorage.setItem(SEEN, '1'); } catch (e) { /* storage blocked: fine */ } };
+const seenBefore = () => { try { return sessionStorage.getItem(SEEN) === '1'; } catch (e) { return false; } };
+
+/* ============================== the way in (same rules as docs/go) ============================== */
+$('enterBtn').href = dest; $('goAgain').href = dest;
+$('thisLink').textContent = location.href;
+const ua = navigator.userAgent || '';
+const apps = [[/FBAN|FBAV|FB_IAB|FBIOS|Messenger|MessengerLite|FBLC/i, 'Messenger / Facebook'], [/Instagram/i, 'Instagram'], [/GSA\//i, 'the Google app'],
+  [/Line\//i, 'LINE'], [/TikTok|musical_ly|BytedanceWebview/i, 'TikTok'], [/Snapchat/i, 'Snapchat'], [/Twitter/i, 'X'], [/; wv\)/i, 'this app']];
+const app = (apps.find(a => a[0].test(ua)) || [])[1];
+if (app) {
+  $('inapp').hidden = false; $('appName').textContent = app;
+  if (/Android/i.test(ua)) {   // Android: an intent link hands the page to Chrome directly
+    const c = $('chromeBtn'); c.hidden = false;
+    c.href = 'intent://' + location.href.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(location.href) + ';end';
+  } else $('iosSteps').hidden = false;
+  $('enterBtn').textContent = 'Try here anyway';
+}
+function copyLink() {
+  const b = this, done = () => { b.textContent = 'Copied. Paste it in your browser'; };
+  if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(done, () => prompt('Copy this link:', location.href));
+  else prompt('Copy this link:', location.href);
+}
+$('copyBtn').addEventListener('click', copyLink);
+$('copyBtn2').addEventListener('click', copyLink);
+
+const STAGES = [[0, 'Connecting to the camera feed.'], [3, 'Checking your Ateneo account with Google.'],
+  [7, 'Pulling your file from the archive. This part is slow.'], [13, 'Still loading. Keep this tab open.'],
+  [22, 'Taking longer than usual. Many people are opening their files right now.']];
+const pad = n => String(n).padStart(2, '0');
+let goTimer = null;
+function going(on) {
+  clearInterval(goTimer);
+  $('going').hidden = !on;
+  if (!on) return;
+  const t0 = Date.now();
+  $('goLate').hidden = true; $('goBar').style.width = '0';
+  const paint = () => {
+    const s = (Date.now() - t0) / 1000;
+    $('goMsg').textContent = STAGES.filter(x => s >= x[0]).pop()[1];
+    $('goBar').style.width = Math.min(95, 100 * (1 - Math.exp(-s / 9))) + '%';   // never reaches the end on its own
+    $('goT').textContent = pad(Math.floor(s / 60)) + ':' + pad(Math.floor(s % 60));
+    if (s > 25) $('goLate').hidden = false;
+  };
+  paint(); goTimer = setInterval(paint, 500);
+}
+$('enterBtn').addEventListener('click', e => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; going(true); });
+$('goAgain').addEventListener('click', () => going(true));
+$('goBack').addEventListener('click', () => going(false));
+// coming back with the browser's Back button shows this page from memory: don't leave the overlay up
+addEventListener('pageshow', e => { if (e.persisted) going(false); });
+setInterval(() => { const d = new Date(); $('clock').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); }, 500);
+
+/* ============================== Act 1 ==============================
+   0.0  signal: red field, a burst of glitch
+   0.5  the eye. It looks left, right, then at you. "We have been watching."
+   3.1  a blink. "Please remain seated."
+   4.6  the pupil splits, 5.2 turns to scrawl, 5.6 the scribble glitch
+   7.2  the LEADS eye squashes open. "Subject, your file is ready."
+   9.0  it rises to the top of the screen and the way in fades up underneath */
+const END = 9.6;
+const FREEZE = parseFloat(new URLSearchParams(location.search).get('at'));
+const st = stage($('film'));
+const { ctx } = st;
+const S = makeSound();
+const cap = captions($('cap'), $('capLive'), () => S.tick());
+let t0 = 0, mode = 'gate', fired = {};
+const once = (k, fn) => { if (!fired[k]) { fired[k] = true; fn(); } };
+const lerp = (a, b, k) => a + (b - a) * k;
+
+function look(t) {
+  if (t < 1.4) return { x: lerp(0, -.8, span(t, .8, 1.3)), y: 0 };
+  if (t < 2.2) return { x: lerp(-.8, .8, span(t, 1.5, 2.0)), y: -.2 * span(t, 1.5, 2.0) };
+  return { x: lerp(.8, 0, span(t, 2.3, 2.6)) + Math.sin(t * 9) * .03, y: lerp(-.2, 0, span(t, 2.3, 2.6)) };   // at you
+}
+function frame(t, idle) {
+  const { W, H, u } = st, b = boil(t);
+  st.begin(C.field);
+  const ew = u * .34;
+  if (!idle && t >= .5 && t < 5.8) {   // the party eye
+    const open = 1 - .95 * Math.sin(Math.PI * span(t, 3.05, 3.3));
+    const pupil = t < 4.6 ? 'dot' : t < 5.2 ? 'split' : 'scrawl';
+    partyEye(ctx, { cx: W / 2, cy: H * .44, w: ew, look: look(t), open, seed: b, pupil });
+  }
+  const burst = idle || reduced ? 0 : Math.sin(Math.PI * span(t, 5.55, 6.9));
+  if (burst > 0) scribble(ctx, W / 2, H * .44, u * .5, burst, b);
+  if (idle || t >= 7.2) {   // the LEADS eye, which then rises out of the way of the door
+    const rise = idle ? 1 : span(t, 8.9, 9.6);
+    const open = idle ? 1 : backOut((t - 7.2) / .55);
+    const w = lerp(u * .36, Math.min(u * .26, H * .2), rise);
+    const iris = { x: Math.sin(t * 1.3) * .4, y: Math.cos(t * .9) * .2 };
+    wordEye(ctx, { cx: W / 2, cy: lerp(H * .44, Math.max(H * .17, w * .7 + 40), rise), w, open, seed: b, iris });
+  }
+  grain(st, .35, b);
+  glitch(st, Math.max(burst, !idle && t < .45 ? .7 : 0, !idle && t >= 7.2 && t < 7.35 ? .6 : 0), b);
+}
+function caption(t) {
+  if (t >= .8 && t < 3) cap.show('We have been watching.', .8, t, 26);
+  else if (t >= 3.4 && t < 5.4) cap.show('Please remain seated.', 3.4, t, 26);
+  else if (t >= 7.6 && t < END - .4) cap.show('Subject, your file is ready.', 7.6, t, 30);
+  else cap.clear();
+}
+function sounds(t) {
+  once('sig', () => S.burst(.4, .6));
+  if (t >= .8) once('bell', () => S.cue('bell'));
+  if (t >= 4.6) once('fall', () => S.cue('fall'));
+  if (t >= 5.55) once('crackle', () => S.crackle(1.3));
+  if (t >= 7.2) once('open', () => S.cue('open'));
+  S.bedLevel(.6, .025);
+}
+
+let idleT0 = 0;
+function loop(now) {
+  if (mode === 'film') {
+    const t = isNaN(FREEZE) ? (now - t0) / 1000 : FREEZE;   // ?at=5.8 freezes a frame (for review)
+    frame(Math.min(t, END), false); caption(t); sounds(t);
+    if (t >= END) showDoor();
+  } else if (mode === 'door') frame((now - idleT0) / 1000 + 20, true);   // the LEADS eye keeps watching, boiling
+  requestAnimationFrame(loop);
+}
+const paintSound = () => { const on = S.on(); $('sound').innerHTML = SPEAKER(on) + (on ? ' Sound ON' : ' Sound OFF'); $('sound').setAttribute('aria-pressed', String(on)); $('sound').setAttribute('aria-label', on ? 'Sound on. Tap to mute' : 'Sound off. Tap to turn on'); };
+function play(withSound) {
+  remember();
+  if (withSound) S.set(true);
+  paintSound();
+  $('gate').hidden = true; $('door').hidden = true; $('door').classList.remove('on');
+  $('ctl').classList.remove('gone');
+  fired = {}; cap.clear(); mode = 'film'; t0 = performance.now();
+}
+function showDoor() {
+  mode = 'door'; idleT0 = performance.now(); cap.clear(); S.fade();
+  $('gate').hidden = true; $('ctl').classList.add('gone');
+  $('door').hidden = false; requestAnimationFrame(() => $('door').classList.add('on'));
+  $('enterBtn').focus({ preventScroll: true });
+}
+$('sound').addEventListener('click', () => { S.toggle(); paintSound(); });
+$('play').addEventListener('click', () => play(true));
+$('toDoor').addEventListener('click', () => { remember(); showDoor(); });
+$('skip').addEventListener('click', showDoor);
+$('again').addEventListener('click', () => { scrollTo(0, 0); play(S.on()); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && mode === 'film') showDoor(); });
+addEventListener('resize', () => st.fit());
+
+await fontsReady();
+st.fit();
+if (!isNaN(FREEZE)) play(false);
+else if (seenBefore()) showDoor();   // back again in the same tab (e.g. after a failed sign-in): straight to the way in
+else frame(0, false);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
