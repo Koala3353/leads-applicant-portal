@@ -1988,7 +1988,7 @@
     };
     window.addEventListener('message', onMsg);
     document.addEventListener('keydown', onKey);
-    frame.src = url;   // loads invisibly (the veil isn't .on yet), so a slow or blocked film never blacks out the hub
+    frame.src = url + (url.indexOf('?') < 0 ? '?' : '&') + 'v=' + Date.now();   // always the latest film (GitHub Pages caches for 10 min); loads invisibly (the veil isn't .on yet), so a slow or blocked film never blacks out the hub
     setTimeout(() => { if (!ready) close(); }, 12000);   // blocked or offline: quietly drop it, they'll get it next time
   }
 

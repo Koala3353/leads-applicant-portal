@@ -49,7 +49,7 @@ function loadErrorLine_(list) {
 
 const BRAND = {
   /* ---------- identity ---------- */
-  // Title: Eyes on LEADS (was LEADS: Oversight). Theme: oversight = (1) watchful supervision, (2) an inadvertent error.
+  // Title: Eyes on LEADS. Theme: being watched, then seeing yourself.
   // Fears: being watched, feeling boxed in, failing. Mood: a surveillance case file, 1984-style.
   org: 'LEADS',
   contacts: PORTAL_CONTACTS,
@@ -205,7 +205,7 @@ const BRAND = {
     ['ATYCHIPHOBIA', 'fear of failing'],
     ['CLAUSTROPHOBIA', 'fear of being boxed in'],
     ['GLOSSOPHOBIA', 'fear of public speaking'],
-    ['OVERSIGHT', '1. watchful supervision 2. an honest mistake'],
+    ['EYES ON LEADS', 'and on you'],
     ['DECIDOPHOBIA', 'fear of making the call'],
     ['I.R.I.S. IS WATCHING', 'say hi'],
     ['YOU BLINKED', "we didn't"],

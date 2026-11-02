@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Special+Elite&display=swap">
-<link rel="modulepreload" href="ink.js">
+<link rel="modulepreload" href="ink.js?v=3">
 <style>
   :root{--film-black:#070606;--oxblood:#3a0806;--dried-red:#7a120c;--chalk:#e6e0d4;--cctv:#8b97a4;--misreg-blue:#2b4a86;--lamp-warm:#d8b787;--brand-red:#e50000;--card-blue:#000ff0;--yellow:#fffc04}
   *{box-sizing:border-box}
@@ -76,7 +76,7 @@
 
 <script type="module">
 import { PAL, reduced, boilFrame, span, lerp, mix, rgba, stage, wline, wtext, circ, partyEye, layer, grade, grain, vhs, misreg, shake,
-  lampCone, stamp, drawStamp, glitch, filmAudio, SPEAKER, captions, fontsReady } from './ink.js';
+  lampCone, stamp, drawStamp, glitch, filmAudio, SPEAKER, captions, fontsReady } from './ink.js?v=3';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -89,6 +89,7 @@ const PORTAL = 'https://script.google.com/a/macros/student.ateneo.edu/s/AKfycbwo
 const who = { id: '', nick: '', stamp: 'REVIEWED' };
 const clean = (v, n) => String(v || '').replace(/[^\w .'ñÑ-]/g, '').trim().slice(0, n);
 const num = () => who.id.replace(/^APP-/, '');
+const subjectName = () => who.nick || (who.id ? 'No. ' + num() : 'you');   // their first name; the file number if the portal has none
 let gotInit = null;
 const initArrived = new Promise(r => { gotInit = r; });
 window.addEventListener('message', e => {
@@ -230,7 +231,7 @@ function page(t, b, lit, warm) {
   wline(st, [[px, py], [px + pw, py], [px + pw, py + ph], [px, py + ph]], 50, b, { close: true, fill: g, col: PAL.red, a: .8 });
   wtext(st, 'EYES ON LEADS · ' + (who.id ? 'FILE ' + num() : 'INTAKE'), px + pw * .05, py + ph * .13, 51, b, { still: true, col: ink, font: `700 ${Math.round(pw * .04)}px ${mono}` });
   wline(st, [[px + pw * .05, py + ph * .19], [px + pw * .66, py + ph * .19]], 52, b, { col: PAL.red });
-  const rows = [['SUBJECT', typed(t, who.nick || 'you', 6.9, .3 / (who.nick || 'you').length), .55], ['LAST SEEN', typed(t, 'just now', 7.35, .08), .72], ['FINDING', '', .89]];
+  const rows = [['SUBJECT', typed(t, subjectName(), 6.9, .3 / subjectName().length), .55], ['LAST SEEN', typed(t, 'just now', 7.35, .08), .72], ['FINDING', '', .89]];
   rows.forEach(([label, val, k], i) => {
     const y = py + ph * k;
     wtext(st, label, px + pw * .05, y, 55 + i, b, { still: true, col: pre, font: `700 ${Math.round(pw * .034)}px ${mono}` });

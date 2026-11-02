@@ -377,11 +377,11 @@
     box-shadow: 4px 4px 0 var(--blue);
   }
 
-/* OVERSIGHT multi-step extension */
-#oversightSteps{display:flex;gap:8px;margin:22px 0 30px;padding:0;list-style:none}
-#oversightSteps li{flex:1;border-top:3px solid var(--line);padding:10px 3px;color:var(--muted);font:700 .75rem var(--mono);text-align:center}
-#oversightSteps li.current{border-color:var(--glow);color:var(--glow)}
-#oversightSteps li.passed{border-color:var(--glow);color:var(--text)}
+/* multi-step form: the progress steps */
+#formSteps{display:flex;gap:8px;margin:22px 0 30px;padding:0;list-style:none}
+#formSteps li{flex:1;border-top:3px solid var(--line);padding:10px 3px;color:var(--muted);font:700 .75rem var(--mono);text-align:center}
+#formSteps li.current{border-color:var(--glow);color:var(--glow)}
+#formSteps li.passed{border-color:var(--glow);color:var(--text)}
 .ov-step[hidden],#ovTerminal[hidden]{display:none!important}
 .ov-actions{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0 10px}
 .ov-actions button{min-height:44px}
@@ -391,7 +391,7 @@
 #ovTerminalSkip{font:inherit}
 .ov-review{margin:14px 0;padding:10px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
 .ov-review b{display:block;color:var(--glow);font:.8rem var(--mono)}
-@media(max-width:520px){#oversightSteps li{font-size:.6rem}.ov-actions .btn{width:100%}}
+@media(max-width:520px){#formSteps li{font-size:.6rem}.ov-actions .btn{width:100%}}
 @media(prefers-reduced-motion:reduce){#ovTerminalBar{transition:none!important}}
 
 /* PRELEADS_CENTER_WATCHER_V1 -- Pre-LEADS only */
@@ -518,7 +518,7 @@
       <ul id="errorSummaryList"></ul>
     </div>
 
-    <ol id="oversightSteps" aria-label="Registration progress"><li class="current">01 Overview</li><li>02 Identity</li><li>03 Leadership</li><li>04 Review</li></ol>
+    <ol id="formSteps" aria-label="Registration progress"><li class="current">01 Overview</li><li>02 Identity</li><li>03 Leadership</li><li>04 Review</li></ol>
     <form id="preleadsForm" novalidate autocomplete="on">
 
       <section class="ov-step" id="ovStep1">
@@ -1050,7 +1050,7 @@ function scheduleIris() {
 }
 window.__plPage = n => page(n);   // the submit's error display (first script) jumps back to the step holding the error
 function page(n){stage=n;irisQueue=irisQueue.filter(m=>m.atStage===n);for(let i=1;i<=4;i++)q('ovStep'+i).hidden=i!==n;
-  document.querySelectorAll('#oversightSteps li').forEach((el,i)=>{el.classList.toggle('current',i+1===n);el.classList.toggle('passed',i+1<n);if(i+1===n)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
+  document.querySelectorAll('#formSteps li').forEach((el,i)=>{el.classList.toggle('current',i+1===n);el.classList.toggle('passed',i+1<n);if(i+1===n)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
   window.scrollTo({top:0,behavior:reduced.matches?'auto':'smooth'});
   if(n===3){iris('neutral','Identity recorded. Your file has been updated.');setTimeout(()=>{if(stage===3)iris('neutral','The next responses may reveal more than you expect.');},4600);}
   if(n===4)iris('neutral','Your responses are awaiting final submission.');
@@ -1082,7 +1082,7 @@ let lastWasTerminal=false;
 // you're entering), or the ACCESSING SUBJECT PROFILE terminal, never twice in a row. The section changes while covered.
 function animate(n,done){if(reduced.matches){done();return;}
  const useTerminal=!lastWasTerminal&&Math.random()<1/7;lastWasTerminal=useTerminal;
- if(!useTerminal&&window.Loader){busy=true;const step=document.querySelectorAll('#oversightSteps li')[n-1];
+ if(!useTerminal&&window.Loader){busy=true;const step=document.querySelectorAll('#formSteps li')[n-1];
   Loader.show('',step?step.textContent.trim():'Next section','Section '+String(n).padStart(2,'0'));
   setTimeout(()=>{done();window.scrollTo(0,0);},560);setTimeout(()=>{Loader.hide();busy=false;},1250);return;}
  terminal(n,done);}
