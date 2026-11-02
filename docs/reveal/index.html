@@ -1,16 +1,17 @@
 <!doctype html>
 <!--
-  Eyes on LEADS: the results reveal, Act 2 (GitHub Pages, not Apps Script; clasp ignores docs/).
-  Act 1 is docs/results/, the public page the acceptance email links to. It ends on the LEADS eye opening and sends
-  them into the portal with ?reveal=1; the portal (Home.html) then opens this page full screen, once, for an ACCEPTED
-  applicant, and says who it is with postMessage:
+  Eyes on LEADS: the results reveal, Act 2 "The file" (GitHub Pages, not Apps Script; clasp ignores docs/).
+  Act 1 is docs/results/, the public page the acceptance email links to. It ends on the LEADS eye and sends them into
+  the portal with ?reveal=1; the portal (Home.html) then opens this page full screen, once, for an ACCEPTED applicant,
+  and says who it is with postMessage:
       { type: 'leads-reveal-init', id: 'APP-2306', nick: 'Bea', stamp: 'ACCEPTED', sound: true }
-  so the page itself never states anyone's result (opened on its own it says REVIEWED). It answers with
-  'leads-reveal-ready' (fonts loaded, about to play), 'leads-reveal-replay' (started again, so the portal resets its
-  safety timer) and 'leads-reveal-done' (closed from the end card).
-  ~9.5 s, all drawn in one 2D canvas by ink.js (shared with Act 1), in the style of the party video: red field,
-  boiling hand-drawn lines, a scribble glitch. Then the brand book's Broadcast Card. No triangle eye.
-  ?at=7.6 freezes a frame (for review).
+  so the page itself never states anyone's result (opened on its own it stamps REVIEWED and the card says nothing about
+  a result). It answers with 'leads-reveal-ready' (fonts loaded, about to play), 'leads-reveal-replay' (started again,
+  so the portal resets its safety timer) and 'leads-reveal-done' (closed from the end card).
+  10.4 s, all drawn in one 2D canvas by ink.js (shared with Act 1): a desk under a swinging lamp, the photo that looks
+  back, the mirror, the intake form typing itself, the stamp, then the Broadcast Card. No triangle eye.
+  Sound is one pre-mixed file (audio/act2.mp3, or audio/act2_calm.mp3 for reduced motion). If it is missing the film is silent.
+  ?at=4.6 freezes a frame (for review, no sound).
 -->
 <html lang="en">
 <head>
@@ -23,21 +24,15 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Special+Elite&display=swap">
 <link rel="modulepreload" href="ink.js">
 <style>
-  :root{--black:#050505;--white:#fefffe;--blue:#000ff0;--yellow:#fffc04;--red:#e50000;--field:#d4260a}
+  :root{--film-black:#070606;--oxblood:#3a0806;--dried-red:#7a120c;--chalk:#e6e0d4;--cctv:#8b97a4;--misreg-blue:#2b4a86;--lamp-warm:#d8b787;--brand-red:#e50000;--card-blue:#000ff0;--yellow:#fffc04}
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--field);color:var(--white);overflow:hidden;font-family:'JetBrains Mono',ui-monospace,monospace}
+  html,body{margin:0;height:100%;background:var(--film-black);color:var(--chalk);overflow:hidden;font-family:'JetBrains Mono',ui-monospace,monospace}
   #film{position:fixed;inset:0;width:100%;height:100%;display:block}
-  .hud{position:fixed;z-index:3;margin:0;font:700 clamp(11px,1.6vw,13px)/1.2 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--white);pointer-events:none}
-  #rec{top:max(16px,env(safe-area-inset-top));left:16px}
-  #rec i{display:inline-block;width:.75em;height:.75em;border-radius:50%;background:var(--white);margin-right:.5em;vertical-align:-.05em;animation:blink 1.1s steps(1) infinite}
-  @keyframes blink{50%{opacity:0}}
-  #clock{top:max(16px,env(safe-area-inset-top));right:16px;font-variant-numeric:tabular-nums}
-  #subject{top:calc(max(16px,env(safe-area-inset-top)) + 22px);left:16px;opacity:.85}
-  /* captions sit under the subject (the eye and the file are drawn in the upper part of the frame) */
-  #cap{position:fixed;z-index:3;left:50%;bottom:calc(max(14px,env(safe-area-inset-bottom)) + 70px);transform:translateX(-50%);max-width:min(92vw,760px);
-    margin:0;text-align:center;pointer-events:none;font:800 clamp(17px,3.6vw,30px)/1.2 'JetBrains Mono',monospace;letter-spacing:-.01em;text-transform:uppercase;color:var(--black)}
-  #cap:not(:empty){padding:.25em .6em;background:var(--white);box-shadow:4px 4px 0 var(--black)}
-  #cap .cur{display:inline-block;width:.55em;height:.95em;background:currentColor;vertical-align:-.1em;margin-left:.1em;animation:blink .8s steps(1) infinite}
+  /* captions: bottom centre, above the controls */
+  #cap{position:fixed;z-index:3;left:50%;bottom:calc(max(14px,env(safe-area-inset-bottom)) + 64px);transform:translateX(-50%);width:max-content;max-width:80vw;margin:0;
+    text-align:center;pointer-events:none;font:700 clamp(16px,3.4vw,26px)/1.3 'JetBrains Mono',monospace;color:var(--chalk);text-shadow:0 0 6px var(--film-black),0 1px 0 var(--film-black)}
+  #cap:not(:empty){padding:.2em .5em;background:rgba(7,6,6,.55)}
+  #cap .cur{display:inline-block;width:1px;height:1em;background:currentColor;vertical-align:-.12em;margin-left:2px;box-shadow:0 0 0 .5px currentColor}
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .ctl{position:fixed;z-index:5;bottom:max(14px,env(safe-area-inset-bottom));right:14px;display:flex;gap:8px;transition:opacity .3s}
   .ctl.gone{opacity:0;pointer-events:none}
@@ -45,54 +40,53 @@
     min-height:44px;padding:0 16px;border:0;color:#000;background:#c0c0c0;
     box-shadow:inset -1px -1px #0a0a0a,inset 1px 1px #fff,inset -2px -2px #808080,inset 2px 2px #dfdfdf,3px 3px 0 #000}
   button:active{box-shadow:inset 1px 1px #0a0a0a,inset -1px -1px #fff,inset 2px 2px #808080}
-  button:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+  button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
   .snd-ic{vertical-align:-2px;margin-right:4px}
-  /* the last frame: a Broadcast Card with the way out */
-  .end{position:fixed;inset:0;z-index:4;display:grid;place-items:end center;padding:20px 16px max(24px,env(safe-area-inset-bottom));opacity:0;pointer-events:none;transition:opacity .4s ease}
+  /* the last frame: a Broadcast Card with the way out. It cuts in (no fade) unless motion is reduced */
+  .end{position:fixed;inset:0;z-index:4;display:grid;place-items:end center;padding:20px 16px max(24px,env(safe-area-inset-bottom));opacity:0;pointer-events:none}
   .end.on{opacity:1;pointer-events:auto}
-  .card{width:min(560px,100%);background:var(--blue);color:#fff;text-align:center;padding:24px 20px 22px;rotate:-1deg;
-    box-shadow:0 0 0 4px #000,0 0 0 7px var(--blue),8px 10px 0 7px #000}
+  .end[inert]{pointer-events:none}
+  .card{width:min(560px,100%);background:var(--card-blue);color:#fff;text-align:center;padding:24px 20px 22px;rotate:-1deg;
+    box-shadow:0 0 0 4px #000,0 0 0 7px var(--card-blue),8px 10px 0 7px #000}
   .card p{margin:0}
   .card .k{font:700 12px/1.4 'JetBrains Mono',monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--yellow)}
   .card .t{font:800 clamp(32px,9vw,58px)/.95 'JetBrains Mono',monospace;letter-spacing:-.04em;text-transform:uppercase;margin:10px 0 12px}
   .card .s{font:400 15px/1.5 'JetBrains Mono',monospace}
   .card .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
   .card .go{background:var(--yellow)}
-  @media (prefers-reduced-motion:reduce){#rec i,#cap .cur{animation:none}.end{transition:none}}
+  @media (prefers-reduced-motion:reduce){.end{transition:opacity .3s ease}}
 </style>
 </head>
 <body>
 <canvas id="film" aria-hidden="true"></canvas>
-<p class="hud" id="rec" aria-hidden="true"><i></i>REC &nbsp;CAM 03</p>
-<p class="hud" id="clock" aria-hidden="true">--:--:--</p>
-<p class="hud" id="subject" aria-hidden="true">SUBJECT ----</p>
 <p id="cap" aria-hidden="true"></p>
 <p class="sr" id="capLive" role="status" aria-live="polite"></p>
 <div class="ctl" id="ctl">
   <button type="button" id="sound" aria-pressed="false"></button>
   <button type="button" id="skip">Skip ▸▸</button>
 </div>
-<div class="end" id="end" role="dialog" aria-modal="true" aria-labelledby="endT" aria-describedby="endS">
+<div class="end" id="end" role="dialog" aria-modal="true" aria-labelledby="endT" aria-describedby="endS" inert>
   <div class="card">
-    <p class="k" id="endK">Transmission ends</p>
-    <p class="t" id="endT">Your file is ready</p>
-    <p class="s" id="endS">Come and see what we found.</p>
+    <p class="k" id="endK">LEADS 26/27 &nbsp;·&nbsp; FINDING</p>
+    <p class="t" id="endT">Your file.</p>
+    <p class="s" id="endS">The rest of your file is inside. Come read it.</p>
     <div class="row"><button type="button" class="go" id="open">Open your file</button><button type="button" id="replay">Replay</button></div>
   </div>
 </div>
 
 <script type="module">
-import { C, reduced, boil, span, backOut, stage, partyEye, wordEye, scribble, grain, glitch, shake, makeSound, SPEAKER, captions, fontsReady } from './ink.js';
+import { PAL, reduced, boilFrame, span, lerp, mix, rgba, stage, wline, wtext, circ, partyEye, layer, grade, grain, vhs, misreg, shake,
+  lampCone, stamp, drawStamp, glitch, filmAudio, SPEAKER, captions, fontsReady } from './ink.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const embedded = window.parent !== window;
 const FREEZE = parseFloat(params.get('at'));
+const frozen = !isNaN(FREEZE);
 const PORTAL = 'https://script.google.com/a/macros/student.ateneo.edu/s/AKfycbwoL5I-i10w25U-nNqAlwfVEDF0NuQhWEHZq_EqMu9t3pszFNH72FuXhYXAH1TH2Fk/exec';
 
 /* ============================== who is watching (from the portal) ============================== */
-const who = { id: '', nick: '', stamp: 'REVIEWED' };
-const clean = (v, n) => String(v || '').replace(/[^\w .'ñÑ-]/g, '').slice(0, n);
+const who = { stamp: 'REVIEWED' };
 let gotInit = null;
 const initArrived = new Promise(r => { gotInit = r; });
 window.addEventListener('message', e => {
@@ -101,169 +95,237 @@ window.addEventListener('message', e => {
   // only the portal (Apps Script serves it from *.googleusercontent.com) may say who this is, so nobody can frame
   // this page elsewhere and fake an acceptance
   if (!/^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(e.origin)) return;
-  who.id = clean(d.id, 12).toUpperCase(); who.nick = clean(d.nick, 24);
   who.stamp = d.stamp === 'ACCEPTED' ? 'ACCEPTED' : 'REVIEWED';   // only two words are ever drawn
   paintIdentity(); makeStamp();
   if (d.sound) trySound();
   gotInit();
 });
 const tell = (type, extra) => { if (embedded) try { parent.postMessage(Object.assign({ type }, extra || {}), '*'); } catch (e) { /* fine */ } };
-const num = () => who.id ? who.id.replace('APP-', '') : '000';
 function paintIdentity() {
-  $('subject').textContent = 'SUBJECT ' + (who.id || '----');
-  // brand book voice: short, second person, case-file words, the reveal saved for the last line, ending on an invitation
-  $('endK').textContent = 'Subject ' + num() + ' // finding: ' + who.stamp.toLowerCase();
-  $('endT').textContent = who.stamp === 'ACCEPTED' ? 'Welcome to LEADS' : 'Your file is ready';
-  $('endS').textContent = who.stamp === 'ACCEPTED' ? 'Your file is ready. Come and see yourself.' : 'Come and see what we found.';
+  // the card says "You're in." only when the portal said ACCEPTED; opened alone it never states a result
+  $('endT').textContent = who.stamp === 'ACCEPTED' ? "You're in." : 'Your file.';
 }
 
-/* ============================== clock, sound, captions ============================== */
-const pad = n => String(n).padStart(2, '0');
-setInterval(() => { const d = new Date(); $('clock').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); }, 500);
-const S = makeSound();
-const paintSound = () => { const on = S.on(); $('sound').innerHTML = SPEAKER(on) + (on ? ' Sound ON' : ' Sound OFF'); $('sound').setAttribute('aria-pressed', String(on)); $('sound').setAttribute('aria-label', on ? 'Sound on. Tap to mute' : 'Sound off. Tap to turn on'); };
+/* ============================== sound, captions ============================== */
+const END = 10.4, CARD = 9.0, CARD_LIVE = 9.0 + 2 / 30, CARD_BTN = 9.4;
+let t0 = 0, playing = false, focused = false;
+const A = filmAudio(reduced ? 'audio/act2_calm.mp3' : 'audio/act2.mp3', () => playing && !frozen ? (performance.now() - t0) / 1000 : null);
+const paintSound = () => { const on = A.on(); $('sound').innerHTML = SPEAKER(on) + (on ? ' Sound ON' : ' Sound OFF'); $('sound').setAttribute('aria-pressed', String(on)); $('sound').setAttribute('aria-label', on ? 'Sound on. Tap to mute' : 'Sound off. Tap to turn on'); };
 paintSound();
-$('sound').addEventListener('click', () => { S.toggle(); paintSound(); S.burst(.15, .5); });
+$('sound').addEventListener('click', () => { A.toggle(); paintSound(); });
 // the portal's sound is on, so start with sound: the tap that opened the portal lets an embedded page play in most
 // browsers; where it doesn't (Safari), the button simply stays at Sound OFF
-function trySound() { S.set(true); paintSound(); setTimeout(() => { if (!S.running()) { S.set(false); paintSound(); } }, 500); }
-const cap = captions($('cap'), $('capLive'), () => S.tick());
+function trySound() { A.set(true); paintSound(); setTimeout(() => { if (!A.running()) { A.set(false); paintSound(); } }, 500); }
+const cap = captions($('cap'), $('capLive'));
+const CAPS = [[.5, 'One file left on the desk.', 26, 2.8], [5.7, 'That one is you.', 22, 7.2]];   // start, line, cps, clear
+const live = () => [[.5, CAPS[0][1]], [3.2, 'The photo in the file looks up.'], [5.4, 'The photo is a mirror now.'], [5.7, CAPS[1][1]], [8.3, 'Stamped: ' + who.stamp.toLowerCase() + '.']];
 
-/* ============================== the stamp, drawn once (worn ink needs its own canvas) ============================== */
-const stampC = document.createElement('canvas'); stampC.width = 1100; stampC.height = 300;
-function makeStamp() {
-  const s = stampC.getContext('2d'); s.clearRect(0, 0, 1100, 300);
-  s.save(); s.strokeStyle = C.red; s.lineWidth = 18; s.strokeRect(20, 20, 1060, 260);
-  s.fillStyle = C.red; s.textAlign = 'center'; s.textBaseline = 'middle'; s.font = '190px "Special Elite", "Courier New", monospace';
-  s.fillText(who.stamp, 550, 162);
-  s.globalCompositeOperation = 'destination-out';
-  let seed = 5; const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 900; i++) { s.globalAlpha = r() * .7; s.fillRect(r() * 1100, r() * 300, 3 + r() * 6, 2 + r() * 3); }
-  s.restore();
-}
+/* ============================== the stamp, inked once (worn ink needs its own canvas) ============================== */
+let stampCv = null;
+function makeStamp() { stampCv = stamp(who.stamp, who.stamp === 'ACCEPTED' ? PAL.brand : PAL.red); }   // bright red only for ACCEPTED
 
 /* ============================== the film ==============================
-   0.0  red field, the LEADS eye shut; 0.3 it squashes open (party-video style)
-   1.0  "I can see you."  the red iris looks around, blinks once
-   3.5  "Do you see yourself?"  the iris turns into a mirror with your eye in it
-   4.4  push into the mirror; 5.2 the scribble glitch
-   6.2  the case file, typed in; 7.4 the stamp slams down; 7.9 "Finding: accepted."
-   9.4  the Broadcast Card (stays until a tap) */
-const END = 9.4;
+   0.0  fade up on a desk under a swinging lamp; 0.5 "One file left on the desk."
+   1.7  the folder opens (form page, photo corner with a shut eye); 3.2 the photo eye opens and looks at you
+   4.0  lamp dips; 4.3 it cuts out; 4.6 ONE frame of a huge eye (skipped for reduced motion); 5.1 the lamp flickers back
+   5.3 the photo is a mirror; 5.7 "That one is you."; 6.0 the light warms and the camera pulls back
+   6.9 the intake form types itself; 8.3 the stamp; 9.0 the Broadcast Card cuts in (buttons live at 9.4); 10.4 the film ends */
 const st = stage($('film'));
 const { ctx } = st;
-let t0 = 0, ended = false, playing = false, fired = {};
-const once = (k, fn) => { if (!fired[k]) { fired[k] = true; fn(); } };
+let Ly = null;   // layout, set on fit
 
-function frame(t) {
-  const { W, H, u } = st, b = boil(t);
-  st.begin(C.field);
-  const cy = H * (W < H ? .4 : .42), ew = u * .4;
-  const sh = shake(t, 7.55, u * .03);
-  ctx.translate(sh.x, sh.y);
-
-  if (t < 5.75) {   // the LEADS eye
-    let open = t < .3 ? .02 : backOut((t - .3) / .55);
-    open *= 1 - .92 * Math.sin(Math.PI * span(t, 2.3, 2.55));   // one slow blink
-    const settle = span(t, 3.0, 3.4);
-    const iris = { x: (Math.sin(t * 1.7) * .55 + Math.sin(t * 4.1) * .12) * (1 - settle), y: Math.cos(t * 1.3) * .3 * (1 - settle) };
-    const push = reduced ? 0 : span(t, 4.4, 5.6);
-    const w = ew * (1 + push * push * 3.2);
-    wordEye(ctx, { cx: W / 2, cy: cy + (H / 2 - cy) * push, w, open, seed: b, iris, mirror: span(t, 3.5, 4.2), years: push < .05 });
-  }
-  const burst = reduced ? 0 : Math.sin(Math.PI * span(t, 5.2, 6.25));
-  if (burst > 0) scribble(ctx, W / 2, H / 2, u * .55, burst, b);
-
-  if (t >= 6.2) drawFile(t, b);
-
-  ctx.setTransform(st.dpr, 0, 0, st.dpr, 0, 0);
-  grain(st, .35, b);
-  glitch(st, Math.max(burst, t < .25 ? .6 : 0, t >= 6.2 && t < 6.4 ? .7 : 0), b);
+function lay() {
+  const { W, H, u } = st;
+  const fw = Math.min(W * .88, u, H * .5 / .72), fh = fw * .72, wide = W > H * 1.2, fy = H * (wide ? .56 : .62), x0 = (W - fw) / 2, y0 = fy - fh / 2;
+  const px = x0 + fw * .05, py = y0 + fh * .06, pw = fw * .9, ph = fh * .88;
+  Ly = { fw, fh, fy, x0, y0, px, py, pw, ph, phW: pw * .25, phH: ph * .36, Lc: H * (wide ? .2 : .24), phX: px + pw * .71, phY: py + ph * .05, sw: Math.max(22, Math.min(60, u * .075)) };
 }
 
-function drawFile(t, b) {
-  const { W, H, u } = st;
-  const fw = Math.min(W * .9, u * 1.05, H * .56 / .68), fh = fw * .68, x = (W - fw) / 2, y = H * (W < H ? .4 : .42) - fh / 2;   // leaves room for the caption
-  const r = n => { let s = b * 31 + n; return () => (s = (s * 16807) % 2147483647) / 2147483647; };
-  const jit = r(3), J = () => (jit() - .5) * fw * .006;
-  ctx.save();
-  ctx.translate(x + fw / 2, y + fh / 2); ctx.rotate(-.02 + (reduced ? 0 : span(t, 6.2, 6.6) * .02 - .02)); ctx.translate(-x - fw / 2, -y - fh / 2);
-  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(x + 10, y + 12, fw, fh);
-  ctx.fillStyle = C.manila; ctx.strokeStyle = C.ink; ctx.lineWidth = Math.max(2, fw * .006);
-  ctx.beginPath(); ctx.moveTo(x + fw * .04 + J(), y - fh * .08 + J()); ctx.lineTo(x + fw * .34 + J(), y - fh * .08 + J()); ctx.lineTo(x + fw * .38 + J(), y + J()); ctx.lineTo(x + J(), y + J()); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x + J(), y + J()); ctx.lineTo(x + fw + J(), y + J()); ctx.lineTo(x + fw + J(), y + fh + J()); ctx.lineTo(x + J(), y + fh + J()); ctx.closePath(); ctx.fill(); ctx.stroke();
-  // the intake form
-  const px = x + fw * .05, py = y + fh * .07, pw = fw * .9, ph = fh * .86;
-  ctx.fillStyle = C.paper; ctx.fillRect(px, py, pw, ph);
-  ctx.fillStyle = C.ink; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
-  const fs = pw * .042;
-  ctx.font = `700 ${Math.round(fs * .95)}px "JetBrains Mono", monospace`;
-  ctx.fillText('INTAKE // CASE FILE 26/27', px + pw * .05, py + ph * .16);
-  const typed = Math.floor(Math.max(0, t - 6.45) * (reduced ? 999 : 28));
-  const rows = [['SUBJECT NO.', who.id || '----'], ['NAME', who.nick ? who.nick.toUpperCase() : '[REDACTED]'], ['OBSERVATION', 'COMPLETE'], ['FINDING', '']];
-  let used = 0;
-  rows.forEach(([k, v], i) => {
-    const ry = py + ph * (.34 + i * .17);
-    ctx.fillStyle = '#666'; ctx.font = `400 ${Math.round(fs * .8)}px "JetBrains Mono", monospace`; ctx.fillText(k, px + pw * .05, ry);
-    ctx.fillStyle = C.ink; ctx.fillRect(px + pw * .36, ry + fs * .35, pw * .58, Math.max(1, fs * .06));
-    ctx.font = `${Math.round(fs * 1.1)}px "Special Elite", "Courier New", monospace`;
-    const n = Math.max(0, Math.min(v.length, typed - used)); used += v.length + 4;
-    ctx.fillText(v.slice(0, n), px + pw * .37, ry);
+/* the lamp swings like a pendulum, then settles (it never swings for reduced motion) */
+const swing = t => reduced ? 0 : 14 * Math.cos(2 * Math.PI * t / 2.4) * Math.exp(-t / 6) * (1 - span(t, 6, 6.8)) * Math.PI / 180;
+function lampI(t) {   // how bright the lamp is, 0..1
+  if (reduced) return t < 4.3 ? 1 : t < 5.1 ? 0 : span(t, 5.1, 5.6);   // it goes out 4.3-5.1 and fades back, no flicker
+  if (t < .3) return span(t, 0, .3);
+  if (t >= 4 && t < 4 + 2 / 30) return .4;       // warning dip, 2 frames
+  if (t >= 4.3 && t < 5.1) return 0;             // out
+  if (t >= 5.1 && t < 5.17) return 1;            // flickers back: on 5.10, off 5.17, on 5.27, off 5.30, on 5.40
+  if (t >= 5.17 && t < 5.27) return 0;
+  if (t >= 5.27 && t < 5.3) return 1;
+  if (t >= 5.3 && t < 5.4) return 0;
+  return 1;
+}
+const typed = (t, str, ts, step) => reduced ? (t >= ts ? str : '') : t < ts ? '' : str.slice(0, Math.min(str.length, Math.floor((t - ts) / step + 1e-6) + 1));
+const mirrorOn = t => t >= (reduced ? 4.7 : 5.3);
+
+/* camera: push-in on the photo (2.6-3.4), pull back to read the page (6.0-6.8). Maps what is at the anchor to the target. */
+function cam(t) {
+  const { W, H } = st, { phX, phY, phW, phH, px, py, pw, ph } = Ly, k1 = span(t, 2.6, 3.4), k2 = span(t, 6, 6.8);
+  const a = [lerp(lerp(W / 2, phX + phW / 2, k1), px + pw / 2, k2), lerp(lerp(H / 2, phY + phH / 2, k1), py + ph / 2, k2)];
+  const g = [lerp(lerp(W / 2, W * .62, k1), W / 2, k2), lerp(lerp(H / 2, H * .4, k1), H * .47, k2)];
+  return { s: 1 + .35 * k1 - .2 * k2, a, g };
+}
+
+function desk(t, b) {
+  const { W, H } = st, { sw, fy, Lc } = Ly, th = swing(t), sh = sw * .75, deskY = H * .9;
+  const B = [W / 2 + (Lc + sh) * Math.sin(th), -4 + (Lc + sh) * Math.cos(th)], tan = Math.tan(th);
+  const poolX = B[0] + (fy - B[1]) * tan, R = (fy - B[1]) * .45 + sw, lit = x => Math.exp(-(((x - poolX) / R) ** 2));
+  const warm = span(t, 6, 6.8), lc = mix(PAL.chalk, PAL.lamp, warm);
+  const litGrad = (x1, x2, col, a0, a1) => { const g = ctx.createLinearGradient(x1, 0, x2, 0); for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, rgba(col, a0 + (a1 - a0) * lit(lerp(x1, x2, i / 6)))); return g; };
+  const c = cam(t);
+  ctx.save(); ctx.translate(c.g[0], c.g[1]); ctx.scale(c.s, c.s); ctx.translate(-c.a[0], -c.a[1]);
+  lampCone(st, { x: B[0], y: B[1], tx: B[0] + (deskY - B[1]) * tan, ty: deskY, sw: sw * .9, spread: (deskY - B[1]) * .5 + sw, col: lc, a: .18 });
+  // the desk: front edge with its thickness, a back edge, a few long grain lines
+  wline(st, [[-W * .2, deskY], [W * 1.2, deskY]], 1, b, { col: PAL.red, w: st.lw * 1.5 });
+  wline(st, [[-W * .2, deskY + H * .02], [W * 1.2, deskY + H * .02]], 2, b, { col: PAL.red, a: .7 });
+  wline(st, [[-W * .2, H * .33], [W * 1.2, H * .33]], 3, b, { col: PAL.red, a: .5 });
+  [.45, .52, .6, .72, .8].forEach((k, i) => wline(st, [[-W * .2, H * k], [W * .4 + i * 40, H * k + 3], [W * 1.2, H * k - 2]], 4 + i, b, { col: PAL.red, a: .3 }));
+  paperClip(b);
+  folder(t, b, lit, litGrad, warm);
+  lamp(b, th);
+  ctx.restore();
+}
+function lamp(b, th) {   // a bare bulb in a conical shade on a chain
+  const { W } = st, { sw, Lc } = Ly, sh = sw * .75, br = sw * .3;
+  ctx.save(); ctx.translate(W / 2, -4); ctx.rotate(-th);
+  wline(st, [[0, 0], [0, Lc]], 20, b);
+  wline(st, [[-sw * .22, Lc], [sw * .22, Lc], [sw, Lc + sh], [-sw, Lc + sh]], 21, b, { close: true, fill: PAL.black, w: st.lw * 1.2 });
+  wline(st, circ(0, Lc + sh + br * .55, br, br, 14), 22, b, { close: true, fill: rgba(PAL.chalk, .45), a: .9 });
+  wline(st, [[-br * .35, Lc + sh + br * .5], [0, Lc + sh + br * .9], [br * .35, Lc + sh + br * .5]], 23, b, { a: .7, w: st.lw * .8 });
+  ctx.restore();
+}
+function paperClip(b) {   // loose on the desk, by the folder
+  const { x0, y0, fw, fh } = Ly, s = fh * .16;
+  ctx.save(); ctx.translate(x0 + fw * .86, y0 + fh * 1.1); ctx.rotate(.35);
+  wline(st, [[0, 0], [0, s], [s * .35, s * 1.15], [s * .7, s], [s * .7, s * .15], [s * .45, 0], [s * .22, s * .15], [s * .22, s * .75]], 30, b, { a: .85, w: st.lw * .9 });
+  ctx.restore();
+}
+
+function folder(t, b, lit, litGrad, warm) {
+  const { x0, y0, fw, fh } = Ly, e = 1 - (1 - Math.min(1, Math.max(0, (t - 1.7) / .5))) ** 2, phi = e * 2.6;
+  const rect = [[x0, y0], [x0 + fw, y0], [x0 + fw, y0 + fh], [x0, y0 + fh]];
+  if (phi > 0.01) {   // the inside: back board and the form page
+    wline(st, rect, 40, b, { close: true, fill: litGrad(x0, x0 + fw, PAL.manila, .06, .45), col: PAL.chalk, a: .5 });
+    page(t, b, lit, warm);
+  }
+  const cs = Math.cos(phi);
+  if (Math.abs(cs) > .03) {   // the cover, hinged on the left edge
+    ctx.save(); ctx.translate(x0, 0); ctx.scale(cs, 1); ctx.translate(-x0, 0);
+    wline(st, rect, 41, b, { close: true, fill: litGrad(x0, x0 + fw, PAL.manila, phi > 1.57 ? .05 : .08, phi > 1.57 ? .25 : .55), col: PAL.chalk, a: .6, w: st.lw * 1.2 });
+    wline(st, [[x0, y0], [x0 + fw * .03, y0 - fh * .07], [x0 + fw * .3, y0 - fh * .07], [x0 + fw * .34, y0]], 42, b, { col: PAL.chalk, a: .6 });   // tab
+    if (phi < 1.57) wline(st, [[x0 + fw * .12, y0 + fh * .55], [x0 + fw * .5, y0 + fh * .55], [x0 + fw * .5, y0 + fh * .75], [x0 + fw * .12, y0 + fh * .75]], 43, b, { close: true, col: PAL.red, a: .8 });   // blank label
+    ctx.restore();
+  }
+}
+
+/* the intake form: pre-printed header and labels, typed values, the photo corner */
+function page(t, b, lit, warm) {
+  const { px, py, pw, ph, fw } = Ly, ink = rgba(PAL.black, .85), pre = rgba(PAL.black, .6), mono = `"JetBrains Mono", monospace`, type = `"Special Elite", "Courier New", monospace`;
+  const pc = mix(PAL.chalk, PAL.lamp, warm), g = ctx.createLinearGradient(px, 0, px + pw, 0);
+  for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, rgba(pc, .3 + .5 * lit(lerp(px, px + pw, i / 6))));
+  wline(st, [[px, py], [px + pw, py], [px + pw, py + ph], [px, py + ph]], 50, b, { close: true, fill: g, col: PAL.red, a: .8 });
+  wtext(st, 'LEADS 26/27  ·  INTAKE', px + pw * .05, py + ph * .13, 51, b, { still: true, col: ink, font: `700 ${Math.round(pw * .04)}px ${mono}` });
+  wline(st, [[px + pw * .05, py + ph * .19], [px + pw * .66, py + ph * .19]], 52, b, { col: PAL.red });
+  const rows = [['SUBJECT', typed(t, 'you', 6.9, .1), .55], ['LAST SEEN', typed(t, 'just now', 7.35, .08), .72], ['FINDING', '', .89]];
+  rows.forEach(([label, val, k], i) => {
+    const y = py + ph * k;
+    wtext(st, label, px + pw * .05, y, 55 + i, b, { still: true, col: pre, font: `700 ${Math.round(pw * .034)}px ${mono}` });
+    wline(st, [[px + pw * .36, y + 5], [px + pw * .95, y + 5]], 60 + i, b, { col: PAL.red });
+    if (val) wtext(st, val, px + pw * .37, y - 1, 65 + i, b, { still: true, col: ink, font: `${Math.round(pw * .062)}px ${type}` });
   });
-  // the photo corner holds the eye from Act 1: yours
-  const fx = px + pw * .76, fy = py + ph * .05, fW = pw * .2, fH = ph * .19;
-  ctx.strokeStyle = C.ink; ctx.lineWidth = Math.max(1.5, fw * .004); ctx.strokeRect(fx, fy, fW, fH);
-  ctx.fillStyle = C.field; ctx.fillRect(fx + 3, fy + 3, fW - 6, fH - 6);
-  partyEye(ctx, { cx: fx + fW / 2, cy: fy + fH / 2, w: fW * .34, look: { x: Math.sin(t * 2) * .3, y: 0 }, seed: b });
-  if (t >= 7.3) {   // the stamp
-    const p = reduced ? 1 : span(t, 7.3, 7.55), sc = 2.6 - 1.6 * p, sw = pw * .62 * sc, shh = sw * 300 / 1100;
-    ctx.save(); ctx.globalAlpha = Math.min(1, p * 3); ctx.translate(px + pw * .6, py + ph * .76); ctx.rotate(-.1);
-    ctx.drawImage(stampC, -sw / 2, -shh / 2, sw, shh); ctx.restore();
+  if (t >= 8.03 && t < 8.3) { ctx.globalAlpha = layer.a * .85; ctx.fillStyle = PAL.black; ctx.fillRect(px + pw * .37, py + ph * .89 - pw * .05, pw * .03, pw * .055); }   // the carriage return, a cursor waiting on FINDING
+  photo(t, b);
+  // the stamp: its shadow grows over the FINDING line first, then it lands
+  const sx = px + pw * .6, sy = py + ph * .89 - 7, sw = pw * .58, f = Math.floor((t - 8.3) * 30 + 1e-6);
+  if (t >= 8.1 && t < 8.3) { const k = span(t, 8.1, 8.3); wline(st, [[sx - sw * .5 * k, sy - sw * .1 * k], [sx + sw * .5 * k, sy - sw * .1 * k], [sx + sw * .5 * k, sy + sw * .1 * k], [sx - sw * .5 * k, sy + sw * .1 * k]], 70, b, { close: true, fill: rgba(PAL.black, .3 * k), nostroke: true }); }
+  if (t >= 8.3 && stampCv) drawStamp(st, stampCv, sx, sy, sw * (!reduced && f === 0 ? 1.12 : !reduced && f === 1 ? 1.04 : 1), -6 * Math.PI / 180, 1);
+  if (t >= 8.3) {   // slight warm bloom around the stamped line
+    const k = span(t, 8.3, 8.6) * .12, bg = ctx.createRadialGradient(sx, sy, 0, sx, sy, fw * .8);
+    bg.addColorStop(0, rgba(PAL.lamp, k)); bg.addColorStop(1, rgba(PAL.lamp, 0));
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = layer.a; ctx.fillStyle = bg; ctx.fillRect(sx - fw, sy - fw, fw * 2, fw * 2); ctx.restore();
+  }
+}
+
+function photo(t, b) {
+  const { phX, phY, phW, phH } = Ly, cx = phX + phW / 2, cy = phY + phH / 2, rect = [[phX, phY], [phX + phW, phY], [phX + phW, phY + phH], [phX, phY + phH]];
+  wline(st, rect, 80, b, { close: true, fill: PAL.black, fa: .9, col: PAL.chalk, a: .8 });
+  [[0, 0, 1, 1], [1, 0, -1, 1], [1, 1, -1, -1], [0, 1, 1, -1]].forEach(([kx, ky, dx, dy], i) => {   // photo corners (L brackets, not triangles)
+    const x = phX + phW * kx - dx * 3, y = phY + phH * ky - dy * 3, l = phW * .16;
+    wline(st, [[x + dx * l, y], [x, y], [x, y + dy * l]], 81 + i, b, { a: .9 });
+  });
+  ctx.save(); ctx.beginPath(); ctx.rect(phX, phY, phW, phH); ctx.clip();
+  if (mirrorOn(t)) {   // a mirror: silvered grey, a head and shoulders with no face, a glare
+    wline(st, rect, 90, b, { close: true, fill: rgba(PAL.cctv, .5), nostroke: true });
+    wline(st, rect, 91, b, { close: true, fill: rgba(PAL.chalk, .25), nostroke: true });
+    wline(st, circ(cx, cy - phH * .14, phW * .17, phH * .17, 14), 92, b, { close: true, a: .75 });
+    wline(st, [[cx - phW * .44, phY + phH], [cx - phW * .36, phY + phH * .8], [cx - phW * .15, phY + phH * .67], [cx + phW * .15, phY + phH * .67], [cx + phW * .36, phY + phH * .8], [cx + phW * .44, phY + phH]], 93, b, { a: .75 });
+    wline(st, [[phX + phW * .15, phY], [phX + phW * .8, phY + phH]], 94, b, { a: .4 });
+    wline(st, [[phX + phW * .3, phY], [phX + phW * .95, phY + phH]], 95, b, { a: .25 });
+  } else {   // the white eye: shut, then at 3.2 it opens and the pupil comes up to look at the camera
+    const open = .05 + .95 * span(t, 3.2, 3.3), look = { x: 0, y: .9 * (1 - span(t, 3.2, 3.45)) };
+    partyEye(st, { cx, cy, w: phW * .38, open, look, id: 96, b, dil: .5, fill: .2 });
   }
   ctx.restore();
 }
 
-function caption(t) {
-  if (t >= 1 && t < 3.4) cap.show('I can see you.', 1, t, 22);
-  else if (t >= 3.5 && t < 5.2) cap.show('Do you see yourself?', 3.5, t, 22);
-  else if (t >= 7.9 && t < END) cap.show('Finding: ' + who.stamp.toLowerCase() + '.', 7.9, t, 24);
-  else cap.clear();
-}
-function sounds(t) {
-  if (t >= .3) once('open', () => S.cue('open'));
-  if (t >= 1) once('bell', () => S.cue('bell'));
-  if (t >= 3.5) once('glass', () => S.cue('glass'));
-  if (t >= 5.2) once('crackle', () => S.crackle(1.05));
-  if (t >= 6.2) once('cut', () => S.burst(.3, .7));
-  if (t >= 7.55) once('thud', () => S.thud());
-  if (t >= 7.9) once('verdict', () => S.cue('verdict'));
-  S.bedLevel(t < 5.2 ? .6 : .45, .025);
+/* the one frame of the film that is meant to hurt: a huge eye, chalk on black, red/blue split */
+function scare(b) {
+  const { W, H } = st;
+  partyEye(st, { cx: W / 2, cy: H * .48, w: W * .55, hr: .42, id: 400, b, dil: .5, fill: .14, lw: 2.2 });
+  misreg(st, 8);
 }
 
+function frame(t) {
+  const { W, H } = st, b = boilFrame(t), f = Math.floor(t * 30 + 1e-6), I = lampI(t);
+  st.begin(PAL.black); layer.a = 1;
+  const ts = Math.min(t, 8.999);   // from the card on, the stamped form is held (dimmed) behind it
+  if (!reduced && f === 138) scare(b);   // 4.60, exactly one frame; the loop makes sure a late tick still shows it
+  else if (!reduced && t >= CARD && t < CARD_LIVE) {   // VHS input switch: two frames of blue noise
+    ctx.fillStyle = PAL.blue; ctx.fillRect(0, 0, W, H); grain(st, .8, f); glitch(st, .5, f);
+  } else if (I > .001) {
+    const sh = shake(t, 8.3, st.u * .006);
+    layer.a = I; ctx.save(); ctx.translate(sh.x, sh.y); desk(ts, b); ctx.restore(); layer.a = 1;
+    grade(st, I > 0 ? lerp(.18, .05, span(t, 6, 6.8)) : 0);
+  }
+  const bh = Math.max(40, Math.min(70, H * .07));
+  const band = reduced ? { y: H * .6, a: .15 } : t >= 4.6 && t < 5.4 ? { y: lerp(-bh, H, (t - 4.6) / .8), a: .5 } : { y: ((t / 6) % 1) * (H + bh) - bh, a: .2 };
+  if (I > .001 || f === 138) vhs(st, { t, band }); else grain(st, .07, reduced ? 1 : f);   // lamp out: grain only
+  if (t >= CARD) { ctx.save(); ctx.globalAlpha = (reduced ? span(t, CARD, CARD + .3) : 1) * .55; ctx.fillStyle = PAL.black; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+}
+
+/* ============================== playback ============================== */
+let prevT = 0;
+function showCard(t) {
+  const on = t >= (reduced ? CARD : CARD_LIVE), ready = t >= CARD_BTN;
+  $('end').classList.toggle('on', on); $('end').inert = !ready; $('ctl').classList.toggle('gone', on);
+  if (ready && !focused) { focused = true; $('open').focus(); }
+}
+function captionsAt(t) {
+  const c = CAPS.find(c => t >= c[0] && t < c[3]);
+  if (c) cap.show(c[1], c[0], t, c[2]); else cap.clear();
+  const ev = live().filter(e => t >= e[0]).pop();
+  if (ev) cap.say(ev[1]);
+}
 function loop() {
   if (!playing) return;
-  const t = isNaN(FREEZE) ? (performance.now() - t0) / 1000 : FREEZE;
-  frame(Math.min(t, END)); caption(t);
-  if (isNaN(FREEZE)) sounds(t);
-  if (t >= END) return finish();
+  let t = frozen ? FREEZE : (performance.now() - t0) / 1000;
+  if (!frozen && !reduced && prevT < 4.6 && t >= 4.6 + 1 / 30) t = 4.6;   // a slow tick must not jump over the one scare frame
+  prevT = t;
+  frame(Math.min(t, END)); captionsAt(t); showCard(t);
+  if (t >= END && !frozen) { playing = false; A.fade(); return; }
   requestAnimationFrame(loop);
 }
 function start() {
-  ended = false; fired = {}; cap.clear();
-  $('end').classList.remove('on'); $('ctl').classList.remove('gone');
-  t0 = performance.now(); playing = true; requestAnimationFrame(loop);
+  focused = false; prevT = 0; cap.reset(); $('end').classList.remove('on'); $('end').inert = true; $('ctl').classList.remove('gone');
+  t0 = performance.now(); playing = true;
+  if (!frozen) A.begin(A.on());   // after the clock starts, so the file begins at t = 0
+  paintSound(); requestAnimationFrame(loop);
 }
-function finish() {
-  if (ended) return; ended = true; playing = false;
-  cap.clear(); frame(END); S.fade();
-  $('ctl').classList.add('gone');   // the card has its own buttons
-  $('end').classList.add('on'); $('open').focus();
-}
-addEventListener('resize', () => { st.fit(); if (ended || !isNaN(FREEZE)) frame(isNaN(FREEZE) ? END : FREEZE); });
+addEventListener('resize', () => { st.fit(); lay(); if (!playing) frame(END - .01); });
 
 /* Skip jumps to the card (the result is on it); closing only ever happens from the card */
-$('skip').addEventListener('click', finish);
-document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (!ended) finish(); else if (embedded) tell('leads-reveal-done', { closed: true }); });
+function skip() { if ((performance.now() - t0) / 1000 < CARD_BTN) { t0 = performance.now() - CARD_BTN * 1000; A.fade(); } }
+$('skip').addEventListener('click', skip);
+document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('end').inert) skip(); else if (embedded) tell('leads-reveal-done', { closed: true }); });
 $('open').addEventListener('click', () => {
   if (embedded) tell('leads-reveal-done', { open: true });
   else location.href = params.get('back') && /^https:\/\/script\.google\.com\//.test(params.get('back')) ? params.get('back') : PORTAL;
@@ -271,11 +333,12 @@ $('open').addEventListener('click', () => {
 $('replay').addEventListener('click', () => { tell('leads-reveal-replay'); start(); });
 
 /* ============================== go ============================== */
-paintIdentity(); makeStamp();
+paintIdentity(); makeStamp(); lay();
+if (!frozen) A.load();   // fetch + decode now; the picture never waits for it
 await fontsReady();
 makeStamp();   // again, now in the real typewriter font
 tell('leads-reveal-ready');
-// the portal answers ready with who this is; give it a moment so the file and the card never show the wrong name
+// the portal answers ready with who this is; give it a moment so the stamp and the card never show the wrong word
 if (embedded) await Promise.race([initArrived, new Promise(r => setTimeout(r, 800))]);
 start();
 </script>
