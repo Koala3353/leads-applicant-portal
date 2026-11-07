@@ -278,6 +278,7 @@ const SETTINGS_SCHEMA = [
   { key: 'RoomBookingNote', type: 'text', def: '', help: 'Shown on the room booking page. Blank shows: details will be posted here.' },
   // Pre-LEADS
   { key: 'PreLeadsOpen', type: 'bool', def: true, help: 'Untick / FALSE to close Pre-LEADS registration right away. Blank = open.' },
+  { key: 'PreLeadsLimit', type: 'int', def: 40, help: 'THE LEADS UP closes once this many have registered. Blank = 40; 0 = no limit.' },
   { key: 'PreLeadsDeadline', type: 'date', def: '2026-11-05 17:00', help: 'When Pre-LEADS registration closes, e.g. 2026-11-05 17:00. Blank = Nov 5, 2026, 5 PM.' },
   { key: 'PreLeadsDate', type: 'text', def: 'November 5, 2026', help: 'Shown on the Pre-LEADS page. Blank = November 5, 2026.' },
   { key: 'PreLeadsTime', type: 'text', def: '5:00 PM – 7:30 PM', help: 'Shown on the Pre-LEADS page. Blank = 5:00 PM – 7:30 PM.' },

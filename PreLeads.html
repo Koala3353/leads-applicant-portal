@@ -462,11 +462,11 @@
     </div>
   </div>
 
-  <!-- Closed: Settings › PreLeadsOpen is off or PreLeadsDeadline has passed -->
+  <!-- Closed: Settings › PreLeadsOpen is off, PreLeadsDeadline has passed, or PreLeadsLimit people have registered -->
   <div class="card state" id="state-closed">
     <p class="eyebrow">TRANSMISSION ENDED</p>
-    <h2>THE LEADS UP registration is closed</h2>
-    <p>Registration for THE LEADS UP is no longer open. If you think this is a mistake, message the core team.</p>
+    <h2 id="closedTitle">THE LEADS UP registration is closed</h2>
+    <p id="closedText">Registration for THE LEADS UP is no longer open. If you think this is a mistake, message the core team.</p>
     <div class="actions"><a class="btn ghost" href="<?= baseUrl ?>" target="_top">Back to the hub</a></div>
   </div>
 
@@ -830,7 +830,13 @@
     }
 
     // Closed (but people who already registered still see their confirmation above)
-    if (res.isOpen === false) { showState('state-closed'); return; }
+    if (res.isOpen === false) {
+      if (res.full) {
+        $('closedTitle').textContent = 'THE LEADS UP is full';
+        $('closedText').textContent = 'All slots are full. If you think this is a mistake, message the core team.';
+      }
+      showState('state-closed'); return;
+    }
 
     // Active form
     $('userEmailDisplay').textContent = res.email;

@@ -99,6 +99,37 @@ function confirmMail_preleads_(r, email) {
   }, 'preleads');
 }
 
+/**
+ * THE LEADS UP reminder, sent the morning of the event (preleads_sendReminders / the 9 AM trigger, PreLeadsServer.gs).
+ * Same look as the registration email, without the answers window. Says "today", so only send it on PreLeadsDate.
+ */
+function confirmReminder_preleads_(r, email) {
+  return confirmSend_(email, confirmReminderMail_(r), 'preleads');
+}
+function confirmReminderMail_(r) {
+  const nick = String(r.Nickname || '').trim() || 'there';
+  const when = setting_('PreLeadsDate'), time = setting_('PreLeadsTime'), where = setting_('PreLeadsVenue') || 'Faura AVR';
+  const start = String(time || '').split(/\s[–-]\s/)[0].trim();   // "5:00 PM – 7:30 PM" -> "5:00 PM"
+  const next = [
+    ['01', 'Come on time', (start ? 'Be at ' + where + ' a few minutes before ' + start + '. ' : '') + 'Bring yourself; the rest is provided.', false],
+    ['02', 'Cannot make it?', 'Reply to this email so your seat can go to someone else.', false]
+  ];
+  if (isOpen_()) next.push(['03', 'Apply to LEADS', 'Applications for the camp itself are open on the portal.', false]);
+  return {
+    subject: 'Today: THE LEADS UP · ' + [time, where].filter(Boolean).join(' · '),
+    preheader: 'THE LEADS UP is today. Here is when and where.',
+    style: 'broadcast', nick: nick, tag: 'THE LEADS UP · ' + [when, time].filter(Boolean).join(' · '), headline: 'See you<br>today',
+    tagline: 'I.R.I.S. is counting down.',
+    intro: 'Hi ' + nick + ', a reminder: THE LEADS UP is today, and your seat is reserved.',
+    facts: [['WHEN', [when, time].filter(Boolean).join(' · ')], ['WHERE', where], ['WHAT', 'A preview of LEADS']],
+    sections: [], referral: '',
+    next: next,
+    button: ['Open the portal', PORTAL_SHORT_LINK_],
+    closing: 'The countdown is almost over.',
+    footer: 'THE LEADS UP · EYES ON LEADS · MEA · AUTOMATIC REMINDER, REPLY IF YOU CANNOT MAKE IT.'
+  };
+}
+
 /** Builds and sends one confirmation. Never throws: returns true when sent. */
 function confirmSend_(to, o, page) {
   try {
@@ -316,7 +347,7 @@ function confirmBroadcastHtml_(o) {
     <tr><td align="center" style="padding:22px 10px 0 10px;">
       <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
         ${win('THE_LEADS_UP.EXE', win1)}
-        ${win('ANSWERS.TXT', win2)}
+        ${o.sections.length ? win('ANSWERS.TXT', win2) : ''}
         ${win('NEXT_STEPS.EXE', win3)}
         <tr><td class="pad t-white" style="padding:2px 4px 18px 4px;font-family:${M};font-size:16px;line-height:24px;font-weight:800;color:${C.white};text-transform:uppercase;">${o.closing}</td></tr>
       </table>
@@ -325,7 +356,7 @@ function confirmBroadcastHtml_(o) {
     <tr><td class="bg-win" bgcolor="${W.gray}" style="background-color:${W.gray};border-top:2px solid #ffffff;padding:5px 8px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
         <td class="bg-win t-ink" bgcolor="${W.gray}" style="background-color:${W.gray};${raised}padding:3px 10px;width:70px;font-family:${M};font-size:12px;line-height:16px;font-weight:800;color:${C.black};text-transform:uppercase;white-space:nowrap;">&#9654; Start</td>
-        <td class="t-ink" style="padding:0 0 0 12px;font-family:${M};font-size:10px;line-height:15px;letter-spacing:1px;color:${C.ink};text-transform:uppercase;">THE LEADS UP &middot; EYES ON LEADS &middot; MEA &middot; AUTOMATIC CONFIRMATION, REPLY IF SOMETHING LOOKS WRONG.</td>
+        <td class="t-ink" style="padding:0 0 0 12px;font-family:${M};font-size:10px;line-height:15px;letter-spacing:1px;color:${C.ink};text-transform:uppercase;">${o.footer ? E(o.footer) : 'THE LEADS UP &middot; EYES ON LEADS &middot; MEA &middot; AUTOMATIC CONFIRMATION, REPLY IF SOMETHING LOOKS WRONG.'}</td>
       </tr></table></td></tr>
   </table>
 </body>
@@ -363,4 +394,12 @@ function confirm_testEmails() {
   confirmMail_preleads_({ FullName: 'Juan Dela Cruz', Nickname: 'Juan', IDNumber: '241234', YearLevel: 2, Course: 'BS ME', Block: '',
     Mobile: '09171234567', HopeToGainPreLEADS: 'To see if LEADS is for me.', DauntingAspects: 'being judged; Other: speaking first' }, me);
   return 'Sent both test confirmations to ' + me;
+}
+
+/** Run from the editor (owner only): sends THE LEADS UP reminder to you, to check the look before preleads_sendReminders. */
+function confirm_testReminder() {
+  ownerOnly_();
+  const me = currentEmail_();
+  confirmReminder_preleads_({ Nickname: 'Juan' }, me);
+  return 'Sent a test reminder to ' + me;
 }

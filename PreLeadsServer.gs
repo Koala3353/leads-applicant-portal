@@ -66,7 +66,8 @@ const PRELEADS_HEADERS = [
   'Consent',
   'HopeToGainPreLEADS',
   'DauntingAspects',
-  'OtherDaunting'
+  'OtherDaunting',
+  'ReminderSent'   // when the day-before reminder went out (preleads_sendReminders); blank = not yet
 ];
 
 /**
@@ -89,11 +90,24 @@ function preleads_isOpen_() {
   return !end || Date.now() < end.getTime();
 }
 
+/** True once Settings › PreLeadsLimit people have registered (rows with an email in the PreLeads tab). */
+function preleads_isFull_(sh) {
+  const limit = setting_('PreLeadsLimit');
+  if (!limit || limit < 0) return false;
+  sh = sh || ss_().getSheetByName(SHEET.PRELEADS);
+  if (!sh || sh.getLastRow() < 2) return false;
+  const emailCol = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(h => String(h || '').trim()).indexOf('Email');
+  if (emailCol < 0) return false;
+  const emails = sh.getRange(2, emailCol + 1, sh.getLastRow() - 1, 1).getValues();
+  return emails.filter(r => String(r[0] || '').trim()).length >= limit;
+}
+
 function preleads_getForm_() {
   const email = currentEmail_();
   const allowed = email ? isAllowedDomain_(email) : false;
   const existing = email ? preleads_findRegistration_(email) : null;
   const member = (email && allowed && !existing) ? preleads_memberFor_(email) : null;   // Ateneo accounts only, like Apply
+  const open = preleads_isOpen_(), full = open && !existing && preleads_isFull_();
   return {
     signedIn: !!email,
     email: email,
@@ -105,7 +119,8 @@ function preleads_getForm_() {
       Timestamp: existing.Timestamp
     } : null,
     member: member,
-    isOpen: preleads_isOpen_(),
+    isOpen: open && !full,
+    full: full,   // closed because every slot is taken (the page says "full", not "closed"; never the number)
     options: {
       daunting: PRELEADS_DAUNTING_OPTIONS
     },
@@ -214,6 +229,8 @@ function preleads_submit_(form) {
     const dup = preleads_isDuplicateLocked_(sh, email, clean.IDNumber);
     if (dup === 'email') return { ok: true, already: true };   // a retried submit that went through the first time: still a success
     if (dup === 'id') { bump_(failKey, 99, 3600); return idTaken; }
+    // after the duplicate check, so a retried submit that already went through still gets its success
+    if (preleads_isFull_(sh)) throw new Error('THE LEADS UP is full: all slots have been taken.');
 
     // Each value goes under its header (so the core team can reorder or add columns safely). Missing headers are added.
     // every string is stored as text (textCell_), so Sheets never turns a Course like "2-1" into a date
@@ -298,6 +315,91 @@ function preleads_isDuplicateLocked_(sh, email, idNumber) {
     if (idCol >= 0 && String(data[i][idCol] || '').trim() === targetId) return 'id';
   }
   return '';
+}
+
+/* ---------------- the day-of reminder ----------------
+ * Run from the Apps Script editor as the owner (the email says "today", so it goes out on PreLeadsDate):
+ *   preleads_reminderDryRun()      lists who would get it, sends nothing
+ *   confirm_testReminder()         (ConfirmMail.gs) sends one to yourself
+ *   preleads_scheduleReminders()   sends it automatically at PRELEADS_REMINDER_AT (one-time trigger; safe to run again)
+ *   preleads_cancelReminders()     removes that trigger
+ *   preleads_sendReminders()       sends it right now instead
+ * Sending emails every registrant whose ReminderSent cell is blank and stamps that cell, so a second run (or the
+ * trigger after a manual send) never emails anyone twice.
+ */
+const PRELEADS_REMINDER_AT = '2026-11-05 09:00';   // Manila time (parseDate_)
+function preleads_reminderTargets_(sh) {
+  const head = preleads_headers_(sh);   // adds the ReminderSent column the first time
+  const n = sh.getLastRow() - 1;
+  if (n < 1) return { head: head, list: [] };
+  const rows = sh.getRange(2, 1, n, head.length).getValues();
+  const c = h => head.indexOf(h);
+  const list = rows.map((r, i) => ({ row: i + 2, email: String(r[c('Email')] || '').trim().toLowerCase(), Nickname: String(r[c('Nickname')] || '').trim(), sent: r[c('ReminderSent')] }))
+    .filter(x => /@/.test(x.email) && !String(x.sent || '').trim());
+  return { head: head, list: list };
+}
+
+function preleads_reminderDryRun() {
+  ownerOnly_();
+  const t = preleads_reminderTargets_(preleads_ensureSheet_());
+  const msg = 'Would send the reminder to ' + t.list.length + ' (daily email quota left: ' + MailApp.getRemainingDailyQuota() + '):\n' +
+    t.list.map(x => x.email).join('\n');
+  console.log(msg);
+  return msg;
+}
+
+function preleads_sendReminders() {
+  ownerOnly_();
+  return preleads_sendReminders_();
+}
+
+/** The one-time trigger's job. From a browser it refuses: public only because triggers need that (like status_dailyReport). */
+function preleads_reminderTrigger(e) {
+  const ours = e && e.triggerUid && ScriptApp.getProjectTriggers().some(t => t.getUniqueId() === String(e.triggerUid));
+  if (!ours) ownerOnly_();
+  try { return preleads_sendReminders_(); }
+  finally { preleads_dropReminderTriggers_(); }   // a one-time trigger: clear it once it has run
+}
+
+function preleads_scheduleReminders() {
+  ownerOnly_();
+  const at = parseDate_(PRELEADS_REMINDER_AT);
+  if (!at || at.getTime() <= Date.now()) throw new Error(PRELEADS_REMINDER_AT + ' (Manila) has already passed. Run preleads_sendReminders() to send now.');
+  preleads_dropReminderTriggers_();
+  ScriptApp.newTrigger('preleads_reminderTrigger').timeBased().at(at).create();
+  const msg = 'THE LEADS UP reminder scheduled for ' + Utilities.formatDate(at, 'Asia/Manila', 'MMM d, yyyy h:mm a') + ' (Manila).';
+  console.log(msg);
+  return msg;
+}
+
+function preleads_cancelReminders() {
+  ownerOnly_();
+  const n = preleads_dropReminderTriggers_();
+  const msg = n ? 'Scheduled reminder cancelled.' : 'No reminder was scheduled.';
+  console.log(msg);
+  return msg;
+}
+
+function preleads_dropReminderTriggers_() {
+  const mine = ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'preleads_reminderTrigger');
+  mine.forEach(t => ScriptApp.deleteTrigger(t));
+  return mine.length;
+}
+
+function preleads_sendReminders_() {
+  const sh = preleads_ensureSheet_();
+  const t = preleads_reminderTargets_(sh);
+  const col = t.head.indexOf('ReminderSent') + 1;
+  let sent = 0;
+  const failed = [];
+  t.list.forEach(x => {
+    if (confirmReminder_preleads_(x, x.email)) { sh.getRange(x.row, col).setValue(new Date()); sent++; }
+    else failed.push(x.email);
+  });
+  activity_('preleads_reminder', 'sent ' + sent + (failed.length ? ', not sent ' + failed.length : ''), { level: failed.length ? 'WARN' : 'INFO', page: 'preleads' });
+  const msg = 'Reminder sent to ' + sent + '.' + (failed.length ? ' Not sent (see Activity): ' + failed.join(', ') : '');
+  console.log(msg);
+  return msg;
 }
 
 /**
