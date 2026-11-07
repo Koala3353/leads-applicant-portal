@@ -64,7 +64,8 @@ function steps_get_(page) {
       details: String(s.PaymentDetails || ''),
       deadline: iso(s.PaymentDeadline),
       qrs: step.unlocked ? steps_qrCodes_(String(s.PaymentQRCodes || '')) : [],
-      proof: String(a.PaymentProof || '') ? true : false
+      proof: String(a.PaymentProof || '') ? true : false,
+      emergencyContact: steps_getEmergencyContact_(a.ApplicantID, a.Email)
     };
   } else if (key === 'reqs') {
     const done = steps_onsiteDone_(a);
@@ -173,8 +174,126 @@ function steps_qrCodes_(text) {
 }
 
 /**
- * Upload proof of payment. file = { name, type, data (base64, no data: prefix) }.
- * Saves it in the PaymentFolder, links it in PaymentProof, and sets Payment to SUBMITTED.
+ * Emergency contact list sheet schema.
+ * Dedicated sheet 'EmergencyContacts' collects emergency contacts for camp.
+ */
+const EMERGENCY_HEADERS = [
+  'ApplicantID', 'Timestamp', 'Email', 'FullName',
+  'ContactName', 'Relationship', 'ContactMobile', 'LastUpdated'
+];
+
+function steps_emergencySheet_() {
+  return ensureTab_('EmergencyContacts', EMERGENCY_HEADERS, {
+    widths: [120, 160, 220, 200, 200, 150, 150, 160],
+    textCols: [1, 7]   // ApplicantID and ContactMobile as text
+  });
+}
+
+function steps_getEmergencyContact_(applicantId, email) {
+  const sh = ss_().getSheetByName('EmergencyContacts');
+  if (sh && sh.getLastRow() >= 2) {
+    const rows = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const r = rows[i];
+      if ((applicantId && String(r[0] || '').trim() === applicantId) ||
+          (email && String(r[2] || '').trim().toLowerCase() === String(email).trim().toLowerCase())) {
+        return {
+          name: String(r[4] || ''),
+          relation: String(r[5] || ''),
+          mobile: String(r[6] || '')
+        };
+      }
+    }
+  }
+  // Fallback: check if stored in Applicants tab
+  const found = applicantId ? getApplicantById_(applicantId) : (email ? getApplicantByEmail_(email) : null);
+  if (found && found.data) {
+    const d = found.data;
+    const name = d.EmergencyContactName || d.EmergencyName;
+    if (name) {
+      return {
+        name: String(name || ''),
+        relation: String(d.EmergencyContactRelation || d.EmergencyRelation || ''),
+        mobile: String(d.EmergencyContactMobile || d.EmergencyMobile || '')
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Saves/updates emergency contact info. Callable independently or via upload.
+ */
+function steps_saveEmergencyContact(contact) {
+  return traced_('steps_saveEmergencyContact', 'pay', () => steps_saveEmergencyContact_(contact || {}), r => r.ok ? r.id + ' emergency contact saved' : 'not saved: ' + r.error);
+}
+
+function steps_saveEmergencyContact_(contact) {
+  const found = requireApplicant_();
+  const a = found.data;
+  const p = progress_(a);
+  if (!p.payment.unlocked && p.payment.state !== 'done' && p.payment.state !== 'waiting') {
+    return { ok: false, error: 'Payment and emergency contact are not open for you yet.' };
+  }
+
+  const name = String(contact.name || '').trim();
+  const relation = String(contact.relation || '').trim();
+  const rawMobile = String(contact.mobile || '').trim();
+  const mobile = normalizeMobile_(rawMobile);
+
+  if (!name || name.length < 2 || name.length > 80) {
+    return { ok: false, error: 'Please enter a valid emergency contact name (2 to 80 characters).' };
+  }
+  if (!relation || relation.length < 2 || relation.length > 50) {
+    return { ok: false, error: 'Please enter a relationship to the student (e.g. Parent, Guardian, Sibling).' };
+  }
+  if (!/^09\d{9}$/.test(mobile)) {
+    return { ok: false, error: 'Emergency contact mobile must be 11 digits starting with 09 (e.g. 09171234567).' };
+  }
+
+  const clean = { name: name, relation: relation, mobile: mobile };
+  withScriptLock_(20000, () => {
+    // 1. Update or append row in EmergencyContacts tab
+    const sh = steps_emergencySheet_();
+    const lastRow = sh.getLastRow();
+    let targetRow = -1;
+    if (lastRow >= 2) {
+      const ids = sh.getRange(2, 1, lastRow - 1, 1).getValues().flat().map(x => String(x).trim());
+      const idx = ids.indexOf(a.ApplicantID);
+      if (idx >= 0) targetRow = idx + 2;
+    }
+
+    const now = new Date();
+    if (targetRow > 0) {
+      sh.getRange(targetRow, 5, 1, 4).setValues([[clean.name, clean.relation, textCell_(clean.mobile), now]]);
+    } else {
+      sh.appendRow([a.ApplicantID, now, a.Email, a.FullName, clean.name, clean.relation, textCell_(clean.mobile), now]);
+    }
+
+    // 2. Also update Applicants tab if columns exist in the header row
+    const cHead = cols_();
+    const extra = {};
+    if (cHead.indexOf('EmergencyContactName') >= 0) extra.EmergencyContactName = clean.name;
+    else if (cHead.indexOf('EmergencyName') >= 0) extra.EmergencyName = clean.name;
+
+    if (cHead.indexOf('EmergencyContactRelation') >= 0) extra.EmergencyContactRelation = clean.relation;
+    else if (cHead.indexOf('EmergencyRelation') >= 0) extra.EmergencyRelation = clean.relation;
+
+    if (cHead.indexOf('EmergencyContactMobile') >= 0) extra.EmergencyContactMobile = clean.mobile;
+    else if (cHead.indexOf('EmergencyMobile') >= 0) extra.EmergencyMobile = clean.mobile;
+
+    if (Object.keys(extra).length) {
+      updateApplicant_(found.row, extra, a.ApplicantID);
+    }
+  });
+
+  logChange_(a.ApplicantID, 'emergency contact', 'saved', clean.name + ' (' + clean.relation + ', ' + clean.mobile + ')', 'applicant');
+  return { ok: true, id: a.ApplicantID, contact: clean };
+}
+
+/**
+ * Upload proof of payment. file = { name, type, data (base64, no data: prefix), emergencyContact: { name, relation, mobile } }.
+ * Saves emergency contact, saves file in PaymentFolder, links it in PaymentProof, and sets Payment to SUBMITTED.
  */
 function steps_uploadProof(file) {
   return traced_('steps_uploadProof', 'pay', () => steps_uploadProof_(file || {}), r => r.ok ? r.id + ' proof uploaded' : 'not uploaded: ' + r.error);
@@ -184,12 +303,24 @@ function steps_uploadProof_(file) {
   const found = requireApplicant_();
   const a = found.data;
   const p = progress_(a);
-  if (!p.payment.unlocked) return { ok: false, error: p.payment.state === 'done' ? 'Your payment is already verified.' : 'Proof of payment is not open for you yet.' };
+  if (!p.payment.unlocked && p.payment.state !== 'done') return { ok: false, error: p.payment.state === 'done' ? 'Your payment is already verified.' : 'Proof of payment is not open for you yet.' };
+
+  // If emergency contact provided, validate and save it first
+  if (file.emergencyContact) {
+    const ecRes = steps_saveEmergencyContact_(file.emergencyContact);
+    if (!ecRes.ok) return ecRes;
+  }
+
+  const rawData = String(file.data || '');
+  // If no file data provided but emergency contact was saved and proof already exists, treat as contact update
+  if (!rawData && a.PaymentProof) {
+    return { ok: true, id: a.ApplicantID, contactOnly: true };
+  }
 
   const type = String(file.type || '').toLowerCase();
   if (PROOF_TYPES.indexOf(type) < 0) return { ok: false, error: 'Upload a photo (PNG, JPG, WEBP, HEIC) or a PDF.' };
   let bytes;
-  try { bytes = Utilities.base64Decode(String(file.data || '')); } catch (e) { return { ok: false, error: 'That file could not be read. Try again.' }; }
+  try { bytes = Utilities.base64Decode(rawData); } catch (e) { return { ok: false, error: 'That file could not be read. Try again.' }; }
   if (!bytes.length) return { ok: false, error: 'That file is empty.' };
   if (bytes.length > PROOF_MAX_BYTES) return { ok: false, error: 'That file is over 8 MB. Send a smaller photo or a screenshot.' };
   if (!steps_looksLike_(bytes, type)) return { ok: false, error: 'That file does not look like a photo or a PDF. Send a screenshot of the receipt.' };

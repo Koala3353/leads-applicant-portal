@@ -55,6 +55,21 @@
   .drop .fname{font-family:var(--mono);font-size:.85rem;overflow-wrap:anywhere}
   .s-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
 
+  /* emergency contact fields & summary */
+  .s-sec-title{font-family:var(--display);font-size:1.15rem;letter-spacing:.03em;text-transform:uppercase;color:var(--text);margin:18px 0 12px;border-bottom:1px solid var(--line);padding-bottom:4px}
+  .s-field{display:flex;flex-direction:column;gap:6px;margin:0 0 14px;min-width:0;text-align:left}
+  .s-field label{font-family:var(--mono);font-size:.76rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .s-field label .req{color:var(--danger,#e00000);margin-left:2px}
+  .s-field input[type=text],.s-field input[type=tel]{width:100%;font:inherit;font-size:16px;color:var(--text);background:#060606;border:2px inset #7a7a7a;border-radius:0;padding:.65em .8em;min-height:44px}
+  .s-field input:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+  .s-field.has-error input{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger)}
+  .s-field .err{color:var(--danger);font-family:var(--mono);font-size:.74rem;display:none;margin-top:2px}
+  .s-field.has-error .err{display:block}
+  .ec-summary{display:grid;gap:8px;font-family:var(--mono);font-size:.82rem;margin:12px 0 16px;padding:12px 14px;background:rgba(0,0,0,.35);border:1px dashed var(--line);text-align:left}
+  .ec-summary p{margin:0;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .ec-summary span{color:var(--muted);text-transform:uppercase}
+  .ec-summary b{color:var(--glow)}
+
   /* requirement forms: manila case folders */
   /* Requirements rows with Link = onsite: an "I dropped this off" box instead of a form button */
   .onsite{margin:12px 0 0;display:flex;align-items:center;gap:12px;min-height:44px;padding:8px 12px;border:2px solid var(--line,#444);cursor:pointer;font-family:var(--mono);font-size:.9rem}
@@ -136,12 +151,43 @@
       <form class="card s-card" id="upForm" hidden>
         <div class="winbar"><span>UPLOAD.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
         <h2><?= BRAND.steps.pay.upTitle ?></h2>
+
+        <p class="s-sec-title">01 // Emergency Contact</p>
+        <div class="s-field" id="field-ecName">
+          <label for="ecName">Contact Full Name <span class="req">*</span></label>
+          <input type="text" id="ecName" autocomplete="name" placeholder="e.g. Maria Dela Cruz" required maxlength="80">
+          <span class="err" id="err-ecName"></span>
+        </div>
+        <div class="s-field" id="field-ecRelation">
+          <label for="ecRelation">Relationship to Student <span class="req">*</span></label>
+          <input type="text" id="ecRelation" placeholder="e.g. Parent, Guardian, Sibling" required maxlength="50">
+          <span class="err" id="err-ecRelation"></span>
+        </div>
+        <div class="s-field" id="field-ecMobile">
+          <label for="ecMobile">Emergency Contact Mobile <span class="req">*</span></label>
+          <input type="tel" id="ecMobile" inputmode="tel" placeholder="09171234567" required maxlength="15">
+          <span class="err" id="err-ecMobile"></span>
+        </div>
+
+        <p class="s-sec-title">02 // Proof of Payment</p>
         <label class="drop" id="drop">
           <input type="file" id="proof" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" aria-describedby="upHint">
           <span id="dropInner"><b>Choose a file</b><br><small id="upHint"><?= BRAND.steps.pay.upHint ?></small></span>
         </label>
-        <div class="s-actions"><button class="btn" type="submit" id="upBtn" disabled>Send proof</button></div>
+        <div class="s-actions"><button class="btn" type="submit" id="upBtn" disabled>Send proof & contact</button></div>
       </form>
+
+      <!-- shown when emergency contact is on record or when payment is verified -->
+      <div class="card s-card" id="ecCard" hidden>
+        <div class="winbar"><span>EMERGENCY_CONTACT.LOG</span><i><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+        <h2>Emergency Contact</h2>
+        <div class="ec-summary">
+          <p><span>Contact:</span> <b id="sumEcName">—</b></p>
+          <p><span>Relationship:</span> <b id="sumEcRelation">—</b></p>
+          <p><span>Mobile:</span> <b id="sumEcMobile">—</b></p>
+        </div>
+        <div class="s-actions"><button class="btn ghost" type="button" id="editEcBtn">Update contact details</button></div>
+      </div>
     </div>
   </div>
 
@@ -221,6 +267,7 @@
   function locked(text) { $('lockedMsg').textContent = text; show('locked'); }
 
   /* ---------- 02 proof of payment ---------- */
+  let hasExistingProof = false;
   function renderPay(d) {
     const c = d.content, v = d.applicant.payment;
     $('payPill').textContent = 'Payment: ' + v; $('payPill').className = 'pill ' + (PILL[v] || 'dim');
@@ -245,9 +292,77 @@
       new IntersectionObserver(es => document.documentElement.classList.toggle('qr-clean', es.some(x => x.isIntersecting)), { threshold: .25 })
         .observe($('qrs'));
     }
-    $('upForm').hidden = !d.step.unlocked;   // verified: nothing left to upload
+
+    hasExistingProof = !!c.proof;
+    const ec = c.emergencyContact;
+    if (ec) {
+      if (!$('ecName').value) $('ecName').value = ec.name || '';
+      if (!$('ecRelation').value) $('ecRelation').value = ec.relation || '';
+      if (!$('ecMobile').value) $('ecMobile').value = ec.mobile || '';
+      $('sumEcName').textContent = ec.name || '—';
+      $('sumEcRelation').textContent = ec.relation || '—';
+      $('sumEcMobile').textContent = ec.mobile || '—';
+      $('ecCard').hidden = false;
+    } else {
+      $('ecCard').hidden = true;
+    }
+
+    const isVerified = (v === 'VERIFIED');
+    $('upForm').hidden = isVerified;
+    if (isVerified) {
+      $('ecCard').hidden = false;
+    }
+
+    updateSubmitBtn();
     if (v === 'VERIFIED') kuya('love', T.pay.states.VERIFIED);
     show('pay');
+  }
+
+  function updateSubmitBtn() {
+    const btn = $('upBtn');
+    if (picked) {
+      btn.textContent = 'Send proof & contact';
+      btn.disabled = false;
+    } else if (hasExistingProof) {
+      btn.textContent = 'Update contact details';
+      btn.disabled = false;
+    } else {
+      btn.textContent = 'Send proof & contact';
+      btn.disabled = true;
+    }
+  }
+
+  $('ecMobile').addEventListener('blur', () => {
+    let v = $('ecMobile').value.replace(/[^\d+]/g, '');
+    if (v.startsWith('+63')) v = '0' + v.slice(3);
+    else if (v.startsWith('63')) v = '0' + v.slice(2);
+    else if (v.length === 10 && v[0] === '9') v = '0' + v;
+    $('ecMobile').value = v;
+  });
+
+  $('editEcBtn').addEventListener('click', () => {
+    $('upForm').hidden = false;
+    $('ecName').focus();
+    $('upForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  function validateEc() {
+    let ok = true;
+    const name = $('ecName').value.trim();
+    const rel = $('ecRelation').value.trim();
+    const mob = $('ecMobile').value.trim();
+
+    const setErr = (id, msg) => {
+      const f = $('field-' + id), e = $('err-' + id);
+      if (msg) { f.classList.add('has-error'); e.textContent = msg; ok = false; }
+      else { f.classList.remove('has-error'); e.textContent = ''; }
+    };
+
+    setErr('ecName', (!name || name.length < 2) ? 'Please enter the contact\'s full name (at least 2 letters).' : '');
+    setErr('ecRelation', (!rel || rel.length < 2) ? 'Please specify the relationship (e.g. Parent, Guardian, Sibling).' : '');
+    setErr('ecMobile', !/^09\d{9}$/.test(mob) ? 'Must be an 11-digit mobile starting with 09 (e.g. 09171234567).' : '');
+
+    return ok ? { name: name, relation: rel, mobile: mob } : null;
   }
 
   // Large photos are shrunk in the browser first (phones take 5+ MB pictures): faster upload, well under the limit.
@@ -258,7 +373,7 @@
   $('drop').addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) pick(e.dataTransfer.files[0]); });
 
   function pick(file) {
-    picked = null; $('upBtn').disabled = true; msg('');
+    picked = null; updateSubmitBtn(); msg('');
     if (!file) return;
     // many browsers report no type for .heic photos: work it out from the extension
     const EXT = { heic: 'image/heic', heif: 'image/heif', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', pdf: 'application/pdf' };
@@ -269,7 +384,7 @@
     const inner = $('dropInner'); inner.textContent = '';
     const done = f => {
       if (f.size > 8 * 1024 * 1024) return msg('That file is over 8 MB. Send a smaller photo or a screenshot.', 'bad');
-      picked = f; $('upBtn').disabled = false;
+      picked = f; updateSubmitBtn();
       if (/^image\//.test(f.type) && !/hei[cf]/.test(f.type)) {
         const img = new Image(), u = URL.createObjectURL(f);
         img.onload = img.onerror = () => URL.revokeObjectURL(u);   // the preview holds the picture; the URL isn't needed after
@@ -297,23 +412,52 @@
   }
   $('upForm').addEventListener('submit', e => {
     e.preventDefault();
-    if (!picked) return;
-    $('upBtn').disabled = true; msg('Uploading…');
-    if (window.Loader) Loader.show('Filing your proof…');
-    const reader = new FileReader();
-    reader.onload = () => {
-      const s = String(reader.result), data = s.slice(s.indexOf(',') + 1);   // one copy, not split()'s array of two
-      call('steps_uploadProof', { name: picked.name, type: picked.type, data: data }).then(r => {
+    const ec = validateEc();
+    if (!ec) {
+      const firstErr = $('upForm').querySelector('.has-error input');
+      if (firstErr) firstErr.focus();
+      return msg('Please complete the emergency contact fields correctly.', 'bad');
+    }
+    if (!picked && !hasExistingProof) return msg('Please attach your proof of payment.', 'bad');
+
+    $('upBtn').disabled = true; msg(picked ? 'Filing your proof and contact…' : 'Updating emergency contact…');
+    if (window.Loader) Loader.show(picked ? 'Filing your proof & contact…' : 'Saving emergency contact…');
+
+    const sendPayload = (data) => {
+      call('steps_uploadProof', {
+        name: picked ? picked.name : '',
+        type: picked ? picked.type : '',
+        data: data || '',
+        emergencyContact: ec
+      }).then(r => {
         if (window.Loader) Loader.hide();
         if (!r || !r.ok) { $('upBtn').disabled = false; return msg((r && r.error) || 'That did not go through. Try again.', 'bad'); }
-        kuya('happy', T.pay.sent);
-        picked = null; $('proof').value = ''; $('dropInner').innerHTML = '<b>Choose a file</b>';
+        kuya('happy', picked ? T.pay.sent : 'Emergency contact updated.');
+        picked = null; $('proof').value = ''; $('dropInner').innerHTML = '<b>Choose a file</b><br><small id="upHint">' + BRAND.steps.pay.upHint + '</small>';
         load();
-        setTimeout(() => msg(T.pay.sent, 'good'), 900);
-      }).catch(err => { if (window.Loader) Loader.hide(); $('upBtn').disabled = false; msg((err && err.message) || 'That did not go through. Try again.', 'bad'); });
+        setTimeout(() => msg(picked ? T.pay.sent : 'Emergency contact updated.', 'good'), 900);
+      }).catch(err => {
+        if (window.Loader) Loader.hide();
+        $('upBtn').disabled = false;
+        msg((err && err.message) || 'That did not go through. Try again.', 'bad');
+      });
     };
-    reader.onerror = () => { if (window.Loader) Loader.hide(); $('upBtn').disabled = false; msg('That file could not be read. Try another one.', 'bad'); };
-    reader.readAsDataURL(picked);
+
+    if (picked) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const s = String(reader.result), data = s.slice(s.indexOf(',') + 1);   // one copy, not split()'s array of two
+        sendPayload(data);
+      };
+      reader.onerror = () => {
+        if (window.Loader) Loader.hide();
+        $('upBtn').disabled = false;
+        msg('That file could not be read. Try another one.', 'bad');
+      };
+      reader.readAsDataURL(picked);
+    } else {
+      sendPayload('');
+    }
   });
 
   /* ---------- 03 requirements ---------- */
