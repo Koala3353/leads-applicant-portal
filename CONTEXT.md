@@ -47,7 +47,9 @@ Member B: you edit `Home.html` + `HomeApi.gs` and the payment view of `Steps.htm
 **LEADS** is an off-site **leadership camp** by **MEA** (Management Engineering Association, Ateneo) for its members, **MEAns**. The portal takes someone from application to "you're in":
 
 1. **Apply** (Member A): one application per person.
-2. **Review:** the core team accept / waitlist / reject **in the Sheet** (LEADS → Open review panel, or the cell dropdowns). Applicants only see the decision once Settings › `ResultsReleased` is ticked (`getApplicantForPortal_` masks ACCEPTED / WAITLISTED / REJECTED / CONFIRMED as UNDER REVIEW; every applicant-facing lookup goes through it).
+**Since Nov 9 2026 the core team's "[LEADS 2627] Participant Application Tracker" (Settings › `TrackerSheet`, `Tracker.gs`) decides Status, Payment and Requirements:** the ID Numbers typed in its `[02.1] Accepted` list = ACCEPTED, `[02.2]` first list = REJECTED, second = WAITLISTED; `[05] Payment Tracker` › Verification Status (No Payment / For Verification / Payment Verified) = Payment; `[04] PNF & DNU Tracker` (both Verified = APPROVED). A proof upload writes the Drive link + "For Verification" (+ Rate) into `[05]`; the "I dropped this off onsite" tick writes `[04]`'s PNF / DNU box. People are matched by ID Number; tracker columns are found by header text. Pages see a change within a minute; `tracker_syncTrigger` (every 5 min, installed by `setup_trackerTrigger`) or LEADS › Sync from the tracker now copies it into the Applicants columns. While it's on, the review panel / menu / hand edits refuse accept / waitlist / reject, Payment and Requirements. `TrackerSheet` = `off` brings the old flow back. The tracker's `[00]` tab imports Applicants **by header name**, so deleting or moving Applicants columns doesn't shift its other tabs (a deleted name just becomes a blank column there).
+
+2. **Review:** the core team accept / waitlist / reject in the **tracker** (above; before Nov 9 2026: in the Sheet's review panel). Applicants only see the decision once Settings › `ResultsReleased` is ticked (`getApplicantForPortal_` masks ACCEPTED / WAITLISTED / REJECTED / CONFIRMED as UNDER REVIEW; every applicant-facing lookup goes through it).
 3. **Payment (first):** proof of payment through the **payment Google Form**, after acceptance or any time after applying (a setting); the core team mark Payment.
 4. **Requirements (after payment):** once Payment is **VERIFIED**, accepted applicants send PDFs + camp info through the **requirements Google Form**; the core team check and mark Requirements.
 5. **Confirmed:** ACCEPTED + Requirements APPROVED + Payment VERIFIED → automatically **CONFIRMED**.
@@ -73,6 +75,7 @@ Member B: you edit `Home.html` + `HomeApi.gs` and the payment view of `Steps.htm
 | `Brand.gs` | `BRAND`: all copy, colors, fonts, I.R.I.S.'s lines/faces/colors. `brand_css_()`, `brand_json_()`. |
 | `AdminMenu.gs` | The LEADS menu, the review panel's server side (`review_*`, sidebar in `ReviewPanel.html`), and the check that logs/undoes hand edits to the three track columns. |
 | `Setup.gs` | `setup_applyValidation()`: Sheet validation rules (owner runs it). |
+| `Tracker.gs` | The Participant Application Tracker link (§2.1): reads it (`trackerRead_`, cached a minute), lays it over the applicant's row (`trackerApply_`, in `getApplicantForPortal_`), writes proof uploads / onsite ticks back, and syncs it into Applicants (`tracker_sync_`). Admins (Admins tab) can open every page whatever the switches say: `progressFor_` / `isOpenFor_` in Utils.gs. |
 | `HomeApi.gs` + `Home.html` | **Member B, shared with Keene.** The hub: status card, next step, one card per step, referral card, FAQ/testimonials for non-applicants. |
 | `StepsApi.gs` + `Steps.html` | **Member B works on the payment view (`?page=pay`), shared with Keene.** The steps after acceptance, one page with four views: `?page=pay` (02 proof of payment: details, QR codes, upload), `reqs` (03 requirements: the forms from the Requirements tab, with an inline preview), `ga` (04 1st GA: calendar button), `room` (05 room booking: placeholder). Copy in `BRAND.steps`. |
 | `Styles.html` · `PageTop.html` · `Loader.html` · `Mascot.html` | Shared CSS · top bar (logo, "← Back to the hub", **Sign out**) · full-screen loading overlay with a bouncing I.R.I.S. · **I.R.I.S.** in the bottom-right corner (§7.2). |
@@ -96,14 +99,13 @@ Navy headers: **never rename** them. The code finds every Applicants column by i
 | `YearLevel` | integer 1–5 | Apply |
 | `Mobile` | `09` + 9 digits, **text** (leading zero!) | Apply. `+63 917…`, `0917-…`, `917…` are cleaned to `09…` by `normalizeMobile_()` (server) / `normalizePhone()` (page) |
 | `Status` / `Requirements` / `Payment` | §2.4 | Apply creates `SUBMITTED`/`NONE`/`NONE`; then core team only |
-| `ReviewedBy`, `LastUpdated` | email, Date | automatic |
-| `Notes` | text | **core team only, never shown to applicants** |
+| `LastUpdated` | Date | automatic. (`ReviewedBy` and `Notes` were deleted Nov 9 2026: the tracker is the record.) |
 | `Block` | letters/numbers, ≤30 | Apply. **Required for first years** (ID starts with `26` or YearLevel 1), optional otherwise |
 | `MBTI` | one of the 16 types (`INTJ`…) or blank | Apply. Autofilled from MemData (header "MBTI", else column AB); `INTJ-A` → `INTJ` |
 | `PastOrgs` | ≤500 chars, multiline, optional | Apply |
-| `FirstOvernight` / `OffsiteAvailability` | `Yes` / `No` | Apply. `OffsiteAvailability` is one checkbox since Oct 23 2026 (RecSec): ticking it = `Yes`, and it's required, so new rows are always `Yes` (older rows may say `No`). Shows Settings › `EventDates` |
+| `OffsiteAvailability` | `Yes` / `No` | Apply. (`FirstOvernight` and `FirstImpression` left the form Oct 23 2026; their columns were deleted Nov 9 2026.) `OffsiteAvailability` is one checkbox since Oct 23 2026 (RecSec): ticking it = `Yes`, and it's required, so new rows are always `Yes` (older rows may say `No`). Shows Settings › `EventDates` |
 | `DataConsent` | `Y` (must be Y to submit) | Apply (RA 10173) |
-| `WhyParticipant` / `FirstImpression` / `TakesLeadership` / `FearLeadership` | 50–1000 chars each, multiline, required | Apply (the 4 essays). `Rumors` was dropped Oct 2026; its old column can stay in the Sheet. |
+| `WhyParticipant` / `TakesLeadership` / `FearLeadership` | 50–1000 chars each, multiline, required | Apply (the 3 essays). `Rumors` was dropped Oct 2026; its old column can stay in the Sheet. |
 | `GameAnswers` | JSON text (≤5000 chars) | Game page: the choices made in the 3 CCTV rooms |
 | `PaymentProof` | Drive link | Steps page upload (`steps_uploadProof`). A new upload replaces the link; old files stay in the folder. |
 | `ReferralCode` | e.g. `BEA` | Made on submit (`makeReferralCode_`): the nickname in capitals (accents and spaces dropped, max 12 letters); if taken, `BEA2`, `BEA3`… Older `BEA-7K2Q` codes still work. Applicants from before referrals get one the first time they open the hub. |

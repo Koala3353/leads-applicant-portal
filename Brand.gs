@@ -238,7 +238,7 @@ const BRAND = {
     req:     { n: '03', title: 'Requirements',     fix: "Ready your documents and submit onsite. Let us know if you've submitted here." },
     ga:      { n: '04', title: '1st General Assembly', fix: 'Your first LEADS gathering. Attendance is required. How many are watching?' },
     room:    { n: '05', title: 'Room booking',     fix: 'Choose where you sleep, and choose wisely who you sleep with.' },
-    sheet:   { n: '00', title: 'Core team',        fix: 'Review applicants in the Sheet: LEADS → Open review panel, click their rows, press Accept, Verify or Approve. Add a note and they see it here.' }
+    sheet:   { n: '00', title: 'Core team',        fix: 'Decide, verify payments and tick PNF / DNU in the Participant Application Tracker: the portal follows it within a minute. Notes to applicants still go in the Sheet (LEADS → Open review panel).' }
   },
   /* ---------- FinAid discount: Apply's FinAid Scholar box, Settings › FinAidDiscount, fee_() in Utils.gs ---------- */
   // Shown on the Game fee note, the payment page and the confirmation email, only to applicants who ticked the box.
