@@ -257,7 +257,15 @@ const BRAND = {
             upHint: 'A screenshot or photo of the receipt that shows the amount, the date and the reference number. PNG, JPG or PDF, up to 8 MB.',
             states: { NONE: 'No proof on file yet.', SUBMITTED: 'Proof received. The core team is checking it. Upload again only if you sent the wrong file.',
                       VERIFIED: 'Verified. Your payment is on record. Requirements are next.', REJECTED: 'Your proof was not accepted. Check the details and upload a new one.' },
-            sent: 'Proof received. It is in your file now.' },
+            sent: 'Proof received. It is in your file now.',
+            // the amount slip on top of "How to pay" (numbers from fee_ in Utils.gs; {later} = pesos, no ₱)
+            dueK: 'Amount due', dueLater: '+ ₱{later} later, only if notarization is needed',
+            track: ['Pay the fee', 'Send your proof', 'Verified'],   // the three tags above the cards
+            // after a proof goes in: the receipt drops into the case folder, RECEIVED is stamped, then what happens next
+            filed: { title: 'Evidence filed.', stamp: 'Received', exhibit: 'Exhibit 02 // proof of payment', tab: 'Case file',
+                     log: 'Proof logged to {id} at {time}',
+                     next: 'The core team checks it next. Once it clears, this page says VERIFIED and your requirements open.',
+                     button: 'Back to my file' } },
     reqs: { n: '03', file: 'REQUIREMENTS.EXE', title: 'Requirements',
             lead: 'Fill in every form below. Each one says what it needs. The core team marks your file APPROVED once everything is in.',
             empty: 'The forms are not posted yet. Check back here.',

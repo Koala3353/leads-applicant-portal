@@ -53,7 +53,68 @@
   .drop small{color:var(--muted);max-width:30em}
   .drop img{max-width:100%;max-height:220px;box-shadow:4px 4px 0 #000}
   .drop .fname{font-family:var(--mono);font-size:.85rem;overflow-wrap:anywhere}
+  /* the drop zone is an evidence bag: a red tag, a scan line while you hover or drag, a taped exhibit photo once picked */
+  .drop::before{content:"EVIDENCE";position:absolute;top:-2px;right:-2px;padding:4px 9px 3px;background:var(--danger);color:#000;font:700 .62rem/1 var(--mono);letter-spacing:.18em}
+  .drop::after{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--glow);opacity:0;pointer-events:none}
+  .drop:hover::after,.drop.over::after{opacity:.7;animation:dropScan 1.8s linear infinite}
+  @keyframes dropScan{from{top:0}to{top:calc(100% - 2px)}}
+  .drop.has-file{border-style:solid;border-color:var(--glow)}
+  .drop .exhibit{display:inline-block;max-width:min(100%,260px);padding:10px 10px 7px;background:#f4f1ea;color:#1b1b1b;box-shadow:4px 4px 0 #000;transform:rotate(-1.5deg)}
+  .drop .exhibit img{display:block;max-width:100%;max-height:200px;margin:0 auto;box-shadow:none}
+  .drop .exhibit small{display:block;margin-top:7px;font-family:var(--type);font-size:.85rem;color:#1b1b1b;overflow-wrap:anywhere}
+  .doc{display:grid;place-items:center;width:84px;height:104px;margin:0 auto;background:#fff;color:#1b1b1b;border:2px solid #1b1b1b;font:700 1rem/1 var(--mono);letter-spacing:.1em}
   .s-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
+
+  /* amount due: a paper slip clipped to "How to pay" */
+  .due-slip{position:relative;margin:0 0 20px;padding:14px 16px 14px;background:var(--paper);color:var(--paper-ink);box-shadow:4px 4px 0 #000;transform:rotate(-.4deg);
+    border-bottom:2px dashed rgba(27,27,27,.45)}
+  .due-slip::before{content:"";position:absolute;top:-9px;left:22px;width:58px;height:18px;background:rgba(255,255,160,.6);transform:rotate(-4deg)}
+  .due-k{margin:0;font:700 .68rem/1.2 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:#5c5c5c}
+  .due-amt{margin:6px 0 4px;font-family:var(--display);font-size:clamp(2.3rem,8vw,3.3rem);line-height:1;letter-spacing:.01em;overflow-wrap:anywhere}
+  .due-amt s{margin-left:.35em;font-size:.42em;color:#8b0000;vertical-align:middle}
+  .due-sub{margin:0;font-family:var(--type);font-size:.95rem}
+  .due-sub:empty{display:none}
+
+  /* where the payment is: three evidence tags */
+  .pay-track{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 22px;padding:0;list-style:none;counter-reset:pt}
+  .pay-track li{position:relative;counter-increment:pt;min-width:0;padding:11px 10px 10px 36px;border:1.5px dashed var(--line);color:var(--muted);
+    font:.76rem/1.25 var(--mono);letter-spacing:.08em;text-transform:uppercase;overflow-wrap:anywhere}
+  .pay-track li::before{content:counter(pt,decimal-leading-zero);position:absolute;left:10px;top:11px;font-weight:700}
+  .pay-track li.is-done{border-style:solid;border-color:var(--glow);color:var(--text)}
+  .pay-track li.is-done::before{content:"\2713";color:var(--glow)}
+  .pay-track li.is-now{border-style:solid;border-color:var(--text);color:var(--text);background:rgba(255,255,0,.06)}
+  .pay-track li.is-now::after{content:"";position:absolute;right:9px;top:9px;width:7px;height:7px;border-radius:50%;background:var(--danger);animation:ld-pulse 1.4s steps(2) infinite}
+  .pay-track li.is-flag{border-style:solid;border-color:var(--danger);color:var(--danger)}
+  @media (max-width:560px){.pay-track li{padding:30px 8px 9px 10px}.pay-track li::before{top:9px}}
+
+  /* EVIDENCE FILED: after a proof goes in. The photo drops into the case folder, RECEIVED is stamped, the log line types,
+     then what happens next. Every element's resting style is its final state, so reduced motion (Styles.html) just shows it. */
+  html.filed-open{overflow:hidden}
+  .filed{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;padding:28px 16px;overflow:auto;background:rgba(5,5,5,.95);animation:filedIn .3s ease-out both}
+  .filed[hidden]{display:none}
+  .filed:focus{outline:none}
+  .filed-scan{position:fixed;left:0;right:0;height:22vh;pointer-events:none;background:linear-gradient(to bottom,transparent,rgba(255,255,0,.06),transparent);animation:vhsBand 1.7s .1s linear both}
+  .filed-stage{position:relative;width:min(100%,420px);text-align:center}
+  .filed-folder{position:relative;width:min(80vw,300px);height:220px;margin:0 auto 22px;animation:ffThud .28s 1.62s ease-out both}
+  .ff-back{position:absolute;inset:28px 0 0;background:var(--manila-dk);box-shadow:5px 5px 0 #000}
+  .ff-tab{position:absolute;left:14px;top:-22px;padding:5px 12px 3px;background:var(--manila-dk);color:#1b1b1b;font:.74rem/1.2 var(--type);letter-spacing:.08em;white-space:nowrap}
+  .ff-photo{position:absolute;left:21%;bottom:44px;width:58%;height:150px;padding:8px 8px 24px;background:#f4f1ea;box-shadow:3px 3px 0 #000;transform:rotate(-4deg);
+    animation:ffDrop 1s .35s cubic-bezier(.2,.8,.25,1) both}
+  .ff-photo img{display:block;width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.15)}
+  .ff-photo .doc{width:100%;height:100%;border-width:1px}
+  .ff-photo span{position:absolute;left:4px;right:4px;bottom:6px;font:.58rem/1 var(--type);color:#1b1b1b;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ff-front{position:absolute;left:0;right:0;bottom:0;height:52%;display:flex;align-items:flex-end;padding:0 0 12px 14px;background:var(--manila);box-shadow:5px 5px 0 #000}
+  .ff-label{font:1rem/1 var(--type);color:#1b1b1b;letter-spacing:.06em;text-transform:uppercase}
+  .filed-stamp{position:absolute;right:6%;bottom:12%;z-index:3;font-size:1.45rem;--r:-12deg;animation:filedSlam .34s 1.35s cubic-bezier(.3,1.6,.5,1) both}
+  .filed-title{margin:0 0 10px;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:clamp(2rem,8vw,2.8rem);line-height:1;animation:filedUp .4s 1.85s ease-out both}
+  .filed-log{min-height:1.4em;margin:0 0 14px;font:.78rem/1.4 var(--mono);letter-spacing:.06em;color:var(--glow);text-transform:uppercase;overflow-wrap:anywhere}
+  .filed-next{margin:0 auto 20px;max-width:30em;line-height:1.55;animation:filedUp .4s 2.55s ease-out both}
+  .filed .btn{animation:filedUp .4s 2.75s ease-out both}
+  @keyframes filedIn{from{opacity:0}}
+  @keyframes ffDrop{from{opacity:0;transform:translateY(-130%) rotate(9deg)}55%{opacity:1}to{opacity:1;transform:rotate(-4deg)}}
+  @keyframes filedSlam{from{opacity:0;transform:rotate(-12deg) scale(2.2)}to{opacity:.85;transform:rotate(-12deg) scale(1)}}
+  @keyframes ffThud{40%{transform:translateY(3px)}}
+  @keyframes filedUp{from{opacity:0;transform:translateY(8px)}}
 
   /* emergency contact fields & summary */
   .s-sec-title{font-family:var(--display);font-size:1.15rem;letter-spacing:.03em;text-transform:uppercase;color:var(--text);margin:18px 0 12px;border-bottom:1px solid var(--line);padding-bottom:4px}
@@ -137,9 +198,17 @@
   <!-- 02 proof of payment -->
   <div class="state" id="state-pay">
     <div class="s-status"><span class="pill" id="payPill"></span><p id="payState"></p></div>
+    <ol class="pay-track" id="payTrack" aria-label="Payment progress">
+      <? BRAND.steps.pay.track.forEach(function (t) { ?><li><?= t ?></li><? }); ?>
+    </ol>
     <div class="s-grid two">
       <div class="card s-card">
         <div class="winbar"><span><?= S.file ?></span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+        <div class="due-slip" id="dueSlip" hidden>
+          <p class="due-k"><?= BRAND.steps.pay.dueK ?></p>
+          <p class="due-amt">&#8369;<span id="dueAmt"></span><s id="dueWas" hidden></s></p>
+          <p class="due-sub" id="dueSub"></p>
+        </div>
         <h2><?= BRAND.steps.pay.how ?></h2>
         <p class="s-text" id="payDetails"></p>
         <p class="s-due" id="payFinAid" hidden></p>
@@ -219,6 +288,23 @@
   </div>
 </div>
 
+<!-- after a proof goes in (showFiled below). Copy: BRAND.steps.pay.filed -->
+<div class="filed" id="filed" role="dialog" aria-modal="true" aria-labelledby="filedTitle" tabindex="-1" hidden>
+  <div class="filed-scan" aria-hidden="true"></div>
+  <div class="filed-stage">
+    <div class="filed-folder" aria-hidden="true">
+      <div class="ff-back"><span class="ff-tab"><?= BRAND.steps.pay.filed.tab ?> &middot; <b id="filedId"></b></span></div>
+      <div class="ff-photo" id="filedPhoto"><span><?= BRAND.steps.pay.filed.exhibit ?></span></div>
+      <div class="ff-front"><span class="ff-label">02 // Payment</span></div>
+      <span class="stamp-ink filed-stamp"><?= BRAND.steps.pay.filed.stamp ?></span>
+    </div>
+    <h2 class="filed-title" id="filedTitle"><?= BRAND.steps.pay.filed.title ?></h2>
+    <p class="filed-log" id="filedLog" aria-hidden="true"></p>
+    <p class="filed-next"><?= BRAND.steps.pay.filed.next ?></p>
+    <button class="btn" type="button" id="filedClose"><?= BRAND.steps.pay.filed.button ?></button>
+  </div>
+</div>
+
 <script>
   const BRAND = <?!= brand_json_() ?>;
   const PAGE = <?!= JSON.stringify(String(page || 'pay')).replace(/</g, '\\u003c') ?>;
@@ -268,7 +354,7 @@
   function locked(text) { $('lockedMsg').textContent = text; show('locked'); }
 
   /* ---------- 02 proof of payment ---------- */
-  let hasExistingProof = false;
+  let hasExistingProof = false, payId = '';
   function renderPay(d) {
     const c = d.content, v = d.applicant.payment;
     $('payPill').textContent = 'Payment: ' + v; $('payPill').className = 'pill ' + (PILL[v] || 'dim');
@@ -280,6 +366,17 @@
       $('payFinAid').textContent = fa.line.replace('{now}', php(fee.now)).replace('{was}', php(fee.now + fee.off)).replace('{off}', php(fee.off)) + ' ' + fa.verify;
     }
     if (c.deadline) { $('payDue').hidden = false; $('payDue').textContent = 'Send it by ' + fmtDate(c.deadline); }
+    // the amount slip: their own amount (FinAid already taken off), the old amount struck through, the later part
+    if (fee.now !== undefined) {
+      $('dueSlip').hidden = false;
+      $('dueAmt').textContent = php(fee.now);
+      $('dueWas').hidden = !(fee.off > 0); $('dueWas').textContent = '₱' + php(fee.now + fee.off);
+      $('dueSub').textContent = fee.later ? T.pay.dueLater.replace('{later}', php(fee.later)) : '';
+    }
+    // the three tags: pay, send proof, verified
+    const TRACK = { NONE: ['now', '', ''], SUBMITTED: ['done', 'done', 'now'], VERIFIED: ['done', 'done', 'done'], REJECTED: ['done', 'flag', ''] }[v] || ['now', '', ''];
+    Array.from($('payTrack').children).forEach((li, i) => { li.className = TRACK[i] ? 'is-' + TRACK[i] : ''; });
+    payId = d.applicant.id || '';
     const box = $('qrs'); box.textContent = '';
     (c.qrs || []).forEach(q => {
       const f = document.createElement('figure'); f.className = 'qr';
@@ -338,6 +435,47 @@
     }
   }
 
+  /* EVIDENCE FILED: the proof drops into the case folder, RECEIVED is stamped, the log line types out, then what's next.
+     The CSS does the motion (and shows the end state at once with reduced motion); this fills it in and types the line. */
+  const calm = () => (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || document.documentElement.classList.contains('calm');
+  let filedTimer = 0;
+  function showFiled(file) {
+    const F = T.pay.filed, o = $('filed'), ph = $('filedPhoto');
+    ph.querySelectorAll('img,.doc').forEach(n => n.remove());
+    if (/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+      const img = new Image(), u = URL.createObjectURL(file);
+      img.onload = img.onerror = () => URL.revokeObjectURL(u);
+      img.src = u; img.alt = ''; ph.prepend(img);
+    } else {
+      const doc = document.createElement('span'); doc.className = 'doc'; doc.textContent = file.type === 'application/pdf' ? 'PDF' : 'PHOTO'; ph.prepend(doc);
+    }
+    $('filedId').textContent = payId || 'your file';
+    o.hidden = false;
+    o.querySelectorAll('*').forEach(n => { n.style.animation = 'none'; void n.offsetWidth; n.style.animation = ''; });   // replay every time
+    document.documentElement.classList.add('filed-open');
+    o.focus();
+    const time = new Date().toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });
+    const line = '> ' + F.log.replace('{id}', payId || 'your file').replace('{time}', time);
+    const log = $('filedLog');
+    clearInterval(filedTimer); clearTimeout(showFiled.wait);
+    if (calm()) { log.textContent = line; $('filedClose').focus(); return; }
+    log.textContent = '';
+    showFiled.wait = setTimeout(() => {
+      let i = 0;
+      filedTimer = setInterval(() => { log.textContent = line.slice(0, ++i); if (i >= line.length) clearInterval(filedTimer); }, 26);
+      setTimeout(() => { if (!o.hidden) $('filedClose').focus(); }, 1000);
+    }, 1900);
+  }
+  function hideFiled() {
+    if ($('filed').hidden) return;
+    clearInterval(filedTimer); clearTimeout(showFiled.wait);
+    $('filed').hidden = true; document.documentElement.classList.remove('filed-open');
+    load();   // now show the page with Payment: SUBMITTED
+    msg(T.pay.sent, 'good');   // after load() clears the line
+  }
+  $('filedClose').addEventListener('click', hideFiled);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') hideFiled(); });
+
   $('ecMobile').addEventListener('blur', () => {
     let v = $('ecMobile').value.replace(/[^\d+]/g, '');
     if (v.startsWith('+63')) v = '0' + v.slice(3);
@@ -379,7 +517,7 @@
   $('drop').addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) pick(e.dataTransfer.files[0]); });
 
   function pick(file) {
-    picked = null; updateSubmitBtn(); msg('');
+    picked = null; updateSubmitBtn(); msg(''); $('drop').classList.remove('has-file');
     if (!file) return;
     // many browsers report no type for .heic photos: work it out from the extension
     const EXT = { heic: 'image/heic', heif: 'image/heif', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', pdf: 'application/pdf' };
@@ -390,13 +528,18 @@
     const inner = $('dropInner'); inner.textContent = '';
     const done = f => {
       if (f.size > 8 * 1024 * 1024) return msg('That file is over 8 MB. Send a smaller photo or a screenshot.', 'bad');
-      picked = f; updateSubmitBtn();
+      picked = f; updateSubmitBtn(); $('drop').classList.add('has-file');
+      // taped to the bag like an exhibit photo: the picture itself, or a paper glyph for a PDF / HEIC (no preview)
+      const ex = document.createElement('span'); ex.className = 'exhibit';
       if (/^image\//.test(f.type) && !/hei[cf]/.test(f.type)) {
         const img = new Image(), u = URL.createObjectURL(f);
         img.onload = img.onerror = () => URL.revokeObjectURL(u);   // the preview holds the picture; the URL isn't needed after
-        img.src = u; img.alt = 'Your proof of payment'; inner.appendChild(img);
+        img.src = u; img.alt = 'Your proof of payment'; ex.appendChild(img);
+      } else {
+        const doc = document.createElement('span'); doc.className = 'doc'; doc.textContent = f.type === 'application/pdf' ? 'PDF' : 'PHOTO'; ex.appendChild(doc);
       }
-      const n = document.createElement('div'); n.className = 'fname'; n.textContent = file.name + ' (' + Math.ceil(f.size / 1024) + ' KB)'; inner.appendChild(n);
+      const n = document.createElement('small'); n.textContent = 'Exhibit // ' + file.name + ' (' + Math.ceil(f.size / 1024) + ' KB)'; ex.appendChild(n);
+      inner.appendChild(ex);
     };
     if (/^image\/(png|jpe?g|webp)$/.test(file.type) && file.size > 1.5 * 1024 * 1024) shrink(file).then(done).catch(() => done(file));
     else done(file);
@@ -438,10 +581,13 @@
       }).then(r => {
         if (window.Loader) Loader.hide();
         if (!r || !r.ok) { $('upBtn').disabled = false; return msg((r && r.error) || 'That did not go through. Try again.', 'bad'); }
-        kuya('happy', picked ? T.pay.sent : 'Emergency contact updated.');
-        picked = null; $('proof').value = ''; $('dropInner').innerHTML = '<b>Choose a file</b><br><small id="upHint">' + BRAND.steps.pay.upHint + '</small>';
+        const sent = picked;   // the file that just went in (null: only the contact changed)
+        kuya('happy', sent ? T.pay.sent : 'Emergency contact updated.');
+        picked = null; $('proof').value = ''; $('drop').classList.remove('has-file');
+        $('dropInner').innerHTML = '<b>Choose a file</b><br><small id="upHint">' + BRAND.steps.pay.upHint + '</small>';
+        if (sent) { showFiled(sent); return; }   // the case-file moment first; the page refreshes (and says "received") on close
         load();
-        setTimeout(() => msg(picked ? T.pay.sent : 'Emergency contact updated.', 'good'), 900);
+        setTimeout(() => msg('Emergency contact updated.', 'good'), 900);
       }).catch(err => {
         if (window.Loader) Loader.hide();
         $('upBtn').disabled = false;
