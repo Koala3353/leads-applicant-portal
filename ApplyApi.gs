@@ -139,7 +139,7 @@ function apply_submit_(form) {
   // a submit is rare and precious: wait longer rather than fail during a rush
   const early = withScriptLock_(30000, () => {
     // Re-verify applications open status inside lock
-    if (!isOpen_()) {
+    if (!isOpenFor_(email)) {   // the core team can still file, to check the form
       throw new Error('Applications just closed.');
     }
 
@@ -191,9 +191,7 @@ function apply_submit_(form) {
       Status: 'SUBMITTED',
       Requirements: 'NONE',
       Payment: 'NONE',
-      ReviewedBy: '',
-      LastUpdated: now,
-      Notes: ''
+      LastUpdated: now
     });
 
     filed = rowMap;   // for the confirmation email, sent after the lock

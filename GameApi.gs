@@ -41,7 +41,7 @@ function game_getInit_() {
     feeLater: fee.later,   // paid later, for possible notarization; the rest is paid once accepted
     feeOff: fee.off,    // the FinAid discount, 0 if none
     primer: /^https:\/\//.test(setting_('PrimerLink')) ? setting_('PrimerLink') : '',
-    isOpen: isOpen_(),   // closed: the page says so instead of letting them play a game they can't file
+    isOpen: isOpenFor_(email),   // closed (the core team excepted): the page says so instead of letting them play a game they can't file
     nickname: draft && draft.data ? String(draft.data.Nickname || '').slice(0, 30) : '',
     saved: saved
   };

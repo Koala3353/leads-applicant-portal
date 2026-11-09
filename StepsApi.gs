@@ -39,8 +39,11 @@ function steps_get_(page) {
   const key = STEP_KEYS[page] ? page : 'pay';
   const email = currentEmail_();
   const found = email ? getApplicantForPortal_(email) : null;
-  const a = found ? found.data : null;
-  const p = progress_(a);
+  // the core team without a file of their own still sees every page, as a stand-in accepted applicant (nothing saves)
+  const preview = !found && isAdmin_(email);
+  const a = found ? found.data : preview ? { ApplicantID: 'PREVIEW', Nickname: 'Core team', Status: 'ACCEPTED', Payment: 'NONE',
+    Requirements: 'NONE', Email: email, MessageToApplicant: 'Core team preview: you have no file of your own, so uploads and ticks here will not save.' } : null;
+  const p = progressFor_(a, email);
   const step = p[STEP_KEYS[key]];
   const s = getSettings_();
   const iso = v => { const d = parseDate_(v); return d ? d.toISOString() : null; };
@@ -85,7 +88,9 @@ function steps_onsiteList_() {
   return steps_forms_('').filter(f => f.onsite).map(f => f.title);
 }
 function steps_onsiteDone_(a) {
-  return String(a.OnsiteSubmitted || '').split(';').map(x => x.trim()).filter(Boolean);
+  const own = String(a.OnsiteSubmitted || '').split(';').map(x => x.trim()).filter(Boolean);
+  // the tracker's [04] PNF / DNU boxes win when this person has a row there (Tracker.gs)
+  return trackerOnsiteDone_(a, steps_onsiteList_(), own) || own;
 }
 
 /**
@@ -96,7 +101,7 @@ function steps_markOnsite(name, done) {
   return traced_('steps_markOnsite', 'reqs', () => {
     const found = requireApplicant_();
     const a = found.data;
-    const p = progress_(a);
+    const p = progressFor_(a);
     if (!p.requirements.unlocked && p.requirements.state !== 'done') return { ok: false, error: 'Requirements are not open for you yet.' };
     const list = steps_onsiteList_();
     name = String(name || '').trim();
@@ -111,6 +116,7 @@ function steps_markOnsite(name, done) {
       marked = list.filter(x => have.indexOf(x) >= 0);   // keep the Settings order
       updateApplicant_(now.row, { OnsiteSubmitted: marked.join('; ') }, a.ApplicantID);
     });
+    trackerOnsite_(a, name, done);   // ticks that person's PNF / DNU box in the tracker's [04] tab (Tracker.gs)
     logChange_(a.ApplicantID, 'onsite', done ? 'not marked' : 'marked', (done ? 'dropped off: ' : 'unmarked: ') + name, 'applicant');
     return { ok: true, done: marked };
   }, r => r.ok ? 'onsite ' + (r.done || []).join('; ') : 'not saved: ' + r.error);
@@ -232,7 +238,7 @@ function steps_saveEmergencyContact(contact) {
 function steps_saveEmergencyContact_(contact) {
   const found = requireApplicant_();
   const a = found.data;
-  const p = progress_(a);
+  const p = progressFor_(a);
   if (!p.payment.unlocked && p.payment.state !== 'done' && p.payment.state !== 'waiting') {
     return { ok: false, error: 'Payment and emergency contact are not open for you yet.' };
   }
@@ -303,7 +309,7 @@ function steps_uploadProof(file) {
 function steps_uploadProof_(file) {
   const found = requireApplicant_();
   const a = found.data;
-  const p = progress_(a);
+  const p = progressFor_(a);
   if (!p.payment.unlocked && p.payment.state !== 'done') return { ok: false, error: p.payment.state === 'done' ? 'Your payment is already verified.' : 'Proof of payment is not open for you yet.' };
 
   // If emergency contact provided, validate and save it first
@@ -346,6 +352,7 @@ function steps_uploadProof_(file) {
     try { saved.setTrashed(true); } catch (e) { /* best effort */ }
     throw err;
   }
+  trackerProofUploaded_(a, saved.getUrl());   // the tracker's [05] row: proof link + For Verification (Tracker.gs)
   const before = String(a.Payment || 'NONE');
   if (before !== 'SUBMITTED') setTrack_(a.ApplicantID, 'Payment', 'SUBMITTED', 'system');
   else logChange_(a.ApplicantID, 'payment proof', 'replaced', 'new file', 'system');

@@ -36,6 +36,7 @@ function onOpen() {
       .addItem('Verify (VERIFIED)', 'menu_payVerified')
       .addItem('Reject proof (REJECTED)', 'menu_payRejected'))
     .addSeparator()
+    .addItem('Sync from the tracker now', 'menu_trackerSync')   // Tracker.gs
     .addItem('Rebuild Referrals tab', 'menu_referrals')
     .addItem('Show portal link', 'menu_portalLink')
     .addToUi();
@@ -76,6 +77,7 @@ function applyToSelection_(field, value) {
   const sh = ss_().getActiveSheet();
   if (sh.getName() !== SHEET.APPLICANTS) { ui.alert('Go to the Applicants tab and select the applicants\' rows first.'); return; }
 
+  if (trackerOwns_(field, value)) { ui.alert(TRACKER_MSG_); return; }
   const ids = selectedIds_(sh);
   if (!ids.length) { ui.alert('Select at least one applicant row (any cell in the row works).'); return; }
   const final = field !== 'Status' ? '' : value === 'REJECTED' ? '\n\nApplicants see it once Settings › ResultsReleased is ticked. A misclick can be changed back.'
@@ -92,6 +94,8 @@ function applyToSelection_(field, value) {
 /** One change for many applicants (the menu and the review panel). Each row is checked on its own; returns what happened. */
 function applyToIds_(ids, field, value, by) {
   const done = [], failed = [];
+  // accept / waitlist / reject, Payment and Requirements now live in the tracker (Tracker.gs): refuse instead of being undone
+  if (trackerOwns_(field, value)) return { done: done, failed: ids.map(id => id + ': ' + TRACKER_MSG_) };
   ids.forEach(id => {
     try {
       if (field === 'Status') setStatus_(id, value, by); else setTrack_(id, field, value, by);
@@ -172,7 +176,6 @@ function review_setMessage(ids, message) {
       if (i < 0) { failed.push(id + ': not found'); return; }
       const row = i + 2;
       sh.getRange(row, col_('MessageToApplicant') + 1).setValue(textCell_(text));
-      sh.getRange(row, col_('ReviewedBy') + 1).setValue(by);
       sh.getRange(row, col_('LastUpdated') + 1).setValue(now);
       forgetApplicant_(mailv[i]);
       done.push(id);
@@ -317,6 +320,7 @@ function guardTrackEdit_(e) {
   const d = { ApplicantID: id, Status: get('Status'), Requirements: get('Requirements'), Payment: get('Payment') };
   let problem = '';
   if (!isAdmin_(who)) problem = 'Only core team members in the Admins tab can change ' + field + '.';
+  else if (trackerOwns_(field, to, from)) problem = TRACKER_MSG_;   // the next sync would undo it anyway (Tracker.gs)
   else if (field === 'Status') problem = statusMoveError_(from, to, d);
   else problem = trackChangeError_(field, to, d);
   if (problem) {
@@ -326,7 +330,6 @@ function guardTrackEdit_(e) {
   }
 
   sh.getRange(row, col_('LastUpdated') + 1).setValue(new Date());
-  sh.getRange(row, col_('ReviewedBy') + 1).setValue(who);
   logChange_(id, field.toLowerCase() + ' (by hand)', from, to, who);
 
   // auto-confirm / un-confirm, same rules as the menu (shouldConfirm_ / shouldUnconfirm_ in Utils.gs)

@@ -1584,7 +1584,7 @@
       if (!a) $('hubNote').textContent = H.noFileNote;
       if (a) setModule('apply', 'done', H.applyDone, H.view);
       else if (!ctx.allowedDomain) setModule('apply', 'locked', H.wrongAccount);
-      else setModule('apply', p.apply.state, p.apply.unlocked ? H.applyOpen : L.apply, H.start);
+      else setModule('apply', p.apply.state, p.apply.preview ? H.adminPreview : p.apply.unlocked ? H.applyOpen : L.apply, H.start);
 
       // the steps after acceptance: each opens its own page once progress_ (Utils.gs) unlocks it.
       // Locked cards say what they're waiting for (BRAND.lockedWhy[key + '_' + why], then lockedWhy[why]).
@@ -1594,7 +1594,8 @@
         req: a ? BRAND.path.requirements + ': ' + (T.requirements[a.requirements] || a.requirements) : '', ga: L.gaOpen, room: L.roomOpen };
       [['pay', 'payment'], ['req', 'requirements'], ['ga', 'ga'], ['room', 'room']].forEach(([key, step]) => {
         const st = p[step];
-        const why = st.state === 'locked' ? (L[key + '_' + st.why] || L[st.why] || '') : (st.state === 'stopped' ? '' : now[key]);
+        // st.preview: open only because this is the core team (progressFor_): say it's still locked for applicants
+        const why = st.preview ? BRAND.hub.adminPreview : st.state === 'locked' ? (L[key + '_' + st.why] || L[st.why] || '') : (st.state === 'stopped' ? '' : now[key]);
         setModule(key, st.state, why, st.state === 'done' ? BRAND.hub.view : BRAND.hub.open);
       });
     }

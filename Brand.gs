@@ -226,6 +226,7 @@ const BRAND = {
     signedOut: 'Not signed in',
     signOutTitle: 'Signs you out of Google in this browser, then back here to sign in with your Ateneo account.',
     applyOpen: 'Open now.',
+    adminPreview: 'Core team view. Still locked for applicants.',   // a card only an Admins-tab account can open (progressFor_ in Utils.gs)
     applyDone: 'Filed. Your application is on record.',
     wrongAccount: 'Use your Ateneo account.',
     open: 'Open', view: 'View', start: 'Start',

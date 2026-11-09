@@ -17,7 +17,7 @@ function home_getContext_() {
   const camp = campStart_(s);
   const found = email ? getApplicantForPortal_(email) : null;
   const a = found ? found.data : null;
-  const p = progress_(a);
+  const p = progressFor_(a, email);   // the core team: every card unlocked (Utils.gs)
 
   return {
     email: email,

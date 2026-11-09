@@ -107,7 +107,8 @@ function preleads_getForm_() {
   const allowed = email ? isAllowedDomain_(email) : false;
   const existing = email ? preleads_findRegistration_(email) : null;
   const member = (email && allowed && !existing) ? preleads_memberFor_(email) : null;   // Ateneo accounts only, like Apply
-  const open = preleads_isOpen_(), full = open && !existing && preleads_isFull_();
+  const admin = isAdmin_(email);   // the core team can always open it, to check the form
+  const open = preleads_isOpen_() || admin, full = open && !existing && !admin && preleads_isFull_();
   return {
     signedIn: !!email,
     email: email,
@@ -153,7 +154,8 @@ function preleads_submit_(form) {
   if (!isAllowedDomain_(email)) {
     throw new Error('Use your Ateneo account to submit.');
   }
-  if (!preleads_isOpen_()) throw new Error('THE LEADS UP registration is closed.');
+  const admin = isAdmin_(email);   // the core team can register while it's closed or full, to check the form
+  if (!preleads_isOpen_() && !admin) throw new Error('THE LEADS UP registration is closed.');
 
   // Someone who keeps hitting "that ID can't be used" is probably trying other people's IDs: stop after 6 an hour
   const failKey = probeKey_(email);   // the same counter as Apply, so the two forms together still allow only 6
@@ -223,14 +225,14 @@ function preleads_submit_(form) {
   const res = withScriptLock_(25000, () => {
     const sh = preleads_ensureSheet_();
 
-    if (!preleads_isOpen_()) throw new Error('THE LEADS UP registration just closed.');
+    if (!preleads_isOpen_() && !admin) throw new Error('THE LEADS UP registration just closed.');
     // Re-verify no duplicate submission inside the lock. Your own account: say so. Someone else's ID: the
     // generic message, so the reply never confirms whether a given ID registered.
     const dup = preleads_isDuplicateLocked_(sh, email, clean.IDNumber);
     if (dup === 'email') return { ok: true, already: true };   // a retried submit that went through the first time: still a success
     if (dup === 'id') { bump_(failKey, 99, 3600); return idTaken; }
     // after the duplicate check, so a retried submit that already went through still gets its success
-    if (preleads_isFull_(sh)) throw new Error('THE LEADS UP is full: all slots have been taken.');
+    if (!admin && preleads_isFull_(sh)) throw new Error('THE LEADS UP is full: all slots have been taken.');
 
     // Each value goes under its header (so the core team can reorder or add columns safely). Missing headers are added.
     // every string is stored as text (textCell_), so Sheets never turns a Course like "2-1" into a date

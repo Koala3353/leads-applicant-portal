@@ -39,11 +39,11 @@ const SHEET = {
 const COLS = [
   'ApplicantID', 'Timestamp', 'Email', 'FullName', 'Nickname', 'IDNumber', 'Course', 'YearLevel',
   'Mobile',
-  'Status', 'Requirements', 'Payment',                                    // the three tracks
-  'ReviewedBy', 'LastUpdated', 'Notes',                                   // core team
-  'Block', 'MBTI', 'PastOrgs', 'FirstOvernight', 'OffsiteAvailability', 'DataConsent',
-  'WhyParticipant', 'FirstImpression', 'TakesLeadership', 'FearLeadership',   // essays (Rumors dropped; FirstImpression and FirstOvernight
-                                                                          // left the form Oct 23 2026: columns kept for old rows)
+  'Status', 'Requirements', 'Payment',                                    // the three tracks (decided by the tracker: Tracker.gs)
+  'LastUpdated',
+  'Block', 'MBTI', 'PastOrgs', 'OffsiteAvailability', 'DataConsent',
+  'WhyParticipant', 'TakesLeadership', 'FearLeadership',                  // essays (ReviewedBy, Notes, FirstOvernight and FirstImpression
+                                                                          // were deleted Nov 9 2026: unused, and the tracker is the record)
   'GameAnswers',                                                          // Game page choices (JSON)
   'PaymentProof',                                                         // Drive link to the uploaded proof of payment
   'ReferralCode', 'ReferredBy', 'ReferrerID',                             // own code to share / code they used / who that is (Referrals.gs)
@@ -265,6 +265,7 @@ const SETTINGS_SCHEMA = [
   { key: 'PaymentDeadline', type: 'date', def: null, help: 'Last day to send proof of payment, e.g. 2026-12-01 23:59 (shown to applicants)' },
   { key: 'RegistrationFee', type: 'int', def: 4200, help: 'Total fee in pesos, shown before filing and in the confirmation email: "covers accommodations, transportation, food, and activities for 3 days and 2 nights".' },
   { key: 'FeeLater', type: 'int', def: 200, help: 'The part of the fee paid later (for possible notarization). Paid once accepted = RegistrationFee minus this.' },
+  { key: 'TrackerSheet', type: 'text', def: '1r2MnpOoriNMGHuCOtL_yiEC88dTmbFrvxHhWJB4oFWg', help: 'The Participant Application Tracker (link or ID). Its accepted / rejected / waitlisted lists, Payment Tracker and PNF & DNU Tracker decide Status, Payment and Requirements (Tracker.gs). Blank = this default. off = use the Applicants columns instead.' },
   { key: 'FinAidDiscount', type: 'int', def: 400, help: 'Pesos off the fee for applicants who ticked "I am a FinAid scholar" on Apply (taken off the amount paid once accepted). The core team verifies it. 0 = no discount.' },
   { key: 'PrimerLink', type: 'text', def: '', help: 'Optional link to the fee primer (full breakdown), shown with the fee. Blank = no link.' },
   { key: 'PortalContacts', type: 'text', def: '', help: 'Who to contact about portal problems, one per line: Name | email (Alt+Enter for a new line). Blank = the list in Brand.gs.' },
@@ -340,6 +341,11 @@ function isOpen_() {
   return setting_('ApplicationsOpen') && (!deadline || new Date() <= deadline);
 }
 
+/** isOpen_, except that the core team (Admins tab) can always open and file Apply / the Game, to check them. */
+function isOpenFor_(email) {
+  return isOpen_() || isAdmin_(email === undefined ? currentEmail_() : email);
+}
+
 /** The core team's switches in Settings: PaymentOpen, RequirementsOpen, RoomBookingOpen (TRUE/FALSE). */
 function stepOpen_(key) { return setting_(key) === true; }
 
@@ -406,7 +412,9 @@ const HIDDEN_UNTIL_RELEASE = ['ACCEPTED', 'WAITLISTED', 'REJECTED', 'CONFIRMED']
  * statuses in the Sheet ahead of time. Server-side checks that must see the real row (duplicates) use the raw lookup.
  */
 function getApplicantForPortal_(email) {
-  const found = getApplicantByEmail_(email);
+  const raw = getApplicantByEmail_(email);
+  // Status / Payment / Requirements as the Participant Application Tracker says (Tracker.gs); unchanged if it's off
+  const found = raw ? Object.assign({}, raw, { data: trackerApply_(raw.data) }) : null;
   if (!found || setting_('ResultsReleased') || HIDDEN_UNTIL_RELEASE.indexOf(String(found.data.Status)) < 0) return found;
   // the core team's note is held back too: "Congrats!" under UNDER REVIEW would give the decision away. So are Payment
   // and Requirements: a VERIFIED payment or APPROVED requirements set ahead of release would show those steps as done.
@@ -508,7 +516,7 @@ function updateApplicant_(row, fields, applicantId) {
 
 /** For pages: the same rules the server uses. */
 function formRules_() {
-  return { rules: RULES, isOpen: isOpen_() };
+  return { rules: RULES, isOpen: isOpenFor_() };
 }
 
 /**
@@ -618,7 +626,6 @@ function setStatusLocked_(applicantId, newStatus, by) {
   const problem = statusMoveError_(from, newStatus, found.data);
   if (problem) throw new Error(problem);
   const fields = { Status: newStatus };
-  if (by && by !== 'system') fields.ReviewedBy = by;
   updateApplicant_(found.row, fields, applicantId);
   logChange_(applicantId, 'status', from, newStatus, by);
   // accepted again with payment verified and requirements approved already: straight to CONFIRMED, like a hand edit
@@ -674,7 +681,6 @@ function setTrack_(applicantId, field, value, by) {
     const problem = trackChangeError_(field, value, found.data);
     if (problem) throw new Error(problem);
     const fields = {}; fields[field] = value;
-    if (by && by !== 'system') fields.ReviewedBy = by;
     updateApplicant_(found.row, fields, applicantId);
     logChange_(applicantId, field.toLowerCase(), from, value, by);
     const now = Object.assign({}, found.data, fields);
@@ -762,6 +768,21 @@ function progress_(a) {
 
   out.confirmed = { unlocked: false, state: status === 'CONFIRMED' ? 'done' : (ended ? 'stopped' : 'locked') };
   return out;
+}
+
+/**
+ * progress_ for whoever is signed in: the core team (Admins tab) gets every step unlocked, whatever the Settings
+ * switches or their own file say, so they can open and check each page. Unlocked-for-preview steps carry preview: true
+ * (the hub says "locked for applicants" on those cards). Everyone else gets progress_(a) unchanged.
+ */
+function progressFor_(a, email) {
+  const p = progress_(a);
+  if (!isAdmin_(email === undefined ? currentEmail_() : email)) return p;
+  if (!a && !p.apply.unlocked) p.apply = Object.assign({}, p.apply, { state: 'open', unlocked: true, preview: true });
+  ['payment', 'requirements', 'ga', 'room'].forEach(k => {
+    if (!p[k].unlocked && p[k].state !== 'done') p[k] = Object.assign({}, p[k], { state: 'open', unlocked: true, preview: true });
+  });
+  return p;
 }
 
 /** Settings > GACalendarLink if it's a real link, else ''. */
