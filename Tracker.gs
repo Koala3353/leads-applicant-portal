@@ -19,7 +19,8 @@
  * If the tracker can't be read, nothing is overridden (the portal shows the Applicants columns) and Activity gets a WARN.
  */
 
-const TRACKER_TTL = 60;
+const TRACKER_TTL = 60;       // seconds a copy counts as fresh
+const TRACKER_KEEP = 21600;   // the last good copy is kept 6 h: when it's stale, ONE request refreshes it while the rest use it
 const TRACKER_TABS_ = {
   accepted: '[02.1] Accepted Participant Information',
   decided: '[02.2] Rejected & Waitlisted',
@@ -80,20 +81,30 @@ function trackerHead_(values) {
 function trackerTrue_(v) { return v === true || String(v).trim().toUpperCase() === 'TRUE'; }
 
 /**
- * Everything the portal needs from the tracker, by ID number (cached TRACKER_TTL seconds; fresh = read it now).
- * { ok: { status, pay, reqs }, ids: { '263756': { s: 'ACCEPTED', p: 'SUBMITTED', r: { pnf, pnfOk, dnu, dnuOk } } } }
+ * Everything the portal needs from the tracker, by ID number. fresh = read it now (the sync trigger, after a write).
+ * { at, ok: { status, pay, reqs }, ids: { '263756': { s: 'ACCEPTED', p: 'SUBMITTED', r: { pnf, pnfOk, dnu, dnuOk } } } }
  * ok.x is false when that tab or its headers are missing: that part then falls back to the Applicants columns.
- * null when the tracker is off or can't be opened.
+ * null when the tracker is off or can't be opened (and there's no earlier copy).
+ * Load: 90 people loading at once must not all open the tracker. A copy younger than TRACKER_TTL is used as is; an
+ * older one is refreshed by the first request (a 30 s claim in the cache) while everyone else keeps using it; the
+ * 5-minute trigger refreshes it too, so pages almost never wait on the tracker.
  */
 function trackerRead_(fresh) {
   const id = trackerId_();
   if (!id) return null;
   const cache = CacheService.getScriptCache(), key = 'trk:' + id.slice(0, 16);
-  if (!fresh) { try { const hit = cache.get(key); if (hit) return JSON.parse(hit); } catch (e) { /* read it fresh */ } }
+  let old = null;
+  if (!fresh) {
+    try { const hit = cache.get(key); if (hit) old = JSON.parse(hit); } catch (e) { old = null; }
+    if (old && old.at && Date.now() - old.at < TRACKER_TTL * 1000) return old;
+    if (old) {
+      try { if (cache.get(key + ':busy')) return old; cache.put(key + ':busy', '1', 30); } catch (e) { return old; }
+    }
+  }
   const ss = tracker_();
-  if (!ss) return null;
+  if (!ss) return old;
 
-  const out = { ok: { status: false, pay: false, reqs: false }, ids: {} };
+  const out = { at: Date.now(), ok: { status: false, pay: false, reqs: false }, ids: {} };
   const entry = idNo => (out.ids[idNo] = out.ids[idNo] || {});
   const tab = name => { const sh = ss.getSheetByName(name); return sh ? sh.getDataRange().getValues() : null; };
   const missing = [];
@@ -134,10 +145,18 @@ function trackerRead_(fresh) {
     } else missing.push(TRACKER_TABS_.reqs + ' › PNF / PNF Verified / DNU / DNU Verified');
   } catch (e) {
     activity_('tracker_read', 'Could not read the tracker: ' + (e && e.message), { level: 'WARN' });
-    return null;
+    try { cache.remove(key + ':busy'); } catch (err) { /* expires on its own */ }
+    return old;   // the last good copy beats nothing
   }
-  if (missing.length) activity_('tracker_read', 'Tracker is missing ' + missing.join('; ') + ' (renamed tab or header?). Using the Applicants columns for that part.', { level: 'WARN' });
-  try { cache.put(key, JSON.stringify(out), TRACKER_TTL); } catch (e) { /* too big or cache down: read again next time */ }
+  if (missing.length) {   // once an hour, not on every page load
+    try {
+      if (!cache.get(key + ':warned')) {
+        cache.put(key + ':warned', '1', 3600);
+        activity_('tracker_read', 'Tracker is missing ' + missing.join('; ') + ' (renamed tab or header?). Using the Applicants columns for that part.', { level: 'WARN' });
+      }
+    } catch (e) { /* skip the warning */ }
+  }
+  try { cache.put(key, JSON.stringify(out), TRACKER_KEEP); cache.remove(key + ':busy'); } catch (e) { /* too big or cache down: read again next time */ }
   return out;
 }
 
@@ -243,6 +262,18 @@ function trackerOnsite_(a, title, done) {
   trackerForget_();
 }
 
+/** The emergency contact form (StepsApi.gs) also fills [02.1] › Emergency Contact for this person: "Name (Relation) 09…". */
+function trackerEmergency_(a, c) {
+  if (!trackerOn_() || !c) return;
+  try {
+    const hit = trackerRow_(TRACKER_TABS_.accepted, trackerIdNo_(a.IDNumber));
+    if (!hit || !hit.col['emergency contact']) return;   // not on the accepted list: the portal's EmergencyContacts tab has it
+    hit.sh.getRange(hit.row, hit.col['emergency contact']).setValue(c.name + ' (' + c.relation + ') ' + c.mobile);
+  } catch (e) {
+    activity_('tracker_write', a.ApplicantID + ': could not write the emergency contact to the tracker: ' + (e && e.message), { level: 'WARN', page: 'pay' });
+  }
+}
+
 /**
  * The requirement titles this person has handed in, per the tracker's [04] row (PNF / DNU boxes or their Verified
  * boxes); titles the tracker doesn't cover come from own (Applicants › OnsiteSubmitted). null = no [04] row: use own.
@@ -264,28 +295,38 @@ function trackerOnsiteDone_(a, titles, own) {
 function tracker_sync_() {
   const t = trackerRead_(true);
   if (!t) return { ok: false, changed: 0 };
+  const changes = [];   // [ApplicantID, column, from, to], logged after the lock
   let changed = 0;
+  // Load: everything is worked out in memory and each changed column is written in ONE call, so even 90 people
+  // accepted at once hold the script lock (which submits and uploads wait on) for about a second.
   withScriptLock_(30000, () => {
     const sh = sheet_(SHEET.APPLICANTS), last = sh.getLastRow();
     if (last < 2) return;
     const head = cols_(), ci = name => head.indexOf(name);
+    const need = TRACK_COLS.concat(['ApplicantID', 'IDNumber', 'Email', 'LastUpdated']);
+    const gone = need.filter(k => ci(k) < 0);
+    if (gone.length) throw new Error('Applicants is missing ' + gone.join(', '));
     const values = sh.getRange(2, 1, last - 1, head.length).getValues();
+    const write = ['LastUpdated'].concat(TRACK_COLS);
+    const col = {}, dirty = {};
+    write.forEach(k => { col[k] = values.map(r => [r[ci(k)]]); });
+    const stamp = new Date(), forget = [];
     values.forEach((r, i) => {
       const d = {};
-      ['ApplicantID', 'IDNumber', 'Status', 'Payment', 'Requirements', 'Email'].forEach(k => { d[k] = ci(k) < 0 ? '' : String(r[ci(k)] === null ? '' : r[ci(k)]).trim(); });
+      ['ApplicantID', 'IDNumber', 'Status', 'Payment', 'Requirements', 'Email'].forEach(k => { d[k] = String(r[ci(k)] === null ? '' : r[ci(k)]).trim(); });
       if (!/^APP-\d{4,}$/.test(d.ApplicantID)) return;
       const now = trackerApply_(d, t);
-      const diff = TRACK_COLS.filter(k => ci(k) >= 0 && now[k] !== d[k]);
+      const diff = TRACK_COLS.filter(k => now[k] !== d[k]);
       if (!diff.length) return;
-      diff.forEach(k => {
-        sh.getRange(i + 2, ci(k) + 1).setValue(now[k]);
-        logChange_(d.ApplicantID, k.toLowerCase() + ' (tracker)', d[k], now[k], 'tracker');
-      });
-      if (ci('LastUpdated') >= 0) sh.getRange(i + 2, ci('LastUpdated') + 1).setValue(new Date());
-      forgetApplicant_(d.Email);
+      diff.forEach(k => { col[k][i][0] = now[k]; dirty[k] = true; changes.push([d.ApplicantID, k, d[k], now[k]]); });
+      col.LastUpdated[i][0] = stamp; dirty.LastUpdated = true;
+      forget.push(d.Email);
       changed++;
     });
+    write.filter(k => dirty[k]).forEach(k => sh.getRange(2, ci(k) + 1, values.length, 1).setValues(col[k]));
+    forget.forEach(forgetApplicant_);
   });
+  changes.forEach(c => logChange_(c[0], c[1].toLowerCase() + ' (tracker)', c[2], c[3], 'tracker'));
   return { ok: true, changed: changed };
 }
 

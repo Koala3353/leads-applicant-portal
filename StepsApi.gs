@@ -294,7 +294,9 @@ function steps_saveEmergencyContact_(contact) {
     }
   });
 
-  logChange_(a.ApplicantID, 'emergency contact', 'saved', clean.name + ' (' + clean.relation + ', ' + clean.mobile + ')', 'applicant');
+  trackerEmergency_(a, clean);   // the tracker's [02.1] › Emergency Contact for this person (Tracker.gs)
+  // the contact's name and number stay out of the Activity log (CHANGE rows are never trimmed; RA 10173)
+  logChange_(a.ApplicantID, 'emergency contact', '', 'saved (in EmergencyContacts)', 'applicant');
   return { ok: true, id: a.ApplicantID, contact: clean };
 }
 
