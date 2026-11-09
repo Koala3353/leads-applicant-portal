@@ -39,16 +39,19 @@ function confirmMail_apply_(a) {
       ['What kind of environment helps you feel most comfortable participating and sharing your thoughts with others?', a.Environment]
     ]]
   ];
-  const total = Number(setting_('RegistrationFee')) || 0, later = Math.max(0, Math.min(total, Number(setting_('FeeLater')) || 0));
+  const fee = fee_(a), total = fee.total, later = fee.later;   // total is after any FinAid discount (fee_ in Utils.gs)
   const php = n => '₱' + n.toLocaleString('en-PH');
   // "₱4,000 of the ₱4,200 fee; the last ₱200 comes later, for possible notarization."
   const feeLine = php(total - later) + ' of the ' + php(total) + ' fee' + (later ? '; the last ' + php(later) + ' comes later, for possible notarization.' : '.');
+  // FinAid scholars: "FinAid scholar: you pay ₱3,600 instead of ₱4,000 (₱400 off). The core team will verify ..."
+  const finAid = fee.off ? BRAND.finAid.line.replace('{now}', fee.now.toLocaleString('en-PH')).replace('{was}', (fee.now + fee.off).toLocaleString('en-PH'))
+    .replace('{off}', fee.off.toLocaleString('en-PH')) + ' ' + BRAND.finAid.verify : '';
   const facts = [['FILE NO.', a.ApplicantID], ['STATUS', 'SUBMITTED'], ['CAMP', String(s.EventDates || 'January 29 to 31, 2027')],
     ['WHERE', String(s.EventVenue || '').trim() || 'Kasile Hills Nature Resort'],
-    ['FEE 1', php(total - later) + ' once accepted']].concat(later ? [['FEE 2', php(later) + ' if notarization is needed']] : [], [['YOUR CODE', a.ReferralCode || '—', true]]);
+    ['FEE 1', php(total - later) + ' once accepted' + (fee.off ? ' (FinAid, to be verified)' : '')]].concat(later ? [['FEE 2', php(later) + ' if notarization is needed']] : [], [['YOUR CODE', a.ReferralCode || '—', true]]);
   const next = [
     ['01', 'Review', 'The core team reads every file. Results come out on the portal; we will email you when they do.', true],
-    ['02', 'Proof of payment', 'Once accepted: pay ' + feeLine + ' Nothing is due before that.', false],
+    ['02', 'Proof of payment', 'Once accepted: pay ' + feeLine + ' Nothing is due before that.' + (finAid ? ' ' + finAid : ''), false],
     ['03', 'Requirements', 'After payment is verified: the forms to fill in.', false],
     ['04', '1st GA', 'Your first general assembly. Date to be set.', false],
     ['05', 'Room booking', 'Where you sleep at camp. Earlier picks for more referral points.', false]

@@ -23,6 +23,7 @@ function game_getInit_() {
   const email = currentEmail_();
   const found = email ? getApplicantForPortal_(email) : null;
   const draft = email && !found ? apply_getDraft_(email) : null;
+  const fee = fee_(draft && draft.data);   // FinAid scholars (ticked on Apply) see the discounted amount
   let saved = {};
   if (draft && draft.data && draft.data.GameAnswers) {
     // only v3 saves (the 16-question game): an older 5-question save used the same ids for different questions
@@ -36,8 +37,9 @@ function game_getInit_() {
     hasDraft: !!(draft && draft.data),
     hasEye: !!(draft && draft.data && draft.data.EyePhoto),   // the eye scan after the passcode is on file
     idNumber: draft && draft.data ? String(draft.data.IDNumber || '').replace(/\D/g, '').slice(0, 6) : '',
-    fee: setting_('RegistrationFee'),
-    feeLater: setting_('FeeLater'),   // paid later, for possible notarization; the rest is paid once accepted
+    fee: fee.total,     // after any FinAid discount
+    feeLater: fee.later,   // paid later, for possible notarization; the rest is paid once accepted
+    feeOff: fee.off,    // the FinAid discount, 0 if none
     primer: /^https:\/\//.test(setting_('PrimerLink')) ? setting_('PrimerLink') : '',
     isOpen: isOpen_(),   // closed: the page says so instead of letting them play a game they can't file
     nickname: draft && draft.data ? String(draft.data.Nickname || '').slice(0, 30) : '',

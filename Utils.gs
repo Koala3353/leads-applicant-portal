@@ -265,6 +265,7 @@ const SETTINGS_SCHEMA = [
   { key: 'PaymentDeadline', type: 'date', def: null, help: 'Last day to send proof of payment, e.g. 2026-12-01 23:59 (shown to applicants)' },
   { key: 'RegistrationFee', type: 'int', def: 4200, help: 'Total fee in pesos, shown before filing and in the confirmation email: "covers accommodations, transportation, food, and activities for 3 days and 2 nights".' },
   { key: 'FeeLater', type: 'int', def: 200, help: 'The part of the fee paid later (for possible notarization). Paid once accepted = RegistrationFee minus this.' },
+  { key: 'FinAidDiscount', type: 'int', def: 400, help: 'Pesos off the fee for applicants who ticked "I am a FinAid scholar" on Apply (taken off the amount paid once accepted). The core team verifies it. 0 = no discount.' },
   { key: 'PrimerLink', type: 'text', def: '', help: 'Optional link to the fee primer (full breakdown), shown with the fee. Blank = no link.' },
   { key: 'PortalContacts', type: 'text', def: '', help: 'Who to contact about portal problems, one per line: Name | email (Alt+Enter for a new line). Blank = the list in Brand.gs.' },
   { key: 'EyeFolder', type: 'text', def: '', help: 'Drive folder for the Game eye scans (EYE_<ID>). Made automatically on the first upload; private to the script owner.' },
@@ -297,6 +298,20 @@ function setting_(key) {
   if (spec.type === 'date') return parseDate_(blank ? spec.def : raw);
   if (spec.type === 'int') { const n = parseInt(String(raw), 10); return blank || isNaN(n) ? spec.def : n; }
   return blank ? spec.def : String(raw).trim();
+}
+
+/**
+ * The fee for one applicant. a = their Applicants row or Apply draft data (may be null: no discount).
+ * A ticked FinAid Scholar box takes Settings › FinAidDiscount off the part paid once accepted (never below 0);
+ * the core team verifies the scholarship on the payment step.
+ * full = RegistrationFee, later = FeeLater, off = the discount, total = full - off, now = total - later (paid once accepted).
+ */
+function fee_(a) {
+  const full = Math.max(0, Number(setting_('RegistrationFee')) || 0);
+  const later = Math.max(0, Math.min(full, Number(setting_('FeeLater')) || 0));
+  const finAid = !!a && String(a.FinAidScholar || '').trim() === 'Yes';
+  const off = finAid ? Math.max(0, Math.min(full - later, Number(setting_('FinAidDiscount')) || 0)) : 0;
+  return { full: full, later: later, off: off, total: full - off, now: full - later - off };
 }
 
 function isTrue_(v) { return v === true || String(v).trim().toUpperCase() === 'TRUE'; }

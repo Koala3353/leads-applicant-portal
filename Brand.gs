@@ -239,6 +239,14 @@ const BRAND = {
     room:    { n: '05', title: 'Room booking',     fix: 'Choose where you sleep, and choose wisely who you sleep with.' },
     sheet:   { n: '00', title: 'Core team',        fix: 'Review applicants in the Sheet: LEADS → Open review panel, click their rows, press Accept, Verify or Approve. Add a note and they see it here.' }
   },
+  /* ---------- FinAid discount: Apply's FinAid Scholar box, Settings › FinAidDiscount, fee_() in Utils.gs ---------- */
+  // Shown on the Game fee note, the payment page and the confirmation email, only to applicants who ticked the box.
+  // {now} = what they pay once accepted, {was} = that amount without the discount, {off} = the discount (numbers only, no ₱)
+  finAid: {
+    line: 'FinAid scholar: you pay ₱{now} instead of ₱{was} (₱{off} off).',
+    verify: 'The core team will verify your FinAid status. If it can\'t be verified, the full fee applies.'
+  },
+
   /* ---------- Steps.html: the pages after acceptance (?page=pay | reqs | ga | room) ---------- */
   steps: {
     qrMissing: 'QR unavailable right now. Message the core team for the payment details.',

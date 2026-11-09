@@ -65,6 +65,7 @@ function steps_get_(page) {
       deadline: iso(s.PaymentDeadline),
       qrs: step.unlocked ? steps_qrCodes_(String(s.PaymentQRCodes || '')) : [],
       proof: String(a.PaymentProof || '') ? true : false,
+      fee: fee_(a),   // { now, off, ... }: the page shows the FinAid line only when off > 0
       emergencyContact: steps_getEmergencyContact_(a.ApplicantID, a.Email)
     };
   } else if (key === 'reqs') {

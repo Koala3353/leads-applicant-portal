@@ -142,6 +142,7 @@
         <div class="winbar"><span><?= S.file ?></span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
         <h2><?= BRAND.steps.pay.how ?></h2>
         <p class="s-text" id="payDetails"></p>
+        <p class="s-due" id="payFinAid" hidden></p>
         <p class="s-due" id="payDue" hidden></p>
         <div id="qrWrap" hidden>
           <h2 style="margin-top:22px"><?= BRAND.steps.pay.qrTitle ?></h2>
@@ -273,6 +274,11 @@
     $('payPill').textContent = 'Payment: ' + v; $('payPill').className = 'pill ' + (PILL[v] || 'dim');
     $('payState').textContent = T.pay.states[v] || '';
     $('payDetails').textContent = c.details || 'The core team will post the amount and payment details here.';
+    const fee = c.fee || {}, fa = BRAND.finAid, php = n => Number(n).toLocaleString('en-PH');   // FinAid scholars: their own amount
+    if (fee.off > 0 && fa) {
+      $('payFinAid').hidden = false;
+      $('payFinAid').textContent = fa.line.replace('{now}', php(fee.now)).replace('{was}', php(fee.now + fee.off)).replace('{off}', php(fee.off)) + ' ' + fa.verify;
+    }
     if (c.deadline) { $('payDue').hidden = false; $('payDue').textContent = 'Send it by ' + fmtDate(c.deadline); }
     const box = $('qrs'); box.textContent = '';
     (c.qrs || []).forEach(q => {

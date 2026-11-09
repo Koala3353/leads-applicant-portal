@@ -432,7 +432,7 @@
     </div>
     <div class="fee" id="fee">
       <p class="eyebrow" style="margin:0 0 6px">REGISTRATION FEE</p>
-      <p style="margin:0">The total registration fee is ₱<span id="feeAmt">4,200</span>, which covers accommodations, transportation, food, and activities for 3 days and 2 nights. Nothing is due now. Once you are accepted, you pay ₱<span id="feeNow">4,000</span>; the remaining ₱<span id="feeLater">200</span> comes later, for possible notarization.<span id="feePrimer" hidden> For the full breakdown, please refer to the <a id="feePrimerLink" target="_blank" rel="noopener">primer</a>.</span></p>
+      <p style="margin:0">The total registration fee is ₱<span id="feeAmt">4,200</span>, which covers accommodations, transportation, food, and activities for 3 days and 2 nights. Nothing is due now. Once you are accepted, you pay ₱<span id="feeNow">4,000</span>; the remaining ₱<span id="feeLater">200</span> comes later, for possible notarization.<span id="feeFinAid" hidden></span><span id="feePrimer" hidden> For the full breakdown, please refer to the <a id="feePrimerLink" target="_blank" rel="noopener">primer</a>.</span></p>
     </div>
     <p class="mono db-foot" style="margin-top:16px">Your answers are recorded. Filing sends your complete profile to the core team.</p>
     <div class="actions"><button class="btn" type="button" id="submitBtn">File my application</button></div>
@@ -1243,6 +1243,11 @@
       if (data.fee) {
         const total = Number(data.fee), later = Math.max(0, Math.min(total, Number(data.feeLater) || 0)), php = n => n.toLocaleString('en-PH');
         $('feeAmt').textContent = php(total); $('feeNow').textContent = php(total - later); $('feeLater').textContent = php(later);
+        const off = Math.max(0, Number(data.feeOff) || 0), fa = BRAND.finAid;   // FinAid scholar: total is already discounted
+        if (off && fa) {
+          $('feeFinAid').textContent = ' ' + fa.line.replace('{now}', php(total - later)).replace('{was}', php(total - later + off)).replace('{off}', php(off)) + ' ' + fa.verify;
+          $('feeFinAid').hidden = false;
+        }
       }
       if (data.primer) { $('feePrimerLink').href = data.primer; $('feePrimer').hidden = false; }
       if (ROOMS.every(roomDone)) {
