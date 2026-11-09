@@ -27,7 +27,8 @@ function confirmMail_apply_(a) {
       ['Block', a.Block || '—'], ['Mobile number', a.Mobile], ['MBTI', a.MBTI || '—'],
       ['Referral code you used', a.ReferredBy || 'None'],
       ['Student or community organizations you have actively participated in', a.PastOrgs || '—'],
-      ['Free to go offsite ' + (String(s.EventDates || '').trim() || 'on the camp dates') + '?', a.OffsiteAvailability]
+      ['Free to go offsite ' + (String(s.EventDates || '').trim() || 'on the camp dates') + '?', a.OffsiteAvailability],
+      ['FinAid scholar', a.FinAidScholar || 'No']
     ]],
     ['PAGE 02 // LEADS', [
       ['Why did you choose to apply for LEADS as a participant?', a.WhyParticipant]

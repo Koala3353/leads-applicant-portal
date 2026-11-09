@@ -52,7 +52,8 @@ const COLS = [
   'IntegrityFlags', 'IntegrityLog',                                       // essay paste / tab-switch signals from Apply (ApplyApi.gs integrityFlags_)
   'Environment',                                                          // where they feel comfortable sharing (pick any, "A; B")
   'EyePhoto',                                                             // Drive link to the eye-scan photo from the Game (GameApi.gs)
-  'OnsiteSubmitted'                                                       // requirements the applicant says they dropped off onsite, "PNF; DNU" (StepsApi.gs)
+  'OnsiteSubmitted',                                                      // requirements the applicant says they dropped off onsite, "PNF; DNU" (StepsApi.gs)
+  'FinAidScholar'                                                         // optional self-declared checkbox on Apply: "Yes" or blank
 ];
 
 /** The Applicants header row as it is in the Sheet right now (read once per run). Falls back to COLS on an empty tab. */
@@ -96,6 +97,7 @@ const RULES = {
   PastOrgs:         { stage: 'apply', maxLen: 500, multiline: true, msg: 'Keep it under 500 characters.' },
   OffsiteAvailability: { stage: 'apply', required: true, options: ['Yes'], msg: 'Tick the box to confirm you are available on the camp dates.' },
   DataConsent:      { stage: 'apply', required: true, options: ['Y'], msg: 'You need to consent to data processing (RA 10173) to apply.' },
+  FinAidScholar:    { stage: 'apply', options: ['Yes'], msg: 'Tick the box only if you are a FinAid scholar.' },
   WhyParticipant:   { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
   TakesLeadership:  { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },
   FearLeadership:   { stage: 'apply', required: true, minLen: 50, maxLen: 1000, multiline: true, msg: 'Must be between 50 and 1000 characters.' },

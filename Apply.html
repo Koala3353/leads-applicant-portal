@@ -826,6 +826,20 @@
           <p class="fee-note">[FEE NOTICE] The participant fee is &#8369;4,000, with another &#8369;200 later if notarization is needed.</p>
           <div class="field-error" id="err-OffsiteAvailability" role="alert" aria-live="polite"></div>
         </div>
+
+        <!-- FinAidScholar (optional, not counted in the progress tape, no Iris comment). The hidden input keeps the Yes / '' value. -->
+        <div class="field" id="wrap-FinAidScholar">
+          <span class="q-num">OPTIONAL</span>
+          <p class="consent-title">FinAid Scholar <span style="color:var(--muted)">[SCHOLARSHIP STATUS]</span></p>
+          <p class="field-hint">[CONFIDENTIAL] FinAid scholars get &#8369;400 off the participant fee. Tick this only if you are a FinAid scholar.</p>
+          <input type="hidden" id="f-FinAidScholar" name="FinAidScholar" value="">
+          <label class="consent-box" for="c-FinAidScholar">
+            <input type="checkbox" id="c-FinAidScholar" aria-describedby="err-FinAidScholar">
+            <span class="consent-tick" aria-hidden="true"></span>
+            <span class="consent-text">I am a FinAid scholar.</span>
+          </label>
+          <div class="field-error" id="err-FinAidScholar" role="alert" aria-live="polite"></div>
+        </div>
       </div>
 
       <!-- SECTION 2: Interrogation & Psychological Dossier -->
@@ -1102,6 +1116,7 @@
       data[f] = el ? el.value : '';
     });
     data.ReferredBy = $('f-ReferredBy') ? $('f-ReferredBy').value.trim().toUpperCase() : '';   // optional, outside FIELDS
+    data.FinAidScholar = $('f-FinAidScholar') ? $('f-FinAidScholar').value : '';               // optional, outside FIELDS
     data.IntegrityLog = JSON.stringify(INTEG);   // essay paste / tab-switch counters (see INTEG below), for the core team only
     return data;
   }
@@ -1118,6 +1133,7 @@
     if ($('c-OffsiteAvailability')) $('c-OffsiteAvailability').checked = $('f-OffsiteAvailability').value === 'Yes';
     syncEnvBoxes();
     if (data.ReferredBy && $('f-ReferredBy')) $('f-ReferredBy').value = data.ReferredBy;
+    if (data.FinAidScholar && $('f-FinAidScholar')) { $('f-FinAidScholar').value = data.FinAidScholar; $('c-FinAidScholar').checked = data.FinAidScholar === 'Yes'; }
     if (data.IntegrityLog) mergeInteg(data.IntegrityLog);   // a reload keeps counting from where it was
     validateMobileField(true);
   }
@@ -1918,6 +1934,12 @@
     hid.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
+  $('c-FinAidScholar').addEventListener('change', e => {
+    const hid = $('f-FinAidScholar');
+    hid.value = e.target.checked ? 'Yes' : '';
+    hid.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
   // Environment boxes -> the hidden "A; B" value (No particular preference clears the others, and the others clear it)
   const ENV_NONE = 'No particular preference';
   function syncEnvBoxes() {
@@ -1954,7 +1976,7 @@
     clearDraft(true);
     $('applyForm').reset();
     // reset() keeps a hidden input's value, so the consent would stay "Y" behind an unticked box
-    $('f-DataConsent').value = ''; $('f-OffsiteAvailability').value = '';
+    $('f-DataConsent').value = ''; $('f-OffsiteAvailability').value = ''; $('f-FinAidScholar').value = '';
     $('f-Environment').value = ''; syncEnvBoxes();
     document.querySelectorAll('.prefilled').forEach(el => el.classList.remove('prefilled'));
     $('draftBanner').hidden = true;
