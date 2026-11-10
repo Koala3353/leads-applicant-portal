@@ -1,6 +1,6 @@
 /**
  * PaymentMail.gs  (integrator owns this file)
- * The two payment emails, in the look of the core team's eol2627-payment-confirmation design (PaymentMail.html):
+ * The two payment emails, in the look of the core team's eol2627-payment-confirmation design (PaymentMailTemplate.html):
  *   received  right after a proof upload (steps_uploadProof_, StepsApi.gs): we have it, the core team is checking it,
  *             another email follows once it's verified. Sent on every upload (a re-upload gets a fresh one).
  *   verified  once Payment is VERIFIED: the tracker's [05] "Payment Verified" (copied in by tracker_sync_), or the LEADS
@@ -17,7 +17,7 @@
 const PAYMAIL_DOOR_ = 'https://koala3353.github.io/leads-applicant-portal/go/';   // the door page: gets people out of Gmail's in-app browser
 const PAYMAIL_PER_RUN_ = 40;   // verified emails per run (MailApp is ~1 s each); the rest go out on the next run, 5 minutes later
 
-/** Everything the template (PaymentMail.html) shows. a = an Applicants row (data object). */
+/** Everything the template (PaymentMailTemplate.html) shows. a = an Applicants row (data object). */
 function payMail_vars_(a, kind) {
   const s = getSettings_(), fee = fee_(a);
   const php = n => '₱' + Number(n).toLocaleString('en-PH');
@@ -96,7 +96,7 @@ function payMail_send_(a, kind) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) { activity_('payment_mail', (a && a.ApplicantID) + ': no usable email, ' + kind + ' email not sent', { level: 'WARN', page: 'pay' }); return false; }
     if (MailApp.getRemainingDailyQuota() < 1) { activity_('payment_mail', 'daily email quota used up: ' + kind + ' email not sent to ' + a.ApplicantID, { level: 'WARN', page: 'pay' }); return false; }
     const v = payMail_vars_(a, kind);
-    const t = HtmlService.createTemplateFromFile('PaymentMail');
+    const t = HtmlService.createTemplateFromFile('PaymentMailTemplate');   // not 'PaymentMail': Apps Script can't have a .gs and an .html with the same name
     t.kind = kind; t.v = v;
     const opts = { name: 'I.R.I.S. // LEADS 2627', htmlBody: t.evaluate().getContent() };   // the sender name inboxes show
     const reply = String(getSetting_('ContactEmail') || '').trim();
