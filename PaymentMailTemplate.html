@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
-<!-- PaymentMailTemplate.html (integrator owns this file; not PaymentMail.html: Apps Script can't have a .gs and an .html with the same name). The two payment emails; PaymentMail.gs fills it in.
-     kind = 'received' (right after a proof upload) or 'verified' (Payment VERIFIED). v = the values (payMail_vars_).
-     Based on the core team's eol2627-payment-confirmation-v2 design.
-     Dark mode: every block that carries text has a SOLID background colour (no texture image behind text), so a mail
-     app that flips colours (Gmail's phone app) flips text and background together and it stays readable. Textures only
-     sit behind images. Outlook.com / Outlook app: the data-ogsc / data-ogsb rules put the intended colours back.
-     Mobile: one fluid column, 600px at most; the media query only tightens padding.
-     Never write a scriptlet tag in a comment: Apps Script runs scriptlets even inside comments. -->
+<!-- PaymentMailTemplate.html (integrator owns this file; not PaymentMail.html: Apps Script can't have a .gs and an .html
+     with the same name). The two payment emails; PaymentMail.gs fills it in. kind = 'received' | 'verified'; v = payMail_vars_.
+     Content: the core team's "Your Payment Is Confirmed. What's Next?" (verified) and our "proof received".
+     ALWAYS DARK, in light and dark mode:
+       - every background is a colour PLUS a 1x1 dark image (the designer's imgur pixels): mail apps that flip colours
+         (Gmail on iPhone) never flip images, so the background stays dark;
+       - there is no dark text on a light background anywhere (the old paper / yellow blocks are dark panels with
+         manila / yellow edges), so nothing can end up light-on-light;
+       - light text sits inside the Gmail blend fix (.gs / .gd below): in Gmail's dark mode it undoes the colour flip,
+         elsewhere it changes nothing;
+       - color-scheme "light only" keeps Apple Mail from adjusting it; the data-ogsc / data-ogsb rules do the same for Outlook.
+     Mobile: one fluid column, 600px at most. Never write a scriptlet tag in a comment: Apps Script runs them. -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -25,162 +29,159 @@
   table { border-collapse:separate; border-spacing:0; }
   img { -ms-interpolation-mode:bicubic; border:0; outline:none; text-decoration:none; }
   a { text-decoration:none; }
-  .btn:hover { background-color:#ff5a60 !important; }
-  /* the same colours again for apps that apply their own dark mode */
+  /* Gmail's dark mode flips text colours but not background images: these two layers flip the text back */
+  u + .body .gs { background:#000; mix-blend-mode:screen; }
+  u + .body .gd { background:#000; mix-blend-mode:difference; }
   @media (prefers-color-scheme: dark) {
-    .bg-page { background-color:#0c0c0e !important; } .bg-win { background-color:#1b1b1f !important; }
-    .bg-inset { background-color:#111114 !important; } .bg-paper { background-color:#ece5cf !important; }
-    .bg-manila { background-color:#d3bc86 !important; } .bg-yellow { background-color:#f2ea00 !important; }
-    .bg-navy { background-color:#000080 !important; } .bg-maroon { background-color:#5a0006 !important; }
     .c-text { color:#e4e4df !important; } .c-head { color:#f6f5ef !important; } .c-muted { color:#a6a6ac !important; }
-    .c-red { color:#ff4a50 !important; } .c-ink { color:#211f19 !important; } .c-inkred { color:#a32620 !important; }
-    .c-dark { color:#111100 !important; } .c-white { color:#ffffff !important; }
+    .c-red { color:#ff4a50 !important; } .c-yel { color:#f2ea00 !important; } .c-man { color:#e2c98e !important; }
+    .c-link { color:#9db8ff !important; } .c-white { color:#ffffff !important; }
   }
-  [data-ogsb] .bg-page { background-color:#0c0c0e !important; } [data-ogsb] .bg-win { background-color:#1b1b1f !important; }
-  [data-ogsb] .bg-inset { background-color:#111114 !important; } [data-ogsb] .bg-paper { background-color:#ece5cf !important; }
-  [data-ogsb] .bg-manila { background-color:#d3bc86 !important; } [data-ogsb] .bg-yellow { background-color:#f2ea00 !important; }
-  [data-ogsb] .bg-navy { background-color:#000080 !important; } [data-ogsb] .bg-maroon { background-color:#5a0006 !important; }
   [data-ogsc] .c-text { color:#e4e4df !important; } [data-ogsc] .c-head { color:#f6f5ef !important; } [data-ogsc] .c-muted { color:#a6a6ac !important; }
-  [data-ogsc] .c-red { color:#ff4a50 !important; } [data-ogsc] .c-ink { color:#211f19 !important; } [data-ogsc] .c-inkred { color:#a32620 !important; }
-  [data-ogsc] .c-dark { color:#111100 !important; } [data-ogsc] .c-white { color:#ffffff !important; }
+  [data-ogsc] .c-red { color:#ff4a50 !important; } [data-ogsc] .c-yel { color:#f2ea00 !important; } [data-ogsc] .c-man { color:#e2c98e !important; }
+  [data-ogsc] .c-link { color:#9db8ff !important; } [data-ogsc] .c-white { color:#ffffff !important; }
+  [data-ogsb] .bg-page { background-color:#0c0c0e !important; } [data-ogsb] .bg-win { background-color:#252527 !important; }
+  [data-ogsb] .bg-inset { background-color:#17181c !important; } [data-ogsb] .bg-navy { background-color:#000080 !important; }
+  [data-ogsb] .bg-maroon { background-color:#4a0000 !important; } [data-ogsb] .bg-red { background-color:#ff3038 !important; }
   @media only screen and (max-width:520px) {
     .pad { padding-left:16px !important; padding-right:16px !important; }
     .pad-in { padding-left:14px !important; padding-right:14px !important; }
     .frame { padding:10px 6px 22px 6px !important; }
     .h-big { font-size:24px !important; line-height:30px !important; }
-    .stamp { font-size:22px !important; line-height:28px !important; }
-    .when { font-size:26px !important; line-height:32px !important; }
+    .stamp { font-size:21px !important; line-height:27px !important; }
+    .when { font-size:24px !important; line-height:30px !important; }
     .hide-sm { display:none !important; }
     .stack { display:block !important; width:100% !important; }
     .eye { padding:14px 0 0 0 !important; }
-    .kv td { display:block !important; width:100% !important; padding-right:0 !important; }
+    .kv td { display:block !important; width:100% !important; }
   }
 </style>
 <!--[if mso]><style>body, table, td, p, a, div, span { font-family: Consolas, 'Courier New', monospace !important; }</style><![endif]-->
 </head>
-<body class="bg-page" style="margin:0;padding:0;background-color:#0c0c0e;">
+<body class="body bg-page" style="margin:0;padding:0;background-color:#0c0c0e;background-image:url('https://i.imgur.com/V8jQqbw.png');">
 
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:#0c0c0e;"><?= v.preheader ?>&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
 
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-page" style="background-color:#0c0c0e;background-image:url('https://i.imgur.com/V8jQqbw.png');">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-page" bgcolor="#0c0c0e" style="background-color:#0c0c0e;background-image:url('https://i.imgur.com/V8jQqbw.png');">
 <tr><td align="center" class="frame" style="padding:20px 10px 30px 10px;">
 
 <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-win"
-       style="width:100%;max-width:600px;background-color:#1b1b1f;border-top:2px solid #707070;border-left:2px solid #707070;border-bottom:2px solid #000000;border-right:2px solid #000000;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-win" bgcolor="#252527"
+       style="width:100%;max-width:600px;background-color:#252527;background-image:url('https://i.imgur.com/02P7pBN.png');background-repeat:repeat;border-top:2px solid #707070;border-left:2px solid #707070;border-bottom:2px solid #000000;border-right:2px solid #000000;">
 
   <!-- title bar -->
-  <tr><td class="bg-navy" style="background-color:#000080;padding:4px 6px 4px 10px;">
+  <tr><td class="bg-navy" bgcolor="#000080" style="background-color:#000080;background-image:url('https://i.imgur.com/ZplW8Fl.png');background-repeat:no-repeat;background-size:100% 100%;padding:4px 6px 4px 10px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-      <td class="c-white" style="font-family:'VT323','Lucida Console',Consolas,monospace;font-size:15px;line-height:20px;letter-spacing:1px;color:#ffffff;text-transform:uppercase;">&#9673;&nbsp; EYES ON LEADS<span class="hide-sm"> // <?= v.windowName ?></span></td>
-      <td align="right" style="white-space:nowrap;font-size:0;line-height:0;">
-        <span style="display:inline-block;width:16px;height:14px;background-color:#c0c0c0;border-top:2px solid #ffffff;border-left:2px solid #ffffff;border-bottom:2px solid #5a5a5a;border-right:2px solid #5a5a5a;"></span>&nbsp;<span style="display:inline-block;width:16px;height:14px;background-color:#c0c0c0;border-top:2px solid #ffffff;border-left:2px solid #ffffff;border-bottom:2px solid #5a5a5a;border-right:2px solid #5a5a5a;"></span>&nbsp;<span style="display:inline-block;width:16px;height:14px;background-color:#c0c0c0;border-top:2px solid #ffffff;border-left:2px solid #ffffff;border-bottom:2px solid #5a5a5a;border-right:2px solid #5a5a5a;"></span>
+      <td class="c-white" style="font-family:'VT323','Lucida Console',Consolas,monospace;font-size:15px;line-height:20px;letter-spacing:1px;color:#ffffff;text-transform:uppercase;"><div class="gs"><div class="gd">&#9673;&nbsp; EYES ON LEADS<span class="hide-sm"> // <?= v.windowName ?></span></div></div></td>
+      <td align="right" style="white-space:nowrap;font-size:0;line-height:0;width:66px;">
+        <img src="https://i.imgur.com/BkStD1h.png" width="16" height="14" alt="" style="display:inline-block;width:16px;height:14px;border-top:2px solid #ffffff;border-left:2px solid #ffffff;border-bottom:2px solid #5a5a5a;border-right:2px solid #5a5a5a;">&nbsp;<img src="https://i.imgur.com/BkStD1h.png" width="16" height="14" alt="" style="display:inline-block;width:16px;height:14px;border-top:2px solid #ffffff;border-left:2px solid #ffffff;border-bottom:2px solid #5a5a5a;border-right:2px solid #5a5a5a;">&nbsp;<img src="https://i.imgur.com/BkStD1h.png" width="16" height="14" alt="" style="display:inline-block;width:16px;height:14px;border-top:2px solid #ffffff;border-left:2px solid #ffffff;border-bottom:2px solid #5a5a5a;border-right:2px solid #5a5a5a;">
       </td>
     </tr></table>
   </td></tr>
 
   <!-- REC bar -->
-  <tr><td class="pad bg-inset c-muted" style="padding:9px 28px;background-color:#111114;border-bottom:1px solid #34343a;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:11px;line-height:17px;letter-spacing:2px;text-transform:uppercase;color:#a6a6ac;">
-    <span class="c-red" style="color:#ff4a50;font-weight:bold;">&#9679; REC</span>&nbsp;&nbsp;<span class="hide-sm">CAM 01 &nbsp;//&nbsp; </span>SUBJECT: <span class="c-head" style="color:#f6f5ef;"><?= v.nickUpper ?></span>&nbsp;&nbsp;//&nbsp;&nbsp;<?= v.id ?>
+  <tr><td class="pad bg-page c-muted" bgcolor="#0c0c0e" style="padding:9px 28px;background-color:#0c0c0e;background-image:url('https://i.imgur.com/V8jQqbw.png');border-bottom:1px solid #3a3a3f;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:11px;line-height:17px;letter-spacing:2px;text-transform:uppercase;color:#a6a6ac;">
+    <div class="gs"><div class="gd"><img src="https://i.imgur.com/n5qzW3m.gif" width="12" height="12" alt="" style="display:inline-block;vertical-align:middle;border:0;width:12px;height:12px;">
+    <span class="c-red" style="color:#ff4a50;font-weight:bold;">REC</span>&nbsp;&nbsp;<span class="hide-sm">CAM 01 &nbsp;//&nbsp; </span>SUBJECT: <span class="c-head" style="color:#f6f5ef;"><?= v.nickUpper ?></span>&nbsp;&nbsp;//&nbsp;&nbsp;<?= v.id ?></div></div>
   </td></tr>
 
-  <!-- case file tag + wordmark (on a dark texture so the light lettering never lands on a light background) -->
+  <!-- case file tag (yellow outline, not a yellow block: no dark text on a light background) + wordmark -->
   <tr><td class="pad" style="padding:26px 28px 0 28px;">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-      <td class="bg-yellow c-dark" style="background-color:#f2ea00;padding:5px 10px;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:12px;line-height:15px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#111100;">CASE FILE 26/27</td>
+      <td class="c-yel" style="border:2px solid #f2ea00;padding:4px 10px;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:12px;line-height:15px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#f2ea00;"><div class="gs"><div class="gd">CASE FILE 26/27</div></div></td>
     </tr></table>
   </td></tr>
-  <tr><td class="pad" style="padding:12px 28px 0 28px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-      <td style="background-color:#0c0c0e;background-image:url('https://i.imgur.com/V8jQqbw.png');padding:10px 12px;">
-        <img src="https://i.imgur.com/cpAjLSQ.png" width="510" alt="EYES ON LEADS" style="display:block;border:0;width:100%;max-width:510px;height:auto;font-family:'Anton',Impact,sans-serif;font-size:36px;color:#f6f5ef;">
-      </td>
-    </tr></table>
+  <tr><td class="pad" style="padding:12px 28px 0 28px;font-size:0;line-height:0;">
+    <img src="https://i.imgur.com/cpAjLSQ.png" width="534" alt="EYES ON LEADS" style="display:block;border:0;width:100%;max-width:534px;height:auto;font-family:'Anton',Impact,sans-serif;font-size:36px;line-height:44px;color:#f6f5ef;">
   </td></tr>
-  <tr><td class="pad c-red h-big" style="padding:16px 28px 0 28px;font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:26px;line-height:32px;letter-spacing:1px;text-transform:uppercase;color:#ff4a50;">
-    <?= v.headline ?>
+  <tr><td class="pad c-red h-big" style="padding:16px 28px 0 28px;font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:24px;line-height:30px;letter-spacing:2px;text-transform:uppercase;color:#ff4a50;">
+    <div class="gs"><div class="gd"><?= v.headline ?></div></div>
   </td></tr>
 
-  <!-- PAYMENT.EXE: the status -->
+  <!-- PAYMENT.EXE // STATUS REPORT -->
   <tr><td class="pad" style="padding:24px 28px 0 28px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-inset"
-           style="background-color:#111114;border-top:2px solid #707070;border-left:2px solid #707070;border-bottom:2px solid #000000;border-right:2px solid #000000;">
-      <tr><td class="bg-navy c-white" style="background-color:#000080;padding:4px 10px;font-family:'VT323','Lucida Console',Consolas,monospace;font-size:15px;line-height:20px;letter-spacing:1px;color:#ffffff;text-transform:uppercase;">PAYMENT.EXE<span class="hide-sm"> // STATUS REPORT</span></td></tr>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-inset" bgcolor="#17181c"
+           style="background-color:#17181c;background-image:url('https://i.imgur.com/ZtlO7pz.png');border-top:2px solid #707070;border-left:2px solid #707070;border-bottom:2px solid #000000;border-right:2px solid #000000;">
+      <tr><td class="bg-navy c-white" bgcolor="#000080" style="background-color:#000080;background-image:url('https://i.imgur.com/ZplW8Fl.png');background-repeat:no-repeat;background-size:100% 100%;padding:4px 10px;font-family:'VT323','Lucida Console',Consolas,monospace;font-size:15px;line-height:20px;letter-spacing:1px;color:#ffffff;text-transform:uppercase;"><div class="gs"><div class="gd">PAYMENT.EXE<span class="hide-sm"> // STATUS REPORT</span></div></div></td></tr>
       <tr><td class="pad-in" style="padding:20px 18px 4px 18px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-          <td class="stamp <?= kind === 'verified' ? 'c-red' : 'c-head' ?>" style="font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:28px;line-height:34px;letter-spacing:2px;text-transform:uppercase;padding:6px 14px;border:3px solid <?= kind === 'verified' ? '#ff4a50' : '#f2ea00' ?>;color:<?= kind === 'verified' ? '#ff4a50' : '#f6f5ef' ?>;"><?= v.stamp ?></td>
+          <td class="stamp <?= kind === 'verified' ? 'c-red' : 'c-yel' ?>" style="font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:28px;line-height:34px;letter-spacing:2px;text-transform:uppercase;padding:6px 14px;border:3px solid <?= kind === 'verified' ? '#ff4a50' : '#f2ea00' ?>;color:<?= kind === 'verified' ? '#ff4a50' : '#f2ea00' ?>;"><div class="gs"><div class="gd"><?= v.stamp ?></div></div></td>
         </tr></table>
       </td></tr>
-      <tr><td class="pad-in c-text" style="padding:14px 18px 6px 18px;font-family:'Courier Prime','Courier New',Courier,monospace;font-size:16px;line-height:26px;color:#e4e4df;">
+      <tr><td class="pad-in c-text" style="padding:14px 18px <?= v.receipt.length ? '6px' : '20px' ?> 18px;font-family:'Courier Prime','Courier New',Courier,monospace;font-size:16px;line-height:26px;color:#e4e4df;">
+        <div class="gs"><div class="gd">
         <? if (kind === 'verified') { ?>
           We&rsquo;ve been watching, and it looks like you&rsquo;ve taken another step toward discovering what lies beyond your comfort zone.<br><br>
-          Your payment for <strong class="c-head" style="color:#f6f5ef;">EYES ON LEADS 2627</strong> has been received and verified.
+          Your payment for <strong class="c-head" style="color:#f6f5ef;">EYES ON LEADS 2627</strong> has been successfully received and verified!
         <? } else { ?>
           We saw it. Your proof of payment for <strong class="c-head" style="color:#f6f5ef;">EYES ON LEADS 2627</strong> is in your file now.<br><br>
-          The core team checks every receipt against our records by hand. <strong class="c-head" style="color:#f6f5ef;">This is not the confirmation yet:</strong> we&rsquo;ll email you again once your payment is verified.
+          The core team checks every receipt by hand. <strong class="c-yel" style="color:#f2ea00;">This is not the confirmation yet:</strong> we&rsquo;ll email you again once your payment is verified.
         <? } ?>
+        </div></div>
       </td></tr>
-      <!-- the receipt: file no., when, amount -->
+      <? if (v.receipt.length) { ?>
+      <!-- the receipt slip -->
       <tr><td class="pad-in" style="padding:12px 18px 20px 18px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-paper" style="background-color:#ece5cf;border-bottom:3px dashed #8a7f63;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-page" bgcolor="#0c0c0e" style="background-color:#0c0c0e;background-image:url('https://i.imgur.com/V8jQqbw.png');border:1px dashed #a8925a;">
           <? v.receipt.forEach(function (r) { ?>
           <tr class="kv">
-            <td class="c-ink" valign="top" style="padding:9px 12px 0 14px;width:42%;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:11px;line-height:18px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#5d5643;"><?= r[0] ?></td>
-            <td class="c-ink" valign="top" style="padding:7px 14px 0 14px;font-family:'Courier Prime','Courier New',Courier,monospace;font-size:16px;line-height:22px;font-weight:bold;color:#211f19;"><?= r[1] ?></td>
+            <td class="c-man" valign="top" style="padding:10px 12px 0 14px;width:40%;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:11px;line-height:18px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#e2c98e;"><div class="gs"><div class="gd"><?= r[0] ?></div></div></td>
+            <td class="c-head" valign="top" style="padding:8px 14px 0 14px;font-family:'Courier Prime','Courier New',Courier,monospace;font-size:16px;line-height:22px;font-weight:bold;color:#f6f5ef;"><div class="gs"><div class="gd"><?= r[1] ?></div></div></td>
           </tr>
           <? }); ?>
           <tr><td colspan="2" style="padding:0 0 12px 0;font-size:0;line-height:0;">&nbsp;</td></tr>
         </table>
         <? if (v.finAidNote) { ?>
-        <p class="c-muted" style="margin:10px 0 0 0;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:12px;line-height:19px;color:#a6a6ac;"><?= v.finAidNote ?></p>
+        <div class="c-muted" style="margin:10px 0 0 0;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:12px;line-height:19px;color:#a6a6ac;"><div class="gs"><div class="gd"><?= v.finAidNote ?></div></div></div>
         <? } ?>
       </td></tr>
+      <? } ?>
     </table>
   </td></tr>
 
-  <!-- yellow divider -->
+  <!-- the status band: warning-tape yellow edges, dark middle -->
   <tr><td style="padding:26px 0 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
-  <tr><td class="pad bg-yellow c-dark" style="background-color:#f2ea00;padding:8px 28px;font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:16px;line-height:21px;letter-spacing:3px;text-transform:uppercase;color:#111100;">
-    &#9888;&nbsp; <?= kind === 'verified' ? 'File status: incomplete' : 'Status: for verification' ?>
+  <tr><td style="height:6px;line-height:6px;font-size:0;background-color:#f2ea00;background-image:url('https://i.imgur.com/uZqf0CR.png');">&nbsp;</td></tr>
+  <tr><td class="pad bg-page c-yel" bgcolor="#0c0c0e" style="background-color:#0c0c0e;background-image:url('https://i.imgur.com/V8jQqbw.png');padding:9px 28px;font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:17px;line-height:22px;letter-spacing:3px;text-transform:uppercase;color:#f2ea00;">
+    <div class="gs"><div class="gd">&#9888;&nbsp; <?= kind === 'verified' ? 'File status: incomplete' : 'Status: for verification' ?></div></div>
   </td></tr>
+  <tr><td style="height:6px;line-height:6px;font-size:0;background-color:#f2ea00;background-image:url('https://i.imgur.com/uZqf0CR.png');">&nbsp;</td></tr>
 
 <? if (kind === 'verified') { ?>
-  <!-- FILE 03: the manila folder with the memo -->
+  <!-- FILE 03: a dark dossier with manila edges -->
   <tr><td class="pad" style="padding:28px 28px 0 28px;">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-      <td class="bg-manila c-ink" style="background-color:#d3bc86;padding:6px 18px 4px 18px;border-top:2px solid #e7d6a6;border-left:2px solid #e7d6a6;border-right:3px solid #a8925a;font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:15px;line-height:19px;letter-spacing:2px;text-transform:uppercase;color:#2b2415;">FILE 03: REQUIREMENTS</td>
+      <td class="bg-inset c-man" bgcolor="#17181c" style="background-color:#17181c;background-image:url('https://i.imgur.com/ZtlO7pz.png');padding:6px 18px 4px 18px;border-top:3px solid #d3bc86;border-left:3px solid #d3bc86;border-right:3px solid #d3bc86;font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:15px;line-height:19px;letter-spacing:2px;text-transform:uppercase;color:#e2c98e;"><div class="gs"><div class="gd">FILE 03: REQUIREMENTS</div></div></td>
     </tr></table>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-manila"
-           style="background-color:#d3bc86;border-top:2px solid #e7d6a6;border-left:2px solid #e7d6a6;border-bottom:5px solid #a8925a;border-right:3px solid #a8925a;">
-      <tr><td style="padding:12px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-paper" style="background-color:#ece5cf;">
-          <tr><td class="pad-in" style="padding:22px 20px 6px 20px;">
-            <p class="c-inkred h-big" style="margin:0 0 14px 0;font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:24px;line-height:30px;letter-spacing:1px;text-transform:uppercase;color:#a32620;border-left:4px solid #a32620;padding-left:14px;">But your file isn&rsquo;t complete just yet.</p>
-            <p class="c-ink" style="margin:0 0 18px 0;font-family:'Special Elite','Courier New',Courier,monospace;font-size:16px;line-height:25px;color:#211f19;">Before you take the leap, there are a few more things we need from you. To finalize your participation, prepare these documents:</p>
-            <? [['01', 'Parental Notification Form', 'PNF'], ['02', 'Declaration and Undertaking', 'D&U']].forEach(function (d) { ?>
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 10px 0;border:2px solid #211f19;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-inset" bgcolor="#17181c"
+           style="background-color:#17181c;background-image:url('https://i.imgur.com/ZtlO7pz.png');border:3px solid #d3bc86;border-bottom-width:6px;">
+      <tr><td class="pad-in" style="padding:22px 20px 6px 20px;">
+        <div class="c-red h-big" style="margin:0 0 14px 0;font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:24px;line-height:30px;letter-spacing:1px;text-transform:uppercase;color:#ff4a50;border-left:4px solid #ff4a50;padding-left:14px;"><div class="gs"><div class="gd">But your file isn&rsquo;t complete just yet.</div></div></div>
+        <div class="c-text" style="margin:0 0 18px 0;font-family:'Special Elite','Courier New',Courier,monospace;font-size:16px;line-height:25px;color:#e4e4df;"><div class="gs"><div class="gd">Before you take the leap, there are a few more things we need from you. To finalize your participation, kindly prepare the following documents:</div></div></div>
+        <? v.docs.forEach(function (d) { ?>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 10px 0;border:2px solid #a8925a;">
+          <tr>
+            <td width="52" valign="middle" align="center" style="width:52px;padding:10px 0 10px 10px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td width="38" height="38" align="center" valign="middle" class="c-red" style="width:38px;height:38px;border:3px solid #ff4a50;border-radius:50%;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:15px;line-height:38px;font-weight:bold;color:#ff4a50;"><div class="gs"><div class="gd"><?= d.n ?></div></div></td></tr></table>
+            </td>
+            <td valign="middle" class="c-text" style="padding:10px 12px 10px 10px;font-family:'Special Elite','Courier New',Courier,monospace;font-size:16px;line-height:22px;color:#e4e4df;"><div class="gs"><div class="gd">
+              <? if (d.url) { ?><a href="<?= d.url ?>" target="_blank" class="c-link" style="color:#9db8ff;text-decoration:underline;"><?= d.name ?> <strong>(<?= d.abbr ?>)</strong> &#8599;</a><? } else { ?><?= d.name ?> <strong>(<?= d.abbr ?>)</strong><? } ?>
+            </div></div></td>
+          </tr>
+        </table>
+        <? }); ?>
+      </td></tr>
+      <tr><td class="pad-in" style="padding:8px 20px 22px 20px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:2px solid #f2ea00;">
+          <tr><td class="c-yel" style="padding:7px 14px;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:12px;line-height:17px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#f2ea00;border-bottom:2px solid #f2ea00;"><div class="gs"><div class="gd">&#9888; Important reminders</div></div></td></tr>
+          <tr><td style="padding:14px 14px 2px 14px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <? v.reminders.forEach(function (r) { ?>
               <tr>
-                <td width="52" valign="middle" align="center" style="width:52px;padding:10px 0 10px 10px;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td width="38" height="38" align="center" valign="middle" class="c-inkred" style="width:38px;height:38px;border:3px solid #a32620;border-radius:50%;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:15px;line-height:38px;font-weight:bold;color:#a32620;"><?= d[0] ?></td></tr></table>
-                </td>
-                <td valign="middle" class="c-ink" style="padding:10px 12px 10px 10px;font-family:'Special Elite','Courier New',Courier,monospace;font-size:16px;line-height:22px;color:#211f19;"><?= d[1] ?> <strong>(<?= d[2] ?>)</strong></td>
+                <td width="18" valign="top" class="c-red" style="width:18px;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:13px;line-height:23px;font-weight:bold;color:#ff4a50;"><div class="gs"><div class="gd">&#9632;</div></div></td>
+                <td class="c-text" style="padding-bottom:12px;font-family:'Special Elite','Courier New',Courier,monospace;font-size:15px;line-height:23px;color:#e4e4df;"><div class="gs"><div class="gd"><?!= r ?></div></div></td>
               </tr>
-            </table>
-            <? }); ?>
-          </td></tr>
-          <tr><td class="pad-in" style="padding:8px 20px 22px 20px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:2px solid #211f19;">
-              <tr><td class="bg-yellow c-dark" style="background-color:#f2ea00;padding:7px 14px;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:12px;line-height:17px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#111100;border-bottom:2px solid #211f19;">&#9888; Important reminders</td></tr>
-              <tr><td style="padding:14px 14px 2px 14px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                  <? v.reminders.forEach(function (r) { ?>
-                  <tr>
-                    <td width="18" valign="top" class="c-inkred" style="width:18px;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:13px;line-height:23px;font-weight:bold;color:#a32620;">&#9632;</td>
-                    <td class="c-ink" style="padding-bottom:12px;font-family:'Special Elite','Courier New',Courier,monospace;font-size:15px;line-height:23px;color:#211f19;"><?!= r ?></td>
-                  </tr>
-                  <? }); ?>
-                </table>
-              </td></tr>
+              <? }); ?>
             </table>
           </td></tr>
         </table>
@@ -189,25 +190,27 @@
   </td></tr>
 <? } ?>
 
-  <!-- the action window: confirm on the portal (verified) / what happens next (received) -->
+  <!-- the action window -->
   <tr><td class="pad" style="padding:28px 28px 0 28px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-inset"
-           style="background-color:#111114;border-top:2px solid #707070;border-left:2px solid #707070;border-bottom:2px solid #000000;border-right:2px solid #000000;">
-      <tr><td class="bg-maroon c-white" style="background-color:#5a0006;padding:4px 10px;font-family:'VT323','Lucida Console',Consolas,monospace;font-size:15px;line-height:20px;letter-spacing:1px;color:#ffffff;text-transform:uppercase;"><?= kind === 'verified' ? 'CONFIRM_SUBMISSION.EXE' : 'NEXT_STEPS.EXE' ?></td></tr>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-inset" bgcolor="#17181c"
+           style="background-color:#17181c;background-image:url('https://i.imgur.com/ZtlO7pz.png');border-top:2px solid #707070;border-left:2px solid #707070;border-bottom:2px solid #000000;border-right:2px solid #000000;">
+      <tr><td class="bg-maroon c-white" bgcolor="#4a0000" style="background-color:#4a0000;background-image:url('https://i.imgur.com/HVlgs0R.png');background-repeat:no-repeat;background-size:100% 100%;padding:4px 10px;font-family:'VT323','Lucida Console',Consolas,monospace;font-size:15px;line-height:20px;letter-spacing:1px;color:#ffffff;text-transform:uppercase;"><div class="gs"><div class="gd"><?= kind === 'verified' ? 'CONFIRM_SUBMISSION.EXE' : 'NEXT_STEPS.EXE' ?></div></div></td></tr>
       <tr><td class="pad-in c-text" style="padding:18px 18px 6px 18px;font-family:'Courier Prime','Courier New',Courier,monospace;font-size:16px;line-height:26px;color:#e4e4df;">
+        <div class="gs"><div class="gd">
         <? if (kind === 'verified') { ?>
-          <span class="c-red" style="color:#ff4a50;font-weight:bold;letter-spacing:1px;">CONFIRM YOUR SUBMISSION</span><br>
-          After you drop off both documents, come back to the portal and tick them under <strong class="c-head" style="color:#f6f5ef;">FILE 03: REQUIREMENTS</strong> (&ldquo;I dropped this off onsite&rdquo;).
+          <span class="c-red" style="color:#ff4a50;font-weight:bold;letter-spacing:1px;">&#128187; CONFIRM YOUR SUBMISSION</span><br>
+          After <strong class="c-head" style="color:#f6f5ef;">physically submitting</strong> your documents, return to the EYES ON LEADS applicant portal and <strong class="c-head" style="color:#f6f5ef;">confirm your submission</strong> under <strong class="c-yel" style="color:#f2ea00;">FILE 03: REQUIREMENTS</strong>.
         <? } else { ?>
           <span class="c-red" style="color:#ff4a50;font-weight:bold;letter-spacing:1px;">NOTHING ELSE TO DO FOR NOW</span><br>
           Watch your inbox: the next email says your payment is verified and opens your requirements.<br><br>
           Sent the wrong file? Upload the right one on the payment page. We check the latest one.
         <? } ?>
+        </div></div>
       </td></tr>
       <tr><td class="pad-in" style="padding:16px 18px 20px 18px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-          <td align="center" style="background-color:#ff3038;border-top:3px solid #ff9094;border-left:3px solid #ff9094;border-bottom:3px solid #8a0d14;border-right:3px solid #8a0d14;">
-            <a href="<?= v.button[1] ?>" target="_blank" class="btn c-white"
+          <td align="center" class="bg-red" bgcolor="#ff3038" style="background-color:#ff3038;background-image:url('https://i.imgur.com/oFCz3I1.png');border-top:3px solid #ff9094;border-left:3px solid #ff9094;border-bottom:3px solid #8a0d14;border-right:3px solid #8a0d14;">
+            <a href="<?= v.button[1] ?>" target="_blank" class="c-white"
                style="display:block;padding:15px 12px 13px 12px;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:16px;line-height:22px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#ffffff;text-decoration:none;"><?= v.button[0] ?></a>
           </td>
         </tr></table>
@@ -215,12 +218,12 @@
     </table>
   </td></tr>
 
-  <!-- the camp dates -->
+  <!-- the date box: the submission deadline (verified, when Settings › RequirementsDeadline is set) or the camp dates -->
   <tr><td class="pad" style="padding:28px 28px 0 28px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-inset" style="background-color:#111114;border:1px dashed #4a4a52;">
-      <tr><td align="center" class="c-red" style="padding:14px 12px 2px 12px;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:11px;line-height:15px;font-weight:bold;letter-spacing:3px;color:#ff4a50;">EVENT DATES</td></tr>
-      <tr><td align="center" class="c-head when" style="padding:2px 12px 4px 12px;font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:30px;line-height:36px;letter-spacing:2px;text-transform:uppercase;color:#f6f5ef;"><?= v.dates ?></td></tr>
-      <tr><td align="center" class="c-muted" style="padding:0 12px 14px 12px;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:12px;line-height:18px;letter-spacing:1px;text-transform:uppercase;color:#a6a6ac;"><?= v.venue ?></td></tr>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-page" bgcolor="#0c0c0e" style="background-color:#0c0c0e;background-image:url('https://i.imgur.com/V8jQqbw.png');border:1px dashed #4a4a52;">
+      <tr><td align="center" class="c-red" style="padding:14px 12px 2px 12px;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:11px;line-height:15px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;color:#ff4a50;"><div class="gs"><div class="gd"><?= v.dateBox[0] ?></div></div></td></tr>
+      <tr><td align="center" class="c-head when" style="padding:2px 12px 4px 12px;font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:28px;line-height:34px;letter-spacing:2px;text-transform:uppercase;color:#f6f5ef;"><div class="gs"><div class="gd"><?= v.dateBox[1] ?></div></div></td></tr>
+      <tr><td align="center" class="c-muted" style="padding:0 12px 14px 12px;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:12px;line-height:18px;letter-spacing:1px;text-transform:uppercase;color:#a6a6ac;"><div class="gs"><div class="gd"><?= v.dateBox[2] ?></div></div></td></tr>
     </table>
   </td></tr>
 
@@ -228,20 +231,18 @@
   <tr><td class="pad" style="padding:28px 28px 18px 28px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
       <td class="stack" valign="middle">
-        <div class="c-head h-big" style="font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:28px;line-height:34px;letter-spacing:1px;text-transform:uppercase;color:#f6f5ef;border-left:5px solid #ff3038;padding-left:15px;">We have been watching.<br><span class="c-red" style="color:#ff4a50;"><?= v.closing ?></span></div>
+        <div class="c-head h-big" style="font-family:'Anton',Impact,'Arial Narrow',Arial,sans-serif;font-size:28px;line-height:34px;letter-spacing:1px;text-transform:uppercase;color:#f6f5ef;border-left:5px solid #ff3038;padding-left:15px;"><div class="gs"><div class="gd">We have been watching.<br><span class="c-red" style="color:#ff4a50;"><?= v.closing ?></span></div></div></div>
       </td>
-      <td class="stack eye" width="110" align="right" valign="middle" style="width:110px;padding-left:12px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="right"><tr>
-          <td style="background-color:#0c0c0e;background-image:url('https://i.imgur.com/V8jQqbw.png');padding:6px;font-size:0;line-height:0;"><img src="https://i.imgur.com/uhoxnzE.gif" width="90" height="48" alt="" style="display:block;border:0;width:90px;height:auto;"></td>
-        </tr></table>
+      <td class="stack eye" width="100" align="right" valign="middle" style="width:100px;padding-left:12px;font-size:0;line-height:0;">
+        <img src="https://i.imgur.com/uhoxnzE.gif" width="90" height="48" alt="" style="display:block;border:0;width:90px;height:auto;margin:0 0 0 auto;">
       </td>
     </tr></table>
   </td></tr>
 
   <!-- footer -->
-  <tr><td class="pad bg-inset c-muted" style="padding:14px 28px 16px 28px;background-color:#111114;border-top:1px solid #34343a;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:11px;line-height:18px;letter-spacing:1px;color:#a6a6ac;">
-    Questions? Reply to this email, or message <?= v.contacts ?>.<br><br>
-    EYES ON LEADS &middot; A LEADERSHIP DEVELOPMENT PROJECT OF MEA &middot; CASE FILE 26/27 &middot; I.R.I.S. IS WATCHING
+  <tr><td class="pad bg-inset c-muted" bgcolor="#17181c" style="padding:14px 28px 16px 28px;background-color:#17181c;background-image:url('https://i.imgur.com/ZtlO7pz.png');border-top:1px solid #3a3a3f;font-family:'JetBrains Mono',Consolas,Menlo,monospace;font-size:11px;line-height:18px;letter-spacing:1px;color:#a6a6ac;">
+    <div class="gs"><div class="gd">Questions? Reply to this email, or message <?= v.contacts ?>.<br><br>
+    EYES ON LEADS &middot; A LEADERSHIP DEVELOPMENT PROJECT OF MEA &middot; CASE FILE 26/27 &middot; I.R.I.S. IS WATCHING</div></div>
   </td></tr>
 
 </table>

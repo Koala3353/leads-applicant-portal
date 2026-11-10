@@ -29,25 +29,37 @@ function payMail_vars_(a, kind) {
     ? fa.line.replace('{now}', Number(fee.now).toLocaleString('en-PH')).replace('{was}', Number(fee.now + fee.off).toLocaleString('en-PH'))
       .replace('{off}', Number(fee.off).toLocaleString('en-PH')) + ' ' + fa.verify
     : '';
+  const dates = String(s.EventDates || '').trim() || 'January 29 to 31, 2027';
+  const venue = String(s.EventVenue || '').trim() || 'Kasile Hills Nature Resort';
   const v = {
-    id: id, nickUpper: nick.toUpperCase(),
-    dates: String(s.EventDates || '').trim() || 'January 29 to 31, 2027',
-    venue: String(s.EventVenue || '').trim() || 'Kasile Hills Nature Resort',
+    id: id, nickUpper: nick.toUpperCase(), dates: dates, venue: venue,
     contacts: contactsInline_(portalContacts_()),
-    finAidNote: finAidNote
+    finAidNote: finAidNote,
+    dateBox: ['Event dates', dates, venue]
   };
   if (kind === 'verified') {
+    // the forms: Settings › PNFLink / DULink (blank = no link, and reminder 1 says they'll be released instead)
+    const link = k => { const u = String(setting_(k) || '').trim(); return /^https:\/\//.test(u) ? u : ''; };
+    const docs = [{ n: '01', name: 'Parental Notification Form', abbr: 'PNF', url: link('PNFLink') },
+      { n: '02', name: 'Declaration and Undertaking', abbr: 'D&U', url: link('DULink') }];
+    const both = docs.every(d => d.url);
+    // the drop-off deadline: Settings › RequirementsDeadline (blank = no date in the email)
+    const due = parseDate_(s.RequirementsDeadline);
+    const hl = t => '<strong class="c-yel" style="color:#f2ea00;">' + t + '</strong>';
+    const reminders = [
+      both ? 'The ' + hl('PNF') + ' and ' + hl('D&amp;U') + ' forms can be accessed through the links above. Kindly ' + hl('download and accomplish both documents') + ' before submission.'
+        : 'The forms will be made available through our core communication channels. Kindly ' + hl('wait for their release') + ' before accomplishing them.',
+      'Both documents must bear your parent&rsquo;s or guardian&rsquo;s original ' + hl('wet signature') + '.',
+      'Once completed, physically submit both documents to the ' + hl('designated drop-off box at the MEA Room (MVP 320)') +
+        (due ? ' by ' + hl(Utilities.formatDate(due, 'Asia/Manila', 'MMMM d, h:mm a')) : '') + '.'
+    ];
     return Object.assign(v, {
       subject: 'Your payment is confirmed. What’s next? · ' + id,
       preheader: 'Payment verified. Two documents left before your file is complete: the PNF and the D&U.',
-      windowName: 'Payment verified', headline: 'All eyes on you, ' + nick + '.', stamp: '✓ Payment verified',
-      receipt: [['File no.', id], ['Verified', when], ['Status', 'Payment verified']],
-      reminders: [
-        'Both documents must bear your parent&rsquo;s or guardian&rsquo;s <strong>original wet signature</strong>.',
-        'The forms will be released through our core communication channels. <strong>Wait for their release</strong> before you fill them in.',
-        'Once done, drop off both documents at the designated box in the <strong>MEA Room (MVP 320)</strong>.'
-      ],
-      button: ['Open the applicant portal', PAYMAIL_DOOR_ + '?page=reqs'],
+      windowName: 'Payment verified', headline: 'All eyes on you, ' + nick + '. 👁️', stamp: '✅ Payment verified',
+      receipt: [], docs: docs, reminders: reminders, due: due,
+      dateBox: due ? ['Deadline of submission', Utilities.formatDate(due, 'Asia/Manila', 'MMMM d, yyyy · h:mm a'), 'MEA Room (MVP 320) drop-off box'] : v.dateBox,
+      button: ['Open the applicant portal ↗', PAYMAIL_DOOR_ + '?page=reqs'],   // a no-break space keeps the arrow on the text's line
       closing: 'Finish your file.'
     });
   }
@@ -58,8 +70,8 @@ function payMail_vars_(a, kind) {
     subject: 'Proof received: ' + id + ' · Eyes on LEADS',
     preheader: 'We have your proof of payment. The core team is checking it; another email follows once it is verified.',
     windowName: 'Proof received', headline: 'Evidence received, ' + nick + '.', stamp: 'Proof received',
-    receipt: rows, reminders: [],
-    button: ['Check your file', PAYMAIL_DOOR_ + '?page=pay'],
+    receipt: rows, reminders: [], docs: [],
+    button: ['Check your file ↗', PAYMAIL_DOOR_ + '?page=pay'],
     closing: 'Your file is moving.'
   });
 }
@@ -68,14 +80,14 @@ function payMail_vars_(a, kind) {
 function payMail_text_(kind, v) {
   const lines = ['EYES ON LEADS // ' + v.windowName.toUpperCase(), '', v.headline, ''];
   if (kind === 'verified') {
-    lines.push('Your payment for EYES ON LEADS 2627 has been received and verified.', '',
-      'BUT YOUR FILE ISN\'T COMPLETE JUST YET. Prepare these documents:',
-      '  01  Parental Notification Form (PNF)', '  02  Declaration and Undertaking (D&U)', '',
-      'Important reminders:',
-      '  - Both documents need your parent\'s or guardian\'s original wet signature.',
-      '  - The forms will be released through our core communication channels. Wait for their release.',
-      '  - Drop off both documents at the designated box in the MEA Room (MVP 320).', '',
-      'Then confirm on the portal under FILE 03: REQUIREMENTS ("I dropped this off onsite").');
+    const plain = h => String(h).replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&rsquo;/g, '\'');
+    lines.push('We\'ve been watching, and it looks like you\'ve taken another step toward discovering what lies beyond your comfort zone.',
+      'Your payment for EYES ON LEADS 2627 has been successfully received and verified!', '',
+      'BUT YOUR FILE ISN\'T COMPLETE JUST YET. Kindly prepare the following documents:');
+    v.docs.forEach(d => lines.push('  ' + d.n + '  ' + d.name + ' (' + d.abbr + ')' + (d.url ? ': ' + d.url : '')));
+    lines.push('', 'Important reminders:');
+    v.reminders.forEach(r => lines.push('  - ' + plain(r)));
+    lines.push('', 'After physically submitting your documents, return to the applicant portal and confirm your submission under FILE 03: REQUIREMENTS.');
   } else {
     lines.push('We saw it. Your proof of payment for EYES ON LEADS 2627 is in your file now.',
       'The core team checks every receipt by hand. This is not the confirmation yet: we\'ll email you again once your payment is verified.', '');
@@ -84,7 +96,7 @@ function payMail_text_(kind, v) {
   }
   lines.push('');
   v.receipt.forEach(r => lines.push(r[0] + ': ' + r[1]));
-  lines.push('', v.button[0] + ': ' + v.button[1], '', 'Event dates: ' + v.dates + ' (' + v.venue + ')', '',
+  lines.push('', v.button[0].replace(/\s*↗$/, '') + ': ' + v.button[1], '', v.dateBox[0] + ': ' + v.dateBox[1] + (v.dateBox[2] ? ' (' + v.dateBox[2] + ')' : ''), '',
     'We have been watching. ' + v.closing, '', 'Questions? Reply to this email, or message ' + v.contacts + '.');
   return lines.join('\n');
 }

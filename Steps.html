@@ -628,7 +628,7 @@
       if (f.due) { const p = document.createElement('p'); p.className = 's-due'; p.textContent = 'Due ' + (/^\d{4}-/.test(f.due) ? fmtDate(f.due) : f.due); li.appendChild(p); }
       const act = document.createElement('div'); act.className = 's-actions';
       if (f.link) {
-        const a = document.createElement('a'); a.className = 'btn'; a.href = f.link; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Open form'; act.appendChild(a);
+        const a = document.createElement('a'); a.className = 'btn'; a.href = f.link; a.target = '_blank'; a.rel = 'noopener'; a.textContent = f.onsite ? 'Download the form' : 'Open form'; act.appendChild(a);
       }
       if (f.embed) {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ghost'; b.textContent = 'Preview here';

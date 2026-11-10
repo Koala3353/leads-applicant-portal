@@ -306,7 +306,9 @@ function tracker_sync_() {
     const need = TRACK_COLS.concat(['ApplicantID', 'IDNumber', 'Email', 'LastUpdated']);
     const gone = need.filter(k => ci(k) < 0);
     if (gone.length) throw new Error('Applicants is missing ' + gone.join(', '));
-    const values = sh.getRange(2, 1, last - 1, head.length).getValues();
+    // only as far right as the last column it needs (not the essays and game answers further along)
+    const width = Math.max.apply(null, need.map(ci)) + 1;
+    const values = sh.getRange(2, 1, last - 1, width).getValues();
     const write = ['LastUpdated'].concat(TRACK_COLS);
     const col = {}, dirty = {};
     write.forEach(k => { col[k] = values.map(r => [r[ci(k)]]); });

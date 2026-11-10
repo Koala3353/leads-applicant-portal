@@ -99,6 +99,7 @@ function steps_onsiteDone_(a) {
  */
 function steps_markOnsite(name, done) {
   return traced_('steps_markOnsite', 'reqs', () => {
+    const pv = steps_previewBlock_(); if (pv) return pv;
     const found = requireApplicant_();
     const a = found.data;
     const p = progressFor_(a);
@@ -133,17 +134,27 @@ function steps_forms_(applicantId) {
     what: headerIndex_(head, ['what to do', 'instructions']), due: headerIndex_(head, ['due', 'deadline']) };
   return rows.slice(1).filter(r => c.title >= 0 && String(r[c.title]).trim()).map(r => {
     const raw = c.link >= 0 ? String(r[c.link]).trim() : '';
-    const link = formLink_(raw, applicantId) || (/^https:\/\//.test(raw) ? raw : '');
+    const onsite = /^on-?site$/i.test(raw);
+    // an onsite paper form (PNF / DNU) gets its download link from Settings › PNFLink / DULink
+    const link = formLink_(raw, applicantId) || (/^https:\/\//.test(raw) ? raw : '') || (onsite ? steps_downloadLink_(r[c.title]) : '');
     const due = c.due >= 0 ? parseDate_(r[c.due]) : null;
     return {
       title: String(r[c.title]).trim(),
-      onsite: /^on-?site$/i.test(raw),
+      onsite: onsite,
       link: link,
       embed: steps_embedUrl_(link),
       what: c.what >= 0 ? String(r[c.what]).trim() : '',
       due: due ? due.toISOString() : (c.due >= 0 ? String(r[c.due]).trim() : '')
     };
   });
+}
+
+/** Settings › PNFLink / DULink for a Requirements row titled "PNF …" / "DNU …" / "D&U …" ('' if blank or not a link). */
+function steps_downloadLink_(title) {
+  const t = String(title || '').trim();
+  const key = /^(pnf\b|parental)/i.test(t) ? 'PNFLink' : /^(dnu\b|d\s*&\s*u\b|declaration)/i.test(t) ? 'DULink' : '';
+  const url = key ? String(setting_(key) || '').trim() : '';
+  return /^https:\/\//.test(url) ? url : '';
 }
 
 /** A Google Form link made embeddable for the preview ('' for anything else). */
@@ -236,6 +247,7 @@ function steps_saveEmergencyContact(contact) {
 }
 
 function steps_saveEmergencyContact_(contact) {
+  const pv = steps_previewBlock_(); if (pv) return pv;
   const found = requireApplicant_();
   const a = found.data;
   const p = progressFor_(a);
@@ -308,7 +320,15 @@ function steps_uploadProof(file) {
   return traced_('steps_uploadProof', 'pay', () => steps_uploadProof_(file || {}), r => r.ok ? r.id + ' proof uploaded' : 'not uploaded: ' + r.error);
 }
 
+/** The core team previewing without a file of their own: a friendly "doesn't save" instead of an ERROR in Activity. */
+function steps_previewBlock_() {
+  const email = currentEmail_();
+  if (!email || !isAdmin_(email) || getApplicantByEmail_(email)) return null;
+  return { ok: false, error: 'Core team preview: nothing saves here without an applicant file of your own.' };
+}
+
 function steps_uploadProof_(file) {
+  const pv = steps_previewBlock_(); if (pv) return pv;
   const found = requireApplicant_();
   const a = found.data;
   const p = progressFor_(a);

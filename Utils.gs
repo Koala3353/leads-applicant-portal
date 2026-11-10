@@ -276,6 +276,8 @@ const SETTINGS_SCHEMA = [
   { key: 'RequirementsOpen', type: 'bool', def: false, help: 'STEP 03. Tick to open Requirements for accepted applicants whose Payment is VERIFIED. The forms are listed in the Requirements tab.' },
   { key: 'RequirementsNote', type: 'text', def: '', help: 'Shown above the forms: general instructions for every requirement.' },
   { key: 'RequirementsDeadline', type: 'date', def: null, help: 'Last day to finish requirements, e.g. 2026-12-15 23:59 (shown to applicants)' },
+  { key: 'PNFLink', type: 'text', def: '', help: "Link to download the Parental Notification Form (PNF): in the 'payment verified' email and on the Requirements page. Blank = the email says the forms will be released through the core team's channels." },
+  { key: 'DULink', type: 'text', def: '', help: 'Link to download the Declaration and Undertaking (D&U): in the \'payment verified\' email and on the Requirements page. Blank = same as above.' },
   // 04 GA, 05 rooms
   { key: 'GACalendarLink', type: 'text', def: '', help: 'STEP 04. Google Calendar link for the 1st GA. The step stays locked until this is filled in.' },
   { key: 'GADetails', type: 'text', def: '', help: 'Shown with the calendar button: date, time, room, what to bring.' },
