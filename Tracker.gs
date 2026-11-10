@@ -351,6 +351,36 @@ function menu_trackerSync() {
   ui.alert(r.ok ? 'Synced. ' + r.changed + ' applicant(s) changed.' : 'Could not read the tracker. Check Settings › TrackerSheet and that this account can open it.');
 }
 
+/**
+ * Run from the Apps Script editor after changing the tracker's sharing: can the portal's account (the one that deploys
+ * it) still read the tracker AND write to [04] / [05]? Changes nothing. The result is in the execution log.
+ */
+function tracker_check() {
+  ownerOnly_();
+  const me = String(Session.getEffectiveUser().getEmail() || '');
+  const say = m => { console.log(m); return m; };
+  const id = trackerId_();
+  if (!id) return say('Settings › TrackerSheet is off.');
+  let ss;
+  try { ss = SpreadsheetApp.openById(id); } catch (e) { return say('CANNOT OPEN the tracker as ' + me + ': ' + (e && e.message) + '. Share it with ' + me + ' as Editor.'); }
+  tracker_.memo = ss;
+  const t = trackerRead_(true);
+  const out = ['Opened "' + ss.getName() + '" as ' + me,
+    'Accepted / rejected / waitlisted lists read: ' + !!(t && t.ok.status),
+    'Payment Tracker read: ' + !!(t && t.ok.pay),
+    'PNF & DNU Tracker read: ' + !!(t && t.ok.reqs),
+    'People with an ID in the tracker: ' + (t ? Object.keys(t.ids).length : 0)];
+  try { out.push('Drive access: ' + DriveApp.getFileById(id).getAccess(me)); } catch (e) { out.push('Drive access: could not check (' + (e && e.message) + ')'); }
+  [TRACKER_TABS_.pay, TRACKER_TABS_.reqs, TRACKER_TABS_.accepted].forEach(name => {
+    const sh = ss.getSheetByName(name);
+    if (!sh) { out.push(name + ': TAB MISSING'); return; }
+    const locked = sh.getProtections(SpreadsheetApp.ProtectionType.SHEET).concat(sh.getProtections(SpreadsheetApp.ProtectionType.RANGE))
+      .filter(p => !p.isWarningOnly() && !p.canEdit());
+    out.push(name + ': ' + (locked.length ? 'PROTECTED against this account (' + locked.length + ' protection(s)): the portal cannot write here' : 'writable'));
+  });
+  return say(out.join('\n'));
+}
+
 /** Run once from the Apps Script editor: syncs the tracker into the Applicants tab every 5 minutes. */
 function setup_trackerTrigger() {
   ownerOnly_();
