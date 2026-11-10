@@ -340,6 +340,8 @@ function tracker_syncTrigger() {
   } catch (e) {
     activity_('tracker_sync', 'Sync from the tracker failed: ' + (e && e.message), { level: 'WARN' });
   }
+  // then the "payment verified" emails anyone is now due (PaymentMail.gs); runs even with the tracker off
+  try { payMail_sendPending_(); } catch (e) { activity_('payment_mail', 'Verified emails failed: ' + (e && e.message), { level: 'WARN' }); }
 }
 
 /** LEADS › Sync from the tracker now. */
@@ -348,7 +350,9 @@ function menu_trackerSync() {
   try { requireAdmin_(); } catch (e) { ui.alert('Only core team members listed in the Admins tab can do this.'); return; }
   if (!trackerOn_()) { ui.alert('Settings › TrackerSheet is off, so there is nothing to sync.'); return; }
   const r = tracker_sync_();
-  ui.alert(r.ok ? 'Synced. ' + r.changed + ' applicant(s) changed.' : 'Could not read the tracker. Check Settings › TrackerSheet and that this account can open it.');
+  const mails = r.ok ? payMail_sendPending_() : 0;   // "payment verified" emails now due (PaymentMail.gs)
+  ui.alert(r.ok ? 'Synced. ' + r.changed + ' applicant(s) changed.' + (mails ? ' ' + mails + ' "payment verified" email(s) sent.' : '')
+    : 'Could not read the tracker. Check Settings › TrackerSheet and that this account can open it.');
 }
 
 /**

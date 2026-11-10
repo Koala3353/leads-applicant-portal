@@ -53,7 +53,8 @@ const COLS = [
   'Environment',                                                          // where they feel comfortable sharing (pick any, "A; B")
   'EyePhoto',                                                             // Drive link to the eye-scan photo from the Game (GameApi.gs)
   'OnsiteSubmitted',                                                      // requirements the applicant says they dropped off onsite, "PNF; DNU" (StepsApi.gs)
-  'FinAidScholar'                                                         // optional self-declared checkbox on Apply: "Yes" or blank
+  'FinAidScholar',                                                        // optional self-declared checkbox on Apply: "Yes" or blank
+  'PaymentVerifiedMail'                                                   // when the "payment verified" email went out (PaymentMail.gs); blank = not yet
 ];
 
 /** The Applicants header row as it is in the Sheet right now (read once per run). Falls back to COLS on an empty tab. */

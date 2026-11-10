@@ -358,6 +358,7 @@ function steps_uploadProof_(file) {
   const before = String(a.Payment || 'NONE');
   if (before !== 'SUBMITTED') setTrack_(a.ApplicantID, 'Payment', 'SUBMITTED', 'system');
   else logChange_(a.ApplicantID, 'payment proof', 'replaced', 'new file', 'system');
+  payMail_send_(a, 'received');   // "we saw your proof; another email once it's verified" (PaymentMail.gs; never throws)
   return { ok: true, id: a.ApplicantID };
 }
 
