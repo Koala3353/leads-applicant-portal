@@ -161,3 +161,37 @@ function payMail_test() {
     : { ApplicantID: 'APP-0000', Nickname: 'Sample', FullName: 'Applicant, Sample', Email: me, FinAidScholar: 'Yes' };
   return ['received', 'verified'].map(k => k + ': ' + (payMail_send_(a, k) ? 'sent to ' + me : 'NOT sent (see Activity)')).join('\n');
 }
+
+/**
+ * Run from the editor: a one-off "dark mode lab" email to you. Gmail on iPhone darkened the light text in the payment
+ * emails; each row here draws light text on the email's dark background a different way. Open it in Gmail on an iPhone
+ * with dark mode ON, screenshot it, and the row that still reads light is the technique the template should use.
+ */
+function payMail_darkLab() {
+  ownerOnly_();
+  const me = String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
+  const dark = "background-color:#17181c;background-image:url('https://i.imgur.com/ZtlO7pz.png');";
+  const sample = (wrap, extra) => ['#e4e4df', '#f2ea00', '#e2c98e'].map(c => wrap('<span style="color:' + c + ';' + extra(c) + '">Case file ' +
+    (c === '#e4e4df' ? 'grey' : c === '#f2ea00' ? 'yellow' : 'manila') + ' text</span>')).join('<br>');
+  const none = h => h, noExtra = () => '';
+  const rows = [
+    ['A', 'plain colour (what failed)', dark, sample(none, noExtra)],
+    ['B', 'blend fix in a style block (current)', dark, sample(h => '<div class="gs"><div class="gd">' + h + '</div></div>', noExtra)],
+    ['C', 'blend fix written inline', dark, sample(h => '<div style="background:#000;mix-blend-mode:screen;"><div style="background:#000;mix-blend-mode:difference;">' + h + '</div></div>', noExtra)],
+    ['D', '-webkit-text-fill-color', dark, sample(none, c => '-webkit-text-fill-color:' + c + ';')],
+    ['E', 'text painted as a clipped background', dark, sample(none, c => 'background-image:linear-gradient(' + c + ',' + c + ');-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;')],
+    ['F', 'mid-grey tone (#9a9a9a)', dark, '<span style="color:#9a9a9a;">Case file mid-grey text</span>'],
+    ['G', 'plain dark colour, NO image', 'background-color:#17181c;', sample(none, noExtra)]
+  ];
+  const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only">' +
+    '<style>u + .body .gs { background:#000; mix-blend-mode:screen; } u + .body .gd { background:#000; mix-blend-mode:difference; }</style></head>' +
+    '<body class="body" style="margin:0;padding:0;background-color:#0c0c0e;background-image:url(\'https://i.imgur.com/V8jQqbw.png\');">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0c0c0e;background-image:url(\'https://i.imgur.com/V8jQqbw.png\');"><tr><td style="padding:16px;">' +
+    '<p style="margin:0 0 14px 0;font-family:Courier New,monospace;font-size:15px;line-height:22px;color:#ff4a50;">DARK MODE LAB: open in Gmail on iPhone with dark mode ON and screenshot every row. The row whose three lines still read light (grey, yellow, manila) wins.</p>' +
+    rows.map(r => '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 12px 0;border:2px solid #707070;' + r[2] + '"><tr><td style="padding:12px 14px;font-family:Courier New,monospace;font-size:16px;line-height:24px;">' +
+      '<span style="color:#ff4a50;font-weight:bold;">' + r[0] + ' &middot; ' + r[1] + '</span><br>' + r[3] + '</td></tr></table>').join('') +
+    '</td></tr></table></body></html>';
+  MailApp.sendEmail(me, 'Dark mode lab (Eyes on LEADS payment emails)', 'Open this in Gmail on iPhone with dark mode on.', { name: 'I.R.I.S. // LEADS 2627', htmlBody: html });
+  return 'Lab sent to ' + me;
+}
