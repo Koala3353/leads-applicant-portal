@@ -141,6 +141,7 @@
   .onsite input:checked + span{color:var(--glow,#fffc04)}
   .onsite input:focus-visible{outline:3px solid var(--sky,#6cf);outline-offset:2px}
   .onsite-msg{margin:10px 0 0;font-size:.78rem;min-height:1.2em;color:var(--muted)}
+  .pdf-soon{margin:10px 0 0;font:700 .86rem/1.4 var(--mono);color:#6b1a12}   /* on the manila card: dark rust ink, readable */
   .forms{display:grid;gap:26px;margin:0;padding:0;list-style:none;counter-reset:f}
   .form{position:relative;padding:22px clamp(14px,3vw,26px) 20px;background:#d9c08a;color:#1b1b1b;box-shadow:5px 5px 0 #000;counter-increment:f}
   .form::before{content:"FORM " counter(f, decimal-leading-zero);position:absolute;top:-18px;left:16px;padding:3px 12px 2px;background:#d9c08a;font-family:var(--type);font-size:.85rem;letter-spacing:.12em}
@@ -668,7 +669,7 @@
       if (f.link) {
         const a = document.createElement('a'); a.className = 'btn'; a.href = f.link; a.target = '_blank'; a.rel = 'noopener'; a.textContent = f.onsite ? 'Download the PDF' : 'Open form'; act.appendChild(a);
       } else if (f.onsite) {   // the PDF isn't up yet (Settings › PNFLink / DULink blank): say where it will be
-        const p = document.createElement('p'); p.className = 'mono onsite-msg'; p.textContent = 'The PDF will be posted here. Check back soon.'; li.appendChild(p);
+        const p = document.createElement('p'); p.className = 'pdf-soon'; p.textContent = 'The PDF will be posted here. Check back soon.'; li.appendChild(p);
       }
       if (f.embed) {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ghost'; b.textContent = 'Preview here';
