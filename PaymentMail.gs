@@ -47,8 +47,8 @@ function payMail_vars_(a, kind) {
     const due = parseDate_(s.RequirementsDeadline);
     const hl = t => pm_hl_(t);   // a yellow marker on the paper (PaymentMailHtml.gs)
     const reminders = [
-      both ? 'The ' + hl('PNF') + ' and ' + hl('D&amp;U') + ' forms can be accessed through the links above. Kindly ' + hl('download and accomplish both documents') + ' before submission.'
-        : 'The forms will be made available through our core communication channels. Kindly ' + hl('wait for their release') + ' before accomplishing them.',
+      both ? 'The ' + hl('PNF') + ' and ' + hl('D&amp;U') + ' PDFs can be downloaded from the links above, or from the applicant portal under ' + hl('FILE 03: REQUIREMENTS') + '. Kindly ' + hl('download and accomplish both documents') + ' before submission.'
+        : 'The forms will be made available as PDFs on the applicant portal, under ' + hl('FILE 03: REQUIREMENTS') + '. Kindly ' + hl('wait for their release') + ' before accomplishing them.',
       'Both documents must bear your parent&rsquo;s or guardian&rsquo;s original ' + hl('wet signature') + '.',
       'Once completed, physically submit both documents to the ' + hl('designated drop-off box at the MEA Room (MVP 320)') +
         (due ? ' by ' + hl(Utilities.formatDate(due, 'Asia/Manila', 'MMMM d, h:mm a')) : '') + '.'

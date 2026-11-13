@@ -666,7 +666,9 @@
       if (f.due) { const p = document.createElement('p'); p.className = 's-due'; p.textContent = 'Due ' + (/^\d{4}-/.test(f.due) ? fmtDate(f.due) : f.due); li.appendChild(p); }
       const act = document.createElement('div'); act.className = 's-actions';
       if (f.link) {
-        const a = document.createElement('a'); a.className = 'btn'; a.href = f.link; a.target = '_blank'; a.rel = 'noopener'; a.textContent = f.onsite ? 'Download the form' : 'Open form'; act.appendChild(a);
+        const a = document.createElement('a'); a.className = 'btn'; a.href = f.link; a.target = '_blank'; a.rel = 'noopener'; a.textContent = f.onsite ? 'Download the PDF' : 'Open form'; act.appendChild(a);
+      } else if (f.onsite) {   // the PDF isn't up yet (Settings › PNFLink / DULink blank): say where it will be
+        const p = document.createElement('p'); p.className = 'mono onsite-msg'; p.textContent = 'The PDF will be posted here. Check back soon.'; li.appendChild(p);
       }
       if (f.embed) {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ghost'; b.textContent = 'Preview here';
