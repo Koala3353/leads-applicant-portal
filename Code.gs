@@ -47,7 +47,7 @@ function doGet(e) {
   template.ref = normalizeReferral_(e && e.parameter && e.parameter.ref);   // ...exec?ref=BEA (Referrals.gs); '' if none
   template.revealAsked = !!(e && e.parameter && e.parameter.reveal === '1');   // ...exec?reveal=1: the results email (Home plays the reveal)
   template.revealAs = String((e && e.parameter && e.parameter.as) || '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 12);   // ...&as=APP-2447: core team only (checked on the server)
-  template.viewAs = String((e && e.parameter && e.parameter.viewas) || '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 12);   // ...?viewas=APP-2447 (or NOFILE / GUEST): Home after results, as that applicant; core team only (home_viewAs)
+  template.viewAs = String((e && e.parameter && e.parameter.viewas) || '').replace(/[^A-Za-z0-9.@_-]/g, '').slice(0, 80);   // ...?viewas=APP-2447, an email, NOFILE or GUEST: Home after results, as that applicant; core team only (home_viewAs)
   activity_('page_view', notice ? 'unknown page, showed Home' : '', { page: key, anon: true });   // no email on page views
   PAGE_BOOT_ = notice ? null : pageBoot_(key);   // printed into the page by brand_css_() (Brand.gs)
   return template.evaluate()

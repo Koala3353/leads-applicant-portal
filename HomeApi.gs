@@ -75,7 +75,8 @@ function homeReleased_() {
 
 /**
  * The core team's preview of Home after results are out (...exec?viewas=APP-2447): the page exactly as that applicant
- * will see it once Settings › ResultsReleased and PaymentOpen are ticked, whatever they say now. viewas=NOFILE shows a
+ * will see it once Settings › ResultsReleased and PaymentOpen are ticked, whatever they say now. viewas= also takes their
+ * login email (...?viewas=juan.dela.cruz@student.ateneo.edu, as the tracker lists people). viewas=NOFILE shows a
  * signed-in Ateneo account with no file, viewas=GUEST someone not signed in. Admins only. Read-only: the switches are
  * flipped for this one call in memory (never in the Sheet), and nothing is written for the applicant (no RevealSeen,
  * no referral, no events; the trace row is the core team's own).
@@ -87,8 +88,8 @@ function home_viewAs(applicantId) {
     getSettings_.cache = Object.assign({}, getSettings_(), { ResultsReleased: true, PaymentOpen: true });   // this call only
     if (id === 'GUEST') return home_getContext_({ email: '', id: id });
     if (id === 'NOFILE') return home_getContext_({ email: 'preview.nofile@student.ateneo.edu', id: id });
-    const found = getApplicantById_(id);
-    if (!found || !String(found.data.Email || '').trim()) throw new Error('No applicant with the ID ' + id + '.');
+    const found = id.indexOf('@') > 0 ? getApplicantByEmail_(id.toLowerCase()) : getApplicantById_(id);   // an APP ID or their email
+    if (!found || !String(found.data.Email || '').trim()) throw new Error('No applicant with the ID or email ' + id + '.');
     return home_getContext_({ email: String(found.data.Email).trim(), id: found.data.ApplicantID });
   }, c => 'preview ' + (c && c.preview ? c.preview.id : '') + (c && c.applicant ? ' ' + c.applicant.status : ''));
 }
