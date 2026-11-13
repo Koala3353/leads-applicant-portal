@@ -288,7 +288,7 @@
   .status .status-act{display:inline-flex;margin:14px 0 4px}
   /* rejected / withdrawn: a closed file. Only the status card and the filed application stay. */
   body.file-closed .mod[data-key="pay"],body.file-closed .mod[data-key="req"],body.file-closed .mod[data-key="ga"],body.file-closed .mod[data-key="room"],
-  body.file-closed #refCard,body.file-closed .fact-pay,body.file-closed .duestrip{display:none}
+  body.file-closed #refCard,body.file-closed .facts li.fact-pay,body.file-closed .duestrip{display:none}
   body.file-closed .mods:not(.with-admin){grid-template-columns:minmax(0,520px)}
   body.file-closed .substat-row:has(#sig-payment),body.file-closed .substat-row:has(#sig-requirements),body.file-closed .substat-row:has(#sig-confirmed){display:none}
   body.file-closed .path{grid-template-columns:repeat(2,1fr)}
@@ -1686,7 +1686,7 @@
       $('hubNote').textContent = BRAND.hub.guestNote;
     } else {
       const H = BRAND.hub;
-      if (!a) $('hubNote').textContent = H.noFileNote;
+      if (!a) $('hubNote').textContent = R ? H.noFileReleased : H.noFileNote;
       if (a) setModule('apply', 'done', H.applyDone, H.view);
       else if (!ctx.allowedDomain) setModule('apply', 'locked', H.wrongAccount);
       else setModule('apply', p.apply.state, p.apply.preview ? H.adminPreview : p.apply.unlocked ? H.applyOpen : L.apply, H.start);
@@ -1818,10 +1818,10 @@
       { id: 'reqs', title: S.reqs.title, kicker: S.reqs.kicker, deadline: dls.requirements, mine: acc,
         isDone: a && (a.requirements === 'SUBMITTED' || a.requirements === 'APPROVED'), isOpen: true, calm: !reqOpen, dim: !reqOpen,
         badge: reqOpen && a ? 'requirements ' + (BRAND.trackLabels.requirements[a.requirements] || String(a.requirements).toLowerCase()) : C0.lockedPill },
-      { id: 'ga', title: S.ga.title, kicker: S.ga.kicker, label: S.ga.label, now: S.ga.now, deadline: dls.ga, mine: acc, isOpen: true, calm: true, badge: accBadge },
-      { id: 'room', title: S.room.title, kicker: S.room.kicker, label: S.room.label, now: S.room.now, deadline: dls.room, mine: acc, isOpen: true, calm: true, badge: accBadge },
+      { id: 'ga', title: S.ga.title, kicker: S.ga.kicker, label: S.ga.label, now: S.ga.now, deadline: dls.ga, mine: acc, isOpen: true, calm: true, event: true, badge: accBadge },
+      { id: 'room', title: S.room.title, kicker: S.room.kicker, label: S.room.label, now: S.room.now, deadline: dls.room, mine: acc, isOpen: true, calm: true, event: true, badge: accBadge },
       { id: 'camp', title: S.camp.title, kicker: S.camp.kicker, label: S.camp.label, now: S.camp.now, deadline: dls.camp || ctx.campStart,
-        mine: acc || !a, isOpen: true, calm: true, badge: acc ? accBadge : C0.resultsPill },
+        mine: acc || !a, isOpen: true, calm: true, event: true, badge: acc ? accBadge : C0.resultsPill },
       { id: 'waitReply', title: S.waitReply.title, kicker: S.waitReply.kicker, deadline: dls.waitlistReply, mine: wl, isOpen: true, badge: BRAND.path.waitlisted.toLowerCase() },
       { id: 'waitPay', title: S.waitPay.title, kicker: S.waitPay.kicker, deadline: dls.waitlistPay, mine: wl, isOpen: false, calm: true, badge: '' }
     ];
@@ -1931,7 +1931,7 @@
     if (secondary && nextBox) {
       nextBox.hidden = false;
       $('nextTitle').textContent = secondary.kicker;
-      $('nextDate').textContent = BRAND.countdown.due + new Date(secondary.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', timeZone: 'Asia/Manila' });
+      $('nextDate').textContent = (secondary.event ? BRAND.countdown.on : BRAND.countdown.due) + new Date(secondary.deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', timeZone: 'Asia/Manila' });
     } else if (nextBox) {
       nextBox.hidden = true;
     }

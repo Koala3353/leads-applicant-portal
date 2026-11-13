@@ -125,6 +125,7 @@ const BRAND = {
     waitlistTextNoDate: 'If a slot opens, the core team emails you.',
     deadline: 'Deadline: ',
     due: 'Due ',
+    on: 'On ',                          // NEXT IN LINE for an event (1st GA, rooms, camp) instead of "Due"
     passed: 'Passed',
     stepClosed: ': deadline passed',    // a payment/requirements deadline went by (uploads still work, so not "closed")
     allClear: 'All steps cleared',
@@ -252,6 +253,7 @@ const BRAND = {
     title: 'What we have on you.',
     guestNote: 'Sign in with your Ateneo account to see your file.',
     noFileNote: 'No file on you yet. Start one above.',
+    noFileReleased: 'No file under this account. Applications for this year are closed.',   // once results are out
     checking: 'Checking who you are…',
     signedIn: 'Signed in as ',
     signedOut: 'Not signed in',
@@ -532,7 +534,7 @@ const BRAND = {
       'UNDER REVIEW': ['thinking', "Your file is open on someone's desk. Nothing to do yet. Breathe."],
       'WAITLISTED':   ['thinking', 'Waitlisted. Your file stays open. So does the door.'],
       'ACCEPTED':     ['excited',  'Subject cleared. Next: payment, then requirements. Your file is ready.'],
-      'REJECTED':     ['sad',      'Not this time. Your file stays on record. You can open it again next year.'],
+      'REJECTED':     ['sad',      'Not this time. Thank you for letting us look.'],   // no promise to keep the file (the rejection email)
       'CONFIRMED':    ['love',     'Confirmed. We have been watching. We will see you at camp.'],
       'WITHDRAWN':    ['sad',      'You withdrew. Your file is closed. Message the core team if you have questions.']
     },
