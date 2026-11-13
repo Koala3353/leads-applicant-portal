@@ -357,7 +357,7 @@
   function locked(text) { $('lockedMsg').textContent = text; show('locked'); }
 
   /* ---------- 02 proof of payment ---------- */
-  let hasExistingProof = false, payId = '', payNick = '', payDue = '';
+  let hasExistingProof = false, payId = '', payNick = '', payDue = '', paySurname = '', payCamp = '';
   function renderPay(d) {
     const c = d.content, v = d.applicant.payment;
     $('payPill').textContent = 'Payment: ' + v; $('payPill').className = 'pill ' + (PILL[v] || 'dim');
@@ -379,7 +379,7 @@
     // the three tags: pay, send proof, verified
     const TRACK = { NONE: ['now', '', ''], SUBMITTED: ['done', 'done', 'now'], VERIFIED: ['done', 'done', 'done'], REJECTED: ['done', 'flag', ''] }[v] || ['now', '', ''];
     Array.from($('payTrack').children).forEach((li, i) => { li.className = TRACK[i] ? 'is-' + TRACK[i] : ''; });
-    payId = d.applicant.id || ''; payNick = d.applicant.firstName || '';
+    payId = d.applicant.id || ''; payNick = d.applicant.firstName || ''; paySurname = d.applicant.surname || ''; payCamp = d.camp || '';
     const box = $('qrs'); box.textContent = '';
     (c.qrs || []).forEach(q => {
       const f = document.createElement('figure'); f.className = 'qr';
@@ -476,8 +476,8 @@
   function playReceipt(file) {
     if (calm()) return false;
     let origin = ''; try { origin = new URL(RECEIPT_URL).origin; } catch (e) { return false; }
-    const veil = document.createElement('div'); veil.className = 'rcpt-veil'; veil.setAttribute('role', 'dialog'); veil.setAttribute('aria-modal', 'true'); veil.setAttribute('aria-label', 'Evidence received');
-    const frame = document.createElement('iframe'); frame.title = 'Evidence received'; frame.allow = 'autoplay; fullscreen';
+    const veil = document.createElement('div'); veil.className = 'rcpt-veil'; veil.setAttribute('role', 'dialog'); veil.setAttribute('aria-modal', 'true'); veil.setAttribute('aria-label', 'The Site, part 1 of 2');
+    const frame = document.createElement('iframe'); frame.title = 'The Site, part 1 of 2'; frame.allow = 'autoplay; fullscreen';
     veil.append(frame); document.body.append(veil);
     const time = new Date().toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });
     let ready = false, maxTimer = 0, done = false;
@@ -493,7 +493,7 @@
       if (d.type === 'leads-receipt-ready') {
         ready = true; veil.classList.add('on'); try { frame.focus(); } catch (err) { /* fine */ }
         maxTimer = setTimeout(() => finish(false), 60000);
-        frame.contentWindow.postMessage({ type: 'leads-receipt-init', id: payId, nick: payNick, amount: payDue, time: time }, origin);
+        frame.contentWindow.postMessage({ type: 'leads-receipt-init', id: payId, nick: payNick, surname: paySurname, camp: payCamp, amount: payDue, time: time }, origin);
         call('home_revealEye').then(r => { if (r && r.src) try { frame.contentWindow.postMessage({ type: 'leads-reveal-eye', src: r.src }, origin); } catch (err) { /* fine */ } }).catch(() => {});
       } else if (d.type === 'leads-receipt-alive') { clearTimeout(maxTimer); maxTimer = setTimeout(() => finish(false), 60000); }
       else if (d.type === 'leads-receipt-done') finish(false);

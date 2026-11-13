@@ -53,11 +53,13 @@ function steps_get_(page) {
     signedIn: !!email,
     email: email,
     applicant: a ? { id: a.ApplicantID, firstName: String(a.Nickname || a.FullName || '').trim().split(' ')[0], status: a.Status,
+      surname: String(a.FullName || '').split(',')[0].trim().slice(0, 30),   // FullName is "Surname, First"; the payment film types it into the door log
       payment: a.Payment || 'NONE', requirements: a.Requirements || 'NONE',
       message: String(a.MessageToApplicant || '').trim().slice(0, 1000) } : null,
     step: { state: step.state, unlocked: !!step.unlocked, why: step.why || '' },
     progress: { payment: p.payment.state, requirements: p.requirements.state, ga: p.ga.state, room: p.room.state },
     contact: String(s.ContactEmail || ''),
+    camp: campStart_(s),   // ISO or null: the payment film's "days until Kasile Hills"
     content: null
   };
   if (!a || !step.unlocked && step.state !== 'done') return out;

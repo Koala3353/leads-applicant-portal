@@ -1,102 +1,104 @@
 <!doctype html>
 <!--
-  Eyes on LEADS: Act 3 "The receipt" (GitHub Pages; clasp ignores docs/). Plays once, full screen, right after an
-  accepted applicant's FIRST proof-of-payment upload. Steps.html opens it in a frame and says who it is:
-      { type: 'leads-receipt-init', id: 'APP-2447', nick: 'Hanna', amount: '4,000', time: '6:24 PM' }
-  and, a moment later, their eye-scan photo { type: 'leads-reveal-eye', src: 'data:image/...' } (the same message
-  the results film uses). It answers 'leads-receipt-ready', 'leads-receipt-alive' (keep-alive while the gate waits),
-  'leads-receipt-finished' / 'leads-receipt-skip' and 'leads-receipt-done'. Only *.googleusercontent.com (the portal)
-  may say who it is.
-  ~20 s, drawn in one 2D canvas with ../reveal/ink.js. The sound is generated here with Web Audio (no files): tape
-  hiss, a sub drone, fluorescent buzz, a heartbeat that speeds up, a thermal printer, a whisper in the dark, one
-  stinger on the single scare frame, a stamp, a drawer slam, then a low calm note under the card.
-  Brand rules (CONTEXT.md 7.1): scary, never gory; one frame of scare, no strobing; the scare, flicker and tears are
-  skipped for reduced motion; the words end calm, on what happens next. No triangle eye.
-  ?at=13.7 freezes a frame (for review, no sound).
-  Story: 0.4 the archive (REC CAM 05). 3.6 a figure stands at the end of the aisle; it was not there a second ago.
-  6.2 / 7.4 tears bring it closer. 8.6 the receipt prints, line by line, with their details. 12.6 the lights die; the
-  printer keeps going; something whispers. 13.7 ONE frame: their eye, huge. 14.6 the lamp: the receipt is clipped
-  into their folder, RECEIVED is stamped (15.6), their eye in the photo corner, the figure's shadow over the desk.
-  17.6 the drawer slams. 18.6 the card: EVIDENCE FILED.
+  Eyes on LEADS: "The Site", PART 1 OF 2 (GitHub Pages; clasp ignores docs/). Plays once, full screen, right after an
+  accepted applicant's FIRST proof-of-payment upload. Part 2 ("The Room") comes with room booking,
+  which opens in January 2027; this one is the teaser.
+  Steps.html opens it in a frame and says who it is:
+      { type: 'leads-receipt-init', id: 'APP-2447', nick: 'Hanna', surname: 'Reyes', camp: '2027-01-29T00:00:00.000Z',
+        amount: '4,000', time: '6:24 PM' }
+  and, a moment later, their eye-scan photo { type: 'leads-reveal-eye', src: 'data:image/...' }. It answers
+  'leads-receipt-ready', 'leads-receipt-alive' (keep-alive while the gate waits), 'leads-receipt-finished' /
+  'leads-receipt-skip' and 'leads-receipt-done'. Only *-script.googleusercontent.com (the portal) may say who it is.
+
+  LOOK (LEADS 2627 brand book): photocopied, not photographed. Every shot is a two-tone halftone print (plates/*.png,
+  made from Unsplash-licence photos: Zoltan Tasi, Daniil Myakotin, Thomas Thompson, Samarth Kulkarni, Markus Spiske);
+  over it, hand-inked marks that boil (red brush brackets, circles, strike-throughs, handwritten notes), the portal's
+  retro OS window, REC / timestamps, scanlines on screen moments, the brand red dot, the blue broadcast card.
+  SOUND: audio/site.mp3 (site_calm.mp3 for reduced motion), mixed from CC0 Freesound recordings; see audio/CREDITS.md.
+
+  Story (seconds):  0 a call: someone breathes on the line; PAYMENT RECEIVED / SUBJECT CLEARED FOR TRANSFER; it hangs up.
+   3.4 CAM 01 the road to Kasile Hills, empty, dogs far off.   5.4 CAM 02 someone standing in the fog.
+   7.2 CAM 03 closer. The streetlight dies. NO SIGNAL.   8.9 CAM 04 the dorm corridor: the lights come on toward you;
+   the door log replaces ROOM 207 UNASSIGNED with their surname; three knocks; DOOR 207 OPEN; every light dies.
+   13.8 one second of silence and black.   15.0 ONE beat: their own eye, enormous, in negative.   15.6 the desk:
+   a TRANSFER ORDER with their details, CLEARED is stamped, a red note: "We found your room."   18.6 the card.
+  Brand rules (CONTEXT.md 7.1): scary, never gory; one scare, no strobing; the scare, shakes and flicker are skipped
+  for reduced motion; the words end on an invitation (Part 2 in January, not a threat). No triangle eye.  ?at=15.05 freezes a frame (review, no sound).
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Eyes on LEADS // Evidence</title>
+<title>Eyes on LEADS // The Site</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Special+Elite&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Special+Elite&family=VT323&family=Reenie+Beanie&display=swap">
 <link rel="modulepreload" href="../reveal/ink.js?v=3">
+<link rel="preload" as="image" href="plates/road.png"><link rel="preload" as="image" href="plates/hall.png">
 <style>
-  :root{--film-black:#070606;--chalk:#e6e0d4;--dried-red:#7a120c;--misreg-blue:#2b4a86;--brand-red:#e50000;--card-blue:#000ff0;--yellow:#fffc04}
+  :root{--black:#050505;--paper:#e9e6dc;--red:#e50000;--blue:#000ff0;--yellow:#fffc04;--grey:#808080}
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--film-black);color:var(--chalk);overflow:hidden;font-family:'JetBrains Mono',ui-monospace,monospace}
+  html,body{margin:0;height:100%;background:var(--black);color:var(--paper);overflow:hidden;font-family:'JetBrains Mono',ui-monospace,monospace}
   #film{position:fixed;inset:0;width:100%;height:100%;display:block}
-  #cap{position:fixed;z-index:3;left:50%;bottom:calc(max(14px,env(safe-area-inset-bottom)) + 64px);transform:translateX(-50%);width:max-content;max-width:84vw;margin:0;
-    text-align:center;pointer-events:none;font:700 clamp(16px,3.4vw,26px)/1.3 'JetBrains Mono',monospace;color:var(--chalk);text-shadow:0 0 6px var(--film-black),0 1px 0 var(--film-black)}
-  #cap:not(:empty){padding:.2em .5em;background:rgba(7,6,6,.55)}
-  #cap .cur{display:inline-block;width:1px;height:1em;background:currentColor;vertical-align:-.12em;margin-left:2px}
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .ctl{position:fixed;z-index:5;bottom:max(14px,env(safe-area-inset-bottom));right:14px;display:flex;gap:8px;transition:opacity .3s}
   .ctl.gone{opacity:0;pointer-events:none}
   button{font:700 13px/1 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;min-height:44px;padding:0 16px;border:0;color:#000;background:#c0c0c0;
     box-shadow:inset -1px -1px #0a0a0a,inset 1px 1px #fff,inset -2px -2px #808080,inset 2px 2px #dfdfdf,3px 3px 0 #000}
   button:active{box-shadow:inset 1px 1px #0a0a0a,inset -1px -1px #fff,inset 2px 2px #808080}
-  button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
+  button:focus-visible{outline:3px solid var(--paper);outline-offset:3px}
   .snd-ic{vertical-align:-2px;margin-right:4px}
-  .gate{position:fixed;inset:0;z-index:6;display:grid;place-items:center;padding:24px 18px;text-align:center;background:var(--film-black)}
+  .gate{position:fixed;inset:0;z-index:6;display:grid;place-items:center;padding:24px 18px;text-align:center;background:var(--black)}
   .gate[hidden]{display:none}
-  .gate h1{margin:0 0 12px;font:400 clamp(2rem,9vw,3.4rem)/1 'Special Elite','Courier New',monospace;color:var(--chalk);text-shadow:-2px 0 var(--dried-red),2px 0 var(--misreg-blue)}
-  .gate p{margin:0 auto 24px;max-width:30ch;font:400 15px/1.55 'JetBrains Mono',monospace}
+  .gate h1{margin:0 0 14px;font:400 clamp(1.9rem,8.4vw,3.2rem)/1.05 'Special Elite','Courier New',monospace;color:var(--paper);text-shadow:-2px 0 rgba(229,0,0,.75),2px 0 rgba(0,15,240,.75)}
+  .gate p{margin:0 auto 26px;max-width:30ch;font:400 15px/1.55 'JetBrains Mono',monospace;color:#bdbab0}
   .gate .go{background:var(--yellow);min-height:54px;width:min(320px,100%);font-size:15px}
-  .gate .rec{position:absolute;top:max(18px,env(safe-area-inset-top));left:18px;font:700 13px/1 'JetBrains Mono',monospace;letter-spacing:.12em}
-  .gate .rec i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--brand-red);margin-right:6px;animation:blink 1s steps(2) infinite}
+  .gate .rec{position:absolute;top:max(18px,env(safe-area-inset-top));left:18px;font:400 20px/1 'VT323',monospace;letter-spacing:.08em}
+  .gate .rec i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--red);margin-right:8px;animation:blink 1s steps(2) infinite}
+  .gate .ring{display:block;margin:0 auto 18px;width:14px;height:14px;border-radius:50%;background:var(--red);box-shadow:0 0 0 6px rgba(229,0,0,.18);animation:blink 1.2s steps(2) infinite}
   @keyframes blink{50%{opacity:0}}
-  @media (prefers-reduced-motion:reduce){.gate .rec i{animation:none}}
+  @media (prefers-reduced-motion:reduce){.gate .rec i,.gate .ring{animation:none}}
   .end{position:fixed;inset:0;z-index:4;display:grid;place-items:end center;padding:20px 16px max(24px,env(safe-area-inset-bottom));opacity:0;pointer-events:none}
   .end.on{opacity:1;pointer-events:auto}
   .end[inert]{pointer-events:none}
-  .card{width:min(560px,100%);background:var(--card-blue);color:#fff;text-align:center;padding:24px 20px 22px;rotate:-1deg;box-shadow:0 0 0 4px #000,0 0 0 7px var(--card-blue),8px 10px 0 7px #000}
+  .card{width:min(560px,100%);background:var(--blue);color:#fff;text-align:center;padding:24px 20px 22px;rotate:-1deg;box-shadow:0 0 0 4px #000,0 0 0 7px var(--blue),8px 10px 0 7px #000}
   .card p{margin:0}
   .card .k{font:700 12px/1.4 'JetBrains Mono',monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--yellow)}
-  .card .t{font:800 clamp(32px,9vw,56px)/.95 'JetBrains Mono',monospace;letter-spacing:-.04em;text-transform:uppercase;margin:10px 0 12px}
+  .card .t{font:800 clamp(34px,10vw,58px)/.95 'JetBrains Mono',monospace;letter-spacing:-.04em;text-transform:uppercase;margin:10px 0 12px}
   .card .s{font:400 15px/1.5 'JetBrains Mono',monospace}
   .card .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
   .card .go{background:var(--yellow)}
-  @media (prefers-reduced-motion:reduce){.end{transition:opacity .3s ease}}
 </style>
 </head>
 <body>
 <canvas id="film" aria-hidden="true"></canvas>
-<p id="cap" aria-hidden="true"></p>
-<p class="sr" id="capLive" role="status" aria-live="polite"></p>
+<p class="sr" id="live" role="status" aria-live="polite"></p>
 <div class="ctl gone" id="ctl">
   <button type="button" id="sound" aria-pressed="false"></button>
   <button type="button" id="skip">Skip ▸▸</button>
 </div>
 <section class="gate" id="gate" aria-labelledby="gateT" hidden>
-  <p class="rec" aria-hidden="true"><i></i>REC &nbsp;CAM 5</p>
+  <p class="rec" aria-hidden="true"><i></i>INCOMING &nbsp;LINE 2</p>
   <div>
-    <h1 id="gateT">Something came in for your file.</h1>
-    <p>It runs twenty seconds. Turn your sound on. Do not look away.</p>
-    <button type="button" class="go" id="gateGo">Open the archive</button>
+    <span class="ring" aria-hidden="true"></span>
+    <h1 id="gateT">A transmission for you.</h1>
+    <p id="gateS">Part 1 of 2. It runs twenty seconds. Wear headphones.</p>
+    <button type="button" class="go" id="gateGo">Answer</button>
   </div>
 </section>
 <div class="end" id="end" role="dialog" aria-modal="true" aria-labelledby="endT" aria-describedby="endS" inert>
   <div class="card">
-    <p class="k" id="endK">EYES ON LEADS &nbsp;·&nbsp; EVIDENCE</p>
-    <p class="t" id="endT">Evidence filed.</p>
-    <p class="s" id="endS">We check every receipt by hand. You will get an email once your payment is verified.</p>
-    <p class="k" style="margin-top:12px">Your file is almost complete.</p>
+    <p class="k" id="endK">EYES ON LEADS &nbsp;·&nbsp; PART 1 OF 2</p>
+    <p class="t" id="endT">The Site.</p>
+    <p class="s" id="endS">Your room is being prepared. Part 2 opens in January, when room booking does.</p>
+    <p class="k" id="endD" style="margin-top:12px" hidden></p>
     <div class="row"><button type="button" class="go" id="open">Back to my file</button><button type="button" id="replay">Replay</button></div>
   </div>
 </div>
 
 <script type="module">
-import { PAL, reduced, boilFrame, span, lerp, rgba, stage, wline, wtext, osd, circ, partyEye, layer, grade, grain, vhs, misreg,
-  tapeTear, crtCollapse, shake, lampCone, stamp, drawStamp, SPEAKER, captions, fontsReady } from '../reveal/ink.js?v=3';
+import { reduced, rng, stamp, drawStamp, filmAudio, SPEAKER, fontsReady } from '../reveal/ink.js?v=3';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -105,9 +107,9 @@ const FREEZE = parseFloat(params.get('at'));
 const frozen = !isNaN(FREEZE);
 
 /* ============================== who (from the portal) ============================== */
-const who = { id: '', nick: '', amount: '', time: '' };
+const who = { id: '', nick: '', surname: '', camp: null, amount: '', time: '' };
 const clean = (v, n) => String(v || '').replace(/[^\w .,:'ñÑ-]/g, '').trim().slice(0, n);
-const num = () => who.id.replace(/^APP-/, '');
+const num = () => (who.id.replace(/^APP-/, '') || '----');
 let eyeImg = null, gotInit = null;
 const initArrived = new Promise(r => { gotInit = r; });
 const trusted = e => (location.hostname === 'localhost' && e.origin === location.origin) || /^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(e.origin);
@@ -115,311 +117,447 @@ window.addEventListener('message', e => {
   const d = e.data || {};
   if (!trusted(e)) return;
   if (d.type === 'leads-receipt-init') {
-    who.id = clean(d.id, 12).toUpperCase(); who.nick = clean(d.nick, 18); who.amount = clean(d.amount, 12); who.time = clean(d.time, 10);
-    $('endK').textContent = 'EYES ON LEADS  ·  ' + (who.id ? 'FILE ' + num() : 'EVIDENCE');
-    gotInit();
+    who.id = clean(d.id, 12).toUpperCase(); who.nick = clean(d.nick, 18); who.surname = clean(d.surname, 24);
+    who.amount = clean(d.amount, 12); who.time = clean(d.time, 10);
+    const c = new Date(String(d.camp || '')); who.camp = isNaN(c) ? null : c;
+    paintWho(); gotInit();
   } else if (d.type === 'leads-reveal-eye' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(String(d.src || ''))) {
-    const img = new Image(); img.onload = () => { eyeImg = img; }; img.src = d.src;
+    const img = new Image(); img.onload = () => { eyeImg = img; eyeArt = null; }; img.src = d.src;
   }
 });
 const tell = (type, extra) => { if (embedded) try { parent.postMessage(Object.assign({ type }, extra || {}), '*'); } catch (e) { /* fine */ } };
+const doorName = () => (who.surname || who.nick || 'SUBJECT ' + num()).toUpperCase();
+function paintWho() {
+  if (who.nick) $('gateT').textContent = 'A transmission for ' + who.nick + '.';
+  $('endK').textContent = 'EYES ON LEADS  ·  ' + (who.id ? 'SUBJECT ' + num() + '  ·  ' : '') + 'PART 1 OF 2';
+  if (who.camp) {
+    const days = Math.ceil((who.camp - Date.now()) / 864e5);
+    if (days > 0) { $('endD').hidden = false; $('endD').textContent = days + (days === 1 ? ' DAY' : ' DAYS') + ' UNTIL KASILE HILLS'; }
+  }
+}
 
 /* ============================== timeline ============================== */
-const END = 20.4, CARD = 18.6, CARD_BTN = 19.0;
-const TEARS = [3.0, 6.2, 7.4, 8.6];
-const SCARE = 13.7, DARK = [12.6, 14.6], STAMP = 15.6, SLAM = 17.6;
-const CAPS = [[.8, 'Something came in for your file.', 26, 2.9], [4.0, 'It was not there a second ago.', 24, 6.1], [7.5, 'It brought your receipt.', 24, 8.5],
-              [12.8, 'Keep looking at the screen.', 20, 13.6], [16.0, 'Evidence filed.', 22, 17.4]];
-const LIVE = [[.8, CAPS[0][1]], [3.6, 'A figure is standing at the end of the archive.'], [4.0, CAPS[1][1]], [6.2, 'It is closer.'], [7.5, CAPS[2][1]],
-              [8.6, 'A receipt prints with your details.'], [12.6, 'The lights go out. The printer keeps going.'], [12.8, CAPS[3][1]],
-              [14.6, 'The receipt is clipped into your folder. Stamped: received.'], [16.0, CAPS[4][1]], [17.6, 'The drawer slams shut.']];
+const END = 21.5, CARD = 18.6, CARD_BTN = 19.0;
+const CUT = { road: 3.4, fog: 5.4, green: 7.2, nosig: 8.6, hall: 8.9, dark: 13.75, scare: 15.0, desk: 15.6 };
+const LIGHTS = [9.2, 9.55, 9.95, 10.4];       // the tubes come on, far to near
+const TYPE_AT = 10.95, KNOCKS = [12.05, 12.62, 13.2], OPEN_AT = 13.2, DIE = 13.62, STAMP_AT = 16.9, NOTE = [17.3, 18.3];
+const LIVE = [[0, 'A call. Someone is breathing on the line.'], [.8, 'Payment received. Subject cleared for transfer.'], [3.1, 'The line goes dead.'],
+  [3.4, 'Camera 1: the road to Kasile Hills, at night. Empty.'], [5.4, 'Camera 2: someone is standing in the fog.'], [7.2, 'Camera 3: closer.'],
+  [8.3, 'The streetlight dies. No signal.'], [8.9, 'Camera 4: a dormitory corridor. The lights come on, one by one, toward you.'],
+  [10.95, 'The door log for room 207 changes from unassigned to your surname.'], [12.05, 'Three knocks.'], [13.2, 'Door 207 is open.'],
+  [13.62, 'Every light goes out.'], [15.6, 'A transfer order on a desk, with your details. Stamped: cleared.'], [17.3, 'A note in red: we found your room.']];
 
-/* the archive lights: steady, with flickers that get worse, and out in the dark */
-function flick(t) {
-  if (t < .4) return 0;
-  if (t >= DARK[0] && t < DARK[1]) return 0;
-  if (reduced) return 1;
-  const f = Math.floor(t * 30);
-  if (t >= 3.4 && t < 3.6) return f % 3 === 0 ? 0 : 1;   // the flicker the figure appears behind
-  if (t >= 11.6 && t < DARK[0]) return (f * 7919) % 5 < 2 ? .15 : 1;   // failing
-  return (f * 104729) % 97 === 0 ? .3 : 1;
+/* ============================== stage ============================== */
+const cv = $('film'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1, V = { x: 0, y: 0, w: 0, h: 0 }, U = 1;   // V: the picture (2:3 on wide screens, full on phones)
+function fit() {
+  DPR = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const vw = Math.min(W, H * 2 / 3); V = { x: (W - vw) / 2, y: 0, w: vw, h: H }; U = Math.min(V.w, V.h) / 400;
+  makeLayer();
 }
+const PL = {}; ['road', 'fog', 'green', 'hall', 'desk'].forEach(k => { const i = new Image(); i.src = 'plates/' + k + '.png'; PL[k] = i; });
+const ready = () => Object.values(PL).every(i => i.complete && i.naturalWidth);
 
-/* ============================== sound: generated (Web Audio) ============================== */
-let ac = null, master = null, soundOn = false, voices = [];
-function audio() {
-  if (ac) return ac;
-  try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
-  const comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(ac.destination);
-  master = ac.createGain(); master.gain.value = 0; master.connect(comp);
-  return ac;
+// cover the picture with a plate, zoomed z toward plate point (fx, fy); returns the plate->screen mapping
+function plateMap(img, z, fx, fy) {
+  const s = Math.max(V.w / img.naturalWidth, V.h / img.naturalHeight) * z, w = img.naturalWidth * s, h = img.naturalHeight * s;
+  let x = V.x + V.w / 2 - fx * s, y = V.y + V.h / 2 - fy * s;
+  x = Math.min(V.x, Math.max(V.x + V.w - w, x)); y = Math.min(V.y, Math.max(V.y + V.h - h, y));
+  return { s, x, y, w, h, P: (px, py) => [x + px * s, y + py * s] };
 }
-function noiseBuf() {
-  if (noiseBuf.b) return noiseBuf.b;
-  const b = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), d = b.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  return (noiseBuf.b = b);
-}
-const keep = n => { voices.push(n); return n; };
-function noise(at, dur, type, freq, q, peak, attack, loop) {
-  const s = keep(ac.createBufferSource()); s.buffer = noiseBuf(); s.loop = !!loop;
-  const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q || 1;
-  const g = ac.createGain(); g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(peak, at + (attack || .005)); g.gain.exponentialRampToValueAtTime(.0001, at + dur);
-  s.connect(f).connect(g).connect(master); s.start(at); s.stop(at + dur + .05);
-  return { f, g };
-}
-function tone(at, dur, type, f0, f1, peak, attack) {
-  const o = keep(ac.createOscillator()); o.type = type; o.frequency.setValueAtTime(f0, at); if (f1) o.frequency.exponentialRampToValueAtTime(f1, at + dur);
-  const g = ac.createGain(); g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(peak, at + (attack || .01)); g.gain.exponentialRampToValueAtTime(.0001, at + dur);
-  o.connect(g).connect(master); o.start(at); o.stop(at + dur + .05);
-}
-function score(offset) {   // schedule everything from film time `offset` on
-  if (!audio()) return;
-  voices.forEach(v => { try { v.stop(); } catch (e) { /* done */ } }); voices = [];
-  const T = ac.currentTime + .05 - offset, past = t => t < offset - .02;   // T + filmTime = when, in the audio clock
-  const span2 = (a, b, fn) => { const s = Math.max(a, offset); if (b - s > .05) fn(T + s, b - s); };
-  // tape hiss, the whole film
-  span2(0, END, (at, len) => noise(at, len, 'highpass', 4000, .7, .025, .3, true));
-  // the drone: detuned saws, low, swelling until the dark; quieter after
-  [[.4, DARK[0], .085, 520], [DARK[1], SLAM, .05, 300]].forEach(([a, b, pk, top]) => span2(a, b, (at, len) => {
-    [55, 55.6, 82.4].forEach((hz, i) => {
-      const o = keep(ac.createOscillator()); o.type = 'sawtooth'; o.frequency.value = hz;
-      const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(180, at); f.frequency.linearRampToValueAtTime(top, at + len);
-      const g = ac.createGain(), p = pk * (i === 2 ? .5 : 1);
-      g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(p, at + Math.min(2.5, len * .6)); g.gain.setValueAtTime(p, at + len - .04); g.gain.linearRampToValueAtTime(0, at + len);
-      o.connect(f).connect(g).connect(master); o.start(at); o.stop(at + len + .05);
-    });
-  }));
-  // fluorescent buzz that follows the lights
-  if (!reduced) span2(.4, DARK[0], (at, len) => {
-    const o = keep(ac.createOscillator()); o.type = 'square'; o.frequency.value = 120;
-    const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 240; f.Q.value = 6;
-    const g = ac.createGain(); g.gain.value = 0;
-    for (let k = 0; k < len; k += 1 / 30) g.gain.setValueAtTime(flick(at - T + k) > .5 ? .03 : .003, at + k);
-    g.gain.setValueAtTime(0, at + len);
-    o.connect(f).connect(g).connect(master); o.start(at); o.stop(at + len + .05);
-  });
-  // deck clunk, tape tears
-  if (!past(.05)) { noise(T + .05, .08, 'lowpass', 900, 1, .5); tone(T + .05, .18, 'sine', 95, 50, .5); }
-  TEARS.forEach(tt => { if (!past(tt)) { noise(T + tt, .22, 'bandpass', 1800, 2, .35); tone(T + tt, .25, 'sawtooth', 300, 60, .08); } });
-  // the heartbeat: from the figure to the dark, faster and louder
-  for (let t = 3.6; t < DARK[0] + .6;) {
-    const p = span(t, 3.6, DARK[0]), pk = lerp(.35, .7, p);
-    if (!past(t)) { tone(T + t, .14, 'sine', 62, 40, pk, .004); tone(T + t + .2, .12, 'sine', 55, 36, pk * .7, .004); }
-    t += lerp(1.0, .42, p);
+function plate(img, m, a = 1) { if (!img.naturalWidth) return; ctx.save(); ctx.globalAlpha = a; ctx.drawImage(img, m.x, m.y, m.w, m.h); ctx.restore(); }
+const clipV = () => { ctx.beginPath(); ctx.rect(V.x, V.y, V.w, V.h); ctx.clip(); };
+const span = (t, a, b) => { const x = Math.max(0, Math.min(1, (t - a) / (b - a))); return x * x * (3 - 2 * x); };
+const pad = n => String(n).padStart(2, '0');
+const boil = t => reduced ? 0 : Math.floor(t * 10);   // hand-drawn marks redraw 10x a second
+
+/* ---------- hand-inked brush: several bristles, dry gaps, ink blobs at the ends (it boils) ---------- */
+function brush(pts, w, seed, col, a = 1, frame = 0) {
+  const r = rng(seed * 131 + frame * 7);
+  ctx.save(); ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const J = w * .35;
+  const P = pts.map(([x, y]) => [x + (r() - .5) * J, y + (r() - .5) * J]);
+  for (let b = 0; b < 5; b++) {
+    const off = (b - 2) * w * .16;
+    ctx.globalAlpha = a * (.55 + r() * .45); ctx.lineWidth = w * (.28 + r() * .3);
+    ctx.beginPath();
+    for (let i = 0; i < P.length - 1; i++) {
+      const [x0, y0] = P[i], [x1, y1] = P[i + 1], L = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / L, ny = (x1 - x0) / L;
+      const steps = Math.max(2, Math.ceil(L / (w * 1.2)));
+      for (let k = 0; k <= steps; k++) {
+        const q = k / steps, x = x0 + (x1 - x0) * q + nx * (off + (r() - .5) * w * .12), y = y0 + (y1 - y0) * q + ny * (off + (r() - .5) * w * .12);
+        if (r() < .06 && b !== 2) ctx.moveTo(x, y); else if (k === 0 && i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
   }
-  // the thermal printer, until the scare
-  for (let t = 8.8; t < SCARE - .05; t += .055 + Math.random() * .02) if (!past(t)) noise(T + t, .03, 'bandpass', 2600 + Math.random() * 900, 4, t < DARK[0] ? .12 : .07);
-  // the whisper in the dark (breathy noise, moving formants) and a rising screech under it
-  span2(DARK[0], SCARE, (at, len) => {
-    const n = noise(at, len + .05, 'bandpass', 900, 8, .16, .4, true);
-    for (let k = 0; k < len; k += .09) n.f.frequency.setValueAtTime(700 + Math.random() * 1400, at + k);
-    const o = keep(ac.createOscillator()), m = keep(ac.createOscillator()), mg = ac.createGain(), g = ac.createGain();
-    o.type = 'sine'; o.frequency.setValueAtTime(900, at); o.frequency.exponentialRampToValueAtTime(2400, at + len);
-    m.frequency.value = 37; mg.gain.value = 260; m.connect(mg).connect(o.frequency);
-    g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(.06, at + len); g.gain.setValueAtTime(0, at + len + .01);
-    o.connect(g).connect(master); o.start(at); m.start(at); o.stop(at + len + .02); m.stop(at + len + .02);
+  ctx.globalAlpha = a * .9;
+  [P[0], P[P.length - 1]].forEach(([x, y]) => { ctx.beginPath(); ctx.arc(x + (r() - .5) * w * .3, y + (r() - .5) * w * .3, w * (.25 + r() * .2), 0, 7); ctx.fill(); });
+  for (let i = 0; i < 4; i++) { const [x, y] = P[Math.floor(r() * P.length)]; ctx.globalAlpha = a * .7; ctx.beginPath(); ctx.arc(x + (r() - .5) * w * 3, y + (r() - .5) * w * 3, w * r() * .18, 0, 7); ctx.fill(); }   // spatter
+  ctx.restore();
+}
+// [ ] corner brackets like the wordmark's, around a box
+function brackets(x0, y0, x1, y1, w, seed, col, a, f) {
+  const c = Math.min(x1 - x0, y1 - y0) * .28;
+  brush([[x0, y0 + c], [x0, y0], [x0 + c, y0]], w, seed, col, a, f); brush([[x1 - c, y0], [x1, y0], [x1, y0 + c]], w, seed + 1, col, a, f);
+  brush([[x0, y1 - c], [x0, y1], [x0 + c, y1]], w, seed + 2, col, a, f); brush([[x1 - c, y1], [x1, y1], [x1, y1 - c]], w, seed + 3, col, a, f);
+}
+function ring(cx, cy, rx, ry, w, seed, col, a, f, p = 1) {   // a hand-drawn circle, drawn on to fraction p
+  const pts = [], n = 26, r = rng(seed);
+  for (let i = 0; i <= n * p * 1.08; i++) { const q = i / n * Math.PI * 2 - 1.9; pts.push([cx + Math.cos(q) * rx * (1 + (r() - .5) * .08), cy + Math.sin(q) * ry * (1 + (r() - .5) * .1)]); }
+  if (pts.length > 1) brush(pts, w, seed, col, a, f);
+}
+function hand(str, x, y, size, col, p = 1, rot = -.05) {   // handwriting, written on left to right
+  ctx.save(); ctx.font = `${size}px "Reenie Beanie", cursive`; ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  const w = ctx.measureText(str).width; ctx.translate(x, y); ctx.rotate(rot);
+  ctx.beginPath(); ctx.rect(-size, -size * 1.4, (w + size * 2) * p, size * 2.4); ctx.clip(); ctx.fillText(str, 0, 0); ctx.restore();
+  return w;
+}
+function txt(str, x, y, font, col, a = 1, align = 'left') { ctx.save(); ctx.globalAlpha = a; ctx.font = font; ctx.fillStyle = col; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillText(str, x, y); ctx.restore(); }
+
+/* ---------- film surface: grain, scanlines, vignette, tracking, misregistration ---------- */
+let grainTiles = [], scan = null, layer = null, lctx = null;
+function makeTex() {
+  const r = rng(11);
+  grainTiles = [0, 1, 2, 3].map(() => {
+    const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'), d = g.createImageData(256, 256);
+    for (let i = 0; i < d.data.length; i += 4) { const v = r() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = r() < .5 ? 40 : 0; }
+    g.putImageData(d, 0, 0); return c;
   });
-  // THE stinger, on the one scare frame (reduced motion: a soft low hit instead)
-  if (!past(SCARE)) {
-    if (reduced) tone(T + SCARE, 1.2, 'sine', 70, 45, .4);
-    else {
-      noise(T + SCARE, .9, 'highpass', 500, .7, .9, .002);
-      [220, 233, 311, 466, 622].forEach(hz => tone(T + SCARE, 1.4, 'sawtooth', hz, hz * .94, .12, .003));
-      tone(T + SCARE, 1.6, 'sine', 90, 28, 1, .003);
+  const s = document.createElement('canvas'); s.width = 4; s.height = 3; const g = s.getContext('2d'); g.fillStyle = 'rgba(0,0,0,.32)'; g.fillRect(0, 0, 4, 1);
+  scan = ctx.createPattern(s, 'repeat');
+}
+function makeLayer() { layer = document.createElement('canvas'); layer.width = cv.width; layer.height = cv.height; lctx = layer.getContext('2d'); lctx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+function grain(f, a) { ctx.save(); clipV(); ctx.globalAlpha = a; ctx.globalCompositeOperation = 'overlay'; const g = grainTiles[f % 4]; const ox = (f * 97) % 256, oy = (f * 57) % 256;
+  for (let x = V.x - ox; x < V.x + V.w; x += 256) for (let y = -oy; y < H; y += 256) ctx.drawImage(g, x, y); ctx.restore(); }
+function screenFx(t, f, tint) {   // the CCTV monitor: tint, scanlines, vignette, a rolling tracking band
+  ctx.save(); clipV();
+  if (tint) { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = tint; ctx.fillRect(V.x, V.y, V.w, V.h); ctx.globalCompositeOperation = 'source-over'; }
+  ctx.fillStyle = scan; ctx.fillRect(V.x, V.y, V.w, V.h);
+  if (!reduced) { const by = V.y + ((t * .22) % 1) * (V.h + 80) - 40; const g = ctx.createLinearGradient(0, by - 30, 0, by + 30);
+    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, 'rgba(255,255,255,.07)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(V.x, by - 30, V.w, 60); }
+  ctx.restore(); vignette(.7);
+}
+function vignette(a) { ctx.save(); clipV(); const g = ctx.createRadialGradient(V.x + V.w / 2, H / 2, Math.min(V.w, V.h) * .3, V.x + V.w / 2, H / 2, Math.hypot(V.w, V.h) * .62);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${a})`); ctx.fillStyle = g; ctx.fillRect(V.x, V.y, V.w, V.h); ctx.restore(); }
+function tear(t, at, f) {   // a tape tear at a cut: slices shove sideways for 3 frames
+  if (reduced || t < at || t > at + .1) return;
+  const r = rng(Math.floor(at * 100) + f);
+  for (let i = 0; i < 7; i++) { const y = V.y + r() * V.h, h = 6 + r() * 40, dx = (r() - .5) * V.w * .25;
+    ctx.drawImage(cv, V.x * DPR, y * DPR, V.w * DPR, h * DPR, V.x + dx, y, V.w, h); }
+  ctx.save(); ctx.globalAlpha = .5; ctx.fillStyle = '#fff'; ctx.fillRect(V.x, V.y + r() * V.h, V.w, 2); ctx.restore();
+}
+function misreg(px) {   // red / blue print misregistration for screen moments
+  if (reduced) return;
+  ctx.save(); clipV(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = .35;
+  ctx.drawImage(cv, V.x * DPR, 0, V.w * DPR, H * DPR, V.x - px, 0, V.w, H); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(229,0,0,.12)'; ctx.fillRect(V.x, 0, V.w, H); ctx.restore();
+}
+
+/* ---------- the OSD (VT323), live clock from the moment they answered ---------- */
+let wall = new Date();
+const OSDB = () => 74 + Math.max(0, H * .01);   // the bottom OSD sits above the Sound / Skip buttons
+function osd(t, cam, place, extra) {
+  const m = 14 * U / 1.6 + 6, fs = Math.round(Math.max(15, U * 13)), F = `${fs}px VT323, monospace`, x0 = V.x + m, x1 = V.x + V.w - m;
+  const now = new Date(wall.getTime() + Math.max(0, t) * 1000);
+  const date = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase().replace(',', '');
+  if (reduced || (t % 1) < .55) { ctx.fillStyle = '#e50000'; ctx.beginPath(); ctx.arc(x0 + fs * .3, m + fs * .55, fs * .28, 0, 7); ctx.fill(); }
+  txt('REC  ' + cam, x0 + fs * .8, m + fs * .85, F, '#e9e6dc', .92);
+  txt(date + '  ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds()), x1, m + fs * .85, F, '#e9e6dc', .92, 'right');
+  const yb = H - OSDB();
+  txt(place, x0, yb - fs * (extra ? 1.3 : 0), F, '#e9e6dc', .85);
+  if (extra) txt(extra[0], x0, yb, F, extra[1] || '#e9e6dc', .95);
+}
+
+/* ---------- scene 0: the call ---------- */
+function callShot(t, f) {
+  ctx.fillStyle = '#050505'; ctx.fillRect(V.x, V.y, V.w, V.h);
+  const cx = V.x + V.w / 2, cy = H * .42, fs = Math.round(U * 11);
+  txt('LINE 2  //  CONNECTED', cx, cy - U * 70, `${Math.round(U * 13)}px VT323, monospace`, '#808080', 1, 'center');
+  // the breathing, as hand-inked bars
+  const n = 23, bw = V.w * .62 / n, br = rng(3);
+  for (let i = 0; i < n; i++) {
+    const breath = .5 + .5 * Math.sin(t * 2.4 - .6), e = t < 3.1 ? (.15 + breath * .85) * (.35 + .65 * Math.abs(Math.sin(i * 1.7 + t * (reduced ? 0 : 6) + br()))) : 0;
+    const h = Math.max(2, e * U * 42), x = cx - n * bw / 2 + i * bw + bw / 2;
+    brush([[x, cy - h], [x, cy + h]], bw * .5, 40 + i, '#e9e6dc', .9, boil(t));
+  }
+  const L1 = 'PAYMENT RECEIVED.', L2 = 'SUBJECT ' + num() + ' CLEARED FOR TRANSFER.';
+  const c1 = Math.floor(span(t, .8, 1.5) * L1.length + 1e-6), c2 = Math.floor(span(t, 1.6, 2.7) * L2.length + 1e-6);
+  const fm = `700 ${fs}px "JetBrains Mono", monospace`;
+  txt(L1.slice(0, reduced ? L1.length : c1), cx, cy + U * 70, fm, '#e9e6dc', 1, 'center');
+  if (t >= 1.6) txt(L2.slice(0, reduced ? L2.length : c2), cx, cy + U * 70 + fs * 1.8, fm, '#e9e6dc', 1, 'center');
+  if (t >= 3.1) txt('— LINE DISCONNECTED —', cx, cy + U * 70 + fs * 4.4, `${Math.round(U * 14)}px VT323, monospace`, '#e50000', 1, 'center');
+}
+
+/* ---------- the road cameras ---------- */
+const FIG = { fog: [497, 569, 598, 810], green: [475, 378, 702, 990] };   // the figure's box on each plate
+function roadShot(t, f) {
+  const tq = reduced ? t : Math.floor(t * 12) / 12;   // CCTV frame rate
+  const img = PL.road, m = plateMap(img, 1.04 + span(tq, CUT.road, CUT.fog) * .05, 540, 760);
+  plate(img, m); screenFx(t, f, '#b9c4bb'); osd(t - CUT.road, 'CAM 01', 'KASILE HILLS // ACCESS ROAD');
+}
+function figShot(t, f, key, cam, conf, z0, z1) {
+  const tq = reduced ? t : Math.floor(t * 12) / 12, a = key === 'fog' ? CUT.fog : CUT.green, b = key === 'fog' ? CUT.green : CUT.nosig;
+  const img = PL[key], bx = FIG[key], m = plateMap(img, z0 + span(tq, a, b) * (z1 - z0), (bx[0] + bx[2]) / 2, (bx[1] + bx[3]) / 2);
+  let dim = 1;
+  if (key === 'green' && t > 8.25) { const k = span(t, 8.25, 8.55); dim = reduced ? 1 - k : (1 - k) * ((Math.floor(t * 30) % 3) ? 1 : .35); }   // the streetlight dies
+  ctx.fillStyle = '#050505'; ctx.fillRect(V.x, V.y, V.w, V.h); plate(img, m, dim);
+  screenFx(t, f, '#a9bfae');
+  if (t > a + .45 && dim > .3) {
+    const [x0, y0] = m.P(bx[0] - 30, bx[1] - 30), [x1, y1] = m.P(bx[2] + 30, bx[3] + 20), w = Math.max(5, U * 5.5);
+    brackets(x0, y0, x1, y1, w, key === 'fog' ? 70 : 80, '#e50000', .95, boil(t));
+    txt('PERSON ' + conf, x0, y0 - U * 8, `${Math.round(Math.max(16, U * 15))}px VT323, monospace`, '#e50000', 1);
+    if (key === 'green') hand('who is that?', Math.max(V.x + U * 8, x0 - U * 4), y1 + U * 34, Math.round(U * 40), '#e50000', span(t, 7.7, 8.2), -.06);
+  }
+  osd(t - a, cam, key === 'fog' ? 'KASILE HILLS // GATE ROAD' : 'KASILE HILLS // GATE', ['SUBJECT ' + num() + ': IN TRANSIT', '#e9e6dc']);
+}
+function noSignal(t, f) {
+  ctx.fillStyle = '#050505'; ctx.fillRect(V.x, V.y, V.w, V.h); grain(f, .9);
+  txt('CAM 03', V.x + V.w / 2, H / 2 - U * 6, `${Math.round(U * 18)}px VT323, monospace`, '#e9e6dc', .9, 'center');
+  txt('NO SIGNAL', V.x + V.w / 2, H / 2 + U * 16, `${Math.round(U * 22)}px VT323, monospace`, '#e9e6dc', .9, 'center');
+  screenFx(t, f, null);
+}
+
+/* ---------- CAM 04: the corridor ---------- */
+const VP = [529, 702], DOOR = [942, 394, 1015, 1415];   // vanishing point and the near right door, plate coordinates
+function lightAt(t) {   // 0..1: how far the light has reached, far to near; 0 after the lights die
+  if (t >= DIE) { if (reduced) return Math.max(0, 1 - span(t, DIE, DIE + .3)); const k = Math.floor((t - DIE) * 30); return k < 4 ? (k % 2 ? .1 : 1) : 0; }
+  let reach = 0;
+  LIGHTS.forEach((at, i) => { if (t >= at) { const k = Math.floor((t - at) * 30); reach = (reduced || k > 3 || k % 2 === 0) ? (i + 1) / LIGHTS.length : reach; } });
+  return reach;
+}
+function hallShot(t, f) {
+  const tq = reduced ? t : Math.floor(t * 15) / 15, img = PL.hall;
+  const z = 1.02 + span(tq, 10.8, DIE) * .26, fx = 540 + span(tq, 10.8, DIE) * 380, fy = 780 + span(tq, 10.8, DIE) * 120;
+  let sx = 0, sy = 0; KNOCKS.forEach(k => { if (!reduced && t >= k && t < k + .18) { const r = rng(Math.floor(t * 60)); sx += (r() - .5) * U * 5; sy += (r() - .5) * U * 4; } });
+  const m = plateMap(img, z, fx, fy); m.x += sx; m.y += sy;
+  ctx.fillStyle = '#050505'; ctx.fillRect(V.x, V.y, V.w, V.h);
+  plate(img, m, .1);   // in the dark you can just make it out
+  const reach = lightAt(t);
+  if (reach > 0) {   // the lit corridor through a soft mask that grows from the vanishing point toward you
+    lctx.clearRect(0, 0, W, H); lctx.drawImage(img, m.x, m.y, m.w, m.h);
+    const [vx, vy] = m.P(VP[0], VP[1]), R = Math.hypot(V.w, V.h) * (.12 + reach * .95);
+    const g = lctx.createRadialGradient(vx, vy, R * .55, vx, vy, R); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    lctx.globalCompositeOperation = 'destination-in'; lctx.fillStyle = g; lctx.fillRect(0, 0, W, H); lctx.globalCompositeOperation = 'source-over';
+    const knockDip = KNOCKS.some(k => !reduced && t >= k && t < k + .07) ? .55 : 1;
+    ctx.save(); ctx.globalAlpha = knockDip; ctx.drawImage(layer, 0, 0, W, H); ctx.restore();
+  }
+  screenFx(t, f, '#c4c9c0');
+  if (t >= OPEN_AT && reach > 0) {   // the door, ringed in red
+    const [x0, y0] = m.P(DOOR[0] - 20, DOOR[1]), [x1, y1] = m.P(DOOR[2] + 20, DOOR[3]);
+    brackets(x0, y0, Math.min(x1, V.x + V.w - U * 6), Math.min(y1, H - OSDB() - U * 40), Math.max(5, U * 5.5), 90, '#e50000', .95, boil(t));
+  }
+  if (t < DIE + .15) { osd(t - CUT.hall, 'CAM 04', 'DORM B // 2F CORRIDOR', t >= OPEN_AT ? ['DOOR 207: OPEN', '#e50000'] : ['MOTION: NONE']); doorLog(t); }
+}
+function doorLog(t) {   // the portal's retro window: the building's door-access log types their name
+  const w = Math.min(V.w - 28, U * 260), fs = Math.round(Math.max(15, U * 13)), lh = fs * 1.25, h = lh * 4 + fs * 2.4, x = V.x + (V.w - w) / 2, y = H - OSDB() - fs * 3.4 - h;
+  if (t < 9.5) return;
+  ctx.save(); ctx.globalAlpha = span(t, 9.5, 9.7);
+  ctx.fillStyle = '#c0c0c0'; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = '#fff'; ctx.fillRect(x, y, w, 2); ctx.fillRect(x, y, 2, h); ctx.fillStyle = '#404040'; ctx.fillRect(x, y + h - 2, w, 2); ctx.fillRect(x + w - 2, y, 2, h);
+  ctx.fillStyle = '#000080'; ctx.fillRect(x + 4, y + 4, w - 8, fs * 1.2);
+  txt('DOOR_ACCESS.EXE  //  DORM B', x + 10, y + 4 + fs * .95, `${fs}px VT323, monospace`, '#fff');
+  ctx.fillStyle = '#050505'; ctx.fillRect(x + 6, y + fs * 1.5 + 6, w - 12, h - fs * 1.5 - 12);
+  const F = `${fs}px VT323, monospace`, tx = x + 14; let ty = y + fs * 1.5 + 6 + lh;
+  txt('ROOM 205 ...... ASSIGNED', tx, ty, F, '#808080'); ty += lh;
+  txt('ROOM 206 ...... ASSIGNED', tx, ty, F, '#808080'); ty += lh;
+  const target = doorName(), was = 'UNASSIGNED';
+  let val = was, col = '#e9e6dc';
+  if (t >= TYPE_AT) {
+    const k = (t - TYPE_AT) / .04;   // backspace, then type, ~25 chars a second
+    val = reduced ? target : k < was.length ? was.slice(0, was.length - Math.floor(k)) : target.slice(0, Math.floor(k - was.length));
+    col = '#e50000';
+  }
+  const cur = !reduced && (t * 2 % 1) < .5 && t < 12.2 ? '_' : '';
+  txt('ROOM 207 ...... ' + val + cur, tx, ty, F, col); ty += lh;
+  txt(t >= OPEN_AT ? 'DOOR 207 ...... OPEN' : 'DOOR 207 ...... LOCKED', tx, ty, F, t >= OPEN_AT ? '#e50000' : '#808080');
+  ctx.restore();
+}
+
+/* ---------- the eye: theirs (or a drawn one), as a halftone print ---------- */
+let eyeArt = null;   // { neg, pos } canvases
+function halftoneEye() {
+  const S = 640, cell = 9, n = Math.floor(S / cell), lum = new Float32Array(n * n);
+  if (eyeImg) {
+    const c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d');
+    const s = Math.max(n / eyeImg.width, n / eyeImg.height), w = eyeImg.width * s, h = eyeImg.height * s; g.drawImage(eyeImg, (n - w) / 2, (n - h) / 2, w, h);
+    let d; try { d = g.getImageData(0, 0, n, n).data; } catch (e) { d = null; }
+    if (d) { let lo = 1, hi = 0; for (let i = 0; i < n * n; i++) { const v = (d[i * 4] * .3 + d[i * 4 + 1] * .59 + d[i * 4 + 2] * .11) / 255; lum[i] = v; lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      for (let i = 0; i < n * n; i++) lum[i] = Math.pow((lum[i] - lo) / (hi - lo + 1e-6), 1.1); }
+  } else {   // a drawn eye: almond, iris, pupil, lashes
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+      const x = (i / n - .5) * 2, y = (j / n - .5) * 2, lid = Math.abs(y) < .55 * (1 - x * x) ? 1 : 0, rr = Math.hypot(x, y * 1.05);
+      let v = lid ? .92 - Math.max(0, rr - .2) * .2 : .58 + .1 * Math.sin(i * .7) * Math.cos(j * .5) - Math.max(0, Math.hypot(x, y) - .7) * .5;
+      if (lid && rr < .42) v = .35 + .25 * Math.sin(Math.atan2(y, x) * 18) * (rr - .18);
+      if (lid && rr < .2) v = .03;
+      if (Math.abs(Math.abs(y) - .55 * (1 - x * x)) < .05) v = .02;
+      lum[j * n + i] = Math.max(0, Math.min(1, v));
     }
   }
-  // the stamp; the drawer slam (thump, rattle, a metal ring); one low calm note under the card
-  if (!past(STAMP)) { noise(T + STAMP, .05, 'lowpass', 2500, 1, .5); tone(T + STAMP, .4, 'sine', 80, 38, .9, .003); }
-  if (!past(SLAM)) {
-    noise(T + SLAM, .35, 'lowpass', 1100, 1, .9, .003); tone(T + SLAM, .5, 'sine', 70, 32, 1, .003);
-    [430, 645, 1290].forEach((hz, i) => tone(T + SLAM + .01, 1.6 - i * .3, 'sine', hz, hz * .995, .07 / (i + 1), .002));
-  }
-  if (!past(CARD)) tone(T + CARD, 3, 'triangle', 110, 108, .09, .6);
+  const make = neg => { const c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
+    g.fillStyle = neg ? '#050505' : '#e9e6dc'; g.fillRect(0, 0, S, S); g.fillStyle = neg ? '#e9e6dc' : '#0a0a0c';
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const v = neg ? lum[j * n + i] : 1 - lum[j * n + i], r = Math.sqrt(v / Math.PI) * cell * 1.05;
+      if (r > .4) { g.beginPath(); g.arc(i * cell + cell / 2 + (j % 2 ? cell / 2 : 0), j * cell + cell / 2, Math.min(r, cell * .75), 0, 7); g.fill(); } }
+    return c; };
+  eyeArt = { neg: make(true), pos: make(false) };
 }
-function setSound(on) {
-  soundOn = !!on && !!audio();
-  if (ac && soundOn && ac.state === 'suspended') Promise.resolve(ac.resume()).catch(() => {});
-  if (master) master.gain.setTargetAtTime(soundOn ? .9 : 0, ac.currentTime, .05);
-  paintSound();
+function scareShot(t, f) {   // ONE beat: their own eye, in negative, enormous; the brand red dot on the pupil
+  if (!eyeArt) halftoneEye();
+  const r = rng(f), s = Math.max(V.w, V.h) * 1.25 * (1 + (t - CUT.scare) * .6), jx = (r() - .5) * U * 14, jy = (r() - .5) * U * 10;
+  ctx.drawImage(eyeArt.neg, V.x + V.w / 2 - s / 2 + jx, H / 2 - s / 2 + jy, s, s);
+  ctx.fillStyle = '#e50000'; ctx.beginPath(); ctx.arc(V.x + V.w / 2 + jx, H / 2 + jy, s * .055, 0, 7); ctx.fill();
+  misreg(U * 6);
 }
-function paintSound() { $('sound').innerHTML = SPEAKER(soundOn) + (soundOn ? ' Sound ON' : ' Sound OFF'); $('sound').setAttribute('aria-pressed', String(soundOn)); }
-$('sound').addEventListener('click', () => setSound(!soundOn));
+function collapse(p) {   // the CRT dies: picture squeezes to a line, then a dot
+  ctx.fillStyle = '#050505'; ctx.fillRect(V.x, V.y, V.w, V.h);
+  const cx = V.x + V.w / 2, cy = H / 2, h = Math.max(2, H * (1 - span(p, 0, .55)) * .4), w = V.w * (1 - span(p, .5, 1)) + 3;
+  ctx.fillStyle = '#e9e6dc'; ctx.globalAlpha = 1 - span(p, .85, 1); ctx.fillRect(cx - w / 2, cy - h / 2, w, h); ctx.globalAlpha = 1;
+}
 
-/* ============================== picture ============================== */
-const st = stage($('film')), { ctx } = st;
-const cap = captions($('cap'), $('capLive'));
-const pad = n => String(n).padStart(2, '0');
-
-// one-point perspective archive: shelves both sides, boxes, a strip light, the far wall
-function archive(vp, b) {
-  const { W, H } = st, Ex = W * .7, Ef = H * .5, Ec = H * .46, Z = 9;
-  const P = (x, y, z) => [vp[0] + x * Ex / z, vp[1] + (y > 0 ? y * Ef : y * Ec) / z];
-  const L = (pts, id, o) => wline(st, pts, id, b, o), red = { col: PAL.red }, soft = { col: PAL.chalk, a: .35 }, faint = { col: PAL.chalk, a: .2 };
-  [1, 1.4, 1.9, 2.6, 3.6, 5, 7].forEach((z, i) => {
-    L([P(-1, -1, z), P(-1, 1, z)], 10 + i, soft); L([P(1, -1, z), P(1, 1, z)], 20 + i, soft);
-    L([P(-1, 1, z), P(1, 1, z)], 30 + i, red);
+/* ---------- the desk: a TRANSFER ORDER printed onto the sheet in the plate ---------- */
+const SHEET = [[86, 609], [746, 405], [380, 1553]];   // the paper's top-left, top-right, bottom-left corners on the desk plate
+const DW = 707, DH = 1000;
+let cleared = null;
+function campText() {
+  if (!who.camp) return 'SEE PORTAL';
+  return who.camp.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }).toUpperCase();
+}
+function orderDoc(g, t) {   // drawn in document units (707 x 1000), ink on the photocopied sheet
+  const ink = '#0d0d0f', red = '#e50000', T = (s, x, y, f, c = ink, al = 'left') => { g.font = f; g.fillStyle = c; g.textAlign = al; g.fillText(s, x, y); };
+  const r = rng(21);
+  T('EYES ON LEADS  ·  MEA', 56, 78, '700 22px "JetBrains Mono", monospace');
+  T('FORM 05-T', 650, 78, '700 22px "JetBrains Mono", monospace', ink, 'right');
+  g.fillStyle = ink; g.fillRect(56, 92, 595, 4);
+  T('TRANSFER ORDER', 56, 168, '62px "Special Elite", monospace');
+  T('Subject is cleared for transfer to the site.', 56, 208, '22px "Special Elite", monospace');
+  // photo corner with their eye
+  const px = 470, py = 236, pw = 181, ph = 200; g.strokeStyle = ink; g.lineWidth = 6; g.strokeRect(px - 3, py - 3, pw + 6, ph + 6);
+  if (eyeArt) g.drawImage(eyeArt.pos, 80, 140, 480, 400, px, py, pw, ph); else { g.fillStyle = '#e9e6dc'; g.fillRect(px, py, pw, ph); }
+  T('SUBJECT ' + num(), px + pw / 2, py + ph + 34, '700 20px "JetBrains Mono", monospace', ink, 'center');
+  const rows = [['SUBJECT', (who.nick || '—').toUpperCase() + (who.surname ? ' ' + who.surname.toUpperCase() : '')], ['FILE NO.', num()],
+    ['PAYMENT', who.amount ? 'P' + who.amount + ' · RECEIVED' : 'RECEIVED'], ['DESTINATION', 'KASILE HILLS'], ['REPORT ON', campText()], ['ROOM', 'UNASSIGNED']];
+  let y = 280;
+  rows.forEach(([k, v], i) => {
+    T(k, 56, y, '700 19px "JetBrains Mono", monospace');
+    T(v.slice(0, 18), 56, y + 34, '30px "Special Elite", monospace');
+    g.fillStyle = ink; g.globalAlpha = .5; g.fillRect(56, y + 46, i < 4 ? 380 : 595, 2); g.globalAlpha = 1;
+    y += 92;
   });
-  [-.75, -.35, .05, .45, .8].forEach((y, i) => { L([P(-1, y, 1), P(-1, y, Z)], 40 + i, faint); L([P(1, y, 1), P(1, y, Z)], 50 + i, faint); });
-  [[-1, .2, 2.1], [-1, -.5, 3.1], [1, .55, 1.6], [1, -.2, 4.2], [-1, .6, 5.5]].forEach(([x, y, z], i) =>
-    L([P(x, y, z), P(x, y - .22, z), P(x, y - .22, z + .5), P(x, y, z + .5)], 60 + i, { close: true, col: PAL.chalk, a: .3 }));
-  L([P(-.15, -1, 1.2), P(-.15, -1, Z)], 70, { col: PAL.chalk, a: .5 }); L([P(.15, -1, 1.2), P(.15, -1, Z)], 71, { col: PAL.chalk, a: .5 });
-  L([P(-1, -1, Z), P(1, -1, Z), P(1, 1, Z), P(-1, 1, Z)], 72, { close: true, fill: PAL.black, col: PAL.chalk, a: .45 });
+  // the room line: struck through by hand
+  g.save(); g.strokeStyle = ink; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(52, 754); g.quadraticCurveTo(170, 744, 280, 752); g.stroke(); g.restore();
+  // redacted reason line, the brand's redaction bar
+  T('REASON FOR TRANSFER', 56, 850, '700 19px "JetBrains Mono", monospace');
+  g.fillStyle = ink; g.fillRect(56, 866, 420, 30); g.fillRect(56, 904, 260, 30);
+  T('I.R.I.S. // CASE FILE 26/27', 650, 960, '700 16px "JetBrains Mono", monospace', ink, 'right');
 }
-// a faceless figure: small head, long neck, narrow shoulders, arms too long; holding a slip of paper
-function figure(cx, footY, h, b, idBase, slip) {
-  const w = h * .26, head = h * .085;
-  wline(st, circ(cx, footY - h + head, head * .8, head, 14), idBase, b, { close: true, fill: PAL.black, fa: .95, col: PAL.chalk, a: .85 });
-  wline(st, [[cx - w * .5, footY], [cx - w * .55, footY - h * .55], [cx - w * .5, footY - h * .8], [cx - w * .2, footY - h * .86], [cx, footY - h + head * 2],
-    [cx + w * .2, footY - h * .86], [cx + w * .5, footY - h * .8], [cx + w * .55, footY - h * .55], [cx + w * .5, footY]], idBase + 1, b, { close: true, fill: PAL.black, fa: .95, col: PAL.chalk, a: .7 });
-  wline(st, [[cx - w * .5, footY - h * .78], [cx - w * .62, footY - h * .3], [cx - w * .55, footY - h * .1]], idBase + 2, b, { a: .6 });
-  wline(st, [[cx + w * .5, footY - h * .78], [cx + w * .6, footY - h * .45], [cx + w * .3, footY - h * .42]], idBase + 3, b, { a: .6 });
-  if (slip) wline(st, [[cx + w * .12, footY - h * .47], [cx + w * .42, footY - h * .45], [cx + w * .4, footY - h * .33], [cx + w * .1, footY - h * .35]], idBase + 4, b, { close: true, fill: rgba(PAL.chalk, .6), a: .9 });
-}
-function archiveShot(t, b, near) {   // near: 0 none, 1 far end, 2 halfway, 3 close
-  const { W, H } = st, vp = [W * .5, H * .46];
-  archive(vp, b);
-  if (near) { const h = H * [0, .13, .42, .95][near], foot = vp[1] + h * .48; figure(vp[0], Math.min(foot, H * 1.05), h, b, 100, near >= 2); }
-  const m = 24, y = m + st.osd, secs = Math.floor(t) + 3 * 3600 + 7 * 60 + 41;
-  osd(st, 'REC', m, y);
-  if (reduced || (t % 1) < .5) { ctx.globalAlpha = layer.a; ctx.fillStyle = PAL.brand; ctx.beginPath(); ctx.arc(m + ctx.measureText('REC').width + st.osd * .8, y - st.osd * .33, st.osd * .32, 0, 7); ctx.fill(); }
-  osd(st, 'CAM 05 · ARCHIVE B2', m + st.osd * 4.2, y);
-  osd(st, pad(Math.floor(secs / 3600)) + ':' + pad(Math.floor(secs / 60) % 60) + ':' + pad(secs % 60), m, y + st.osd * 1.5);
-}
-
-// the receipt: thermal paper from a slot, lines appear as the printer goes
-function receiptShot(t, b, inDark) {
-  const { W, H } = st, tall = H > W * 1.5, pw = tall ? W * .78 : Math.min(W * .42, H * .5), x0 = (W - pw) / 2, slotY = H * (tall ? .2 : .16);
-  const feed = Math.min(1, span(t, 8.6, 12.4)), ph = lerp(pw * .15, H * (tall ? .62 : .7), feed), curl = Math.sin(t * 1.3) * pw * .01;
-  wline(st, [[x0 - pw * .08, slotY], [x0 + pw * 1.08, slotY]], 200, b, { col: PAL.chalk, a: .9, w: st.lw * 2 });
-  wline(st, [[x0, slotY], [x0 + pw, slotY], [x0 + pw + curl, slotY + ph], [x0 + curl, slotY + ph]], 201, b, { close: true, fill: rgba(PAL.chalk, inDark ? .18 : .82), col: PAL.chalk, a: .6 });
-  const ink = rgba(PAL.black, inDark ? .5 : .88), fs = Math.round(pw * .055), mono = `700 ${fs}px "JetBrains Mono", monospace`;
-  const lines = ['EYES ON LEADS // RECEIPT', '', 'SUBJECT ..... ' + (who.nick || 'YOU').toUpperCase(), 'FILE ........ ' + (who.id ? num() : '----'),
-    'AMOUNT ...... P' + (who.amount || '----'), 'RECEIVED .... ' + (who.time || 'JUST NOW'), '', 'STATUS ...... UNDER OBSERVATION', '', 'WE SAW IT.'];
-  const shown = Math.floor(span(t, 9.0, 12.2) * lines.length + 1e-6);
-  lines.slice(0, shown).forEach((s, i) => { const y = slotY + fs * 1.6 + i * fs * 1.45; if (y < slotY + ph - fs * .4) wtext(st, s, x0 + pw * .07, y, 210 + i, b, { still: true, col: ink, font: mono }); });
-}
-
-let rcvStamp = null;
-const makeStamp = () => { rcvStamp = stamp('RECEIVED', PAL.manila); };
-// the folder under the lamp: receipt clipped in, their eye in the photo corner, RECEIVED, the figure's shadow
-function folderShot(t, b) {
-  const { W, H } = st, tall = H > W * 1.5, fw = tall ? W * .94 : Math.min(W * .7, H * .9), fh = fw * .72, x0 = (W - fw) / 2;
-  const y0 = H * (tall ? .3 : .22) + span(t, SLAM - .25, SLAM) * H * .9;   // the drawer takes it
-  lampCone(st, { x: W / 2, y: -4, tx: W / 2, ty: H * .9, sw: 40, spread: H * .45, col: PAL.lamp, a: .16 });
-  wline(st, [[x0, y0], [x0 + fw, y0], [x0 + fw, y0 + fh], [x0, y0 + fh]], 300, b, { close: true, fill: rgba(PAL.manila, .45), col: PAL.chalk, a: .6, w: st.lw * 1.2 });
-  wline(st, [[x0, y0], [x0 + fw * .03, y0 - fh * .07], [x0 + fw * .3, y0 - fh * .07], [x0 + fw * .34, y0]], 301, b, { col: PAL.chalk, a: .6 });
-  wtext(st, 'FILE ' + (who.id ? num() : '----') + ' · EVIDENCE', x0 + fw * .05, y0 + fh * .1, 302, b, { still: true, col: rgba(PAL.black, .85), font: `700 ${Math.round(fw * .04)}px "JetBrains Mono", monospace` });
-  const rx = x0 + fw * .07, ry = y0 + fh * .18, rw = fw * .42, rh = fh * .74;
-  ctx.save(); ctx.translate(rx + rw / 2, ry + rh / 2); ctx.rotate(-.04); ctx.translate(-(rx + rw / 2), -(ry + rh / 2));
-  wline(st, [[rx, ry], [rx + rw, ry], [rx + rw, ry + rh], [rx, ry + rh]], 303, b, { close: true, fill: rgba(PAL.chalk, .85), col: PAL.chalk, a: .5 });
-  ['RECEIPT', (who.nick || 'YOU').toUpperCase(), 'P' + (who.amount || '----'), 'UNDER', 'OBSERVATION'].forEach((s, i) =>
-    wtext(st, s, rx + rw * .08, ry + rh * (.16 + i * .15), 304 + i, b, { still: true, col: rgba(PAL.black, .8), font: `700 ${Math.round(rw * .075)}px "JetBrains Mono", monospace` }));
-  wline(st, [[rx + rw * .4, ry - rh * .06], [rx + rw * .4, ry + rh * .1], [rx + rw * .5, ry + rh * .1], [rx + rw * .5, ry - rh * .03]], 309, b, { a: .9 });
+function deskShot(t, f) {   // looking straight down at the sheet: the camera turns so the order sits nearly upright
+  const img = PL.desk, s0 = Math.max(V.w / img.naturalWidth, V.h / img.naturalHeight), push = span(t, CUT.desk, CARD);
+  const s = s0 * Math.max(1, .86 * V.w / 691 / s0) * (1 + push * .05), C = [565, 977];
+  const m = { s, x: V.x + V.w / 2 - C[0] * s, y: H * .47 - C[1] * s, w: img.naturalWidth * s, h: img.naturalHeight * s };
+  m.P = (px, py) => [m.x + px * s, m.y + py * s];
+  if (!eyeArt) halftoneEye();
+  ctx.fillStyle = '#050505'; ctx.fillRect(V.x, V.y, V.w, V.h);
+  const [pcx, pcy] = m.P(...C);
+  ctx.save(); clipV(); ctx.translate(pcx, pcy); ctx.rotate(.27 - push * .03); ctx.translate(-pcx, -pcy);
+  ctx.drawImage(img, m.x, m.y, m.w, m.h);
+  // the document onto the sheet (affine from three corners), multiplied so the print sits in the paper
+  const [ax, ay] = m.P(...SHEET[0]), [bx, by] = m.P(...SHEET[1]), [cx, cy] = m.P(...SHEET[2]);
+  ctx.transform((bx - ax) / DW, (by - ay) / DW, (cx - ax) / DH, (cy - ay) / DH, ax, ay);
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.save(); orderDoc(ctx, t); ctx.restore();
+  if (t >= STAMP_AT && cleared) { const k = Math.floor((t - STAMP_AT) * 30 + 1e-6), z = !reduced && k === 0 ? 1.14 : !reduced && k === 1 ? 1.05 : 1;
+    drawStamp({ ctx }, cleared, 455, 640, 400 * z, -.12, .92); }
+  ctx.globalCompositeOperation = 'source-over';
+  // red ink on the sheet: the room line circled, the note beside it
+  if (t >= NOTE[0] - .4) ring(165, 742, 128, 34, 7, 120, '#e50000', .95, boil(t), reduced ? 1 : span(t, NOTE[0] - .4, NOTE[0]));
+  if (t >= NOTE[0]) hand('We found your room.', 300, 800, 54, '#e50000', reduced ? 1 : span(t, NOTE[0], NOTE[1]), -.07);
   ctx.restore();
-  const phX = x0 + fw * .6, phY = y0 + fh * .2, phW = fw * .32, phH = fh * .42;
-  wline(st, [[phX, phY], [phX + phW, phY], [phX + phW, phY + phH], [phX, phY + phH]], 310, b, { close: true, fill: PAL.black, fa: .95, col: PAL.chalk, a: .8 });
-  ctx.save(); ctx.beginPath(); ctx.rect(phX, phY, phW, phH); ctx.clip();
-  if (eyeImg) {
-    const ir = eyeImg.width / eyeImg.height, fr = phW / phH, w = ir > fr ? phH * ir : phW, h = ir > fr ? phH : phW / ir;
-    ctx.globalAlpha = layer.a; ctx.filter = 'grayscale(1) contrast(1.3) brightness(.9)'; ctx.drawImage(eyeImg, phX + phW / 2 - w / 2, phY + phH / 2 - h / 2, w, h); ctx.filter = 'none';
-  } else partyEye(st, { cx: phX + phW / 2, cy: phY + phH / 2, w: phW * .4, open: 1, id: 311, b, dil: .5, fill: .2 });
-  ctx.restore();
-  if (t >= STAMP && rcvStamp) { const f = Math.floor((t - STAMP) * 30 + 1e-6); drawStamp(st, rcvStamp, x0 + fw * .66, y0 + fh * .8, fw * .5 * (!reduced && f === 0 ? 1.14 : !reduced && f === 1 ? 1.05 : 1), -8 * Math.PI / 180, 1); }
-  if (!reduced) {   // the figure's shadow, leaning over the desk from above: it is behind you
-    const k = span(t, 14.8, 16.4) * (1 - span(t, SLAM - .3, SLAM));
-    ctx.save(); ctx.globalAlpha = layer.a * .55 * k; ctx.fillStyle = '#000';
-    ctx.beginPath(); ctx.ellipse(W * .5, -H * .02, W * .22, H * .16, 0, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(W * .2, -2); ctx.lineTo(W * .35, H * .2); ctx.lineTo(W * .65, H * .2); ctx.lineTo(W * .8, -2); ctx.fill(); ctx.restore();
-  }
+  vignette(.85);
+  // the lamp: warm, from the top left
+  ctx.save(); clipV(); ctx.globalCompositeOperation = 'multiply'; const g = ctx.createRadialGradient(V.x + V.w * .3, H * .25, 10, V.x + V.w * .3, H * .25, Math.hypot(V.w, H) * .8);
+  g.addColorStop(0, 'rgba(255,236,200,1)'); g.addColorStop(1, 'rgba(70,50,30,1)'); ctx.fillStyle = g; ctx.fillRect(V.x, V.y, V.w, V.h); ctx.restore();
 }
 
-function scare() {   // the one frame: their eye, enormous, split red/blue (or a huge drawn eye)
-  const { W, H } = st;
-  if (eyeImg) {
-    const s = Math.max(W / eyeImg.width, H / eyeImg.height) * 1.15, w = eyeImg.width * s, h = eyeImg.height * s;
-    ctx.save(); ctx.filter = 'grayscale(1) contrast(1.6) brightness(1.1)'; ctx.drawImage(eyeImg, (W - w) / 2, (H - h) / 2, w, h); ctx.restore();
-  } else partyEye(st, { cx: W / 2, cy: H * .48, w: W * .6, hr: .42, id: 400, b: boilFrame(SCARE), dil: .6, fill: .14, lw: 2.4 });
-  misreg(st, 10);
-}
-
+/* ============================== frame ============================== */
+let lastLive = '';
 function frame(t) {
-  const { W, H } = st, b = boilFrame(t), f = Math.floor(t * 30 + 1e-6), I = flick(t);
-  st.begin(PAL.black); layer.a = 1;
-  if (!reduced && f === Math.round(SCARE * 30)) { scare(); grain(st, .2, f); return; }
-  if (!reduced && t >= SCARE && t < SCARE + .27) { crtCollapse(st, (t - SCARE) / .27); return; }
-  if (t >= DARK[0] && t < DARK[1]) {   // the dark: only the receipt, barely, then grain
-    if (t < SCARE) { layer.a = .35; receiptShot(t, b, true); layer.a = 1; }
-    grain(st, .09, reduced ? 1 : f); return;
+  const f = Math.floor(t * 30 + 1e-6);
+  ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, W, H);
+  if (t < CUT.road) callShot(t, f);
+  else if (t < CUT.fog) roadShot(t, f);
+  else if (t < CUT.green) figShot(t, f, 'fog', 'CAM 02', '0.61', 1.08, 1.2);
+  else if (t < CUT.nosig) figShot(t, f, 'green', 'CAM 03', '0.97', 1.04, 1.16);
+  else if (t < CUT.hall) noSignal(t, f);
+  else if (t < CUT.dark) hallShot(t, f);
+  else if (t < CUT.scare) { /* one second of nothing */ }
+  else if (t < CUT.desk) {
+    if (reduced) { /* no scare: the dark just holds */ }
+    else if (t < CUT.scare + .2) scareShot(t, f);
+    else collapse((t - CUT.scare - .2) / .4);
+  } else {
+    deskShot(t, f);
+    const k = span(t, CUT.desk, CUT.desk + .5); if (k < 1) { ctx.fillStyle = `rgba(5,5,5,${1 - k})`; ctx.fillRect(V.x, V.y, V.w, V.h); }
+    const s = !reduced && t >= STAMP_AT && t < STAMP_AT + .12;
+    if (s) { const r = rng(f); ctx.drawImage(cv, V.x * DPR, 0, V.w * DPR, H * DPR, V.x + (r() - .5) * U * 6, (r() - .5) * U * 5, V.w, H); }
   }
-  const s1 = shake(t, STAMP, st.u * .012), s2 = shake(t, SLAM, st.u * .02);
-  ctx.save(); ctx.translate(s1.x + s2.x, s1.y + s2.y); layer.a = I;
-  if (t < 3.05) archiveShot(t, b, 0);
-  else if (t < 6.25) archiveShot(t, b, t >= 3.6 ? 1 : 0);
-  else if (t < 7.45) archiveShot(t, b, 2);
-  else if (t < 8.65) archiveShot(t, b, 3);
-  else if (t < DARK[0]) receiptShot(t, b, false);
-  else if (t < CARD) folderShot(t, b);
-  ctx.restore(); layer.a = 1;
-  if (!reduced) TEARS.forEach((t0, i) => tapeTear(st, t, t0, i + 1));
-  grade(st, t < DARK[0] ? .2 : .1);
-  const bh = Math.max(40, Math.min(70, H * .07));
-  vhs(st, { t, band: reduced ? { y: H * .6, a: .15 } : { y: ((t / 5) % 1) * (H + bh) - bh, a: .22 } });
-  if (t >= SLAM && t < CARD) { ctx.fillStyle = PAL.black; ctx.fillRect(0, 0, W, H); grain(st, .06, f); }   // after the slam: black, then the card
-  if (t >= CARD) { ctx.save(); ctx.globalAlpha = .6; ctx.fillStyle = PAL.black; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+  [CUT.road, CUT.fog, CUT.green, CUT.hall, CUT.desk].forEach(c => tear(t, c, f));
+  if (t < CUT.dark || t >= CUT.desk) grain(f, t >= CUT.desk ? .35 : .55);
+  if (t >= CARD) { ctx.fillStyle = 'rgba(5,5,5,.55)'; ctx.fillRect(0, 0, W, H); }
+  const ev = LIVE.filter(e => t >= e[0]).pop(); if (ev && ev[1] !== lastLive) { lastLive = ev[1]; $('live').textContent = ev[1]; }
 }
 
 /* ============================== playback ============================== */
 let t0 = 0, playing = false, prevT = 0, focused = false, skipped = false;
-function captionsAt(t) {
-  const c = CAPS.find(c => t >= c[0] && t < c[3]);
-  if (c) cap.show(c[1], c[0], t, c[2]); else cap.clear();
-  const ev = LIVE.filter(e => t >= e[0]).pop();
-  if (ev) cap.say(ev[1]);
-}
+const A = filmAudio(reduced ? 'audio/site_calm.mp3' : 'audio/site.mp3', () => playing && !frozen ? (performance.now() - t0) / 1000 : null);
+function paintSound() { $('sound').innerHTML = SPEAKER(A.on()) + (A.on() ? ' Sound ON' : ' Sound OFF'); $('sound').setAttribute('aria-pressed', String(A.on())); }
+$('sound').addEventListener('click', () => { A.toggle(); paintSound(); });
 function showCard(t) {
-  const on = t >= CARD, ready = t >= CARD_BTN;
-  $('end').classList.toggle('on', on); $('end').inert = !ready; $('ctl').classList.toggle('gone', on);
-  if (ready && !focused) { focused = true; $('open').focus(); }
+  const on = t >= CARD, ready2 = t >= CARD_BTN;
+  $('end').classList.toggle('on', on); $('end').inert = !ready2; $('ctl').classList.toggle('gone', on);
+  if (ready2 && !focused) { focused = true; $('open').focus(); }
 }
 function loop() {
   if (!playing) return;
   let t = frozen ? FREEZE : (performance.now() - t0) / 1000;
-  if (!frozen && !reduced && prevT < SCARE && t >= SCARE + 1 / 30) t = SCARE;   // a slow tick never skips the scare frame
+  if (!frozen && !reduced && prevT < CUT.scare && t >= CUT.scare + .2) t = CUT.scare + .01;   // a slow tick never skips the scare
   prevT = t;
-  frame(Math.min(t, END)); captionsAt(t); showCard(t);
-  if (t >= END && !frozen) { playing = false; if (!skipped) tell('leads-receipt-finished'); return; }
+  frame(Math.min(t, END)); showCard(t);
+  if (t >= END && !frozen) { playing = false; A.fade(); if (!skipped) tell('leads-receipt-finished'); return; }
   requestAnimationFrame(loop);
 }
 function start() {
-  focused = false; prevT = 0; skipped = false; cap.reset(); $('end').classList.remove('on'); $('end').inert = true; $('ctl').classList.remove('gone');
-  t0 = performance.now(); playing = true;
-  if (!frozen && ac) score(0);
+  focused = false; prevT = 0; skipped = false; lastLive = ''; wall = new Date();
+  $('end').classList.remove('on'); $('end').inert = true; $('ctl').classList.remove('gone');
+  t0 = performance.now(); playing = true; if (!frozen) { A.begin(A.on()); paintSound(); }
   requestAnimationFrame(loop);
 }
 function skip() {
   if ((performance.now() - t0) / 1000 >= CARD) return;
-  t0 = performance.now() - CARD * 1000; skipped = true; tell('leads-receipt-skip');
-  if (ac) score(CARD);   // drop everything still to come, keep only the calm note
+  t0 = performance.now() - CARD * 1000; skipped = true; tell('leads-receipt-skip'); A.fade();
 }
 $('skip').addEventListener('click', skip);
 document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('end').inert) skip(); else tell('leads-receipt-done'); });
 $('open').addEventListener('click', () => tell('leads-receipt-done'));
 $('replay').addEventListener('click', () => { tell('leads-receipt-alive'); start(); });
-addEventListener('resize', () => { st.fit(); if (!playing) frame(END - .01); });
+addEventListener('resize', () => { fit(); if (!playing) frame(frozen ? FREEZE : 0); });
 
 /* ============================== go ============================== */
-paintSound(); makeStamp();
-await fontsReady(); makeStamp();
+fit(); makeTex(); paintSound();
+A.load();
+await fontsReady();
+try { await Promise.race([Promise.all(['24px VT323', '30px "Reenie Beanie"'].map(f => document.fonts.load(f))), new Promise(r => setTimeout(r, 2000))]); } catch (e) { /* fine */ }
+cleared = stamp('CLEARED', '#e50000');
+await Promise.race([Promise.all(Object.values(PL).map(i => i.decode ? i.decode().catch(() => {}) : null)), new Promise(r => setTimeout(r, 4000))]);
 tell('leads-receipt-ready');
 if (embedded) await Promise.race([initArrived, new Promise(r => setTimeout(r, 800))]);
+paintWho();
 if (frozen) start();
 else {
-  frame(0); $('gate').hidden = false; $('gateGo').focus();
+  ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, W, H); $('gate').hidden = false; $('gateGo').focus();
   const alive = setInterval(() => tell('leads-receipt-alive'), 30000);
   $('gateGo').addEventListener('click', () => {
     clearInterval(alive); $('gate').hidden = true;
-    setSound(true);   // inside the tap: phones allow sound now
+    A.set(true); paintSound();   // inside the tap: phones allow sound now
     tell('leads-receipt-alive'); start();
   }, { once: true });
 }
