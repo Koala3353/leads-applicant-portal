@@ -136,6 +136,12 @@ function paintWho() {
   }
 }
 
+// ?demo=1: a mock applicant, so the film can be watched with details outside the portal (sample data only, nothing real)
+if (params.get('demo') === '1') {
+  Object.assign(who, { id: 'APP-0000', nick: 'Juan', surname: 'Dela Cruz', amount: '4,000', time: '7:30 PM', camp: new Date('2027-01-29T08:00:00+08:00') });
+  paintWho();
+}
+
 /* ============================== timeline ============================== */
 const END = 21.5, CARD = 18.6, CARD_BTN = 19.0;
 const CUT = { road: 3.4, fog: 5.4, green: 7.2, nosig: 8.6, hall: 8.9, dark: 13.75, scare: 15.0, desk: 15.6 };
