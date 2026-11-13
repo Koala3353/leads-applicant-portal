@@ -2,6 +2,8 @@
 
 Google Apps Script web app. Read `CONTEXT.md` before writing any code (rules, file ownership, sheet columns, specs).
 `README.md` has the one-time clasp setup.
+Building or editing an email (results blasts, payment emails, any HTML email)? Read `EMAIL_DARK_MODE.md` first: Gmail on iPhone
+breaks emails in dark mode unless they follow it.
 
 ## How code moves
 - **GitHub** = shared history. **Apps Script editor** = what runs. **clasp** syncs local files <-> editor.
