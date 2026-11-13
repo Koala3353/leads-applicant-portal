@@ -104,7 +104,7 @@
 <script type="module">
 import { PAL, reduced, boilFrame, span, lerp, mix, rgba, stage, wline, wtext, circ, partyEye, layer, grade, grain, vhs, misreg, shake,
   lampCone, stamp, drawStamp, glitch, filmAudio, SPEAKER, captions, fontsReady } from './ink.js?v=3';
-import { plate, ready, monitor, vignette, reye, grayPhoto, drawPhoto, brush, manilaCard, affine } from './xerox.js?v=1';
+import { plate, ready, monitor, vignette, reye, grayPhoto, drawPhoto, brush, manilaCard, affine, plateMirrored } from './xerox.js?v=2';
 const DESK = plate('plates/desk.png');   // halftone print of a sheet on a desk (see plates/CREDITS.md)
 const SHEET = [[86, 609], [746, 405], [380, 1553]];   // the sheet's top-left, top-right, bottom-left corners on that plate
 
@@ -224,7 +224,7 @@ function desk(t, b) {
   ctx.save(); ctx.translate(c.g[0], c.g[1]); ctx.scale(c.s, c.s); ctx.translate(-c.a[0], -c.a[1]);
   if (ready(DESK)) {   // the plate, placed so its sheet is exactly the form page
     ctx.save(); affine(ctx, SHEET[0], [SHEET[1][0] - SHEET[0][0], SHEET[1][1] - SHEET[0][1]], [SHEET[2][0] - SHEET[0][0], SHEET[2][1] - SHEET[0][1]], [px, py], [pw, 0], [0, ph]);
-    ctx.drawImage(DESK, 0, 0); ctx.restore();
+    plateMirrored(ctx, DESK); ctx.restore();   // mirrored all round: no plate edge on a wide screen
   }
   folder(t, b, warm);
   ctx.restore();

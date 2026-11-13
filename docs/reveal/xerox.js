@@ -148,3 +148,11 @@ export function softEye(g, cx, cy, w, o = {}, feather = .4) {
   e.fillStyle = gr; e.fillRect(-w / 2, -w / 2, w, w);
   g.drawImage(c, cx - w / 2, cy - h / 2, w, h);
 }
+/* draw a plate at (0, 0) in the current transform, plus mirrored copies all around it, so a plate smaller than a wide
+   screen never shows its edge (the mirror makes every seam continuous) */
+export function plateMirrored(g, img) {
+  const w = img.naturalWidth, h = img.naturalHeight;
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    g.save(); g.translate(dx === 1 ? 2 * w : 0, dy === 1 ? 2 * h : 0); g.scale(dx ? -1 : 1, dy ? -1 : 1); g.drawImage(img, 0, 0); g.restore();
+  }
+}

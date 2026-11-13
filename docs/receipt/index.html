@@ -149,11 +149,11 @@ const LIVE = [[0, 'A call. Someone is breathing on the line.'], [.8, 'Payment re
 
 /* ============================== stage ============================== */
 const cv = $('film'), ctx = cv.getContext('2d');
-let W = 0, H = 0, DPR = 1, V = { x: 0, y: 0, w: 0, h: 0 }, U = 1;   // V: the picture (2:3 on wide screens, full on phones)
+let W = 0, H = 0, DPR = 1, V = { x: 0, y: 0, w: 0, h: 0 }, U = 1;   // V: the picture (the whole screen)
 function fit() {
   DPR = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  const vw = Math.min(W, H * 2 / 3); V = { x: (W - vw) / 2, y: 0, w: vw, h: H }; U = Math.min(V.w, V.h) / 400;
+  V = { x: 0, y: 0, w: W, h: H }; U = Math.min(V.w, V.h) / 400;   // the picture always fills the screen, so every filter covers all of it
   makeLayer();
 }
 const PL = {}; ['road', 'fog', 'green', 'hall', 'desk'].forEach(k => { const i = new Image(); i.src = 'plates/' + k + '.png'; PL[k] = i; });
@@ -486,13 +486,16 @@ function orderDoc(g, t) {   // drawn in document units (707 x 1000), ink on the 
 }
 function deskShot(t, f) {   // looking straight down at the sheet: the camera turns so the order sits nearly upright
   const img = PL.desk, s0 = Math.max(V.w / img.naturalWidth, V.h / img.naturalHeight), push = span(t, CUT.desk, CARD);
-  const s = s0 * Math.max(1, .86 * V.w / 691 / s0) * (1 + push * .05), C = [565, 977];
+  const s = Math.min(s0 * Math.max(1, .86 * V.w / 691 / s0), .8 * V.h / 983) * (1 + push * .05), C = [565, 977];   // the sheet fits the width on phones, the height on wide screens
   const m = { s, x: V.x + V.w / 2 - C[0] * s, y: H * .47 - C[1] * s, w: img.naturalWidth * s, h: img.naturalHeight * s };
   m.P = (px, py) => [m.x + px * s, m.y + py * s];
   ctx.fillStyle = '#050505'; ctx.fillRect(V.x, V.y, V.w, V.h);
   const [pcx, pcy] = m.P(...C);
   ctx.save(); clipV(); ctx.translate(pcx, pcy); ctx.rotate(.27 - push * .03); ctx.translate(-pcx, -pcy);
-  ctx.drawImage(img, m.x, m.y, m.w, m.h);
+  ctx.save(); ctx.translate(m.x, m.y); ctx.scale(s, s);   // the plate, mirrored all round so a wide screen never shows its edge
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const w = img.naturalWidth, h = img.naturalHeight;
+    ctx.save(); ctx.translate(dx === 1 ? 2 * w : 0, dy === 1 ? 2 * h : 0); ctx.scale(dx ? -1 : 1, dy ? -1 : 1); ctx.drawImage(img, 0, 0); ctx.restore(); }
+  ctx.restore();
   // the document onto the sheet (affine from three corners), multiplied so the print sits in the paper
   const [ax, ay] = m.P(...SHEET[0]), [bx, by] = m.P(...SHEET[1]), [cx, cy] = m.P(...SHEET[2]);
   ctx.transform((bx - ax) / DW, (by - ay) / DW, (cx - ax) / DH, (cy - ay) / DH, ax, ay);
