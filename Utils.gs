@@ -275,14 +275,19 @@ const SETTINGS_SCHEMA = [
   // 03 requirements
   { key: 'RequirementsOpen', type: 'bool', def: false, help: 'STEP 03. Tick to open Requirements for accepted applicants whose Payment is VERIFIED. The forms are listed in the Requirements tab.' },
   { key: 'RequirementsNote', type: 'text', def: '', help: 'Shown above the forms: general instructions for every requirement.' },
-  { key: 'RequirementsDeadline', type: 'date', def: null, help: 'Last day to finish requirements, e.g. 2026-12-15 23:59 (shown to applicants)' },
+  { key: 'RequirementsDeadline', type: 'date', def: null, help: 'Last day to finish requirements (PNF and D&U drop-off), e.g. 2026-12-15 23:59. Shown to applicants; Home counts down to it once their proof of payment is in. Blank = the countdown skips it.' },
   { key: 'PNFLink', type: 'text', def: '', help: "Link to download the Parental Notification Form (PNF): in the 'payment verified' email and on the Requirements page. Blank = the email says the PDFs will be posted on the portal, and the PNF card says the PDF will be posted there." },
   { key: 'DULink', type: 'text', def: '', help: 'Link to download the Declaration and Undertaking (D&U): in the \'payment verified\' email and on the Requirements page. Blank = same as above.' },
   // 04 GA, 05 rooms
   { key: 'GACalendarLink', type: 'text', def: '', help: 'STEP 04. Google Calendar link for the 1st GA. The step stays locked until this is filled in.' },
   { key: 'GADetails', type: 'text', def: '', help: 'Shown with the calendar button: date, time, room, what to bring.' },
+  { key: 'GADate', type: 'date', def: null, help: 'When the 1st GA starts, e.g. 2026-12-05 14:00. Home counts down to it for accepted applicants and the GA card shows the date. Blank = "date to be announced" and the countdown skips it.' },
   { key: 'RoomBookingOpen', type: 'bool', def: false, help: 'STEP 05. Tick to open Room booking for accepted applicants whose Requirements are APPROVED (placeholder page for now).' },
   { key: 'RoomBookingNote', type: 'text', def: '', help: 'Shown on the room booking page. Blank shows: details will be posted here.' },
+  { key: 'RoomBookingOpens', type: 'date', def: null, help: 'When room booking opens, e.g. 2027-01-10 09:00 (only for the Home countdown and the Rooms card; RoomBookingOpen still opens the page). Blank = the card says "opens in January" and the countdown skips it.' },
+  // results phase: the waitlist (Home's countdown + status card for WAITLISTED applicants)
+  { key: 'WaitlistReplyBy', type: 'date', def: '2026-11-16 23:59', help: 'Waitlisted applicants reply to the results email by this to stay on the waitlist (Home counts down to it). Blank = 2026-11-16 23:59; off = skip it.' },
+  { key: 'WaitlistPaymentBy', type: 'date', def: '2026-11-27 23:59', help: 'If a slot opens, a waitlisted applicant pays by this (shown on their payment card and as NEXT IN LINE). Blank = 2026-11-27 23:59; off = skip it.' },
   // Pre-LEADS
   { key: 'PreLeadsOpen', type: 'bool', def: true, help: 'Untick / FALSE to close Pre-LEADS registration right away. Blank = open.' },
   { key: 'PreLeadsLimit', type: 'int', def: 40, help: 'THE LEADS UP closes once this many have registered. Blank = 40; 0 = no limit.' },

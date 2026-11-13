@@ -68,11 +68,22 @@ const BRAND = {
     redact: [],                            // words in the lede shown as black bars until hovered or tapped (empty = off)
     // the project description (RecSec, Oct 2026): also shown at the top of the Apply form as "What is LEADS?"
     lede: "LEADS is MEA's flagship offsite leadership formation camp. Three days. Two nights. Away from the city. " +
-          "Out of your comfort zone. People will watch you make the call and watch you grow. You'll let them watch."
+          "Out of your comfort zone. People will watch you make the call and watch you grow. You'll let them watch.",
+    poster: 'Act natural. Apply anyway.',  // the small line on the TV-wall poster
+    // once Settings › ResultsReleased is ticked (Home.html swaps these in; nothing changes before)
+    released: {
+      tagline: 'The files are open.',
+      blurb: 'Results are out. Sign in with your Ateneo account to read yours.',                // guests
+      blurbNoFile: 'Results are out. There is no file under this account. If you applied with another one, switch to it.',   // signed in, no file
+      poster: 'Results are in. Check your file.',
+      closedBtn: 'Applications are closed',   // in place of the main button for people without a file
+      closedNote: 'See you next year.'
+    }
   },
   buttons: {
     apply: 'Start your application',
     applySignIn: 'Sign in to apply',          // the main button for guests
+    signInResults: 'Sign in to read your file',   // the main button for guests once results are out
     applyWrongAccount: 'Switch to your Ateneo account',   // signed in, but not with an Ateneo account
     applyClosed: 'Applications are closed',
     status: 'Check my status',
@@ -98,8 +109,20 @@ const BRAND = {
       apply: { title: 'Time left to decide', kicker: '01 · APPLICATION' },
       pay:   { title: 'Proof of payment due', kicker: '02 · PAYMENT' },
       reqs:  { title: 'Requirements due', kicker: '03 · REQUIREMENTS' },
-      camp:  { title: 'Camp starts in', kicker: '05 · CAMP' }
+      camp:  { title: 'Camp starts in', kicker: 'CAMP · KASILE HILLS', label: 'Camp: ', now: 'Camp is in session' },
+      // results phase (Settings › ResultsReleased): each person's next date on their own timeline. Dates: Settings
+      // GADate, RoomBookingOpens, WaitlistReplyBy, WaitlistPaymentBy (blank = skipped)
+      ga:    { title: '1st General Assembly in', kicker: '04 · 1ST GA', label: '1st GA: ', now: 'The 1st GA is on' },
+      room:  { title: 'Room booking opens in', kicker: '05 · ROOMS', label: 'Opens: ', now: 'Room booking is open' },
+      waitReply: { title: 'Reply to stay on the waitlist', kicker: 'WAITLIST · REPLY' },
+      waitPay:   { title: 'Payment due if a slot opens', kicker: 'IF A SLOT OPENS · PAY' }
     },
+    resultsPill: 'results are out',     // the clock's pill for people without a file, after release
+    acceptedPill: 'accepted',           // the camp countdown's pill for ACCEPTED (CONFIRMED keeps "confirmed camper")
+    lockedPill: 'opens after payment',  // requirements deadline shown before their payment is verified
+    waitlistTitle: 'On the waitlist',   // waitlisted, after the reply deadline
+    waitlistText: 'If a slot opens, the core team emails you. You would pay by {date}.',
+    waitlistTextNoDate: 'If a slot opens, the core team emails you.',
     deadline: 'Deadline: ',
     due: 'Due ',
     passed: 'Passed',
@@ -117,7 +140,7 @@ const BRAND = {
     applyClosedPill: 'applications closed',
     loading: 'loading',
     endedTitle: 'File closed',
-    endedText: 'This file is closed. Thank you for applying.',
+    endedText: 'Observation concluded. Thank you for applying.',
     // I.R.I.S. as a deadline gets close ({step} = the step's title)
     alarms: {
       t72: ['thinking', '{step}: three days left.'],
@@ -143,7 +166,7 @@ const BRAND = {
   signal: { done: 'done', action: 'your move', open: 'open', waiting: 'in review', locked: 'locked', stopped: 'closed' },
   // labels for the progress path + SUBJECT_STATUS.EXE rows (the same words in both places)
   path: { apply: 'Applied', review: 'Accepted', payment: 'Payment', requirements: 'Requirements', confirmed: 'Confirmed',
-          waitlisted: 'Waitlisted', rejected: 'Not accepted', withdrawn: 'Withdrawn' },
+          waitlisted: 'Waitlisted', rejected: 'Not selected', withdrawn: 'Withdrawn' },
   door: 'Access granted. Book your room →',   // SUBJECT_STATUS.EXE, once room booking opens for a confirmed camper
 
   // Home: the "closes today" strip, and the one-time full-screen cards when the status changes. {id} = Applicant ID
@@ -170,6 +193,7 @@ const BRAND = {
   // FAQ: {dates} {venue} {contact} are filled from Settings. If a value a line needs is blank, `fallback` shows instead.
   // todo: true = the core team still has to write the answer; only admins see it (marked TODO) until then.
   faq: {
+    show: false,   // the FAQ case files on Home (Nov 14 2026: hidden; applications are closed). true = show them again
     eyebrow: 'FAQ',
     title: 'Classified files',
     note: 'Open a file. We already read it.',
@@ -214,6 +238,13 @@ const BRAND = {
     ['DO NOT TURN AROUND', 'it is fine. probably.']
   ],
 
+  // added to the ticker once Settings › ResultsReleased is ticked
+  tickerResults: [
+    ['FILES OPENED', 'read yours'],
+    ['RESULTS ARE IN', 'check your file'],
+    ['OBSERVATION CONCLUDED', 'for now']
+  ],
+
   /* ---------- the hub: one card per step, in order ---------- */
   hub: {
     eyebrow: 'Your file // live',
@@ -228,6 +259,8 @@ const BRAND = {
     applyOpen: 'Open now.',
     adminPreview: 'Core team view. Still locked for applicants.',   // a card only an Admins-tab account can open (progressFor_ in Utils.gs)
     applyDone: 'Filed. Your application is on record.',
+    closedNote: 'This file is closed. There is nothing left to do here.',   // REJECTED / WITHDRAWN, once results are out
+    previewBar: 'Core team preview // {id} // after results // read-only',    // ?viewas=… (home_viewAs)
     wrongAccount: 'Use your Ateneo account.',
     open: 'Open', view: 'View', start: 'Start',
     hi: 'Hi {name}. '
@@ -295,15 +328,39 @@ const BRAND = {
     req: 'Opens once your requirements are approved.',
     link: 'Date not set yet. Check back here.',
     gaOpen: 'Date is set. Add it to your calendar.',
-    roomOpen: 'Open now.'
+    roomOpen: 'Open now.',
+    // results phase: locked cards say when they open ({date} from Settings)
+    ga_tba: 'Date to be announced.',
+    ga_date: '{date}. Calendar link soon.',              // Settings › GADate
+    room_jan: 'Opens in January. Part 2 of The Site plays here.',
+    room_date: 'Opens {date}. Part 2 of The Site plays here.',   // Settings › RoomBookingOpens
+    waitlist_pay: 'Opens if a slot frees up. You would pay by {date}.',   // Settings › WaitlistPaymentBy
+    waitlist: 'Opens if a slot frees up.'
+  },
+  // the thin strip above the cards for ACCEPTED applicants, once results are out ({date} = Manila date and time)
+  dueStrip: {
+    pay: 'Payment due {date}',
+    payNoDate: 'Payment open. Send your proof.',
+    payRejected: 'Proof not accepted. Send a new one by {date}',
+    paySent: 'Proof received, for verification',
+    reqs: 'PNF and D&U due {date}',
+    reqsNoDate: 'Payment verified. PNF and D&U are next.'
+  },
+  // WAITLISTED status card, once results are out: reply by Settings › WaitlistReplyBy (to Settings › ContactEmail)
+  waitlist: {
+    reply: 'Reply to the results email by {date} to stay on the waitlist.',
+    replyClosed: 'The reply window closed on {date}. If a slot opens, the core team emails you.',
+    button: 'Reply to stay on the waitlist',
+    subject: 'Joining the LEADS 2627 waitlist ({id})',
+    body: 'Yes, I would like to be included in the waitlist for LEADS 2627.\n\nName: {name}\nApplicant ID: {id}'
   },
 
   statusCopy: {
     'SUBMITTED':    'We got your application. Someone from the core team will read it soon.',
     'UNDER REVIEW': 'The core team is reading your file. Nothing to do yet. We will tell you when it is your move.',
-    'WAITLISTED':   "You're on the waitlist. Slots open up more often than you think.",
+    'WAITLISTED':   "You're on the waitlist. Joining it does not guarantee a slot, but slots do open.",
     'ACCEPTED':     "You're accepted. Next: pay and upload your proof of payment. Requirements open once your payment is verified.",
-    'REJECTED':     'Not this time. Applying still took guts, and we hope you try again next year.',
+    'REJECTED':     "We're sorry. After a full assessment of this cycle's applicants, we cannot offer you a slot for LEADS 2627. Capacity is limited, and we could not accommodate everyone. Thank you for trusting us with your reflection. Observation concluded. File closed.",
     'CONFIRMED':    "You're in. See you at camp.",
     'WITHDRAWN':    'You withdrew. Your file is closed. Message the core team if you have questions.'
   },

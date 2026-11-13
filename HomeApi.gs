@@ -5,35 +5,47 @@
 
 /** Everything the hub needs in one call. */
 function home_getContext() {
-  return traced_('home_getContext', 'home', home_getContext_, c =>
+  return traced_('home_getContext', 'home', () => home_getContext_(), c =>
     (c.applicant ? c.applicant.id + ' ' + c.applicant.status : (c.signedIn ? 'signed in, no file' : 'guest')) + (c.isAdmin ? ' (admin)' : ''));
 }
-function home_getContext_() {
-  const email = currentEmail_();
+
+/**
+ * view: null for the real visitor, or the core team's preview (home_viewAs): { email, id }. In a preview the page is
+ * built for that applicant's email (or a made-up one with no file, or no email = a guest), never as the core team:
+ * no admin chips, no unlocked-for-preview cards, no reveal film, no referral (it can write).
+ */
+function home_getContext_(view) {
+  const email = view ? view.email : currentEmail_();
   const s = getSettings_();
-  const deadline = parseDate_(s.Deadline);
-  const payDeadline = parseDate_(s.PaymentDeadline);
-  const reqsDeadline = parseDate_(s.RequirementsDeadline);
+  const iso = v => { const d = parseDate_(v); return d ? d.toISOString() : null; };
+  const released = !!setting_('ResultsReleased');
   const camp = campStart_(s);
   const found = email ? getApplicantForPortal_(email) : null;
   const a = found ? found.data : null;
-  const p = progressFor_(a, email);   // the core team: every card unlocked (Utils.gs)
+  const admin = !view && isAdmin_(email);
+  const p = view ? progress_(a) : progressFor_(a, email);   // the core team: every card unlocked (Utils.gs)
 
   return {
     email: email,
     signedIn: !!email,
     allowedDomain: email ? isAllowedDomain_(email) : false,
     isOpen: isOpen_(),
-    deadline: deadline ? deadline.toISOString() : null,
+    resultsReleased: released,   // Settings › ResultsReleased: Home switches to the results phase (hero, countdown, cards)
+    deadline: iso(s.Deadline),
     deadlines: {
-      apply: deadline ? deadline.toISOString() : null,
-      payment: payDeadline ? payDeadline.toISOString() : null,
-      requirements: reqsDeadline ? reqsDeadline.toISOString() : null,
+      apply: iso(s.Deadline),
+      payment: iso(s.PaymentDeadline),
+      requirements: iso(s.RequirementsDeadline),
+      ga: iso(setting_('GADate')),                    // the rest: Home's results-phase countdown (blank = skipped)
+      room: iso(setting_('RoomBookingOpens')),
+      waitlistReply: iso(setting_('WaitlistReplyBy')),
+      waitlistPay: iso(setting_('WaitlistPaymentBy')),
       camp: camp
     },
-    campStart: camp,   // ISO or null; Home counts down to it once the applicant is CONFIRMED
+    campStart: camp,   // ISO or null
     contact: String(s.ContactEmail || ''),
-    isAdmin: isAdmin_(email),
+    isAdmin: admin,
+    preview: view ? { id: view.id } : null,
     event: {
       name: String(s.EventName || ''),
       dates: String(s.EventDates || ''),
@@ -46,14 +58,39 @@ function home_getContext_() {
       requirements: a.Requirements || 'NONE',
       payment: a.Payment || 'NONE',
       message: String(a.MessageToApplicant || '').trim().slice(0, 1000),   // a note from the core team (Applicants › MessageToApplicant)
-      reveal: revealFor_(a)   // the results film: { url, play } once the decision is visible, else null
+      reveal: view ? null : revealFor_(a)   // the results film: { url, play } once the decision is visible, else null
     } : null,
-    revealUrl: isAdmin_(email) ? revealUrl_() : '',   // the core team can preview it with ?reveal=1
+    revealUrl: admin ? revealUrl_() : '',   // the core team can preview it with ?reveal=1
     progress: p,
     preleads: { date: String(s.PreLeadsDate || ''), time: String(s.PreLeadsTime || ''), venue: String(s.PreLeadsVenue || '') },   // the Home banner
-    referral: found ? safeReferral_(found) : null,   // own code + counts (never names); Referrals.gs
-    sheetUrl: isAdmin_(email) ? sheetUrl_() : ''   // the core team gets a link to the Sheet
+    referral: found && !released && !view ? safeReferral_(found) : null,   // own code + counts (never names); hidden once results are out
+    sheetUrl: admin ? sheetUrl_() : ''   // the core team gets a link to the Sheet
   };
+}
+
+/** Settings › ResultsReleased for Home's first paint (hero tagline, poster); false if Settings can't be read. */
+function homeReleased_() {
+  try { return !!setting_('ResultsReleased'); } catch (e) { return false; }
+}
+
+/**
+ * The core team's preview of Home after results are out (...exec?viewas=APP-2447): the page exactly as that applicant
+ * will see it once Settings › ResultsReleased and PaymentOpen are ticked, whatever they say now. viewas=NOFILE shows a
+ * signed-in Ateneo account with no file, viewas=GUEST someone not signed in. Admins only. Read-only: the switches are
+ * flipped for this one call in memory (never in the Sheet), and nothing is written for the applicant (no RevealSeen,
+ * no referral, no events; the trace row is the core team's own).
+ */
+function home_viewAs(applicantId) {
+  return traced_('home_viewAs', 'home', () => {
+    if (!isAdmin_(currentEmail_())) throw new Error('Only the core team can preview as an applicant.');
+    const id = String(applicantId || '').trim().toUpperCase();
+    getSettings_.cache = Object.assign({}, getSettings_(), { ResultsReleased: true, PaymentOpen: true });   // this call only
+    if (id === 'GUEST') return home_getContext_({ email: '', id: id });
+    if (id === 'NOFILE') return home_getContext_({ email: 'preview.nofile@student.ateneo.edu', id: id });
+    const found = getApplicantById_(id);
+    if (!found || !String(found.data.Email || '').trim()) throw new Error('No applicant with the ID ' + id + '.');
+    return home_getContext_({ email: String(found.data.Email).trim(), id: found.data.ApplicantID });
+  }, c => 'preview ' + (c && c.preview ? c.preview.id : '') + (c && c.applicant ? ' ' + c.applicant.status : ''));
 }
 
 /**

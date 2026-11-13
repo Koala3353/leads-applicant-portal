@@ -267,6 +267,36 @@
   @keyframes nextUp{50%{outline-color:transparent}}
   @media (prefers-reduced-motion:reduce){.mod.next-up{animation:none}}
   .replay-tape{display:inline-flex;margin:0 0 14px 0}
+  /* ---------- results phase (Settings › ResultsReleased; body.results), Nov 2026 ---------- */
+  /* no file: a stamped notice in place of a dead button */
+  .closed-stamp{display:inline-flex;flex-direction:column;gap:6px;margin:0;padding:12px 18px 14px;border:3px double var(--danger);color:var(--danger);
+    transform:rotate(-2deg);background:color-mix(in srgb,var(--danger) 7%,transparent);max-width:100%}
+  .closed-stamp b{font:400 clamp(1.3rem,4.6vw,1.9rem)/1 var(--display);text-transform:uppercase;letter-spacing:.03em}
+  .closed-stamp span{font:400 1rem/1.3 var(--type);color:var(--text)}
+  /* accepted: a thin strip of warning tape above the cards with their next date */
+  .duestrip{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;margin:20px 0 0;padding:8px 14px;background:var(--glow);color:#000;
+    text-decoration:none;font:700 .8rem/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase;border-block:2px solid #000;box-shadow:0 0 0 1.5px var(--glow)}
+  .duestrip .ds-k{padding:2px 6px;background:#000;color:var(--glow);font-weight:700;font-size:.7rem;letter-spacing:.12em}
+  .duestrip b{flex:1 1 12em;min-width:0;overflow-wrap:anywhere}
+  .duestrip .ds-go{font-size:.72rem}
+  .duestrip.wait{background:var(--win,#c0c0c0)}
+  .duestrip.warn{background:var(--danger);color:#fff;box-shadow:0 0 0 1.5px var(--danger)}
+  .duestrip.warn .ds-k{color:var(--danger)}
+  .duestrip:focus-visible{outline:2px dotted var(--glow);outline-offset:3px}
+  .duestrip:hover .ds-go{text-decoration:underline}
+  /* waitlisted: the reply button on the status card */
+  .status .status-act{display:inline-flex;margin:14px 0 4px}
+  /* rejected / withdrawn: a closed file. Only the status card and the filed application stay. */
+  body.file-closed .mod[data-key="pay"],body.file-closed .mod[data-key="req"],body.file-closed .mod[data-key="ga"],body.file-closed .mod[data-key="room"],
+  body.file-closed #refCard,body.file-closed .fact-pay,body.file-closed .duestrip{display:none}
+  body.file-closed .mods:not(.with-admin){grid-template-columns:minmax(0,520px)}
+  body.file-closed .substat-row:has(#sig-payment),body.file-closed .substat-row:has(#sig-requirements),body.file-closed .substat-row:has(#sig-confirmed){display:none}
+  body.file-closed .path{grid-template-columns:repeat(2,1fr)}
+  body.file-closed .path li[data-step="payment"],body.file-closed .path li[data-step="requirements"],body.file-closed .path li[data-step="confirmed"]{display:none}
+  .clock.no-units .units{display:none}
+  /* the core team's ?viewas= preview */
+  .preview-bar{position:sticky;top:0;z-index:70;margin:0;padding:6px 12px;background:var(--danger);color:#fff;text-align:center;
+    font:700 .72rem/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;overflow-wrap:anywhere}
   .reveal-veil iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
   .cnote{margin:14px 0 0;padding:10px 12px 12px;background:#f4efe1;color:#111;border-left:5px solid var(--danger);box-shadow:4px 4px 0 #000;rotate:-.4deg}
   .cnote-k{margin:0 0 4px;font:700 .68rem/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#b00000}
@@ -683,7 +713,9 @@
   }
 </style>
 </head>
-<body data-base="<?= baseUrl ?>" data-ref="<?= ref ?>" data-reveal="<?= revealAsked ? '1' : '' ?>" data-reveal-as="<?= revealAs ?>" data-loader-wait>
+<body data-base="<?= baseUrl ?>" data-ref="<?= ref ?>" data-reveal="<?= revealAsked ? '1' : '' ?>" data-reveal-as="<?= revealAs ?>" data-viewas="<?= typeof viewAs === 'undefined' ? '' : viewAs ?>" data-loader-wait>
+<? var released = homeReleased_(), HR = BRAND.hero.released || {}; ?>
+<p class="preview-bar" id="previewBar" role="status" hidden></p>
 <?!= include_('Loader') ?>
 <?!= include_('Ambience') ?>
 <button type="button" class="sound-chip" id="soundChip" aria-pressed="true" aria-label="Background music"><svg class="snd-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg> Sound ON &middot; tap to mute</button>
@@ -741,10 +773,11 @@
     <div>
       <p class="rec" aria-hidden="true"><span class="dot">REC</span><span>CAM 01</span><time id="recClock">--:--:--</time><span class="seen" id="seen"></span></p>
       <h1 class="rgb"><span class="kicker<?= BRAND.effects.shiver ? ' shiver' : '' ?>"><?= BRAND.hero.kicker ?></span><? var hl = String(BRAND.hero.headline).split(/ (?=\S+$)/); ?><span class="line"><?= hl[0] ?></span><? if (hl[1]) { ?><span class="line big" style="--n:<?= hl[0].length / hl[1].length ?>"><?= hl[1] ?></span><? } ?></h1>
-      <p class="tagline"><?= BRAND.hero.tagline ?></p>
-      <p class="lede"><?= BRAND.hero.lede ?></p>
+      <p class="tagline"><?= released ? HR.tagline : BRAND.hero.tagline ?></p>
+      <p class="lede"><?= released ? HR.blurb : BRAND.hero.lede ?></p>
       <div class="cta">
         <a class="btn" id="mainBtn" href="<?= baseUrl ?>?page=apply" target="_top"><?= BRAND.buttons.apply ?></a>
+        <p class="closed-stamp" id="closedStamp" hidden><b><?= HR.closedBtn ?></b><span><?= HR.closedNote ?></span></p>
       </div>
       <p class="hint" id="hint" hidden><?= BRAND.hero.hint ?></p>
     </div>
@@ -799,6 +832,7 @@
         <span class="pill" id="statusPill">your application</span>
         <p class="big" id="statusBig"></p>
         <p id="statusMsg"></p>
+        <a class="btn status-act" id="statusAct" target="_blank" rel="noopener" hidden></a>
         <p class="mono rank" id="statusRank" hidden></p>
         <div class="cnote" id="statusNote" hidden><p class="cnote-k"><?= BRAND.hub.noteLabel ?></p><p class="cnote-t" id="statusNoteText"></p></div>
         <div class="tracks">
@@ -840,7 +874,7 @@
       <p class="p-top">Notice</p>
       <span class="reye wrong" data-watch style="--d:-3.3s"><span class="reye-ball"><i></i></span></span>
       <p class="p-h">You are <em>being watched</em></p>
-      <p class="p-s">Act natural. Apply anyway.</p>
+      <p class="p-s"><?= released ? HR.poster : BRAND.hero.poster ?></p>
       <p class="p-no">NO. 26/27</p>
     </div>
     <p class="scrap s1">don't look<br>behind you</p>
@@ -893,6 +927,8 @@
       <li data-step="confirmed"><?= BRAND.path.confirmed ?></li>
     </ol>
 
+    <a class="duestrip" id="dueStrip" target="_top" hidden><span class="ds-k" id="dueKey">FILE 02</span><b id="dueText"></b><span class="ds-go" aria-hidden="true">Open &#8594;</span></a>
+
     <ul class="mods" id="mods">
       <? ['apply', 'pay', 'req', 'ga', 'room', 'sheet'].forEach(function (key) { var m = BRAND.modules[key]; var pg = { apply: 'apply', pay: 'pay', req: 'reqs', ga: 'ga', room: 'room' }[key]; ?>
       <li class="card mod is-locked" data-key="<?= key ?>">
@@ -910,7 +946,7 @@
   </section>
 
   <!-- only for people without a file yet: hidden once they've applied -->
-  <section class="intel" id="faq" aria-labelledby="faqTitle">
+  <section class="intel" id="faq" aria-labelledby="faqTitle"<?= BRAND.faq.show === false ? ' hidden' : '' ?>>
     <div class="hub-head">
       <p class="eyebrow"><?= BRAND.faq.eyebrow ?></p>
       <h2 id="faqTitle"><?= BRAND.faq.title ?></h2>
@@ -1340,11 +1376,15 @@
   }
 
   /* ---------- fear ticker ---------- */
-  (function () {
+  /* extra: lines mixed in every fourth place (BRAND.tickerResults once results are out) */
+  function buildTicker(extra) {
     const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const html = BRAND.ticker.map(f => '<span><b>' + esc(f[0]) + '</b> // ' + esc(f[1]) + '</span>').join('');
+    const lines = BRAND.ticker.slice();
+    (extra || []).forEach((l, i) => lines.splice(Math.min(i * 4, lines.length), 0, l));
+    const html = lines.map(f => '<span><b>' + esc(f[0]) + '</b> // ' + esc(f[1]) + '</span>').join('');
     $('tick').innerHTML = html + html; // doubled for a seamless loop
-  })();
+  }
+  buildTicker();
 
   /* ---------- account links ----------
      Apps Script can't sign anyone out itself, so these go through Google:
@@ -1491,6 +1531,56 @@
     return R.line.replace('{n}', R.min + (h % (R.max - R.min + 1)));
   }
 
+  /* Manila date strings: whenShort = "Nov 20, 11:59 PM", whenLong = "Sat, Dec 5, 2:00 PM", day = "Jan 10" */
+  const MNL = { timeZone: 'Asia/Manila' };
+  const whenShort = iso => new Date(iso).toLocaleString('en-US', Object.assign({ month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }, MNL));
+  const whenLong = iso => new Date(iso).toLocaleString('en-US', Object.assign({ weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }, MNL));
+  const dayOnly = iso => new Date(iso).toLocaleDateString('en-US', Object.assign({ month: 'short', day: 'numeric' }, MNL));
+
+  /* ---------- results phase (Settings › ResultsReleased): everything here is skipped before release ---------- */
+  /** Locked cards say when they open: accepted → 1st GA date / rooms in January; waitlisted → if a slot frees up. */
+  function releasedWhy(key, a, dls) {
+    const L = BRAND.lockedWhy;
+    if (a.status === 'WAITLISTED') return key === 'pay' && dls.waitlistPay ? L.waitlist_pay.replace('{date}', dayOnly(dls.waitlistPay)) : L.waitlist;
+    if (key === 'ga') return dls.ga ? L.ga_date.replace('{date}', whenLong(dls.ga)) : L.ga_tba;
+    if (key === 'room') return dls.room ? L.room_date.replace('{date}', dayOnly(dls.room)) : L.room_jan;
+    return '';
+  }
+
+  /** ACCEPTED / CONFIRMED: the thin strip above the cards. Payment due → proof received → PNF and D&U due → gone. */
+  function renderDueStrip(ctx) {
+    const a = ctx.applicant, ds = $('dueStrip'), dls = ctx.deadlines || {}, D = BRAND.dueStrip, base = document.body.dataset.base;
+    ds.hidden = true;
+    if (!ctx.resultsReleased || !a || (a.status !== 'ACCEPTED' && a.status !== 'CONFIRMED')) return;
+    let text = '', page = 'pay', tone = '';
+    if (a.payment === 'NONE') text = dls.payment ? D.pay.replace('{date}', whenShort(dls.payment)) : D.payNoDate;
+    else if (a.payment === 'REJECTED') { text = dls.payment ? D.payRejected.replace('{date}', whenShort(dls.payment)) : D.payNoDate; tone = 'warn'; }
+    else if (a.payment === 'SUBMITTED') { text = D.paySent; tone = 'wait'; }
+    else if (a.payment === 'VERIFIED' && a.requirements !== 'SUBMITTED' && a.requirements !== 'APPROVED') {
+      page = 'reqs'; text = dls.requirements ? D.reqs.replace('{date}', whenShort(dls.requirements)) : D.reqsNoDate;
+    }
+    if (!text) return;
+    $('dueText').textContent = text;
+    $('dueKey').textContent = page === 'pay' ? 'FILE 02' : 'FILE 03';
+    ds.className = 'duestrip' + (tone ? ' ' + tone : '');
+    ds.href = base + '?page=' + page;
+    ds.hidden = false;
+  }
+
+  /** WAITLISTED: reply to the results email by Settings › WaitlistReplyBy; a Reply button mails Settings › ContactEmail. */
+  function renderWaitlist(ctx) {
+    const a = ctx.applicant, act = $('statusAct'), W = BRAND.waitlist, by = (ctx.deadlines || {}).waitlistReply;
+    act.hidden = true;
+    if (!ctx.resultsReleased || !a || a.status !== 'WAITLISTED' || !by) return;
+    const open = new Date(by).getTime() > Date.now();
+    $('statusMsg').append(' ' + (open ? W.reply : W.replyClosed).replace('{date}', whenLong(by)));
+    if (!open || !ctx.contact) return;
+    const fill = t => t.replace(/\{id\}/g, a.id).replace(/\{name\}/g, a.firstName || '');
+    act.href = 'mailto:' + encodeURIComponent(ctx.contact).replace(/%40/g, '@') + '?subject=' + encodeURIComponent(fill(W.subject)) + '&body=' + encodeURIComponent(fill(W.body));
+    act.textContent = W.button;
+    act.hidden = false;
+  }
+
   /* ---------- render ---------- */
   /** Tells anything included in the page (e.g. the report button) what the hub loaded: 'hub:context' / 'hub:error'. */
   function announce(type, detail) {
@@ -1522,13 +1612,22 @@
   function render(ctx) {
     Loader.hide();
     try { announce('context', ctx); } catch (e) { console.error(e); } // a widget error must not stop the hub
-    const p = ctx.progress, a = ctx.applicant;
+    const p = ctx.progress, a = ctx.applicant, R = !!ctx.resultsReleased, HR = BRAND.hero.released || {};
     $('who').textContent = ctx.signedIn ? BRAND.hub.signedIn : BRAND.hub.signedOut;
     if (ctx.signedIn) { const b = document.createElement('b'); b.textContent = ctx.email; $('who').append(b); }
+    if (ctx.preview) { $('previewBar').textContent = BRAND.hub.previewBar.replace('{id}', ctx.preview.id); $('previewBar').hidden = false; }
+    document.body.classList.toggle('results', R);
+    if (R) {   // the hero, the poster and the ticker switch to the results phase
+      const tg = document.querySelector('.hero .tagline'), ld = document.querySelector('.hero .lede'), ps = document.querySelector('.poster .p-s');
+      if (tg) tg.textContent = HR.tagline;
+      if (ld) ld.textContent = ctx.signedIn && ctx.allowedDomain && !a ? HR.blurbNoFile : HR.blurb;
+      if (ps) ps.textContent = HR.poster;
+      buildTicker(BRAND.tickerResults);
+    }
     window.__creep.name = (a && a.firstName) || '';
     window.__creep.id = (a && a.id) || '';
     if (a && $('youBox')) $('youBox').dataset.id = 'ID: ' + a.id;   // CAM 03 tags you with your file number once you have one
-    try { broadcastMoments(ctx); } catch (e) { console.error(e); }
+    if (!ctx.preview) try { broadcastMoments(ctx); } catch (e) { console.error(e); }   // a preview shows no pop-ups and stores nothing
     $('hint').hidden = !(ctx.signedIn && !a && ctx.isOpen && ctx.allowedDomain);
     renderContacts($('contact'));
     $('contact').hidden = false;
@@ -1573,9 +1672,10 @@
     } else {
       // no move: say why on the button itself, not only in a tooltip
       const B = BRAND.buttons;
-      const why = !ctx.signedIn ? B.applySignIn : (!ctx.allowedDomain ? B.applyWrongAccount : B.applyClosed);
+      const why = !ctx.signedIn ? (R ? B.signInResults : B.applySignIn) : (!ctx.allowedDomain ? B.applyWrongAccount : B.applyClosed);
       main.textContent = why;
       if (!ctx.signedIn || !ctx.allowedDomain) main.href = ctx.signedIn ? ACCOUNT.out : ACCOUNT.choose;
+      else if (R) { main.hidden = true; $('closedStamp').hidden = false; }   // results out, no file: a stamp, not a dead button
       else disable(main, why);
     }
 
@@ -1600,7 +1700,8 @@
       [['pay', 'payment'], ['req', 'requirements'], ['ga', 'ga'], ['room', 'room']].forEach(([key, step]) => {
         const st = p[step];
         // st.preview: open only because this is the core team (progressFor_): say it's still locked for applicants
-        const why = st.preview ? BRAND.hub.adminPreview : st.state === 'locked' ? (L[key + '_' + st.why] || L[st.why] || '') : (st.state === 'stopped' ? '' : now[key]);
+        let why = st.preview ? BRAND.hub.adminPreview : st.state === 'locked' ? (L[key + '_' + st.why] || L[st.why] || '') : (st.state === 'stopped' ? '' : now[key]);
+        if (R && a && st.state === 'locked' && !st.preview) why = releasedWhy(key, a, ctx.deadlines || {}) || why;
         setModule(key, st.state, why, st.state === 'done' ? BRAND.hub.view : BRAND.hub.open);
       });
     }
@@ -1634,6 +1735,7 @@
       $('statusRank').textContent = watchRank(a.id); $('statusRank').hidden = closedFile;
       // a note the core team typed in Applicants › MessageToApplicant (plain text, line breaks kept)
       $('statusNoteText').textContent = a.message || ''; $('statusNote').hidden = !a.message;
+      try { renderWaitlist(ctx); } catch (e) { console.error(e); }
       const T = BRAND.trackLabels;
       [['trStatus', a.status, a.status], ['trReq', a.requirements, T.requirements[a.requirements]], ['trPay', a.payment, T.payment[a.payment]]].forEach(([id, v, label]) => {
         $(id).textContent = label || v;
@@ -1641,7 +1743,12 @@
       });
     }
 
-    try { renderReferral(ctx.referral); } catch (e) { console.error(e); }
+    // results out: rejected / withdrawn files close (no step cards, no referral), and nobody gets the referral card
+    const fileClosed = R && !!a && (a.status === 'REJECTED' || a.status === 'WITHDRAWN');
+    document.body.classList.toggle('file-closed', fileClosed);
+    if (fileClosed) $('hubNote').textContent = BRAND.hub.closedNote;
+    try { renderDueStrip(ctx); } catch (e) { console.error(e); }
+    try { renderReferral(R ? null : ctx.referral); } catch (e) { console.error(e); }
     try {   // Pre-LEADS banner: hidden after its date and for confirmed campers (copy + date in BRAND.preleadsBanner)
       const pb = BRAND.preleadsBanner, until = pb && new Date(pb.until);
       $('preleadsStrip').hidden = !(pb && pb.show && !(until && Date.now() > until.getTime()) && !(a && a.status === 'CONFIRMED'));
@@ -1696,7 +1803,29 @@
     const nextBox = $('clockNext');
 
     // Define all milestone tasks with completion conditions
-    const allMilestones = [
+    // Results phase (R): each person's own timeline, nearest date first. Accepted: payment (until proof is in) →
+    // PNF/D&U (until submitted) → 1st GA → room booking opens → camp. Waitlisted: the reply deadline, then the payment
+    // date if a slot opens (only as NEXT IN LINE). No file / guests: camp. Rejected / withdrawn: nothing (a closed file).
+    // calm = no alarms or panic (events, or a deadline that isn't theirs to act on yet); a blank Settings date is skipped.
+    const S = BRAND.countdown.steps, C0 = BRAND.countdown, st0 = a ? String(a.status) : '';
+    const acc = st0 === 'ACCEPTED' || st0 === 'CONFIRMED', wl = st0 === 'WAITLISTED';
+    const accBadge = st0 === 'CONFIRMED' ? C0.confirmed : C0.acceptedPill;
+    const reqOpen = !!(p && p.requirements && p.requirements.unlocked);
+    const releasedMilestones = [
+      { id: 'pay', title: S.pay.title, kicker: S.pay.kicker, deadline: dls.payment, mine: acc,
+        isDone: a && (a.payment === 'SUBMITTED' || a.payment === 'VERIFIED'), isOpen: !!(p && p.payment && p.payment.unlocked),
+        badge: a ? 'payment ' + (BRAND.trackLabels.payment[a.payment] || String(a.payment).toLowerCase()) : '' },
+      { id: 'reqs', title: S.reqs.title, kicker: S.reqs.kicker, deadline: dls.requirements, mine: acc,
+        isDone: a && (a.requirements === 'SUBMITTED' || a.requirements === 'APPROVED'), isOpen: true, calm: !reqOpen, dim: !reqOpen,
+        badge: reqOpen && a ? 'requirements ' + (BRAND.trackLabels.requirements[a.requirements] || String(a.requirements).toLowerCase()) : C0.lockedPill },
+      { id: 'ga', title: S.ga.title, kicker: S.ga.kicker, label: S.ga.label, now: S.ga.now, deadline: dls.ga, mine: acc, isOpen: true, calm: true, badge: accBadge },
+      { id: 'room', title: S.room.title, kicker: S.room.kicker, label: S.room.label, now: S.room.now, deadline: dls.room, mine: acc, isOpen: true, calm: true, badge: accBadge },
+      { id: 'camp', title: S.camp.title, kicker: S.camp.kicker, label: S.camp.label, now: S.camp.now, deadline: dls.camp || ctx.campStart,
+        mine: acc || !a, isOpen: true, calm: true, badge: acc ? accBadge : C0.resultsPill },
+      { id: 'waitReply', title: S.waitReply.title, kicker: S.waitReply.kicker, deadline: dls.waitlistReply, mine: wl, isOpen: true, badge: BRAND.path.waitlisted.toLowerCase() },
+      { id: 'waitPay', title: S.waitPay.title, kicker: S.waitPay.kicker, deadline: dls.waitlistPay, mine: wl, isOpen: false, calm: true, badge: '' }
+    ];
+    const allMilestones = R ? releasedMilestones : [
       {
         id: 'apply',
         title: BRAND.countdown.steps.apply.title,
@@ -1738,23 +1867,30 @@
     // Filter out completed tasks, invalid dates, and steps that aren't this person's: the application is for people
     // without a file, payment/requirements for applicants, camp only once CONFIRMED, nothing once rejected/withdrawn
     const ended = a && (a.status === 'REJECTED' || a.status === 'WITHDRAWN');
-    const mine = t => !ended && (t.id === 'apply' ? !a : !!a) && (t.id !== 'camp' || t.isOpen);
+    const mine = R ? (t => !!t.mine) : (t => !ended && (t.id === 'apply' ? !a : !!a) && (t.id !== 'camp' || t.isOpen));
     const pendingTasks = allMilestones.filter(t => mine(t) && !t.isDone && t.deadline && !isNaN(new Date(t.deadline).getTime()));
     pendingTasks.sort((x, y) => new Date(x.deadline) - new Date(y.deadline));
 
     // Exclude tasks that passed more than 2 hours ago unless it's the only task
     const curNow = new Date().getTime();
     const activeTasks = pendingTasks.filter(t => (new Date(t.deadline).getTime() - curNow) > -72e5);
-    const queue = activeTasks.length ? activeTasks : pendingTasks;
+    const queue = R ? activeTasks : (activeTasks.length ? activeTasks : pendingTasks);   // results phase: a date long gone is never shown
 
     // the big countdown (and its panic alarms) only for a step that is open to them now; a locked one can still
     // show as "next" so they see it coming
     const primary = queue.find(t => t.isOpen) || null;
     const secondary = queue.find(t => t !== primary) || null;
 
+    $('clock').classList.toggle('no-units', !primary && !!ended && R);   // a closed file: no empty clock
     if (!primary) {
       const C = BRAND.countdown;
-      if (a && a.status === 'CONFIRMED') {
+      const wlPay = dls.waitlistPay && new Date(dls.waitlistPay).getTime() > Date.now() ? dls.waitlistPay : '';
+      if (R && wl) {        // waitlisted, the reply window is over: wait for an email
+        $('clockTitle').textContent = C.waitlistTitle;
+        pill.textContent = BRAND.path.waitlisted.toLowerCase();
+        pill.className = 'pill';
+        $('deadlineText').textContent = wlPay ? C.waitlistText.replace('{date}', whenLong(wlPay)) : C.waitlistTextNoDate;
+      } else if (a && a.status === 'CONFIRMED') {
         $('clockTitle').textContent = C.allClear;
         pill.textContent = C.confirmed;
         pill.className = 'pill ok';
@@ -1788,8 +1924,9 @@
     const endPrimary = new Date(primary.deadline);
     $('clockTitle').textContent = primary.title;
     pill.textContent = primary.badge;
-    pill.className = 'pill ' + (primary.isOpen ? 'ok' : 'dim');
-    $('deadlineText').textContent = (primary.id === 'camp' ? BRAND.countdown.campLabel : BRAND.countdown.deadline) + endPrimary.toLocaleString('en-PH', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Manila' });
+    const okPill = primary.isOpen && !primary.dim;
+    pill.className = 'pill ' + (okPill ? 'ok' : 'dim');
+    $('deadlineText').textContent = (primary.label || (primary.id === 'camp' ? BRAND.countdown.campLabel : BRAND.countdown.deadline)) + endPrimary.toLocaleString('en-PH', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Manila' });
 
     if (secondary && nextBox) {
       nextBox.hidden = false;
@@ -1802,7 +1939,7 @@
     const pad = n => String(n).padStart(2, '0');
     let alertTier = 0;
     const alarm = k => { const l = BRAND.countdown.alarms[k]; if (l) kuya(l[0], String(l[1]).replace('{step}', primary.title)); };
-    const calm = primary.id === 'camp';   // counting down to camp is not a deadline: no alarms, no panic
+    const calm = primary.id === 'camp' || !!primary.calm;   // counting down to camp (or an event) is not a deadline: no alarms, no panic
     const PANIC_TIERS = ['panic-tier-1', 'panic-tier-2', 'panic-tier-3', 'panic-tier-4', 'panic-tier-5'];
 
     function tick() {
@@ -1822,9 +1959,9 @@
         }
       }
 
-      if (ms <= 0 && calm) {
-        $('clockTitle').textContent = BRAND.countdown.campStarted;
-        $('deadlineText').textContent = BRAND.countdown.campStartedText;
+      if (ms <= 0 && (primary.id === 'camp' || primary.now)) {   // an event that has started (camp, the 1st GA, room booking)
+        $('clockTitle').textContent = primary.now || BRAND.countdown.campStarted;
+        $('deadlineText').textContent = primary.id === 'camp' ? BRAND.countdown.campStartedText : '';
         pill.textContent = primary.badge; pill.className = 'pill ok';
         ['d', 'h', 'm', 's'].forEach(k => $(k).textContent = '00');
         return;
@@ -1864,7 +2001,7 @@
       if (totalHoursLeft <= 0 || calm) {
         // expired, or the camp countdown: stay calm
         pill.textContent = primary.badge;
-        pill.className = 'pill ' + (primary.isOpen ? 'ok' : 'dim');
+        pill.className = 'pill ' + (okPill ? 'ok' : 'dim');
       } else if (totalHoursLeft < 3) {
         document.body.classList.add('panic-tier-5');
         $('clock').classList.add('urgent');
@@ -1903,7 +2040,7 @@
       } else if (totalHoursLeft < 72) {
         document.body.classList.add('panic-tier-1');
         pill.textContent = BRAND.countdown.pills.t72;
-        pill.className = 'pill ' + (primary.isOpen ? 'ok' : 'dim');
+        pill.className = 'pill ' + (okPill ? 'ok' : 'dim');
         if (alertTier < 1) {
           alertTier = 1;
           alarm('t72');
@@ -1912,7 +2049,7 @@
         // Default: >= 72h (3+ days) - strictly calm, no red, no sirens, no jittery eyes
         alertTier = 0;
         pill.textContent = primary.badge;
-        pill.className = 'pill ' + (primary.isOpen ? 'ok' : 'dim');
+        pill.className = 'pill ' + (okPill ? 'ok' : 'dim');
       }
 
       setTimeout(tick, 1000);
@@ -1923,6 +2060,7 @@
 
   /** FAQ "classified files". Text only (textContent), filled from Settings. */
   function renderIntel(ctx) {
+    if (BRAND.faq.show === false) { $('faq').hidden = true; return; }   // off in Brand.gs (Nov 2026)
     const ev = ctx.event || {};
     const vals = { dates: ev.dates, venue: ev.venue || BRAND.faq.venueFallback, contact: ctx.contact };
     const list = $('faqList');
@@ -2049,7 +2187,8 @@
     return { film(on) { film = on; if (on) { if (window.Ambience) Ambience.stop(.5); } else go(); }, wanted() { return want; } };
   })();
 
-  window.runServer('home_getContext').then(render).catch(fail);   // retries when Google is busy; .catch also covers a throw inside render
+  // ?viewas=APP-xxxx (core team): Home after results as that applicant (home_viewAs checks the account; read-only)
+  (document.body.dataset.viewas ? window.runServer('home_viewAs', document.body.dataset.viewas) : window.runServer('home_getContext')).then(render).catch(fail);   // retries when Google is busy; .catch also covers a throw inside render
 </script>
 </body>
 </html>
