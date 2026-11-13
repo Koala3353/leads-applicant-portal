@@ -8,8 +8,11 @@
   so the page itself never states anyone's result (opened on its own it stamps REVIEWED and the card says nothing about
   a result). It answers with 'leads-reveal-ready' (fonts loaded, about to play), 'leads-reveal-replay' (started again,
   so the portal resets its safety timer) and 'leads-reveal-done' (closed from the end card).
-  10.4 s, all drawn in one 2D canvas by ink.js (shared with Act 1): a desk under a swinging lamp, the photo that looks
-  back, the mirror, the intake form typing itself, the stamp, then the Broadcast Card. No triangle eye.
+  ~11 s in one 2D canvas. Nov 14 2026, photocopied per the brand book (xerox.js, shared with Act 1): a halftone print of
+  a sheet on a desk (plates/desk.png) under a swinging lamp you only see as light, a printed manila cover that opens, the
+  intake form printed onto the sheet, a black-and-white photo of an eye (the portal home page's .reye, painted) that
+  opens and looks up, the one-frame scare, the mirror (their eye-scan photo), the form typing itself, ACCEPTED inked into
+  the paper, then the Broadcast Card. No triangle eye.
   Sound is one pre-mixed file (audio/act2.mp3, or audio/act2_calm.mp3 for reduced motion). If it is missing the film is silent.
   ?at=4.6 freezes a frame (for review, no sound).
   Nov 13 2026: (1) it opens on a one-tap gate ("Open your file"), because a phone only plays sound after a tap on this
@@ -101,6 +104,9 @@
 <script type="module">
 import { PAL, reduced, boilFrame, span, lerp, mix, rgba, stage, wline, wtext, circ, partyEye, layer, grade, grain, vhs, misreg, shake,
   lampCone, stamp, drawStamp, glitch, filmAudio, SPEAKER, captions, fontsReady } from './ink.js?v=3';
+import { plate, ready, monitor, vignette, reye, grayPhoto, drawPhoto, brush, manilaCard, affine } from './xerox.js?v=1';
+const DESK = plate('plates/desk.png');   // halftone print of a sheet on a desk (see plates/CREDITS.md)
+const SHEET = [[86, 609], [746, 405], [380, 1553]];   // the sheet's top-left, top-right, bottom-left corners on that plate
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -179,11 +185,11 @@ let Ly = null;   // layout, set on fit
 
 function lay() {
   const { W, H, u } = st;
-  const tall = H > W * 1.5;   // a phone held upright: use the width, sit the card higher, under the lamp
-  const fw = tall ? W * .94 : Math.min(W * .88, u, H * .5 / .72), fh = fw * .72, wide = W > H * 1.2, fy = H * (wide ? .56 : tall ? .52 : .62), x0 = (W - fw) / 2, y0 = fy - fh / 2;
-  const px = x0 + fw * .05, py = y0 + fh * .06, pw = fw * .9, ph = fh * .88;
-  Ly = { fw, fh, fy, x0, y0, px, py, pw, ph, phW: pw * .25, phH: ph * .36, Lc: H * (wide ? .2 : tall ? .17 : .24), phX: px + pw * .71, phY: py + ph * .05, sw: Math.max(22, Math.min(60, u * .075)),
-         sx: px + pw * .6, sy: py + ph * .89 - 7, deskY: H * (tall ? .8 : .9) };
+  const tall = H > W * 1.5;   // a phone held upright: the sheet uses most of the width
+  const pw = tall ? W * .8 : Math.min(W * .4, H * .64 / 1.414), ph = pw * 1.414, px = (W - pw) / 2, py = H * .52 - ph / 2;
+  const fw = pw * 1.05, fh = ph * 1.03, x0 = px - pw * .025, y0 = py - ph * .015;
+  Ly = { tall, fw, fh, fy: py + ph / 2, x0, y0, px, py, pw, ph, phW: pw * .3, phH: pw * .34, phX: px + pw * .64, phY: py + ph * .19,
+         sx: px + pw * .58, sy: py + ph * .74, Lc: H * .2, sw: Math.max(22, Math.min(60, u * .075)), deskY: H * .9 };
 }
 
 /* the lamp swings like a pendulum, then settles (it never swings for reduced motion) */
@@ -205,127 +211,108 @@ const mirrorOn = t => t >= (reduced ? 4.7 : 5.3);
 /* camera: push-in on the photo (2.6-3.4), pull back to read the page (6.0-6.8). Maps what is at the anchor to the target. */
 function cam(t) {
   const { W, H } = st, { phX, phY, phW, phH, px, py, pw, ph, sx, sy } = Ly, k1 = span(t, 2.6, 3.4), k2 = span(t, 6, 6.8);
-  const k3 = reduced ? 0 : 1 - (1 - span(t, 8.3, 9.1)) ** 3;   // (3) after the stamp lands, ease in on it
+  const k3 = reduced ? 0 : 1 - (1 - span(t, 8.3, 9.1)) ** 3;   // after the stamp lands, ease in on it
   const a0 = [lerp(lerp(W / 2, phX + phW / 2, k1), px + pw / 2, k2), lerp(lerp(H / 2, phY + phH / 2, k1), py + ph / 2, k2)];
-  const g0 = [lerp(lerp(W / 2, W * .62, k1), W / 2, k2), lerp(lerp(H / 2, H * .4, k1), H * .47, k2)];
+  const g0 = [lerp(lerp(W / 2, W * .55, k1), W / 2, k2), lerp(lerp(H / 2, H * .42, k1), H * .5, k2)];
   const a = [lerp(a0[0], sx, k3), lerp(a0[1], sy, k3)], g = [lerp(g0[0], W / 2, k3), lerp(g0[1], H * .46, k3)];
-  return { s: 1 + .35 * k1 - .2 * k2 + .45 * k3, a, g };
+  return { s: 1 + .6 * k1 - .6 * k2 + .22 * k3, a, g };
 }
 
+/* the desk: a photocopied sheet on wood under a lamp you never see, only its light, swinging */
 function desk(t, b) {
-  const { W, H } = st, { sw, fy, Lc, deskY } = Ly, th = swing(t), sh = sw * .75;
-  const B = [W / 2 + (Lc + sh) * Math.sin(th), -4 + (Lc + sh) * Math.cos(th)], tan = Math.tan(th);
-  const poolX = B[0] + (fy - B[1]) * tan, R = (fy - B[1]) * .45 + sw, lit = x => Math.exp(-(((x - poolX) / R) ** 2));
-  const warm = span(t, 6, 6.8), lc = mix(PAL.chalk, PAL.lamp, warm);
-  const litGrad = (x1, x2, col, a0, a1) => { const g = ctx.createLinearGradient(x1, 0, x2, 0); for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, rgba(col, a0 + (a1 - a0) * lit(lerp(x1, x2, i / 6)))); return g; };
-  const c = cam(t);
+  const { W, H } = st, { px, py, pw, ph } = Ly, th = swing(t), warm = span(t, 6, 6.8), c = cam(t);
   ctx.save(); ctx.translate(c.g[0], c.g[1]); ctx.scale(c.s, c.s); ctx.translate(-c.a[0], -c.a[1]);
-  lampCone(st, { x: B[0], y: B[1], tx: B[0] + (deskY - B[1]) * tan, ty: deskY, sw: sw * .9, spread: (deskY - B[1]) * .5 + sw, col: lc, a: .18 });
-  // the desk: front edge with its thickness, a back edge, a few long grain lines
-  wline(st, [[-W * .2, deskY], [W * 1.2, deskY]], 1, b, { col: PAL.red, w: st.lw * 1.5 });
-  wline(st, [[-W * .2, deskY + H * .02], [W * 1.2, deskY + H * .02]], 2, b, { col: PAL.red, a: .7 });
-  wline(st, [[-W * .2, H * .33], [W * 1.2, H * .33]], 3, b, { col: PAL.red, a: .5 });
-  [.45, .52, .6, .72, .8].forEach((k, i) => wline(st, [[-W * .2, H * k], [W * .4 + i * 40, H * k + 3], [W * 1.2, H * k - 2]], 4 + i, b, { col: PAL.red, a: .3 }));
-  paperClip(b);
-  folder(t, b, lit, litGrad, warm);
-  lamp(b, th);
+  if (ready(DESK)) {   // the plate, placed so its sheet is exactly the form page
+    ctx.save(); affine(ctx, SHEET[0], [SHEET[1][0] - SHEET[0][0], SHEET[1][1] - SHEET[0][1]], [SHEET[2][0] - SHEET[0][0], SHEET[2][1] - SHEET[0][1]], [px, py], [pw, 0], [0, ph]);
+    ctx.drawImage(DESK, 0, 0); ctx.restore();
+  }
+  folder(t, b, warm);
   ctx.restore();
-}
-function lamp(b, th) {   // a bare bulb in a conical shade on a chain
-  const { W } = st, { sw, Lc } = Ly, sh = sw * .75, br = sw * .3;
-  ctx.save(); ctx.translate(W / 2, -4); ctx.rotate(-th);
-  wline(st, [[0, 0], [0, Lc]], 20, b);
-  wline(st, [[-sw * .22, Lc], [sw * .22, Lc], [sw, Lc + sh], [-sw, Lc + sh]], 21, b, { close: true, fill: PAL.black, w: st.lw * 1.2 });
-  wline(st, circ(0, Lc + sh + br * .55, br, br, 14), 22, b, { close: true, fill: rgba(PAL.chalk, .45), a: .9 });
-  wline(st, [[-br * .35, Lc + sh + br * .5], [0, Lc + sh + br * .9], [br * .35, Lc + sh + br * .5]], 23, b, { a: .7, w: st.lw * .8 });
-  ctx.restore();
-}
-function paperClip(b) {   // loose on the desk, by the folder
-  const { x0, y0, fw, fh } = Ly, s = fh * .16;
-  ctx.save(); ctx.translate(x0 + fw * .86, y0 + fh * 1.1); ctx.rotate(.35);
-  wline(st, [[0, 0], [0, s], [s * .35, s * 1.15], [s * .7, s], [s * .7, s * .15], [s * .45, 0], [s * .22, s * .15], [s * .22, s * .75]], 30, b, { a: .85, w: st.lw * .9 });
-  ctx.restore();
+  // the light: a warm pool that swings with the lamp; everything outside it sinks into the dark
+  const lx = W / 2 + Math.sin(th) * H * .55, ly = H * .4, R = Math.max(W, H) * .62;
+  const g = ctx.createRadialGradient(lx, ly, R * .05, lx, ly, R);
+  g.addColorStop(0, warm ? `rgba(255,${Math.round(238 - warm * 14)},${Math.round(212 - warm * 40)},1)` : 'rgba(255,246,228,1)');
+  g.addColorStop(.55, 'rgba(150,130,104,1)'); g.addColorStop(1, 'rgba(18,14,10,1)');
+  ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+  vignette(ctx, 0, 0, W, H, .55);
 }
 
-function folder(t, b, lit, litGrad, warm) {
+/* a manila cover over the form, hinged on the left; it opens at 1.7 */
+function folder(t, b, warm) {
   const { x0, y0, fw, fh } = Ly, e = 1 - (1 - Math.min(1, Math.max(0, (t - 1.7) / .5))) ** 2, phi = e * 2.6;
-  const rect = [[x0, y0], [x0 + fw, y0], [x0 + fw, y0 + fh], [x0, y0 + fh]];
-  if (phi > 0.01) {   // the inside: back board and the form page
-    wline(st, rect, 40, b, { close: true, fill: litGrad(x0, x0 + fw, PAL.manila, .06, .45), col: PAL.chalk, a: .5 });
-    page(t, b, lit, warm);
-  }
+  if (phi > 0.01) page(t, b, warm);
   const cs = Math.cos(phi);
-  if (Math.abs(cs) > .03) {   // the cover, hinged on the left edge
+  if (Math.abs(cs) > .03) {
     ctx.save(); ctx.translate(x0, 0); ctx.scale(cs, 1); ctx.translate(-x0, 0);
-    wline(st, rect, 41, b, { close: true, fill: litGrad(x0, x0 + fw, PAL.manila, phi > 1.57 ? .05 : .08, phi > 1.57 ? .25 : .55), col: PAL.chalk, a: .6, w: st.lw * 1.2 });
-    wline(st, [[x0, y0], [x0 + fw * .03, y0 - fh * .07], [x0 + fw * .3, y0 - fh * .07], [x0 + fw * .34, y0]], 42, b, { col: PAL.chalk, a: .6 });   // tab
-    if (phi < 1.57) wline(st, [[x0 + fw * .12, y0 + fh * .55], [x0 + fw * .5, y0 + fh * .55], [x0 + fw * .5, y0 + fh * .75], [x0 + fw * .12, y0 + fh * .75]], 43, b, { close: true, col: PAL.red, a: .8 });   // blank label
+    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+    ctx.drawImage(manilaCard(), x0, y0, fw, fh); ctx.shadowColor = 'transparent';
+    ctx.fillStyle = '#c8ad74'; ctx.beginPath(); ctx.moveTo(x0, y0 + 2); ctx.lineTo(x0 + fw * .03, y0 - fh * .05); ctx.lineTo(x0 + fw * .3, y0 - fh * .05); ctx.lineTo(x0 + fw * .34, y0 + 2); ctx.fill();   // tab
+    if (phi > 1.57) { ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(x0, y0, fw, fh); }   // the inside of the cover, in its own shadow
+    else {
+      ctx.fillStyle = 'rgba(20,14,6,.85)'; ctx.font = `${Math.round(fw * .05)}px "Special Elite", "Courier New", monospace`; ctx.fillText('SUBJECT FILE', x0 + fw * .1, y0 + fh * .2);
+      ctx.fillText(who.id ? 'NO. ' + num() : 'NO. ----', x0 + fw * .1, y0 + fh * .27);
+      brush(ctx, [[x0 + fw * .1, y0 + fh * .6], [x0 + fw * .55, y0 + fh * .6], [x0 + fw * .55, y0 + fh * .74], [x0 + fw * .1, y0 + fh * .74], [x0 + fw * .1, y0 + fh * .6]], Math.max(3, fw * .012), 43, '#e50000', .85, b);   // a red label box, by hand
+    }
     ctx.restore();
   }
 }
 
-/* the intake form: pre-printed header and labels, typed values, the photo corner */
-function page(t, b, lit, warm) {
-  const { px, py, pw, ph, fw } = Ly, ink = rgba(PAL.black, .85), pre = rgba(PAL.black, .6), mono = `"JetBrains Mono", monospace`, type = `"Special Elite", "Courier New", monospace`;
-  const pc = mix(PAL.chalk, PAL.lamp, warm), g = ctx.createLinearGradient(px, 0, px + pw, 0);
-  for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, rgba(pc, .3 + .5 * lit(lerp(px, px + pw, i / 6))));
-  wline(st, [[px, py], [px + pw, py], [px + pw, py + ph], [px, py + ph]], 50, b, { close: true, fill: g, col: PAL.red, a: .8 });
-  wtext(st, 'EYES ON LEADS · ' + (who.id ? 'FILE ' + num() : 'INTAKE'), px + pw * .05, py + ph * .13, 51, b, { still: true, col: ink, font: `700 ${Math.round(pw * .04)}px ${mono}` });
-  wline(st, [[px + pw * .05, py + ph * .19], [px + pw * .66, py + ph * .19]], 52, b, { col: PAL.red });
-  const rows = [['SUBJECT', typed(t, subjectName(), 6.9, .3 / subjectName().length), .55], ['LAST SEEN', typed(t, 'just now', 7.35, .08), .72], ['FINDING', '', .89]];
-  rows.forEach(([label, val, k], i) => {
+/* the intake form, printed onto the sheet (multiply): header, labels, typed values, the photo corner, the stamp */
+function page(t, b, warm) {
+  const { px, py, pw, ph } = Ly, ink = '#111', mono = `"JetBrains Mono", monospace`, type = `"Special Elite", "Courier New", monospace`;
+  ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = ink; ctx.textAlign = 'left';
+  ctx.font = `700 ${Math.round(pw * .036)}px ${mono}`; ctx.fillText('EYES ON LEADS · ' + (who.id ? 'FILE ' + num() : 'INTAKE'), px + pw * .07, py + ph * .07);
+  ctx.textAlign = 'right'; ctx.fillText('FORM 01-A', px + pw * .93, py + ph * .07); ctx.textAlign = 'left';
+  ctx.fillRect(px + pw * .07, py + ph * .085, pw * .86, Math.max(1.5, pw * .005));
+  ctx.font = `${Math.round(pw * .085)}px ${type}`; ctx.fillText('INTAKE FORM', px + pw * .07, py + ph * .15);
+  const rows = [['SUBJECT', typed(t, subjectName(), 6.9, .3 / subjectName().length), .5], ['LAST SEEN', typed(t, 'just now', 7.35, .08), .62], ['FINDING', '', .74]];
+  rows.forEach(([label, val, k]) => {
     const y = py + ph * k;
-    wtext(st, label, px + pw * .05, y, 55 + i, b, { still: true, col: pre, font: `700 ${Math.round(pw * .034)}px ${mono}` });
-    wline(st, [[px + pw * .36, y + 5], [px + pw * .95, y + 5]], 60 + i, b, { col: PAL.red });
-    if (val) wtext(st, val, px + pw * .37, y - 1, 65 + i, b, { still: true, col: ink, font: `${Math.round(pw * .062)}px ${type}` });
+    ctx.globalAlpha = .75; ctx.font = `700 ${Math.round(pw * .032)}px ${mono}`; ctx.fillText(label, px + pw * .07, y - pw * .055);
+    ctx.fillRect(px + pw * .07, y + pw * .012, pw * .86, Math.max(1, pw * .003)); ctx.globalAlpha = 1;
+    if (val) { ctx.font = `${Math.round(pw * .07)}px ${type}`; ctx.fillText(val, px + pw * .08, y); }
   });
-  if (t >= 8.03 && t < 8.3) { ctx.globalAlpha = layer.a * .85; ctx.fillStyle = PAL.black; ctx.fillRect(px + pw * .37, py + ph * .89 - pw * .05, pw * .03, pw * .055); }   // the carriage return, a cursor waiting on FINDING
+  ctx.globalAlpha = .9; ctx.fillRect(px + pw * .07, py + ph * .84, pw * .5, pw * .04); ctx.fillRect(px + pw * .07, py + ph * .88, pw * .32, pw * .04);   // redacted notes
+  ctx.globalAlpha = 1;
+  if (t >= 8.03 && t < 8.3) ctx.fillRect(px + pw * .08, py + ph * .74 - pw * .06, pw * .03, pw * .065);   // a cursor waiting on FINDING
+  ctx.restore();
   photo(t, b);
-  // the stamp: its shadow grows over the FINDING line first, then it lands
-  const { sx, sy } = Ly, sw = pw * .58, f = Math.floor((t - 8.3) * 30 + 1e-6);
-  if (t >= 8.1 && t < 8.3) { const k = span(t, 8.1, 8.3); wline(st, [[sx - sw * .5 * k, sy - sw * .1 * k], [sx + sw * .5 * k, sy - sw * .1 * k], [sx + sw * .5 * k, sy + sw * .1 * k], [sx - sw * .5 * k, sy + sw * .1 * k]], 70, b, { close: true, fill: rgba(PAL.black, .3 * k), nostroke: true }); }
-  if (t >= 8.3 && stampCv) drawStamp(st, stampCv, sx, sy, sw * (!reduced && f === 0 ? 1.12 : !reduced && f === 1 ? 1.04 : 1), -6 * Math.PI / 180, 1);
-  if (t >= 8.3) {   // slight warm bloom around the stamped line
-    const k = span(t, 8.3, 8.6) * .12, bg = ctx.createRadialGradient(sx, sy, 0, sx, sy, fw * .8);
-    bg.addColorStop(0, rgba(PAL.lamp, k)); bg.addColorStop(1, rgba(PAL.lamp, 0));
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = layer.a; ctx.fillStyle = bg; ctx.fillRect(sx - fw, sy - fw, fw * 2, fw * 2); ctx.restore();
-  }
+  // the stamp: its shadow first, then it lands, inked into the paper
+  const { sx, sy } = Ly, sw = pw * .62, f = Math.floor((t - 8.3) * 30 + 1e-6);
+  if (t >= 8.1 && t < 8.3) { const k = span(t, 8.1, 8.3); ctx.fillStyle = `rgba(0,0,0,${.3 * k})`; ctx.fillRect(sx - sw * .5 * k, sy - sw * .1 * k, sw * k, sw * .2 * k); }
+  if (t >= 8.3 && stampCv) { ctx.save(); ctx.globalCompositeOperation = 'multiply'; drawStamp(st, stampCv, sx, sy, sw * (!reduced && f === 0 ? 1.12 : !reduced && f === 1 ? 1.04 : 1), -6 * Math.PI / 180, 1); ctx.restore(); }
 }
 
+/* the photo corner: a black-and-white photo of an eye, shut; at 3.2 it opens and looks up at you. At 5.3 it is a mirror. */
 function photo(t, b) {
-  const { phX, phY, phW, phH } = Ly, cx = phX + phW / 2, cy = phY + phH / 2, rect = [[phX, phY], [phX + phW, phY], [phX + phW, phY + phH], [phX, phY + phH]];
-  wline(st, rect, 80, b, { close: true, fill: PAL.black, fa: .9, col: PAL.chalk, a: .8 });
-  [[0, 0, 1, 1], [1, 0, -1, 1], [1, 1, -1, -1], [0, 1, 1, -1]].forEach(([kx, ky, dx, dy], i) => {   // photo corners (L brackets, not triangles)
-    const x = phX + phW * kx - dx * 3, y = phY + phH * ky - dy * 3, l = phW * .16;
-    wline(st, [[x + dx * l, y], [x, y], [x, y + dy * l]], 81 + i, b, { a: .9 });
-  });
-  ctx.save(); ctx.beginPath(); ctx.rect(phX, phY, phW, phH); ctx.clip();
-  if (mirrorOn(t) && eyeImg) {   // (4) the mirror is their own eye-scan photo, CCTV-graded, with the same glare
-    const ir = eyeImg.width / eyeImg.height, fr = phW / phH, w = ir > fr ? phH * ir : phW, h = ir > fr ? phH : phW / ir;
-    ctx.save(); ctx.globalAlpha = layer.a; ctx.filter = 'grayscale(1) contrast(1.25) brightness(.95)';
-    ctx.drawImage(eyeImg, cx - w / 2, cy - h / 2, w, h); ctx.restore();
-    wline(st, rect, 90, b, { close: true, fill: rgba(PAL.cctv, .22), nostroke: true });
-    wline(st, [[phX + phW * .15, phY], [phX + phW * .8, phY + phH]], 94, b, { a: .4 });
-    wline(st, [[phX + phW * .3, phY], [phX + phW * .95, phY + phH]], 95, b, { a: .25 });
-  } else if (mirrorOn(t)) {   // a mirror: silvered grey, a head and shoulders with no face, a glare
-    wline(st, rect, 90, b, { close: true, fill: rgba(PAL.cctv, .5), nostroke: true });
-    wline(st, rect, 91, b, { close: true, fill: rgba(PAL.chalk, .25), nostroke: true });
-    wline(st, circ(cx, cy - phH * .14, phW * .17, phH * .17, 14), 92, b, { close: true, a: .75 });
-    wline(st, [[cx - phW * .44, phY + phH], [cx - phW * .36, phY + phH * .8], [cx - phW * .15, phY + phH * .67], [cx + phW * .15, phY + phH * .67], [cx + phW * .36, phY + phH * .8], [cx + phW * .44, phY + phH]], 93, b, { a: .75 });
-    wline(st, [[phX + phW * .15, phY], [phX + phW * .8, phY + phH]], 94, b, { a: .4 });
-    wline(st, [[phX + phW * .3, phY], [phX + phW * .95, phY + phH]], 95, b, { a: .25 });
-  } else {   // the white eye: shut, then at 3.2 it opens and the pupil comes up to look at the camera
-    const open = .05 + .95 * span(t, 3.2, 3.3), look = { x: 0, y: .9 * (1 - span(t, 3.2, 3.45)) };
-    partyEye(st, { cx, cy, w: phW * .38, open, look, id: 96, b, dil: .5, fill: .2 });
+  const { phX, phY, phW, phH } = Ly, cx = phX + phW / 2, cy = phY + phH / 2;
+  ctx.save();
+  ctx.fillStyle = '#f2efe6'; ctx.fillRect(phX - phW * .05, phY - phW * .05, phW * 1.1, phH * 1.1);   // the print's white border
+  ctx.beginPath(); ctx.rect(phX, phY, phW, phH); ctx.clip();
+  ctx.fillStyle = '#1b1b1b'; ctx.fillRect(phX, phY, phW, phH);
+  const ge = mirrorOn(t) ? grayPhoto(eyeImg) : null;
+  if (ge) drawPhoto(ctx, ge, phX, phY, phW, phH);   // the mirror is their own eye-scan photo
+  else if (mirrorOn(t)) reye(ctx, cx, cy, phW * 2.1, { pupil: .34 });   // a mirror: an eye that is looking straight at you
+  else reye(ctx, cx, cy, phW * 2.1, { open: .04 + .96 * span(t, 3.2, 3.3), px: 0, py: 1 - span(t, 3.2, 3.45), pupil: .3 });
+  if (mirrorOn(t)) {   // mirror glare
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.moveTo(phX + phW * .1, phY); ctx.lineTo(phX + phW * .45, phY); ctx.lineTo(phX + phW * .9, phY + phH); ctx.lineTo(phX + phW * .55, phY + phH); ctx.fill();
   }
+  ctx.restore();
+  ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = '#111';   // photo corners: small inked L brackets
+  const l = phW * .13, w2 = Math.max(1.5, phW * .022), o2 = phW * .045;
+  [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([kx, ky]) => { const x = kx ? phX + phW + o2 : phX - o2, y = ky ? phY + phH + o2 : phY - o2, dx = kx ? -1 : 1, dy = ky ? -1 : 1;
+    ctx.fillRect(dx > 0 ? x : x - l, dy > 0 ? y : y - w2, l, w2); ctx.fillRect(dx > 0 ? x : x - w2, dy > 0 ? y : y - l, w2, l); });
   ctx.restore();
 }
 
-/* the one frame of the film that is meant to hurt: a huge eye, chalk on black, red/blue split */
+/* the one frame of the film that is meant to hurt: the watching eye, enormous, staring out of the dark */
 function scare(b) {
-  const { W, H } = st;
-  partyEye(st, { cx: W / 2, cy: H * .48, w: W * .55, hr: .42, id: 400, b, dil: .5, fill: .14, lw: 2.2 });
-  misreg(st, 8);
+  const { W, H } = st, w = Math.max(W * 1.3, H * .9), h = w / 2.1;
+  ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, W, H);
+  reye(ctx, W / 2, H * .48, w, { pupil: .42 });
+  const fade = (y0, y1, a0, a1) => { const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, `rgba(5,5,5,${a0})`); g.addColorStop(1, `rgba(5,5,5,${a1})`); ctx.fillStyle = g; ctx.fillRect(0, y0, W, y1 - y0); };
+  fade(H * .48 - h / 2 - 2, H * .48 - h * .22, 1, 0); fade(H * .48 + h * .22, H * .48 + h / 2 + 2, 0, 1);
+  misreg(st, 6);
 }
 
 function frame(t) {
@@ -337,7 +324,8 @@ function frame(t) {
     ctx.fillStyle = PAL.blue; ctx.fillRect(0, 0, W, H); grain(st, .8, f); glitch(st, .5, f);
   } else if (I > .001) {
     const sh = shake(t, 8.3, st.u * .014);   // (3) the stamp hits harder
-    layer.a = I; ctx.save(); ctx.translate(sh.x, sh.y); desk(ts, b); ctx.restore(); layer.a = 1;
+    ctx.save(); ctx.translate(sh.x, sh.y); desk(ts, b); ctx.restore();
+    if (I < 1) { ctx.fillStyle = `rgba(5,5,5,${1 - I})`; ctx.fillRect(0, 0, W, H); }   // the lamp's brightness
     grade(st, I > 0 ? lerp(.18, .05, span(t, 6, 6.8)) : 0);
   }
   const bh = Math.max(40, Math.min(70, H * .07));
