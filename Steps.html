@@ -90,6 +90,9 @@
   /* EVIDENCE FILED: after a proof goes in. The photo drops into the case folder, RECEIVED is stamped, the log line types,
      then what happens next. Every element's resting style is its final state, so reduced motion (Styles.html) just shows it. */
   html.filed-open{overflow:hidden}
+  .rcpt-veil{position:fixed;inset:0;z-index:9990;background:#050505;opacity:0;pointer-events:none;transition:opacity .4s ease}
+  .rcpt-veil.on{opacity:1;pointer-events:auto}
+  .rcpt-veil iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
   .filed{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;padding:28px 16px;overflow:auto;background:rgba(5,5,5,.95);animation:filedIn .3s ease-out both}
   .filed[hidden]{display:none}
   .filed:focus{outline:none}
@@ -354,7 +357,7 @@
   function locked(text) { $('lockedMsg').textContent = text; show('locked'); }
 
   /* ---------- 02 proof of payment ---------- */
-  let hasExistingProof = false, payId = '';
+  let hasExistingProof = false, payId = '', payNick = '', payDue = '';
   function renderPay(d) {
     const c = d.content, v = d.applicant.payment;
     $('payPill').textContent = 'Payment: ' + v; $('payPill').className = 'pill ' + (PILL[v] || 'dim');
@@ -369,14 +372,14 @@
     // the amount slip: their own amount (FinAid already taken off), the old amount struck through, the later part
     if (fee.now !== undefined) {
       $('dueSlip').hidden = false;
-      $('dueAmt').textContent = php(fee.now);
+      $('dueAmt').textContent = php(fee.now); payDue = php(fee.now);
       $('dueWas').hidden = !(fee.off > 0); $('dueWas').textContent = '₱' + php(fee.now + fee.off);
       $('dueSub').textContent = fee.later ? T.pay.dueLater.replace('{later}', php(fee.later)) : '';
     }
     // the three tags: pay, send proof, verified
     const TRACK = { NONE: ['now', '', ''], SUBMITTED: ['done', 'done', 'now'], VERIFIED: ['done', 'done', 'done'], REJECTED: ['done', 'flag', ''] }[v] || ['now', '', ''];
     Array.from($('payTrack').children).forEach((li, i) => { li.className = TRACK[i] ? 'is-' + TRACK[i] : ''; });
-    payId = d.applicant.id || '';
+    payId = d.applicant.id || ''; payNick = d.applicant.firstName || '';
     const box = $('qrs'); box.textContent = '';
     (c.qrs || []).forEach(q => {
       const f = document.createElement('figure'); f.className = 'qr';
@@ -465,6 +468,40 @@
       filedTimer = setInterval(() => { log.textContent = line.slice(0, ++i); if (i >= line.length) clearInterval(filedTimer); }, 26);
       setTimeout(() => { if (!o.hidden) $('filedClose').focus(); }, 1000);
     }, 1900);
+  }
+  /* Act 3 "The receipt" (docs/receipt on GitHub Pages): ~20 s, once, after the FIRST proof goes in. Full screen in a
+     frame; who it is goes in by postMessage (never in the URL), then their eye-scan photo for the mirror. Falls back to
+     the case-file moment (showFiled) if the film is blocked or slow. Not in CRT-off / calm mode (it has a scare). */
+  const RECEIPT_URL = 'https://koala3353.github.io/leads-applicant-portal/receipt/';
+  function playReceipt(file) {
+    if (calm()) return false;
+    let origin = ''; try { origin = new URL(RECEIPT_URL).origin; } catch (e) { return false; }
+    const veil = document.createElement('div'); veil.className = 'rcpt-veil'; veil.setAttribute('role', 'dialog'); veil.setAttribute('aria-modal', 'true'); veil.setAttribute('aria-label', 'Evidence received');
+    const frame = document.createElement('iframe'); frame.title = 'Evidence received'; frame.allow = 'autoplay; fullscreen';
+    veil.append(frame); document.body.append(veil);
+    const time = new Date().toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });
+    let ready = false, maxTimer = 0, done = false;
+    const finish = fallback => {
+      if (done) return; done = true;
+      window.removeEventListener('message', onMsg); clearTimeout(maxTimer);
+      veil.classList.remove('on'); setTimeout(() => veil.remove(), 400);
+      if (fallback) showFiled(file); else { load(); msg(T.pay.sent, 'good'); }
+    };
+    const onMsg = e => {
+      if (e.origin !== origin || e.source !== frame.contentWindow) return;
+      const d = e.data || {};
+      if (d.type === 'leads-receipt-ready') {
+        ready = true; veil.classList.add('on'); try { frame.focus(); } catch (err) { /* fine */ }
+        maxTimer = setTimeout(() => finish(false), 60000);
+        frame.contentWindow.postMessage({ type: 'leads-receipt-init', id: payId, nick: payNick, amount: payDue, time: time }, origin);
+        call('home_revealEye').then(r => { if (r && r.src) try { frame.contentWindow.postMessage({ type: 'leads-reveal-eye', src: r.src }, origin); } catch (err) { /* fine */ } }).catch(() => {});
+      } else if (d.type === 'leads-receipt-alive') { clearTimeout(maxTimer); maxTimer = setTimeout(() => finish(false), 60000); }
+      else if (d.type === 'leads-receipt-done') finish(false);
+    };
+    window.addEventListener('message', onMsg);
+    frame.src = RECEIPT_URL + '?v=' + Date.now();
+    setTimeout(() => { if (!ready) finish(true); }, 10000);   // blocked or offline: the case-file moment instead
+    return true;
   }
   function hideFiled() {
     if ($('filed').hidden) return;
@@ -569,6 +606,7 @@
     }
     if (!picked && !hasExistingProof) return msg('Please attach your proof of payment.', 'bad');
 
+    const firstProof = !hasExistingProof;   // the receipt film plays only for the first proof
     $('upBtn').disabled = true; msg(picked ? 'Filing your proof and contact…' : 'Updating emergency contact…');
     if (window.Loader) Loader.show(picked ? 'Filing your proof & contact…' : 'Saving emergency contact…');
 
@@ -585,7 +623,7 @@
         kuya('happy', sent ? T.pay.sent : 'Emergency contact updated.');
         picked = null; $('proof').value = ''; $('drop').classList.remove('has-file');
         $('dropInner').innerHTML = '<b>Choose a file</b><br><small id="upHint">' + BRAND.steps.pay.upHint + '</small>';
-        if (sent) { showFiled(sent); return; }   // the case-file moment first; the page refreshes (and says "received") on close
+        if (sent) { if (!(firstProof && playReceipt(sent))) showFiled(sent); return; }   // first proof: the receipt film; later ones: the case-file moment. The page refreshes (and says "received") on close
         load();
         setTimeout(() => msg('Emergency contact updated.', 'good'), 900);
       }).catch(err => {

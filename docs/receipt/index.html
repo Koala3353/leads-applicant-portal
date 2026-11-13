@@ -1,0 +1,428 @@
+<!doctype html>
+<!--
+  Eyes on LEADS: Act 3 "The receipt" (GitHub Pages; clasp ignores docs/). Plays once, full screen, right after an
+  accepted applicant's FIRST proof-of-payment upload. Steps.html opens it in a frame and says who it is:
+      { type: 'leads-receipt-init', id: 'APP-2447', nick: 'Hanna', amount: '4,000', time: '6:24 PM' }
+  and, a moment later, their eye-scan photo { type: 'leads-reveal-eye', src: 'data:image/...' } (the same message
+  the results film uses). It answers 'leads-receipt-ready', 'leads-receipt-alive' (keep-alive while the gate waits),
+  'leads-receipt-finished' / 'leads-receipt-skip' and 'leads-receipt-done'. Only *.googleusercontent.com (the portal)
+  may say who it is.
+  ~20 s, drawn in one 2D canvas with ../reveal/ink.js. The sound is generated here with Web Audio (no files): tape
+  hiss, a sub drone, fluorescent buzz, a heartbeat that speeds up, a thermal printer, a whisper in the dark, one
+  stinger on the single scare frame, a stamp, a drawer slam, then a low calm note under the card.
+  Brand rules (CONTEXT.md 7.1): scary, never gory; one frame of scare, no strobing; the scare, flicker and tears are
+  skipped for reduced motion; the words end calm, on what happens next. No triangle eye.
+  ?at=13.7 freezes a frame (for review, no sound).
+  Story: 0.4 the archive (REC CAM 05). 3.6 a figure stands at the end of the aisle; it was not there a second ago.
+  6.2 / 7.4 tears bring it closer. 8.6 the receipt prints, line by line, with their details. 12.6 the lights die; the
+  printer keeps going; something whispers. 13.7 ONE frame: their eye, huge. 14.6 the lamp: the receipt is clipped
+  into their folder, RECEIVED is stamped (15.6), their eye in the photo corner, the figure's shadow over the desk.
+  17.6 the drawer slams. 18.6 the card: EVIDENCE FILED.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Eyes on LEADS // Evidence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Special+Elite&display=swap">
+<link rel="modulepreload" href="../reveal/ink.js?v=3">
+<style>
+  :root{--film-black:#070606;--chalk:#e6e0d4;--dried-red:#7a120c;--misreg-blue:#2b4a86;--brand-red:#e50000;--card-blue:#000ff0;--yellow:#fffc04}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--film-black);color:var(--chalk);overflow:hidden;font-family:'JetBrains Mono',ui-monospace,monospace}
+  #film{position:fixed;inset:0;width:100%;height:100%;display:block}
+  #cap{position:fixed;z-index:3;left:50%;bottom:calc(max(14px,env(safe-area-inset-bottom)) + 64px);transform:translateX(-50%);width:max-content;max-width:84vw;margin:0;
+    text-align:center;pointer-events:none;font:700 clamp(16px,3.4vw,26px)/1.3 'JetBrains Mono',monospace;color:var(--chalk);text-shadow:0 0 6px var(--film-black),0 1px 0 var(--film-black)}
+  #cap:not(:empty){padding:.2em .5em;background:rgba(7,6,6,.55)}
+  #cap .cur{display:inline-block;width:1px;height:1em;background:currentColor;vertical-align:-.12em;margin-left:2px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .ctl{position:fixed;z-index:5;bottom:max(14px,env(safe-area-inset-bottom));right:14px;display:flex;gap:8px;transition:opacity .3s}
+  .ctl.gone{opacity:0;pointer-events:none}
+  button{font:700 13px/1 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;min-height:44px;padding:0 16px;border:0;color:#000;background:#c0c0c0;
+    box-shadow:inset -1px -1px #0a0a0a,inset 1px 1px #fff,inset -2px -2px #808080,inset 2px 2px #dfdfdf,3px 3px 0 #000}
+  button:active{box-shadow:inset 1px 1px #0a0a0a,inset -1px -1px #fff,inset 2px 2px #808080}
+  button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
+  .snd-ic{vertical-align:-2px;margin-right:4px}
+  .gate{position:fixed;inset:0;z-index:6;display:grid;place-items:center;padding:24px 18px;text-align:center;background:var(--film-black)}
+  .gate[hidden]{display:none}
+  .gate h1{margin:0 0 12px;font:400 clamp(2rem,9vw,3.4rem)/1 'Special Elite','Courier New',monospace;color:var(--chalk);text-shadow:-2px 0 var(--dried-red),2px 0 var(--misreg-blue)}
+  .gate p{margin:0 auto 24px;max-width:30ch;font:400 15px/1.55 'JetBrains Mono',monospace}
+  .gate .go{background:var(--yellow);min-height:54px;width:min(320px,100%);font-size:15px}
+  .gate .rec{position:absolute;top:max(18px,env(safe-area-inset-top));left:18px;font:700 13px/1 'JetBrains Mono',monospace;letter-spacing:.12em}
+  .gate .rec i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--brand-red);margin-right:6px;animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){.gate .rec i{animation:none}}
+  .end{position:fixed;inset:0;z-index:4;display:grid;place-items:end center;padding:20px 16px max(24px,env(safe-area-inset-bottom));opacity:0;pointer-events:none}
+  .end.on{opacity:1;pointer-events:auto}
+  .end[inert]{pointer-events:none}
+  .card{width:min(560px,100%);background:var(--card-blue);color:#fff;text-align:center;padding:24px 20px 22px;rotate:-1deg;box-shadow:0 0 0 4px #000,0 0 0 7px var(--card-blue),8px 10px 0 7px #000}
+  .card p{margin:0}
+  .card .k{font:700 12px/1.4 'JetBrains Mono',monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--yellow)}
+  .card .t{font:800 clamp(32px,9vw,56px)/.95 'JetBrains Mono',monospace;letter-spacing:-.04em;text-transform:uppercase;margin:10px 0 12px}
+  .card .s{font:400 15px/1.5 'JetBrains Mono',monospace}
+  .card .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+  .card .go{background:var(--yellow)}
+  @media (prefers-reduced-motion:reduce){.end{transition:opacity .3s ease}}
+</style>
+</head>
+<body>
+<canvas id="film" aria-hidden="true"></canvas>
+<p id="cap" aria-hidden="true"></p>
+<p class="sr" id="capLive" role="status" aria-live="polite"></p>
+<div class="ctl gone" id="ctl">
+  <button type="button" id="sound" aria-pressed="false"></button>
+  <button type="button" id="skip">Skip ▸▸</button>
+</div>
+<section class="gate" id="gate" aria-labelledby="gateT" hidden>
+  <p class="rec" aria-hidden="true"><i></i>REC &nbsp;CAM 5</p>
+  <div>
+    <h1 id="gateT">Something came in for your file.</h1>
+    <p>It runs twenty seconds. Turn your sound on. Do not look away.</p>
+    <button type="button" class="go" id="gateGo">Open the archive</button>
+  </div>
+</section>
+<div class="end" id="end" role="dialog" aria-modal="true" aria-labelledby="endT" aria-describedby="endS" inert>
+  <div class="card">
+    <p class="k" id="endK">EYES ON LEADS &nbsp;·&nbsp; EVIDENCE</p>
+    <p class="t" id="endT">Evidence filed.</p>
+    <p class="s" id="endS">We check every receipt by hand. You will get an email once your payment is verified.</p>
+    <p class="k" style="margin-top:12px">Your file is almost complete.</p>
+    <div class="row"><button type="button" class="go" id="open">Back to my file</button><button type="button" id="replay">Replay</button></div>
+  </div>
+</div>
+
+<script type="module">
+import { PAL, reduced, boilFrame, span, lerp, rgba, stage, wline, wtext, osd, circ, partyEye, layer, grade, grain, vhs, misreg,
+  tapeTear, crtCollapse, shake, lampCone, stamp, drawStamp, SPEAKER, captions, fontsReady } from '../reveal/ink.js?v=3';
+
+const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const embedded = window.parent !== window;
+const FREEZE = parseFloat(params.get('at'));
+const frozen = !isNaN(FREEZE);
+
+/* ============================== who (from the portal) ============================== */
+const who = { id: '', nick: '', amount: '', time: '' };
+const clean = (v, n) => String(v || '').replace(/[^\w .,:'ñÑ-]/g, '').trim().slice(0, n);
+const num = () => who.id.replace(/^APP-/, '');
+let eyeImg = null, gotInit = null;
+const initArrived = new Promise(r => { gotInit = r; });
+const trusted = e => (location.hostname === 'localhost' && e.origin === location.origin) || /^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(e.origin);
+window.addEventListener('message', e => {
+  const d = e.data || {};
+  if (!trusted(e)) return;
+  if (d.type === 'leads-receipt-init') {
+    who.id = clean(d.id, 12).toUpperCase(); who.nick = clean(d.nick, 18); who.amount = clean(d.amount, 12); who.time = clean(d.time, 10);
+    $('endK').textContent = 'EYES ON LEADS  ·  ' + (who.id ? 'FILE ' + num() : 'EVIDENCE');
+    gotInit();
+  } else if (d.type === 'leads-reveal-eye' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(String(d.src || ''))) {
+    const img = new Image(); img.onload = () => { eyeImg = img; }; img.src = d.src;
+  }
+});
+const tell = (type, extra) => { if (embedded) try { parent.postMessage(Object.assign({ type }, extra || {}), '*'); } catch (e) { /* fine */ } };
+
+/* ============================== timeline ============================== */
+const END = 20.4, CARD = 18.6, CARD_BTN = 19.0;
+const TEARS = [3.0, 6.2, 7.4, 8.6];
+const SCARE = 13.7, DARK = [12.6, 14.6], STAMP = 15.6, SLAM = 17.6;
+const CAPS = [[.8, 'Something came in for your file.', 26, 2.9], [4.0, 'It was not there a second ago.', 24, 6.1], [7.5, 'It brought your receipt.', 24, 8.5],
+              [12.8, 'Keep looking at the screen.', 20, 13.6], [16.0, 'Evidence filed.', 22, 17.4]];
+const LIVE = [[.8, CAPS[0][1]], [3.6, 'A figure is standing at the end of the archive.'], [4.0, CAPS[1][1]], [6.2, 'It is closer.'], [7.5, CAPS[2][1]],
+              [8.6, 'A receipt prints with your details.'], [12.6, 'The lights go out. The printer keeps going.'], [12.8, CAPS[3][1]],
+              [14.6, 'The receipt is clipped into your folder. Stamped: received.'], [16.0, CAPS[4][1]], [17.6, 'The drawer slams shut.']];
+
+/* the archive lights: steady, with flickers that get worse, and out in the dark */
+function flick(t) {
+  if (t < .4) return 0;
+  if (t >= DARK[0] && t < DARK[1]) return 0;
+  if (reduced) return 1;
+  const f = Math.floor(t * 30);
+  if (t >= 3.4 && t < 3.6) return f % 3 === 0 ? 0 : 1;   // the flicker the figure appears behind
+  if (t >= 11.6 && t < DARK[0]) return (f * 7919) % 5 < 2 ? .15 : 1;   // failing
+  return (f * 104729) % 97 === 0 ? .3 : 1;
+}
+
+/* ============================== sound: generated (Web Audio) ============================== */
+let ac = null, master = null, soundOn = false, voices = [];
+function audio() {
+  if (ac) return ac;
+  try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
+  const comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(ac.destination);
+  master = ac.createGain(); master.gain.value = 0; master.connect(comp);
+  return ac;
+}
+function noiseBuf() {
+  if (noiseBuf.b) return noiseBuf.b;
+  const b = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  return (noiseBuf.b = b);
+}
+const keep = n => { voices.push(n); return n; };
+function noise(at, dur, type, freq, q, peak, attack, loop) {
+  const s = keep(ac.createBufferSource()); s.buffer = noiseBuf(); s.loop = !!loop;
+  const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q || 1;
+  const g = ac.createGain(); g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(peak, at + (attack || .005)); g.gain.exponentialRampToValueAtTime(.0001, at + dur);
+  s.connect(f).connect(g).connect(master); s.start(at); s.stop(at + dur + .05);
+  return { f, g };
+}
+function tone(at, dur, type, f0, f1, peak, attack) {
+  const o = keep(ac.createOscillator()); o.type = type; o.frequency.setValueAtTime(f0, at); if (f1) o.frequency.exponentialRampToValueAtTime(f1, at + dur);
+  const g = ac.createGain(); g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(peak, at + (attack || .01)); g.gain.exponentialRampToValueAtTime(.0001, at + dur);
+  o.connect(g).connect(master); o.start(at); o.stop(at + dur + .05);
+}
+function score(offset) {   // schedule everything from film time `offset` on
+  if (!audio()) return;
+  voices.forEach(v => { try { v.stop(); } catch (e) { /* done */ } }); voices = [];
+  const T = ac.currentTime + .05 - offset, past = t => t < offset - .02;   // T + filmTime = when, in the audio clock
+  const span2 = (a, b, fn) => { const s = Math.max(a, offset); if (b - s > .05) fn(T + s, b - s); };
+  // tape hiss, the whole film
+  span2(0, END, (at, len) => noise(at, len, 'highpass', 4000, .7, .025, .3, true));
+  // the drone: detuned saws, low, swelling until the dark; quieter after
+  [[.4, DARK[0], .085, 520], [DARK[1], SLAM, .05, 300]].forEach(([a, b, pk, top]) => span2(a, b, (at, len) => {
+    [55, 55.6, 82.4].forEach((hz, i) => {
+      const o = keep(ac.createOscillator()); o.type = 'sawtooth'; o.frequency.value = hz;
+      const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(180, at); f.frequency.linearRampToValueAtTime(top, at + len);
+      const g = ac.createGain(), p = pk * (i === 2 ? .5 : 1);
+      g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(p, at + Math.min(2.5, len * .6)); g.gain.setValueAtTime(p, at + len - .04); g.gain.linearRampToValueAtTime(0, at + len);
+      o.connect(f).connect(g).connect(master); o.start(at); o.stop(at + len + .05);
+    });
+  }));
+  // fluorescent buzz that follows the lights
+  if (!reduced) span2(.4, DARK[0], (at, len) => {
+    const o = keep(ac.createOscillator()); o.type = 'square'; o.frequency.value = 120;
+    const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 240; f.Q.value = 6;
+    const g = ac.createGain(); g.gain.value = 0;
+    for (let k = 0; k < len; k += 1 / 30) g.gain.setValueAtTime(flick(at - T + k) > .5 ? .03 : .003, at + k);
+    g.gain.setValueAtTime(0, at + len);
+    o.connect(f).connect(g).connect(master); o.start(at); o.stop(at + len + .05);
+  });
+  // deck clunk, tape tears
+  if (!past(.05)) { noise(T + .05, .08, 'lowpass', 900, 1, .5); tone(T + .05, .18, 'sine', 95, 50, .5); }
+  TEARS.forEach(tt => { if (!past(tt)) { noise(T + tt, .22, 'bandpass', 1800, 2, .35); tone(T + tt, .25, 'sawtooth', 300, 60, .08); } });
+  // the heartbeat: from the figure to the dark, faster and louder
+  for (let t = 3.6; t < DARK[0] + .6;) {
+    const p = span(t, 3.6, DARK[0]), pk = lerp(.35, .7, p);
+    if (!past(t)) { tone(T + t, .14, 'sine', 62, 40, pk, .004); tone(T + t + .2, .12, 'sine', 55, 36, pk * .7, .004); }
+    t += lerp(1.0, .42, p);
+  }
+  // the thermal printer, until the scare
+  for (let t = 8.8; t < SCARE - .05; t += .055 + Math.random() * .02) if (!past(t)) noise(T + t, .03, 'bandpass', 2600 + Math.random() * 900, 4, t < DARK[0] ? .12 : .07);
+  // the whisper in the dark (breathy noise, moving formants) and a rising screech under it
+  span2(DARK[0], SCARE, (at, len) => {
+    const n = noise(at, len + .05, 'bandpass', 900, 8, .16, .4, true);
+    for (let k = 0; k < len; k += .09) n.f.frequency.setValueAtTime(700 + Math.random() * 1400, at + k);
+    const o = keep(ac.createOscillator()), m = keep(ac.createOscillator()), mg = ac.createGain(), g = ac.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(900, at); o.frequency.exponentialRampToValueAtTime(2400, at + len);
+    m.frequency.value = 37; mg.gain.value = 260; m.connect(mg).connect(o.frequency);
+    g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(.06, at + len); g.gain.setValueAtTime(0, at + len + .01);
+    o.connect(g).connect(master); o.start(at); m.start(at); o.stop(at + len + .02); m.stop(at + len + .02);
+  });
+  // THE stinger, on the one scare frame (reduced motion: a soft low hit instead)
+  if (!past(SCARE)) {
+    if (reduced) tone(T + SCARE, 1.2, 'sine', 70, 45, .4);
+    else {
+      noise(T + SCARE, .9, 'highpass', 500, .7, .9, .002);
+      [220, 233, 311, 466, 622].forEach(hz => tone(T + SCARE, 1.4, 'sawtooth', hz, hz * .94, .12, .003));
+      tone(T + SCARE, 1.6, 'sine', 90, 28, 1, .003);
+    }
+  }
+  // the stamp; the drawer slam (thump, rattle, a metal ring); one low calm note under the card
+  if (!past(STAMP)) { noise(T + STAMP, .05, 'lowpass', 2500, 1, .5); tone(T + STAMP, .4, 'sine', 80, 38, .9, .003); }
+  if (!past(SLAM)) {
+    noise(T + SLAM, .35, 'lowpass', 1100, 1, .9, .003); tone(T + SLAM, .5, 'sine', 70, 32, 1, .003);
+    [430, 645, 1290].forEach((hz, i) => tone(T + SLAM + .01, 1.6 - i * .3, 'sine', hz, hz * .995, .07 / (i + 1), .002));
+  }
+  if (!past(CARD)) tone(T + CARD, 3, 'triangle', 110, 108, .09, .6);
+}
+function setSound(on) {
+  soundOn = !!on && !!audio();
+  if (ac && soundOn && ac.state === 'suspended') Promise.resolve(ac.resume()).catch(() => {});
+  if (master) master.gain.setTargetAtTime(soundOn ? .9 : 0, ac.currentTime, .05);
+  paintSound();
+}
+function paintSound() { $('sound').innerHTML = SPEAKER(soundOn) + (soundOn ? ' Sound ON' : ' Sound OFF'); $('sound').setAttribute('aria-pressed', String(soundOn)); }
+$('sound').addEventListener('click', () => setSound(!soundOn));
+
+/* ============================== picture ============================== */
+const st = stage($('film')), { ctx } = st;
+const cap = captions($('cap'), $('capLive'));
+const pad = n => String(n).padStart(2, '0');
+
+// one-point perspective archive: shelves both sides, boxes, a strip light, the far wall
+function archive(vp, b) {
+  const { W, H } = st, Ex = W * .7, Ef = H * .5, Ec = H * .46, Z = 9;
+  const P = (x, y, z) => [vp[0] + x * Ex / z, vp[1] + (y > 0 ? y * Ef : y * Ec) / z];
+  const L = (pts, id, o) => wline(st, pts, id, b, o), red = { col: PAL.red }, soft = { col: PAL.chalk, a: .35 }, faint = { col: PAL.chalk, a: .2 };
+  [1, 1.4, 1.9, 2.6, 3.6, 5, 7].forEach((z, i) => {
+    L([P(-1, -1, z), P(-1, 1, z)], 10 + i, soft); L([P(1, -1, z), P(1, 1, z)], 20 + i, soft);
+    L([P(-1, 1, z), P(1, 1, z)], 30 + i, red);
+  });
+  [-.75, -.35, .05, .45, .8].forEach((y, i) => { L([P(-1, y, 1), P(-1, y, Z)], 40 + i, faint); L([P(1, y, 1), P(1, y, Z)], 50 + i, faint); });
+  [[-1, .2, 2.1], [-1, -.5, 3.1], [1, .55, 1.6], [1, -.2, 4.2], [-1, .6, 5.5]].forEach(([x, y, z], i) =>
+    L([P(x, y, z), P(x, y - .22, z), P(x, y - .22, z + .5), P(x, y, z + .5)], 60 + i, { close: true, col: PAL.chalk, a: .3 }));
+  L([P(-.15, -1, 1.2), P(-.15, -1, Z)], 70, { col: PAL.chalk, a: .5 }); L([P(.15, -1, 1.2), P(.15, -1, Z)], 71, { col: PAL.chalk, a: .5 });
+  L([P(-1, -1, Z), P(1, -1, Z), P(1, 1, Z), P(-1, 1, Z)], 72, { close: true, fill: PAL.black, col: PAL.chalk, a: .45 });
+}
+// a faceless figure: small head, long neck, narrow shoulders, arms too long; holding a slip of paper
+function figure(cx, footY, h, b, idBase, slip) {
+  const w = h * .26, head = h * .085;
+  wline(st, circ(cx, footY - h + head, head * .8, head, 14), idBase, b, { close: true, fill: PAL.black, fa: .95, col: PAL.chalk, a: .85 });
+  wline(st, [[cx - w * .5, footY], [cx - w * .55, footY - h * .55], [cx - w * .5, footY - h * .8], [cx - w * .2, footY - h * .86], [cx, footY - h + head * 2],
+    [cx + w * .2, footY - h * .86], [cx + w * .5, footY - h * .8], [cx + w * .55, footY - h * .55], [cx + w * .5, footY]], idBase + 1, b, { close: true, fill: PAL.black, fa: .95, col: PAL.chalk, a: .7 });
+  wline(st, [[cx - w * .5, footY - h * .78], [cx - w * .62, footY - h * .3], [cx - w * .55, footY - h * .1]], idBase + 2, b, { a: .6 });
+  wline(st, [[cx + w * .5, footY - h * .78], [cx + w * .6, footY - h * .45], [cx + w * .3, footY - h * .42]], idBase + 3, b, { a: .6 });
+  if (slip) wline(st, [[cx + w * .12, footY - h * .47], [cx + w * .42, footY - h * .45], [cx + w * .4, footY - h * .33], [cx + w * .1, footY - h * .35]], idBase + 4, b, { close: true, fill: rgba(PAL.chalk, .6), a: .9 });
+}
+function archiveShot(t, b, near) {   // near: 0 none, 1 far end, 2 halfway, 3 close
+  const { W, H } = st, vp = [W * .5, H * .46];
+  archive(vp, b);
+  if (near) { const h = H * [0, .13, .42, .95][near], foot = vp[1] + h * .48; figure(vp[0], Math.min(foot, H * 1.05), h, b, 100, near >= 2); }
+  const m = 24, y = m + st.osd, secs = Math.floor(t) + 3 * 3600 + 7 * 60 + 41;
+  osd(st, 'REC', m, y);
+  if (reduced || (t % 1) < .5) { ctx.globalAlpha = layer.a; ctx.fillStyle = PAL.brand; ctx.beginPath(); ctx.arc(m + ctx.measureText('REC').width + st.osd * .8, y - st.osd * .33, st.osd * .32, 0, 7); ctx.fill(); }
+  osd(st, 'CAM 05 · ARCHIVE B2', m + st.osd * 4.2, y);
+  osd(st, pad(Math.floor(secs / 3600)) + ':' + pad(Math.floor(secs / 60) % 60) + ':' + pad(secs % 60), m, y + st.osd * 1.5);
+}
+
+// the receipt: thermal paper from a slot, lines appear as the printer goes
+function receiptShot(t, b, inDark) {
+  const { W, H } = st, tall = H > W * 1.5, pw = tall ? W * .78 : Math.min(W * .42, H * .5), x0 = (W - pw) / 2, slotY = H * (tall ? .2 : .16);
+  const feed = Math.min(1, span(t, 8.6, 12.4)), ph = lerp(pw * .15, H * (tall ? .62 : .7), feed), curl = Math.sin(t * 1.3) * pw * .01;
+  wline(st, [[x0 - pw * .08, slotY], [x0 + pw * 1.08, slotY]], 200, b, { col: PAL.chalk, a: .9, w: st.lw * 2 });
+  wline(st, [[x0, slotY], [x0 + pw, slotY], [x0 + pw + curl, slotY + ph], [x0 + curl, slotY + ph]], 201, b, { close: true, fill: rgba(PAL.chalk, inDark ? .18 : .82), col: PAL.chalk, a: .6 });
+  const ink = rgba(PAL.black, inDark ? .5 : .88), fs = Math.round(pw * .055), mono = `700 ${fs}px "JetBrains Mono", monospace`;
+  const lines = ['EYES ON LEADS // RECEIPT', '', 'SUBJECT ..... ' + (who.nick || 'YOU').toUpperCase(), 'FILE ........ ' + (who.id ? num() : '----'),
+    'AMOUNT ...... P' + (who.amount || '----'), 'RECEIVED .... ' + (who.time || 'JUST NOW'), '', 'STATUS ...... UNDER OBSERVATION', '', 'WE SAW IT.'];
+  const shown = Math.floor(span(t, 9.0, 12.2) * lines.length + 1e-6);
+  lines.slice(0, shown).forEach((s, i) => { const y = slotY + fs * 1.6 + i * fs * 1.45; if (y < slotY + ph - fs * .4) wtext(st, s, x0 + pw * .07, y, 210 + i, b, { still: true, col: ink, font: mono }); });
+}
+
+let rcvStamp = null;
+const makeStamp = () => { rcvStamp = stamp('RECEIVED', PAL.manila); };
+// the folder under the lamp: receipt clipped in, their eye in the photo corner, RECEIVED, the figure's shadow
+function folderShot(t, b) {
+  const { W, H } = st, tall = H > W * 1.5, fw = tall ? W * .94 : Math.min(W * .7, H * .9), fh = fw * .72, x0 = (W - fw) / 2;
+  const y0 = H * (tall ? .3 : .22) + span(t, SLAM - .25, SLAM) * H * .9;   // the drawer takes it
+  lampCone(st, { x: W / 2, y: -4, tx: W / 2, ty: H * .9, sw: 40, spread: H * .45, col: PAL.lamp, a: .16 });
+  wline(st, [[x0, y0], [x0 + fw, y0], [x0 + fw, y0 + fh], [x0, y0 + fh]], 300, b, { close: true, fill: rgba(PAL.manila, .45), col: PAL.chalk, a: .6, w: st.lw * 1.2 });
+  wline(st, [[x0, y0], [x0 + fw * .03, y0 - fh * .07], [x0 + fw * .3, y0 - fh * .07], [x0 + fw * .34, y0]], 301, b, { col: PAL.chalk, a: .6 });
+  wtext(st, 'FILE ' + (who.id ? num() : '----') + ' · EVIDENCE', x0 + fw * .05, y0 + fh * .1, 302, b, { still: true, col: rgba(PAL.black, .85), font: `700 ${Math.round(fw * .04)}px "JetBrains Mono", monospace` });
+  const rx = x0 + fw * .07, ry = y0 + fh * .18, rw = fw * .42, rh = fh * .74;
+  ctx.save(); ctx.translate(rx + rw / 2, ry + rh / 2); ctx.rotate(-.04); ctx.translate(-(rx + rw / 2), -(ry + rh / 2));
+  wline(st, [[rx, ry], [rx + rw, ry], [rx + rw, ry + rh], [rx, ry + rh]], 303, b, { close: true, fill: rgba(PAL.chalk, .85), col: PAL.chalk, a: .5 });
+  ['RECEIPT', (who.nick || 'YOU').toUpperCase(), 'P' + (who.amount || '----'), 'UNDER', 'OBSERVATION'].forEach((s, i) =>
+    wtext(st, s, rx + rw * .08, ry + rh * (.16 + i * .15), 304 + i, b, { still: true, col: rgba(PAL.black, .8), font: `700 ${Math.round(rw * .075)}px "JetBrains Mono", monospace` }));
+  wline(st, [[rx + rw * .4, ry - rh * .06], [rx + rw * .4, ry + rh * .1], [rx + rw * .5, ry + rh * .1], [rx + rw * .5, ry - rh * .03]], 309, b, { a: .9 });
+  ctx.restore();
+  const phX = x0 + fw * .6, phY = y0 + fh * .2, phW = fw * .32, phH = fh * .42;
+  wline(st, [[phX, phY], [phX + phW, phY], [phX + phW, phY + phH], [phX, phY + phH]], 310, b, { close: true, fill: PAL.black, fa: .95, col: PAL.chalk, a: .8 });
+  ctx.save(); ctx.beginPath(); ctx.rect(phX, phY, phW, phH); ctx.clip();
+  if (eyeImg) {
+    const ir = eyeImg.width / eyeImg.height, fr = phW / phH, w = ir > fr ? phH * ir : phW, h = ir > fr ? phH : phW / ir;
+    ctx.globalAlpha = layer.a; ctx.filter = 'grayscale(1) contrast(1.3) brightness(.9)'; ctx.drawImage(eyeImg, phX + phW / 2 - w / 2, phY + phH / 2 - h / 2, w, h); ctx.filter = 'none';
+  } else partyEye(st, { cx: phX + phW / 2, cy: phY + phH / 2, w: phW * .4, open: 1, id: 311, b, dil: .5, fill: .2 });
+  ctx.restore();
+  if (t >= STAMP && rcvStamp) { const f = Math.floor((t - STAMP) * 30 + 1e-6); drawStamp(st, rcvStamp, x0 + fw * .66, y0 + fh * .8, fw * .5 * (!reduced && f === 0 ? 1.14 : !reduced && f === 1 ? 1.05 : 1), -8 * Math.PI / 180, 1); }
+  if (!reduced) {   // the figure's shadow, leaning over the desk from above: it is behind you
+    const k = span(t, 14.8, 16.4) * (1 - span(t, SLAM - .3, SLAM));
+    ctx.save(); ctx.globalAlpha = layer.a * .55 * k; ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(W * .5, -H * .02, W * .22, H * .16, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(W * .2, -2); ctx.lineTo(W * .35, H * .2); ctx.lineTo(W * .65, H * .2); ctx.lineTo(W * .8, -2); ctx.fill(); ctx.restore();
+  }
+}
+
+function scare() {   // the one frame: their eye, enormous, split red/blue (or a huge drawn eye)
+  const { W, H } = st;
+  if (eyeImg) {
+    const s = Math.max(W / eyeImg.width, H / eyeImg.height) * 1.15, w = eyeImg.width * s, h = eyeImg.height * s;
+    ctx.save(); ctx.filter = 'grayscale(1) contrast(1.6) brightness(1.1)'; ctx.drawImage(eyeImg, (W - w) / 2, (H - h) / 2, w, h); ctx.restore();
+  } else partyEye(st, { cx: W / 2, cy: H * .48, w: W * .6, hr: .42, id: 400, b: boilFrame(SCARE), dil: .6, fill: .14, lw: 2.4 });
+  misreg(st, 10);
+}
+
+function frame(t) {
+  const { W, H } = st, b = boilFrame(t), f = Math.floor(t * 30 + 1e-6), I = flick(t);
+  st.begin(PAL.black); layer.a = 1;
+  if (!reduced && f === Math.round(SCARE * 30)) { scare(); grain(st, .2, f); return; }
+  if (!reduced && t >= SCARE && t < SCARE + .27) { crtCollapse(st, (t - SCARE) / .27); return; }
+  if (t >= DARK[0] && t < DARK[1]) {   // the dark: only the receipt, barely, then grain
+    if (t < SCARE) { layer.a = .35; receiptShot(t, b, true); layer.a = 1; }
+    grain(st, .09, reduced ? 1 : f); return;
+  }
+  const s1 = shake(t, STAMP, st.u * .012), s2 = shake(t, SLAM, st.u * .02);
+  ctx.save(); ctx.translate(s1.x + s2.x, s1.y + s2.y); layer.a = I;
+  if (t < 3.05) archiveShot(t, b, 0);
+  else if (t < 6.25) archiveShot(t, b, t >= 3.6 ? 1 : 0);
+  else if (t < 7.45) archiveShot(t, b, 2);
+  else if (t < 8.65) archiveShot(t, b, 3);
+  else if (t < DARK[0]) receiptShot(t, b, false);
+  else if (t < CARD) folderShot(t, b);
+  ctx.restore(); layer.a = 1;
+  if (!reduced) TEARS.forEach((t0, i) => tapeTear(st, t, t0, i + 1));
+  grade(st, t < DARK[0] ? .2 : .1);
+  const bh = Math.max(40, Math.min(70, H * .07));
+  vhs(st, { t, band: reduced ? { y: H * .6, a: .15 } : { y: ((t / 5) % 1) * (H + bh) - bh, a: .22 } });
+  if (t >= SLAM && t < CARD) { ctx.fillStyle = PAL.black; ctx.fillRect(0, 0, W, H); grain(st, .06, f); }   // after the slam: black, then the card
+  if (t >= CARD) { ctx.save(); ctx.globalAlpha = .6; ctx.fillStyle = PAL.black; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+}
+
+/* ============================== playback ============================== */
+let t0 = 0, playing = false, prevT = 0, focused = false, skipped = false;
+function captionsAt(t) {
+  const c = CAPS.find(c => t >= c[0] && t < c[3]);
+  if (c) cap.show(c[1], c[0], t, c[2]); else cap.clear();
+  const ev = LIVE.filter(e => t >= e[0]).pop();
+  if (ev) cap.say(ev[1]);
+}
+function showCard(t) {
+  const on = t >= CARD, ready = t >= CARD_BTN;
+  $('end').classList.toggle('on', on); $('end').inert = !ready; $('ctl').classList.toggle('gone', on);
+  if (ready && !focused) { focused = true; $('open').focus(); }
+}
+function loop() {
+  if (!playing) return;
+  let t = frozen ? FREEZE : (performance.now() - t0) / 1000;
+  if (!frozen && !reduced && prevT < SCARE && t >= SCARE + 1 / 30) t = SCARE;   // a slow tick never skips the scare frame
+  prevT = t;
+  frame(Math.min(t, END)); captionsAt(t); showCard(t);
+  if (t >= END && !frozen) { playing = false; if (!skipped) tell('leads-receipt-finished'); return; }
+  requestAnimationFrame(loop);
+}
+function start() {
+  focused = false; prevT = 0; skipped = false; cap.reset(); $('end').classList.remove('on'); $('end').inert = true; $('ctl').classList.remove('gone');
+  t0 = performance.now(); playing = true;
+  if (!frozen && ac) score(0);
+  requestAnimationFrame(loop);
+}
+function skip() {
+  if ((performance.now() - t0) / 1000 >= CARD) return;
+  t0 = performance.now() - CARD * 1000; skipped = true; tell('leads-receipt-skip');
+  if (ac) score(CARD);   // drop everything still to come, keep only the calm note
+}
+$('skip').addEventListener('click', skip);
+document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('end').inert) skip(); else tell('leads-receipt-done'); });
+$('open').addEventListener('click', () => tell('leads-receipt-done'));
+$('replay').addEventListener('click', () => { tell('leads-receipt-alive'); start(); });
+addEventListener('resize', () => { st.fit(); if (!playing) frame(END - .01); });
+
+/* ============================== go ============================== */
+paintSound(); makeStamp();
+await fontsReady(); makeStamp();
+tell('leads-receipt-ready');
+if (embedded) await Promise.race([initArrived, new Promise(r => setTimeout(r, 800))]);
+if (frozen) start();
+else {
+  frame(0); $('gate').hidden = false; $('gateGo').focus();
+  const alive = setInterval(() => tell('leads-receipt-alive'), 30000);
+  $('gateGo').addEventListener('click', () => {
+    clearInterval(alive); $('gate').hidden = true;
+    setSound(true);   // inside the tap: phones allow sound now
+    tell('leads-receipt-alive'); start();
+  }, { once: true });
+}
+</script>
+</body>
+</html>
