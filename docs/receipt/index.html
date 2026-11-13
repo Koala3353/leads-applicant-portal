@@ -20,7 +20,7 @@
    3.4 CAM 01 the road to Kasile Hills, empty, dogs far off.   5.4 CAM 02 someone standing in the fog.
    7.2 CAM 03 closer. The streetlight dies. NO SIGNAL.   8.9 CAM 04 the dorm corridor: the lights come on toward you;
    the door log replaces ROOM 207 UNASSIGNED with their surname; three knocks; DOOR 207 OPEN; every light dies.
-   13.8 one second of silence and black.   15.0 ONE beat: their own eye, enormous, in negative.   15.6 the desk:
+   13.8 one second of silence and black.   15.0 ONE beat: their own eye-scan photo (or the home page eye), enormous, pupil blown.   15.6 the desk:
    a TRANSFER ORDER with their details, CLEARED is stamped, a red note: "We found your room."   18.6 the card.
   Brand rules (CONTEXT.md 7.1): scary, never gory; one scare, no strobing; the scare, shakes and flicker are skipped
   for reduced motion; the words end on an invitation (Part 2 in January, not a threat). No triangle eye.  ?at=15.05 freezes a frame (review, no sound).
@@ -122,7 +122,7 @@ window.addEventListener('message', e => {
     const c = new Date(String(d.camp || '')); who.camp = isNaN(c) ? null : c;
     paintWho(); gotInit();
   } else if (d.type === 'leads-reveal-eye' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(String(d.src || ''))) {
-    const img = new Image(); img.onload = () => { eyeImg = img; eyeArt = null; }; img.src = d.src;
+    const img = new Image(); img.onload = () => { eyeImg = img; }; img.src = d.src;
   }
 });
 const tell = (type, extra) => { if (embedded) try { parent.postMessage(Object.assign({ type }, extra || {}), '*'); } catch (e) { /* fine */ } };
@@ -374,39 +374,69 @@ function doorLog(t) {   // the portal's retro window: the building's door-access
   ctx.restore();
 }
 
-/* ---------- the eye: theirs (or a drawn one), as a halftone print ---------- */
-let eyeArt = null;   // { neg, pos } canvases
-function halftoneEye() {
-  const S = 640, cell = 9, n = Math.floor(S / cell), lum = new Float32Array(n * n);
-  if (eyeImg) {
-    const c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d');
-    const s = Math.max(n / eyeImg.width, n / eyeImg.height), w = eyeImg.width * s, h = eyeImg.height * s; g.drawImage(eyeImg, (n - w) / 2, (n - h) / 2, w, h);
-    let d; try { d = g.getImageData(0, 0, n, n).data; } catch (e) { d = null; }
-    if (d) { let lo = 1, hi = 0; for (let i = 0; i < n * n; i++) { const v = (d[i * 4] * .3 + d[i * 4 + 1] * .59 + d[i * 4 + 2] * .11) / 255; lum[i] = v; lo = Math.min(lo, v); hi = Math.max(hi, v); }
-      for (let i = 0; i < n * n; i++) lum[i] = Math.pow((lum[i] - lo) / (hi - lo + 1e-6), 1.1); }
-  } else {   // a drawn eye: almond, iris, pupil, lashes
-    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-      const x = (i / n - .5) * 2, y = (j / n - .5) * 2, lid = Math.abs(y) < .55 * (1 - x * x) ? 1 : 0, rr = Math.hypot(x, y * 1.05);
-      let v = lid ? .92 - Math.max(0, rr - .2) * .2 : .58 + .1 * Math.sin(i * .7) * Math.cos(j * .5) - Math.max(0, Math.hypot(x, y) - .7) * .5;
-      if (lid && rr < .42) v = .35 + .25 * Math.sin(Math.atan2(y, x) * 18) * (rr - .18);
-      if (lid && rr < .2) v = .03;
-      if (Math.abs(Math.abs(y) - .55 * (1 - x * x)) < .05) v = .02;
-      lum[j * n + i] = Math.max(0, Math.min(1, v));
-    }
-  }
-  const make = neg => { const c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
-    g.fillStyle = neg ? '#050505' : '#e9e6dc'; g.fillRect(0, 0, S, S); g.fillStyle = neg ? '#e9e6dc' : '#0a0a0c';
-    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const v = neg ? lum[j * n + i] : 1 - lum[j * n + i], r = Math.sqrt(v / Math.PI) * cell * 1.05;
-      if (r > .4) { g.beginPath(); g.arc(i * cell + cell / 2 + (j % 2 ? cell / 2 : 0), j * cell + cell / 2, Math.min(r, cell * .75), 0, 7); g.fill(); } }
-    return c; };
-  eyeArt = { neg: make(true), pos: make(false) };
+/* ---------- the eye: their own eye-scan photo in black and white, or the portal home page's eye (.reye in
+   Styles.html) painted the same way: skin, wet sclera with veins, a striped iris, a big pupil, the lid's shadow ---------- */
+let eyeGray = null, eyeFrom = null;
+function grayEye() {   // their photo, monochrome and a little hard, like the home page's CCTV eyes
+  if (!eyeImg) return null;
+  if (eyeFrom === eyeImg) return eyeGray;
+  const c = document.createElement('canvas'), k = Math.min(1, 900 / Math.max(eyeImg.width, eyeImg.height));
+  c.width = Math.round(eyeImg.width * k); c.height = Math.round(eyeImg.height * k);
+  const g = c.getContext('2d'); g.drawImage(eyeImg, 0, 0, c.width, c.height);
+  try { const d = g.getImageData(0, 0, c.width, c.height), p = d.data;
+    for (let i = 0; i < p.length; i += 4) { let v = (p[i] * .3 + p[i + 1] * .59 + p[i + 2] * .11) / 255; v = Math.max(0, Math.min(1, (v - .5) * 1.3 + .47)); p[i] = p[i + 1] = p[i + 2] = v * 255; }
+    g.putImageData(d, 0, 0); } catch (e) { /* tainted: keep colour */ }
+  eyeFrom = eyeImg; eyeGray = c; return c;
 }
-function scareShot(t, f) {   // ONE beat: their own eye, in negative, enormous; the brand red dot on the pupil
-  if (!eyeArt) halftoneEye();
-  const r = rng(f), s = Math.max(V.w, V.h) * 1.25 * (1 + (t - CUT.scare) * .6), jx = (r() - .5) * U * 14, jy = (r() - .5) * U * 10;
-  ctx.drawImage(eyeArt.neg, V.x + V.w / 2 - s / 2 + jx, H / 2 - s / 2 + jy, s, s);
-  ctx.fillStyle = '#e50000'; ctx.beginPath(); ctx.arc(V.x + V.w / 2 + jx, H / 2 + jy, s * .055, 0, 7); ctx.fill();
-  misreg(U * 6);
+const BALL = [[0, 54], [7, 38], [18, 22], [33, 10], [50, 5], [66, 8], [81, 18], [93, 33], [100, 50], [93, 63], [81, 77], [66, 88], [50, 93], [34, 89], [19, 79], [7, 67]];
+function reye(g, cx, cy, w, o = {}) {   // the home page eye, in grey; w = width of the whole eye (2.1 : 1)
+  const h = w / 2.1, x0 = cx - w / 2, y0 = cy - h / 2, pupil = o.pupil || .26, px = o.px || 0, py = o.py || 0;
+  g.save();
+  let gr = g.createRadialGradient(cx, y0 + h * .58, 0, cx, y0 + h * .58, w * .55);   // skin
+  gr.addColorStop(0, '#a9a9a9'); gr.addColorStop(.42, '#7d7d7d'); gr.addColorStop(.78, '#454545'); gr.addColorStop(1, '#141414');
+  g.fillStyle = gr; g.fillRect(x0, y0, w, h);
+  const bx = x0 + w * .09, by = y0 + h * .15, bw = w * .82, bh = h * .72, bc = [bx + bw / 2, by + bh / 2];
+  g.beginPath(); BALL.forEach(([u, v], i) => { const X = bx + bw * u / 100, Y = by + bh * v / 100; i ? g.lineTo(X, Y) : g.moveTo(X, Y); }); g.closePath();
+  g.save(); g.clip();
+  gr = g.createRadialGradient(bc[0], by + bh * .48, 0, bc[0], by + bh * .48, bw * .5);   // sclera
+  gr.addColorStop(0, '#f1f1f1'); gr.addColorStop(.48, '#dedede'); gr.addColorStop(.84, '#ababab'); gr.addColorStop(1, '#6f6f6f');
+  g.fillStyle = gr; g.fillRect(bx, by, bw, bh);
+  const vr = rng(5); g.strokeStyle = 'rgba(70,70,70,.35)'; g.lineWidth = Math.max(.6, w * .0018);   // veins
+  for (let i = 0; i < 26; i++) { const an = vr() * Math.PI * 2, r0 = bw * (.2 + vr() * .05), r1 = bw * (.42 + vr() * .1);
+    g.beginPath(); g.moveTo(bc[0] + Math.cos(an) * r1, bc[1] + Math.sin(an) * r1 * .6);
+    g.quadraticCurveTo(bc[0] + Math.cos(an + .15) * (r0 + r1) / 2, bc[1] + Math.sin(an + .15) * (r0 + r1) / 2 * .6, bc[0] + Math.cos(an) * r0, bc[1] + Math.sin(an) * r0 * .6); g.stroke(); }
+  const ir = bw * .37 / 2, ix = bc[0] + px * bw * .12, iy = bc[1] + py * bh * .1;   // iris
+  if (g.createConicGradient) { const cg = g.createConicGradient(.14, ix, iy); for (let k = 0; k <= 40; k++) { const q = k / 40; cg.addColorStop(q, ['#7b7b7b', '#454545', '#9b9b9b', '#565656'][k % 4]); } g.fillStyle = cg; }
+  else g.fillStyle = '#5e5e5e';
+  g.beginPath(); g.arc(ix, iy, ir, 0, 7); g.fill();
+  gr = g.createRadialGradient(ix, iy, 0, ix, iy, ir); gr.addColorStop(.34, 'rgba(0,0,0,0)'); gr.addColorStop(.86, 'rgba(0,0,0,.6)'); gr.addColorStop(.95, '#050505'); gr.addColorStop(1, 'rgba(5,5,5,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(ix, iy, ir, 0, 7); g.fill();
+  gr = g.createRadialGradient(ix, iy, 0, ix, iy, ir * (pupil + .07)); gr.addColorStop(0, '#000'); gr.addColorStop(pupil / (pupil + .07), '#000'); gr.addColorStop(1, 'rgba(10,8,6,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(ix, iy, ir * (pupil + .07), 0, 7); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.92)'; g.beginPath(); g.arc(ix - ir * .28, iy - ir * .36, ir * .1, 0, 7); g.fill();   // the wet highlight
+  g.fillStyle = 'rgba(255,255,255,.3)'; g.beginPath(); g.arc(ix + ir * .22, iy + ir * .28, ir * .06, 0, 7); g.fill();
+  gr = g.createLinearGradient(0, by, 0, by + bh);   // the lid's shadow over the top, a little under
+  gr.addColorStop(0, 'rgba(0,0,0,.62)'); gr.addColorStop(.24, 'rgba(0,0,0,.16)'); gr.addColorStop(.42, 'rgba(0,0,0,0)'); gr.addColorStop(.78, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.38)');
+  g.fillStyle = gr; g.fillRect(bx, by, bw, bh);
+  g.restore();
+  g.save(); g.globalAlpha = .55; g.fillStyle = scan || '#000'; g.fillRect(x0, y0, w, h); g.restore();   // the monitor's lines
+  g.restore();
+}
+function scareShot(t, f) {   // ONE beat: their own eye (or the watching eye), enormous, pupil blown wide, staring at you
+  const r = rng(f), jx = (r() - .5) * U * 12, jy = (r() - .5) * U * 8, cx = V.x + V.w / 2 + jx, cy = H / 2 + jy;
+  ctx.fillStyle = '#050505'; ctx.fillRect(V.x, V.y, V.w, V.h);
+  ctx.save(); clipV();
+  const ge = grayEye();
+  if (ge) { const s = Math.max(V.w / ge.width, V.h / ge.height) * (1.25 + (t - CUT.scare) * .5), w = ge.width * s, h = ge.height * s;
+    ctx.drawImage(ge, cx - w / 2, cy - h / 2, w, h); ctx.fillStyle = scan; ctx.fillRect(V.x, V.y, V.w, V.h); }
+  else {   // the whole eye, lids and all, staring out of the dark, a little too close
+    const w = V.w * 1.32 * (1 + (t - CUT.scare) * .4), h = w / 2.1;
+    reye(ctx, cx, cy, w, { pupil: .4 });
+    const fade = (y0, y1, a0, a1) => { const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, `rgba(5,5,5,${a0})`); g.addColorStop(1, `rgba(5,5,5,${a1})`); ctx.fillStyle = g; ctx.fillRect(V.x, y0, V.w, y1 - y0); };
+    fade(cy - h / 2 - 2, cy - h * .25, 1, 0); fade(cy + h * .25, cy + h / 2 + 2, 0, 1);
+  }
+  ctx.restore();
+  grain(f, .9); vignette(.75); misreg(U * 5);
 }
 function collapse(p) {   // the CRT dies: picture squeezes to a line, then a dot
   ctx.fillStyle = '#050505'; ctx.fillRect(V.x, V.y, V.w, V.h);
@@ -432,7 +462,11 @@ function orderDoc(g, t) {   // drawn in document units (707 x 1000), ink on the 
   T('Subject is cleared for transfer to the site.', 56, 208, '22px "Special Elite", monospace');
   // photo corner with their eye
   const px = 470, py = 236, pw = 181, ph = 200; g.strokeStyle = ink; g.lineWidth = 6; g.strokeRect(px - 3, py - 3, pw + 6, ph + 6);
-  if (eyeArt) g.drawImage(eyeArt.pos, 80, 140, 480, 400, px, py, pw, ph); else { g.fillStyle = '#e9e6dc'; g.fillRect(px, py, pw, ph); }
+  g.save(); g.globalCompositeOperation = 'source-over'; g.beginPath(); g.rect(px, py, pw, ph); g.clip();
+  const ge = grayEye();
+  if (ge) { const k = Math.max(pw / ge.width, ph / ge.height), w = ge.width * k, h = ge.height * k; g.drawImage(ge, px + pw / 2 - w / 2, py + ph / 2 - h / 2, w, h); }
+  else { g.fillStyle = '#2a2a2a'; g.fillRect(px, py, pw, ph); reye(g, px + pw / 2, py + ph / 2, pw * 1.9, { pupil: .3 }); }
+  g.restore();
   T('SUBJECT ' + num(), px + pw / 2, py + ph + 34, '700 20px "JetBrains Mono", monospace', ink, 'center');
   const rows = [['SUBJECT', (who.nick || '—').toUpperCase() + (who.surname ? ' ' + who.surname.toUpperCase() : '')], ['FILE NO.', num()],
     ['PAYMENT', who.amount ? 'P' + who.amount + ' · RECEIVED' : 'RECEIVED'], ['DESTINATION', 'KASILE HILLS'], ['REPORT ON', campText()], ['ROOM', 'UNASSIGNED']];
@@ -455,7 +489,6 @@ function deskShot(t, f) {   // looking straight down at the sheet: the camera tu
   const s = s0 * Math.max(1, .86 * V.w / 691 / s0) * (1 + push * .05), C = [565, 977];
   const m = { s, x: V.x + V.w / 2 - C[0] * s, y: H * .47 - C[1] * s, w: img.naturalWidth * s, h: img.naturalHeight * s };
   m.P = (px, py) => [m.x + px * s, m.y + py * s];
-  if (!eyeArt) halftoneEye();
   ctx.fillStyle = '#050505'; ctx.fillRect(V.x, V.y, V.w, V.h);
   const [pcx, pcy] = m.P(...C);
   ctx.save(); clipV(); ctx.translate(pcx, pcy); ctx.rotate(.27 - push * .03); ctx.translate(-pcx, -pcy);
