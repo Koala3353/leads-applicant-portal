@@ -156,7 +156,8 @@ function payMail_sendPending_() {
 function payMail_test() {
   ownerOnly_();
   const me = String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
-  const found = getApplicantByEmail_(me);
+  let found = null;
+  try { found = getApplicantByEmail_(me); } catch (e) { Logger.log('Own file not readable (' + e.message + '); using sample data.'); }
   const a = found ? Object.assign({}, found.data, { Email: me })
     : { ApplicantID: 'APP-0000', Nickname: 'Sample', FullName: 'Applicant, Sample', Email: me, FinAidScholar: 'Yes' };
   return ['received', 'verified'].map(k => k + ': ' + (payMail_send_(a, k) ? 'sent to ' + me : 'NOT sent (see Activity)')).join('\n');
