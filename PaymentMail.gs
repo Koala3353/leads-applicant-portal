@@ -1,6 +1,6 @@
 /**
  * PaymentMail.gs  (integrator owns this file)
- * The two payment emails, in the look of the core team's eol2627-payment-confirmation design (PaymentMailTemplate.html):
+ * The two payment emails, built like the core team's results blasts (HTML in PaymentMailHtml.gs since Nov 14 2026):
  *   received  right after a proof upload (steps_uploadProof_, StepsApi.gs): we have it, the core team is checking it,
  *             another email follows once it's verified. Sent on every upload (a re-upload gets a fresh one).
  *   verified  once Payment is VERIFIED: the tracker's [05] "Payment Verified" (copied in by tracker_sync_), or the LEADS
@@ -17,7 +17,7 @@
 const PAYMAIL_DOOR_ = 'https://koala3353.github.io/leads-applicant-portal/go/';   // the door page: gets people out of Gmail's in-app browser
 const PAYMAIL_PER_RUN_ = 40;   // verified emails per run (MailApp is ~1 s each); the rest go out on the next run, 5 minutes later
 
-/** Everything the template (PaymentMailTemplate.html) shows. a = an Applicants row (data object). */
+/** Everything the email (payMail_html_ in PaymentMailHtml.gs) shows. a = an Applicants row (data object). */
 function payMail_vars_(a, kind) {
   const s = getSettings_(), fee = fee_(a);
   const php = n => '₱' + Number(n).toLocaleString('en-PH');
@@ -45,7 +45,7 @@ function payMail_vars_(a, kind) {
     const both = docs.every(d => d.url);
     // the drop-off deadline: Settings › RequirementsDeadline (blank = no date in the email)
     const due = parseDate_(s.RequirementsDeadline);
-    const hl = t => '<strong class="c-yel" style="color:#f2ea00;">' + t + '</strong>';
+    const hl = t => pm_hl_(t);   // a yellow marker on the paper (PaymentMailHtml.gs)
     const reminders = [
       both ? 'The ' + hl('PNF') + ' and ' + hl('D&amp;U') + ' forms can be accessed through the links above. Kindly ' + hl('download and accomplish both documents') + ' before submission.'
         : 'The forms will be made available through our core communication channels. Kindly ' + hl('wait for their release') + ' before accomplishing them.',
@@ -108,9 +108,7 @@ function payMail_send_(a, kind) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) { activity_('payment_mail', (a && a.ApplicantID) + ': no usable email, ' + kind + ' email not sent', { level: 'WARN', page: 'pay' }); return false; }
     if (MailApp.getRemainingDailyQuota() < 1) { activity_('payment_mail', 'daily email quota used up: ' + kind + ' email not sent to ' + a.ApplicantID, { level: 'WARN', page: 'pay' }); return false; }
     const v = payMail_vars_(a, kind);
-    const t = HtmlService.createTemplateFromFile('PaymentMailTemplate');   // not 'PaymentMail': Apps Script can't have a .gs and an .html with the same name
-    t.kind = kind; t.v = v;
-    const opts = { name: 'I.R.I.S. // LEADS 2627', htmlBody: t.evaluate().getContent() };   // the sender name inboxes show
+    const opts = { name: 'I.R.I.S. // LEADS 2627', htmlBody: payMail_html_(kind, v) };   // PaymentMailHtml.gs: the results blasts' structure (dark-mode safe on iPhone); the sender name inboxes show
     const reply = String(getSetting_('ContactEmail') || '').trim();
     if (/@/.test(reply)) opts.replyTo = reply;
     MailApp.sendEmail(to, v.subject, payMail_text_(kind, v), opts);
