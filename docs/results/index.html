@@ -23,6 +23,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Special+Elite&display=swap">
 <link rel="modulepreload" href="../reveal/ink.js?v=3">
+<link rel="prefetch" href="../reveal/audio/act2.mp3">
+<link rel="prefetch" href="../reveal/audio/act2_calm.mp3">
 <style>
   :root{--film-black:#070606;--oxblood:#3a0806;--dried-red:#7a120c;--chalk:#e6e0d4;--cctv:#8b97a4;--misreg-blue:#2b4a86;--brand-red:#e50000;--card-blue:#000ff0;--black:#050505;--yellow:#fffc04}
   *{box-sizing:border-box}
@@ -168,6 +170,8 @@ import { PAL, reduced, boilFrame, span, ease, lerp, stage, wline, wtext, osd, ci
   grade, grain, vhs, tapeTear, TEAR_SWAP, misreg, crtCollapse, filmAudio, SPEAKER, captions, fontsReady } from '../reveal/ink.js?v=3';
 
 const $ = id => document.getElementById(id);
+// (3) the case file number from the email link (...results/?f=HO0112): only a code, never the result
+const FILE_NO = (new URLSearchParams(location.search).get('f') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').match(/^[A-Z]{2}\d{4}$/) ? (new URLSearchParams(location.search).get('f') || '').toUpperCase() : '';
 const PORTAL = 'https://script.google.com/a/macros/student.ateneo.edu/s/AKfycbwoL5I-i10w25U-nNqAlwfVEDF0NuQhWEHZq_EqMu9t3pszFNH72FuXhYXAH1TH2Fk/exec';
 const dest = PORTAL + '?reveal=1';   // the portal plays Act 2 for an accepted applicant (and replays it with this flag)
 const SEEN = 'leads-act1-seen';
@@ -281,7 +285,7 @@ function tapeShot(t, b) {
   wline(st, [[x + lw * .06, y + lh * .86], [x + lw * .94, y + lh * .86]], 4, b, { a: .7 });
   [.07, .93].forEach((k, i) => wline(st, circ(x + lw * k, y + lh * .1, lw * .018, lw * .018, 10), 5 + i, b, { close: true }));
   wtext(st, 'EYES ON LEADS', 0, y + lh * .5, 8, b, { align: 'center', font: `${Math.round(lw * .1)}px "Special Elite", "Courier New", monospace` });
-  wtext(st, 'do not tape over', 0, y + lh * .8, 9, b, { align: 'center', font: `${Math.round(lw * .07)}px "Special Elite", "Courier New", monospace` });
+  wtext(st, FILE_NO ? 'case file ' + FILE_NO : 'do not tape over', 0, y + lh * .8, 9, b, { align: 'center', font: `${Math.round(lw * .07)}px "Special Elite", "Courier New", monospace` });
   ctx.restore();
   if (t >= .4 && t < 1.5) osd(st, 'PLAY', 24, 24 + st.osd);
 }

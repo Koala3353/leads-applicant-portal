@@ -93,6 +93,7 @@
     <p class="k" id="endK">EYES ON LEADS &nbsp;·&nbsp; FINDING</p>
     <p class="t" id="endT">Your file.</p>
     <p class="s" id="endS">The rest of your file is inside. Come read it.</p>
+    <p class="k" id="endD" style="margin-top:12px" hidden></p>
     <div class="row"><button type="button" class="go" id="open">Open your file</button><button type="button" id="replay">Replay</button></div>
   </div>
 </div>
@@ -109,7 +110,7 @@ const frozen = !isNaN(FREEZE);
 const PORTAL = 'https://script.google.com/a/macros/student.ateneo.edu/s/AKfycbwoL5I-i10w25U-nNqAlwfVEDF0NuQhWEHZq_EqMu9t3pszFNH72FuXhYXAH1TH2Fk/exec';
 
 /* ============================== who is watching (from the portal) ============================== */
-const who = { id: '', nick: '', stamp: 'REVIEWED' };
+const who = { id: '', nick: '', stamp: 'REVIEWED', campDays: 0 };
 const clean = (v, n) => String(v || '').replace(/[^\w .'ñÑ-]/g, '').trim().slice(0, n);
 const num = () => who.id.replace(/^APP-/, '');
 const subjectName = () => who.nick || (who.id ? 'No. ' + num() : 'you');   // their first name; the file number if the portal has none
@@ -124,6 +125,7 @@ window.addEventListener('message', e => {
   if (!local && !/^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(e.origin)) return;
   who.id = clean(d.id, 12).toUpperCase(); who.nick = clean(d.nick, 18);
   who.stamp = d.stamp === 'ACCEPTED' ? 'ACCEPTED' : 'REVIEWED';   // only two words are ever drawn
+  const camp = new Date(String(d.camp || '')); who.campDays = isNaN(camp) ? 0 : Math.ceil((camp.getTime() - Date.now()) / 864e5);
   paintIdentity(); makeStamp();
   if (d.sound) trySound();
   gotInit();
@@ -142,6 +144,9 @@ function paintIdentity() {
   // the card says "You're in." only when the portal said ACCEPTED; opened alone it never states a result
   $('endT').textContent = who.stamp === 'ACCEPTED' ? "You're in" + (who.nick ? ', ' + who.nick + '.' : '.') : 'Your file.';
   $('endK').textContent = 'EYES ON LEADS  ·  ' + (who.id ? 'SUBJECT ' + num() : 'FINDING');
+  // (6) accepted: how far away camp is (from the portal's camp date)
+  const days = who.stamp === 'ACCEPTED' ? who.campDays : 0;
+  $('endD').hidden = !(days > 0); if (days > 0) $('endD').textContent = days + (days === 1 ? ' day' : ' days') + ' until Kasile Hills';
 }
 
 /* ============================== sound, captions ============================== */
@@ -342,7 +347,7 @@ function frame(t) {
 }
 
 /* ============================== playback ============================== */
-let prevT = 0;
+let prevT = 0, buzzed = false, skipped = false;
 function showCard(t) {
   const on = t >= (reduced ? CARD : CARD_LIVE), ready = t >= CARD_BTN;
   $('end').classList.toggle('on', on); $('end').inert = !ready; $('ctl').classList.toggle('gone', on);
@@ -358,13 +363,14 @@ function loop() {
   if (!playing) return;
   let t = frozen ? FREEZE : (performance.now() - t0) / 1000;
   if (!frozen && !reduced && prevT < 4.6 && t >= 4.6 + 1 / 30) t = 4.6;   // a slow tick must not jump over the one scare frame
+  if (!frozen && !reduced && !buzzed && t >= 8.3) { buzzed = true; try { if (navigator.vibrate) navigator.vibrate([70, 50, 140]); } catch (e) { /* fine */ } }   // (7) the stamp, felt (Android)
   prevT = t;
   frame(Math.min(t, END)); captionsAt(t); showCard(t);
-  if (t >= END && !frozen) { playing = false; A.fade(); return; }
+  if (t >= END && !frozen) { playing = false; A.fade(); if (!skipped) tell('leads-reveal-finished'); return; }   // (8) watched to the end
   requestAnimationFrame(loop);
 }
 function start() {
-  focused = false; prevT = 0; cap.reset(); $('end').classList.remove('on'); $('end').inert = true; $('ctl').classList.remove('gone');
+  focused = false; prevT = 0; buzzed = false; skipped = false; cap.reset(); $('end').classList.remove('on'); $('end').inert = true; $('ctl').classList.remove('gone');
   t0 = performance.now(); playing = true;
   if (!frozen) A.begin(A.on());   // after the clock starts, so the file begins at t = 0
   paintSound(); requestAnimationFrame(loop);
@@ -372,14 +378,14 @@ function start() {
 addEventListener('resize', () => { st.fit(); lay(); if (!playing) frame(END - .01); });
 
 /* Skip jumps to the card (the result is on it); closing only ever happens from the card */
-function skip() { if ((performance.now() - t0) / 1000 < CARD_BTN) { t0 = performance.now() - CARD_BTN * 1000; A.fade(); } }
+function skip() { if ((performance.now() - t0) / 1000 < CARD_BTN) { t0 = performance.now() - CARD_BTN * 1000; A.fade(); if (!skipped) { skipped = true; tell('leads-reveal-skip'); } } }
 $('skip').addEventListener('click', skip);
 document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if ($('end').inert) skip(); else if (embedded) tell('leads-reveal-done', { closed: true }); });
 $('open').addEventListener('click', () => {
   if (embedded) tell('leads-reveal-done', { open: true });
   else location.href = params.get('back') && /^https:\/\/script\.google\.com\//.test(params.get('back')) ? params.get('back') : PORTAL;
 });
-$('replay').addEventListener('click', () => { tell('leads-reveal-replay'); start(); });
+$('replay').addEventListener('click', () => { tell('leads-reveal-replay', { started: true }); start(); });
 
 /* ============================== go ============================== */
 paintIdentity(); makeStamp(); lay();

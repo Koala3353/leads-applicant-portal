@@ -98,26 +98,53 @@ function home_revealSeen() {
   });
 }
 
+/** An applicant's eye-scan photo (Applicants › EyePhoto) as a small data URL (Drive's thumbnail), or ''. */
+function revealEyeSrc_(a) {
+  const id = (String((a && a.EyePhoto) || '').match(/\/d\/([\w-]{20,})/) || [])[1];
+  if (!id) return '';
+  try {
+    const f = DriveApp.getFileById(id);
+    const blob = f.getThumbnail() || (f.getSize() < 1500000 ? f.getBlob() : null);
+    if (!blob) return '';
+    const type = String(blob.getContentType() || 'image/png').toLowerCase();
+    if (!/^image\/(png|jpe?g|webp|gif)$/.test(type)) return '';   // e.g. a HEIC original: browsers can't draw it
+    return 'data:' + type + ';base64,' + Utilities.base64Encode(blob.getBytes());
+  } catch (e) { return ''; }
+}
+
 /**
- * Their own eye-scan photo (Applicants › EyePhoto, taken in the Game) for the reveal's mirror: Drive's small thumbnail
- * as a data URL, so the film (docs/reveal) can show "That one is you." with their eye. Only for someone the reveal
- * plays for; anything missing or unreadable just returns '' and the film keeps its drawn mirror.
+ * Their own eye-scan photo for the reveal's mirror ("That one is you."). Only for someone the reveal plays for;
+ * anything missing or unreadable returns '' and the film keeps its drawn mirror.
  */
 function home_revealEye() {
   return traced_('home_revealEye', 'home', () => {
     const found = requireApplicant_();
-    if (!revealFor_(found.data)) return { src: '' };
-    const id = (String(found.data.EyePhoto || '').match(/\/d\/([\w-]{20,})/) || [])[1];
-    if (!id) return { src: '' };
-    try {
-      const f = DriveApp.getFileById(id);
-      const blob = f.getThumbnail() || (f.getSize() < 1500000 ? f.getBlob() : null);
-      if (!blob) return { src: '' };
-      const type = String(blob.getContentType() || 'image/png').toLowerCase();
-      if (!/^image\/(png|jpe?g|webp|gif)$/.test(type)) return { src: '' };   // e.g. a HEIC original: browsers can't draw it
-      return { src: 'data:' + type + ';base64,' + Utilities.base64Encode(blob.getBytes()) };
-    } catch (e) { return { src: '' }; }
+    return { src: revealFor_(found.data) ? revealEyeSrc_(found.data) : '' };
   }, r => (r && r.src ? 'eye sent' : 'no eye'));
+}
+
+/**
+ * The core team's preview of the film exactly as one applicant will see it (...exec?reveal=1&as=APP-2447): their
+ * first name, file number and eye photo. Admins only; nothing is recorded (no RevealSeen, no events).
+ */
+function home_revealPreview(applicantId) {
+  return traced_('home_revealPreview', 'home', () => {
+    if (!isAdmin_(currentEmail_())) throw new Error('Only the core team can preview as an applicant.');
+    const found = getApplicantById_(String(applicantId || '').trim());
+    if (!found) return { ok: false };
+    const a = found.data;
+    return { ok: true, id: a.ApplicantID, nick: String(a.Nickname || a.FullName || '').trim().split(' ')[0], eye: revealEyeSrc_(a) };
+  });
+}
+
+/** How the film went for this person (finished / skipped / replayed / opened), one Activity row each. */
+function home_revealEvent(kind) {
+  const k = ['finished', 'skipped', 'replayed', 'opened'].indexOf(String(kind)) >= 0 ? String(kind) : '';
+  if (!k) return { ok: false };
+  const found = requireApplicant_();
+  if (!revealFor_(found.data)) return { ok: false };
+  activity_('reveal_' + k, found.data.ApplicantID, { page: 'home' });
+  return { ok: true };
 }
 
 /** Referral info for the hub; a failure (busy lock, sheet hiccup) hides the card instead of breaking the whole hub. */
