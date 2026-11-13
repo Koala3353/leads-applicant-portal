@@ -12,6 +12,11 @@
   back, the mirror, the intake form typing itself, the stamp, then the Broadcast Card. No triangle eye.
   Sound is one pre-mixed file (audio/act2.mp3, or audio/act2_calm.mp3 for reduced motion). If it is missing the film is silent.
   ?at=4.6 freezes a frame (for review, no sound).
+  Nov 13 2026: (1) it opens on a one-tap gate ("Open your file"), because a phone only plays sound after a tap on this
+  page and the stamp's sound is the payoff; while the gate waits it sends 'leads-reveal-replay' every 30 s so the
+  portal's 45 s safety timer never closes it. (2) Tall phone screens get a bigger, higher card. (3) The stamp is a
+  moment: the camera pushes in on it, a harder shake, and a held beat before the card. (4) If the portal sends their
+  eye-scan photo ({ type: 'leads-reveal-eye', src: 'data:image/...' }), the mirror shows it ("That one is you.").
 -->
 <html lang="en">
 <head>
@@ -55,6 +60,16 @@
   .card .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
   .card .go{background:var(--yellow)}
   @media (prefers-reduced-motion:reduce){.end{transition:opacity .3s ease}}
+  /* the gate: one tap opens the file (and lets the sound play) */
+  .gate{position:fixed;inset:0;z-index:6;display:grid;place-items:center;padding:24px 18px;text-align:center;background:rgba(7,6,6,.86)}
+  .gate[hidden]{display:none}
+  .gate h1{margin:0 0 12px;font:400 clamp(2rem,9vw,3.6rem)/1 'Special Elite','Courier New',monospace;color:var(--chalk);text-shadow:-2px 0 var(--dried-red),2px 0 var(--misreg-blue)}
+  .gate p{margin:0 auto 24px;max-width:30ch;font:400 15px/1.55 'JetBrains Mono',monospace}
+  .gate .go{background:var(--yellow);min-height:54px;width:min(320px,100%);font-size:15px}
+  .gate .rec{position:absolute;top:max(18px,env(safe-area-inset-top));left:18px;font:700 13px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:var(--chalk)}
+  .gate .rec i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--brand-red);margin-right:6px;vertical-align:0;animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){.gate .rec i{animation:none}}
 </style>
 </head>
 <body>
@@ -65,6 +80,14 @@
   <button type="button" id="sound" aria-pressed="false"></button>
   <button type="button" id="skip">Skip ▸▸</button>
 </div>
+<section class="gate" id="gate" aria-labelledby="gateT" hidden>
+  <p class="rec" aria-hidden="true"><i></i>REC &nbsp;CAM 3</p>
+  <div>
+    <h1 id="gateT">Your file is ready.</h1>
+    <p>It runs ten seconds. Turn your sound on.</p>
+    <button type="button" class="go" id="gateGo">Open your file</button>
+  </div>
+</section>
 <div class="end" id="end" role="dialog" aria-modal="true" aria-labelledby="endT" aria-describedby="endS" inert>
   <div class="card">
     <p class="k" id="endK">EYES ON LEADS &nbsp;·&nbsp; FINDING</p>
@@ -105,6 +128,15 @@ window.addEventListener('message', e => {
   if (d.sound) trySound();
   gotInit();
 });
+// (4) their own eye-scan photo for the mirror, sent by the portal after init (it can arrive a moment later)
+let eyeImg = null;
+window.addEventListener('message', e => {
+  const d = e.data || {};
+  if (d.type !== 'leads-reveal-eye' || !/^data:image\/(png|jpe?g|webp|gif);base64,/.test(String(d.src || ''))) return;
+  const local = location.hostname === 'localhost' && e.origin === location.origin;
+  if (!local && !/^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(e.origin)) return;
+  const img = new Image(); img.onload = () => { eyeImg = img; }; img.src = d.src;
+});
 const tell = (type, extra) => { if (embedded) try { parent.postMessage(Object.assign({ type }, extra || {}), '*'); } catch (e) { /* fine */ } };
 function paintIdentity() {
   // the card says "You're in." only when the portal said ACCEPTED; opened alone it never states a result
@@ -113,7 +145,7 @@ function paintIdentity() {
 }
 
 /* ============================== sound, captions ============================== */
-const END = 10.4, CARD = 9.0, CARD_LIVE = 9.0 + 2 / 30, CARD_BTN = 9.4;
+const END = 11.0, CARD = 9.6, CARD_LIVE = 9.6 + 2 / 30, CARD_BTN = 10.0;   // (3) a held beat on the stamp before the card
 let t0 = 0, playing = false, focused = false;
 const A = filmAudio(reduced ? 'audio/act2_calm.mp3' : 'audio/act2.mp3', () => playing && !frozen ? (performance.now() - t0) / 1000 : null);
 const paintSound = () => { const on = A.on(); $('sound').innerHTML = SPEAKER(on) + (on ? ' Sound ON' : ' Sound OFF'); $('sound').setAttribute('aria-pressed', String(on)); $('sound').setAttribute('aria-label', on ? 'Sound on. Tap to mute' : 'Sound off. Tap to turn on'); };
@@ -142,9 +174,11 @@ let Ly = null;   // layout, set on fit
 
 function lay() {
   const { W, H, u } = st;
-  const fw = Math.min(W * .88, u, H * .5 / .72), fh = fw * .72, wide = W > H * 1.2, fy = H * (wide ? .56 : .62), x0 = (W - fw) / 2, y0 = fy - fh / 2;
+  const tall = H > W * 1.5;   // a phone held upright: use the width, sit the card higher, under the lamp
+  const fw = tall ? W * .94 : Math.min(W * .88, u, H * .5 / .72), fh = fw * .72, wide = W > H * 1.2, fy = H * (wide ? .56 : tall ? .52 : .62), x0 = (W - fw) / 2, y0 = fy - fh / 2;
   const px = x0 + fw * .05, py = y0 + fh * .06, pw = fw * .9, ph = fh * .88;
-  Ly = { fw, fh, fy, x0, y0, px, py, pw, ph, phW: pw * .25, phH: ph * .36, Lc: H * (wide ? .2 : .24), phX: px + pw * .71, phY: py + ph * .05, sw: Math.max(22, Math.min(60, u * .075)) };
+  Ly = { fw, fh, fy, x0, y0, px, py, pw, ph, phW: pw * .25, phH: ph * .36, Lc: H * (wide ? .2 : tall ? .17 : .24), phX: px + pw * .71, phY: py + ph * .05, sw: Math.max(22, Math.min(60, u * .075)),
+         sx: px + pw * .6, sy: py + ph * .89 - 7, deskY: H * (tall ? .8 : .9) };
 }
 
 /* the lamp swings like a pendulum, then settles (it never swings for reduced motion) */
@@ -165,14 +199,16 @@ const mirrorOn = t => t >= (reduced ? 4.7 : 5.3);
 
 /* camera: push-in on the photo (2.6-3.4), pull back to read the page (6.0-6.8). Maps what is at the anchor to the target. */
 function cam(t) {
-  const { W, H } = st, { phX, phY, phW, phH, px, py, pw, ph } = Ly, k1 = span(t, 2.6, 3.4), k2 = span(t, 6, 6.8);
-  const a = [lerp(lerp(W / 2, phX + phW / 2, k1), px + pw / 2, k2), lerp(lerp(H / 2, phY + phH / 2, k1), py + ph / 2, k2)];
-  const g = [lerp(lerp(W / 2, W * .62, k1), W / 2, k2), lerp(lerp(H / 2, H * .4, k1), H * .47, k2)];
-  return { s: 1 + .35 * k1 - .2 * k2, a, g };
+  const { W, H } = st, { phX, phY, phW, phH, px, py, pw, ph, sx, sy } = Ly, k1 = span(t, 2.6, 3.4), k2 = span(t, 6, 6.8);
+  const k3 = reduced ? 0 : 1 - (1 - span(t, 8.3, 9.1)) ** 3;   // (3) after the stamp lands, ease in on it
+  const a0 = [lerp(lerp(W / 2, phX + phW / 2, k1), px + pw / 2, k2), lerp(lerp(H / 2, phY + phH / 2, k1), py + ph / 2, k2)];
+  const g0 = [lerp(lerp(W / 2, W * .62, k1), W / 2, k2), lerp(lerp(H / 2, H * .4, k1), H * .47, k2)];
+  const a = [lerp(a0[0], sx, k3), lerp(a0[1], sy, k3)], g = [lerp(g0[0], W / 2, k3), lerp(g0[1], H * .46, k3)];
+  return { s: 1 + .35 * k1 - .2 * k2 + .45 * k3, a, g };
 }
 
 function desk(t, b) {
-  const { W, H } = st, { sw, fy, Lc } = Ly, th = swing(t), sh = sw * .75, deskY = H * .9;
+  const { W, H } = st, { sw, fy, Lc, deskY } = Ly, th = swing(t), sh = sw * .75;
   const B = [W / 2 + (Lc + sh) * Math.sin(th), -4 + (Lc + sh) * Math.cos(th)], tan = Math.tan(th);
   const poolX = B[0] + (fy - B[1]) * tan, R = (fy - B[1]) * .45 + sw, lit = x => Math.exp(-(((x - poolX) / R) ** 2));
   const warm = span(t, 6, 6.8), lc = mix(PAL.chalk, PAL.lamp, warm);
@@ -241,7 +277,7 @@ function page(t, b, lit, warm) {
   if (t >= 8.03 && t < 8.3) { ctx.globalAlpha = layer.a * .85; ctx.fillStyle = PAL.black; ctx.fillRect(px + pw * .37, py + ph * .89 - pw * .05, pw * .03, pw * .055); }   // the carriage return, a cursor waiting on FINDING
   photo(t, b);
   // the stamp: its shadow grows over the FINDING line first, then it lands
-  const sx = px + pw * .6, sy = py + ph * .89 - 7, sw = pw * .58, f = Math.floor((t - 8.3) * 30 + 1e-6);
+  const { sx, sy } = Ly, sw = pw * .58, f = Math.floor((t - 8.3) * 30 + 1e-6);
   if (t >= 8.1 && t < 8.3) { const k = span(t, 8.1, 8.3); wline(st, [[sx - sw * .5 * k, sy - sw * .1 * k], [sx + sw * .5 * k, sy - sw * .1 * k], [sx + sw * .5 * k, sy + sw * .1 * k], [sx - sw * .5 * k, sy + sw * .1 * k]], 70, b, { close: true, fill: rgba(PAL.black, .3 * k), nostroke: true }); }
   if (t >= 8.3 && stampCv) drawStamp(st, stampCv, sx, sy, sw * (!reduced && f === 0 ? 1.12 : !reduced && f === 1 ? 1.04 : 1), -6 * Math.PI / 180, 1);
   if (t >= 8.3) {   // slight warm bloom around the stamped line
@@ -259,7 +295,14 @@ function photo(t, b) {
     wline(st, [[x + dx * l, y], [x, y], [x, y + dy * l]], 81 + i, b, { a: .9 });
   });
   ctx.save(); ctx.beginPath(); ctx.rect(phX, phY, phW, phH); ctx.clip();
-  if (mirrorOn(t)) {   // a mirror: silvered grey, a head and shoulders with no face, a glare
+  if (mirrorOn(t) && eyeImg) {   // (4) the mirror is their own eye-scan photo, CCTV-graded, with the same glare
+    const ir = eyeImg.width / eyeImg.height, fr = phW / phH, w = ir > fr ? phH * ir : phW, h = ir > fr ? phH : phW / ir;
+    ctx.save(); ctx.globalAlpha = layer.a; ctx.filter = 'grayscale(1) contrast(1.25) brightness(.95)';
+    ctx.drawImage(eyeImg, cx - w / 2, cy - h / 2, w, h); ctx.restore();
+    wline(st, rect, 90, b, { close: true, fill: rgba(PAL.cctv, .22), nostroke: true });
+    wline(st, [[phX + phW * .15, phY], [phX + phW * .8, phY + phH]], 94, b, { a: .4 });
+    wline(st, [[phX + phW * .3, phY], [phX + phW * .95, phY + phH]], 95, b, { a: .25 });
+  } else if (mirrorOn(t)) {   // a mirror: silvered grey, a head and shoulders with no face, a glare
     wline(st, rect, 90, b, { close: true, fill: rgba(PAL.cctv, .5), nostroke: true });
     wline(st, rect, 91, b, { close: true, fill: rgba(PAL.chalk, .25), nostroke: true });
     wline(st, circ(cx, cy - phH * .14, phW * .17, phH * .17, 14), 92, b, { close: true, a: .75 });
@@ -283,12 +326,12 @@ function scare(b) {
 function frame(t) {
   const { W, H } = st, b = boilFrame(t), f = Math.floor(t * 30 + 1e-6), I = lampI(t);
   st.begin(PAL.black); layer.a = 1;
-  const ts = Math.min(t, 8.999);   // from the card on, the stamped form is held (dimmed) behind it
+  const ts = Math.min(t, CARD - .001);   // from the card on, the stamped form is held (dimmed) behind it
   if (!reduced && f === 138) scare(b);   // 4.60, exactly one frame; the loop makes sure a late tick still shows it
   else if (!reduced && t >= CARD && t < CARD_LIVE) {   // VHS input switch: two frames of blue noise
     ctx.fillStyle = PAL.blue; ctx.fillRect(0, 0, W, H); grain(st, .8, f); glitch(st, .5, f);
   } else if (I > .001) {
-    const sh = shake(t, 8.3, st.u * .006);
+    const sh = shake(t, 8.3, st.u * .014);   // (3) the stamp hits harder
     layer.a = I; ctx.save(); ctx.translate(sh.x, sh.y); desk(ts, b); ctx.restore(); layer.a = 1;
     grade(st, I > 0 ? lerp(.18, .05, span(t, 6, 6.8)) : 0);
   }
@@ -346,7 +389,17 @@ makeStamp();   // again, now in the real typewriter font
 tell('leads-reveal-ready');
 // the portal answers ready with who this is; give it a moment so the stamp and the card never show the wrong word
 if (embedded) await Promise.race([initArrived, new Promise(r => setTimeout(r, 800))]);
-start();
+// (1) one tap to open: it lets the sound play on phones (the stamp's sound is the payoff), and the eye photo has time
+// to arrive. While the gate waits, keep the portal's safety timer from closing the film.
+if (frozen) start();
+else {
+  frame(0); $('gate').hidden = false; $('ctl').classList.add('gone'); $('gateGo').focus();
+  const keep = setInterval(() => tell('leads-reveal-replay'), 30000);
+  $('gateGo').addEventListener('click', () => {
+    clearInterval(keep); $('gate').hidden = true;
+    A.set(true); tell('leads-reveal-replay'); start();
+  }, { once: true });
+}
 </script>
 </body>
 </html>

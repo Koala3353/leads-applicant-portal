@@ -98,6 +98,28 @@ function home_revealSeen() {
   });
 }
 
+/**
+ * Their own eye-scan photo (Applicants › EyePhoto, taken in the Game) for the reveal's mirror: Drive's small thumbnail
+ * as a data URL, so the film (docs/reveal) can show "That one is you." with their eye. Only for someone the reveal
+ * plays for; anything missing or unreadable just returns '' and the film keeps its drawn mirror.
+ */
+function home_revealEye() {
+  return traced_('home_revealEye', 'home', () => {
+    const found = requireApplicant_();
+    if (!revealFor_(found.data)) return { src: '' };
+    const id = (String(found.data.EyePhoto || '').match(/\/d\/([\w-]{20,})/) || [])[1];
+    if (!id) return { src: '' };
+    try {
+      const f = DriveApp.getFileById(id);
+      const blob = f.getThumbnail() || (f.getSize() < 1500000 ? f.getBlob() : null);
+      if (!blob) return { src: '' };
+      const type = String(blob.getContentType() || 'image/png').toLowerCase();
+      if (!/^image\/(png|jpe?g|webp|gif)$/.test(type)) return { src: '' };   // e.g. a HEIC original: browsers can't draw it
+      return { src: 'data:' + type + ';base64,' + Utilities.base64Encode(blob.getBytes()) };
+    } catch (e) { return { src: '' }; }
+  }, r => (r && r.src ? 'eye sent' : 'no eye'));
+}
+
 /** Referral info for the hub; a failure (busy lock, sheet hiccup) hides the card instead of breaking the whole hub. */
 function safeReferral_(found) {
   try { return referralInfo_(found); } catch (e) {

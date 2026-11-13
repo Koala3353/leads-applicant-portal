@@ -213,6 +213,14 @@
     if (arriving) setVariant(read('leads-ld-v')); else pickVariant();
     dest.textContent = arriving || 'Subject located';
     kicker.textContent = arriving ? 'Arriving' : VARIANTS[el.dataset.v].kicker;
+    // from the results email (...exec?reveal=1, right after Act 1's "A file under your name."): the same film, not a
+    // random transition. The manila folder, and words that carry the tape on until Act 2 plays.
+    if (document.body && document.body.getAttribute('data-reveal') === '1') {
+      setVariant('file');
+      dest.textContent = 'A file under your name';
+      kicker.textContent = 'Tape found';
+      LINES = ['Rewinding the tape…', 'Pulling your file from the archive…', 'Checking it is really you…', 'Your file is thicker than expected…'];
+    }
     cycle(); runClock();
     safety = setTimeout(hide, 20000);
     window.addEventListener('DOMContentLoaded', function () {

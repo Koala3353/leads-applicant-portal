@@ -273,7 +273,7 @@ function drawShot(name, t, b) {
 
 /* ---- shot 1: the tape label ---- */
 function tapeShot(t, b) {
-  const { W, H } = st, lw = Math.min(W * .6, H * .85), lh = lw * .58, x = -lw / 2, y = -lh / 2, o = { w: st.lw * 1.3 };
+  const { W, H } = st, lw = H > W * 1.5 ? W * .86 : Math.min(W * .6, H * .85), lh = lw * .58, x = -lw / 2, y = -lh / 2, o = { w: st.lw * 1.3 };   // a phone held upright: use the width
   ctx.save(); ctx.translate(W / 2, H / 2 - 6 * span(t, .4, 1.4)); ctx.rotate(-3 * Math.PI / 180);   // drifts 6 px up, tilted
   wline(st, [[x, y], [x + lw, y], [x + lw, y + lh], [x, y + lh]], 1, b, Object.assign({ close: true }, o));
   wline(st, [[x, y + lh * .2], [x + lw, y + lh * .2]], 2, b);
@@ -337,7 +337,7 @@ function fillShot(t) {
 
 /* ---- the LEADS eye, from the grain ---- */
 function leadsShot(t, b) {
-  const { W, H, u } = st, tt = Math.min(t, END) - LEADS, ew = Math.min(W * .25, u * .3, H * .25), cy = H * .4, sc = 1 + .02 * ease(tt / (END - LEADS));
+  const { W, H, u } = st, tt = Math.min(t, END) - LEADS, ew = H > W * 1.5 ? W * .4 : Math.min(W * .25, u * .3, H * .25), cy = H * .4, sc = 1 + .02 * ease(tt / (END - LEADS));   // upright phone: a bigger eye
   ctx.save(); ctx.translate(W / 2, cy); ctx.scale(sc, sc); ctx.translate(-W / 2, -cy);
   wordEye(st, { cx: W / 2, cy, w: ew, open: .18 + .82 * span(t, 8.3, 8.7), id: 300, b, a: span(tt, 0, .6), irisFill: span(t, 8.6, 8.667) });
   ctx.restore();
@@ -384,7 +384,7 @@ function play(withSound) {
   if (!frozen) A.begin(withSound);   // after the clock starts, so the file begins at t = 0
   paintSound();
 }
-function doorPad() { const { H, W, u } = st; $('door').style.paddingTop = Math.round(H * .4 + Math.min(W * .25, u * .3, H * .25) * .7 + 30) + 'px'; }   // starts under the held eye
+function doorPad() { const { H, W, u } = st; $('door').style.paddingTop = Math.round(H * .4 + (H > W * 1.5 ? W * .4 : Math.min(W * .25, u * .3, H * .25)) * .7 + 30) + 'px'; }   // starts under the held eye
 function showDoor() {
   mode = 'door'; idleT0 = performance.now(); cap.clear(); A.fade();
   $('gate').hidden = true; $('ctl').classList.add('gone');

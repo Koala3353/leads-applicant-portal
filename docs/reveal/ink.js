@@ -392,7 +392,7 @@ export function filmAudio(url, clock) {
   A.set = want => {
     if (!ac) return false;
     on = !!want;
-    if (on) { level(1); if (!src) sync(); else if (ac.state === 'suspended') Promise.resolve(ac.resume()).catch(noop); } else level(0);
+    if (on) { level(1); if (ac.state === 'suspended') Promise.resolve(ac.resume()).catch(noop); if (!src) sync(); } else level(0);   // resume inside the tap: that is what unlocks sound on phones
     return on;
   };
   A.toggle = () => A.set(!on);

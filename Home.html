@@ -1979,11 +1979,15 @@
         ready = true;
         veil.classList.add('on'); try { frame.focus(); } catch (err) { /* fine */ }   // only now does it cover the hub
         if (window.HubSound) HubSound.film(true);   // the film has its own sound
-        maxTimer = setTimeout(close, 45000);   // the film is ~10 s plus its end card; never strand anyone behind it
+        maxTimer = setTimeout(close, 45000);   // the film is ~11 s plus its end card; never strand anyone behind it (its gate sends a keep-alive)
         // sound: the film starts with sound when the hub's sound is on (the tap that got them here lets it play)
         frame.contentWindow.postMessage({ type: 'leads-reveal-init', id: a ? a.id : 'APP-0000', nick: a ? a.firstName : 'Preview',
           stamp: 'ACCEPTED', sound: !window.HubSound || HubSound.wanted() }, origin);   // own: the portal shows ACCEPTED/CONFIRMED; preview: the core team
         if (own && !marked) { marked = true; window.runServer('home_revealSeen').catch(() => {}); }
+        // their own eye-scan photo for the film's mirror ("That one is you."); arrives while they read the film's gate
+        if (own) window.runServer('home_revealEye').then(r => {
+          if (r && r.src) try { frame.contentWindow.postMessage({ type: 'leads-reveal-eye', src: r.src }, origin); } catch (err) { /* fine */ }
+        }).catch(() => {});
       } else if (d.type === 'leads-reveal-replay') { clearTimeout(maxTimer); maxTimer = setTimeout(close, 45000); }   // a replay gets the full time again
       else if (d.type === 'leads-reveal-done') close();
     };
