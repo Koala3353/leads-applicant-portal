@@ -75,12 +75,13 @@ These render correctly in Gmail on iPhone (dark and light), Apple Mail and Gmail
   (script `1nvIOCr1LlwT4zghdqtmO-DWqrgaaxxBNOy_o6SHHnJqpx-KUV7taFqgo`): Nathan's results designs, the reference the above was built from.
 - **`Launch.js`** in the same project: the application launch blast, the first email that got this right.
 - **`Combined Email Sender.js`** in the results project (`1QYum8uOMnBz3B8rjjT0fMf48XTZH5XSQWqryWNxhpZi_4sPqx7sYgFDc`): the scheduled
-  results blast (tracker lists, release ticks, scheduling). Since Nov 14 2026 it sends Nathan's design (one shared shell,
-  `mailShell_`, plus `mailKit_` helpers; `buildHtml_(p, type)` writes only each letter). Edit the words there: this is what goes out.
+  results blast (tracker lists, release ticks, scheduling). Since Nov 14 2026 its `buildHtml_(p, type)` calls Nathan's own
+  `buildHtml3_/4_/5_`, copied verbatim into the file. Edit only the words there: this is what goes out.
 
-**Buttons (Nov 14 2026):** the main action is a solid red rubber stamp (`background-color:#a32620`, the tested exception, square
-corners, a 1px dashed cream inner line, label + →, no emoji); everything else is an outlined ink stamp on the paper (2px `#a32620`
-border, rust text, **no fill at all**). Both are in `mailKit_` (results) and `payMail_html_` (payments).
+**Lesson (Nov 14 2026): don't rebuild a working email, copy it.** A from-scratch rebuild of Nathan's layout (same tiles, same
+classes) with new "stamp + ink-stamp" buttons broke in Gmail iPhone dark mode while Nathan's own files kept working. Combined now
+calls Nathan's `buildHtml3_/4_/5_` copied byte for byte (only words and links changed), and both payment emails use his original
+red stamp button again. Change words, not structure; if you must change structure, test on the iPhone before 5 people see it.
 
 Skeleton of each: Win95 title bar → REC bar → yellow case-file label + title image + red tagline → small data block on the dark
 window → manila folder with the cream paper memo (dark typed text, yellow-tile highlights, red stamp buttons) → closing line with
