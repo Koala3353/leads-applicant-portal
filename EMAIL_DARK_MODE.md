@@ -82,7 +82,7 @@ These render correctly in Gmail on iPhone (dark and light), Apple Mail and Gmail
 `<head>`, `<style>` block (the dark-mode colour classes) and the Gmail fix, so a forwarded copy goes unreadable in Gmail
 iPhone dark mode even when the original is fine. We chased "broken" emails for an afternoon this way; the same emails sent
 straight to Kristen were all readable. Every test function now sends directly to the runner AND Kristen
-(results project: `BLAST_CONFIG.TEST_ALSO`; portal: `PAYMAIL_TEST_ALSO_`). Look at a direct copy, never a forward.
+(Kristen + Lawrence; results project: `BLAST_CONFIG.TEST_ALSO`; portal: `PAYMAIL_TEST_ALSO_`). Look at a direct copy, never a forward.
 
 Skeleton of each: Win95 title bar → REC bar → yellow case-file label + title image + red tagline → small data block on the dark
 window → manila folder with the cream paper memo (dark typed text, yellow-tile highlights, red stamp buttons) → closing line with
