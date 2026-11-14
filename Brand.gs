@@ -339,6 +339,13 @@ const BRAND = {
     waitlist_pay: 'Opens if a slot frees up. You would pay by {date}.',   // Settings › WaitlistPaymentBy
     waitlist: 'Opens if a slot frees up.'
   },
+  // results phase: the status card becomes the subject's case file; one typed FINDING under the stamp (none = no line)
+  caseFile: {
+    finding: { ACCEPTED: 'Cleared for transfer to Kasile Hills.', CONFIRMED: 'Cleared. Expected on site.',
+               WAITLISTED: 'On hold. The file stays open.', WITHDRAWN: 'Withdrawn by the subject.' },
+    findingLabel: 'Finding',
+    exhibit: 'Exhibit A // CAM 03'
+  },
   // the thin strip above the cards for ACCEPTED applicants, once results are out ({date} = Manila date and time)
   dueStrip: {
     pay: 'Payment due {date}',

@@ -298,6 +298,28 @@
   @media (min-width:1280px){.wrap{max-width:1240px}}
   /* results out and nothing to act on (no file, guest, closed file): no hub of locked cards */
   body.hub-off #hub{display:none}
+  /* results phase: the status card is the subject's case file (brand book: Case File). Cream paper in a manila folder,
+     the decision stamped in ink, one typed finding, a clipped surveillance photo. Same look as the result emails. */
+  body.results #statusCard{background:var(--paper);color:var(--paper-ink);padding:22px 22px 20px;margin-left:12px;margin-right:12px;
+    box-shadow:0 0 0 10px var(--manila),0 0 0 12px var(--manila-dk),9px 11px 0 12px rgba(0,0,0,.55)}
+  body.results #statusCard::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;mix-blend-mode:multiply;background-image:var(--grunge)}
+  body.results #statusCard::before{top:-38px;left:-12px;background:var(--manila);border:0;color:#3b3220;font-family:var(--type);font-weight:400;
+    font-size:.78rem;letter-spacing:.12em;padding:6px 16px 5px;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 100%,0 100%)}
+  body.applied.results .hero > div:first-child .status{margin-top:48px}
+  body.results #statusCard #statusPill{display:none}
+  body.results #statusCard .big{margin-top:.2em;color:#1d2bd0}
+  body.results #statusCard .big.ok,body.results #statusCard .big.warn{color:#a32620}
+  body.results #statusCard #statusMsg,body.results #statusCard .cf-finding{color:var(--paper-ink);font-family:var(--type);font-size:1rem;line-height:1.6}
+  body.results #statusCard .rank{color:#7a1a14;font-family:var(--mono);font-size:.74rem}
+  body.results #statusCard .cnote{background:var(--note);box-shadow:3px 3px 0 rgba(0,0,0,.35)}
+  .cf-finding{margin:.1em 0 .7em !important;padding-bottom:6px;border-bottom:1px dashed #a8925a;font-family:var(--type) !important}
+  .cf-finding b{font:700 .7rem/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;margin-right:4px}
+  .cf-photo{float:right;position:relative;z-index:1;width:118px;margin:-6px -4px 10px 14px;padding:6px 6px 4px;background:#f6f3ea;
+    box-shadow:2px 3px 0 rgba(0,0,0,.35);rotate:3.5deg}
+  .cf-photo::before{content:"";position:absolute;top:-10px;left:18px;width:12px;height:30px;border:2.5px solid #8a8a8a;border-radius:6px;border-bottom-color:transparent;rotate:-8deg}
+  .cf-photo .reye{--s:100%;filter:grayscale(1) contrast(1.15)}
+  .cf-photo figcaption{margin-top:4px;font:400 .58rem/1.2 var(--type);letter-spacing:.08em;text-transform:uppercase;color:#4a4436;text-align:center}
+  @media (max-width:480px){ .cf-photo{width:88px;margin-left:10px} body.results #statusCard{padding:18px 16px 16px} }
   /* the core team's ?viewas= preview */
   .preview-bar{position:sticky;top:0;z-index:70;margin:0;padding:6px 12px;background:var(--danger);color:#fff;text-align:center;
     font:700 .72rem/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;overflow-wrap:anywhere}
@@ -833,8 +855,10 @@
         <a class="access-door" id="accessDoor" href="#" target="_top" hidden>&#9656; <?= BRAND.door ?></a>
       </div>
       <div class="card status" id="statusCard" aria-live="polite">
+        <figure class="cf-photo" id="cfPhoto" aria-hidden="true" hidden><span class="reye" data-watch style="--d:-2.2s"><span class="reye-ball"><i></i></span></span><figcaption><?= BRAND.caseFile.exhibit ?></figcaption></figure>
         <span class="pill" id="statusPill">your application</span>
         <p class="big" id="statusBig"></p>
+        <p class="cf-finding" id="cfFinding" hidden><b><?= BRAND.caseFile.findingLabel ?>:</b> <span></span></p>
         <p id="statusMsg"></p>
         <a class="btn status-act" id="statusAct" target="_blank" rel="noopener" hidden></a>
         <p class="mono rank" id="statusRank" hidden></p>
@@ -1084,7 +1108,8 @@
     }
     (function loop() {
       setTimeout(() => {
-        const busy = document.hidden || document.getElementById('ld').classList.contains('on') || document.documentElement.classList.contains('calm');
+        const busy = document.hidden || document.getElementById('ld').classList.contains('on') || document.documentElement.classList.contains('calm') ||
+          !!document.querySelector('.reveal-veil, .bcast-veil');   // never while a film or a broadcast card is up
         if (!busy) { (turn++ % 2 ? interrupt : whisper)(); if (window.Kuya && turn % 3 === 0) window.Kuya.say(['scared', 'You saw that too. Noted.'], 4000); }
         loop();
       }, wait());
@@ -1104,7 +1129,8 @@
     const fill = l => l.replace('{name}', nm()).replace('{name}'.toUpperCase(), nm().toUpperCase());
     const calmOn = () => document.documentElement.classList.contains('calm');
     const busy = () => calmOn() || document.hidden || document.getElementById('ld').classList.contains('on') ||
-      !!document.querySelector('dialog[open]') || $('interrupt').classList.contains('on') || !!document.querySelector('.creep-pop.on');
+      !!document.querySelector('dialog[open]') || $('interrupt').classList.contains('on') || !!document.querySelector('.creep-pop.on') ||
+      !!document.querySelector('.reveal-veil, .bcast-veil');   // the film's clicks happen inside its frame: don't pop up over it
 
     /* the alert window */
     let pop = null, popTimer = null;
@@ -1293,7 +1319,8 @@
       idleT = setTimeout(goIdle, 45000);
     }
     function goIdle() {
-      if (document.hidden || document.querySelector('dialog[open]') || $('ld').classList.contains('on')) { idleT = setTimeout(goIdle, 10000); return; }
+      // not while a film or broadcast card is up (clicks inside the film's frame never reach this page)
+      if (document.hidden || document.querySelector('dialog[open], .reveal-veil, .bcast-veil') || $('ld').classList.contains('on')) { idleT = setTimeout(goIdle, 10000); return; }
       isIdle = true;
       log('SUBJECT STOPPED MOVING. 45 SECONDS.');
       if (!quiet()) document.body.classList.add('idle');
@@ -1303,6 +1330,7 @@
     window.addEventListener('scroll', activity, { passive: true });
     window.addEventListener('keydown', activity);
     activity();
+    window.Obs.wake = activity;   // the results film calls this when it closes: a fresh 45 s, no SUBJECT INACTIVE on the way back
 
     /* sound for the rare face (only possible after the subject has clicked or tapped somewhere) */
     let audio = null;
@@ -1612,6 +1640,8 @@
     const c = Object.assign({}, card, { sub: String(card.sub || '').replace('{id}', a.id) });
     const key = 'leads-bcast-' + a.id + '-' + a.status;
     try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch (e) { return; }
+    // the results film plays now (first visit, or the email's ?reveal=1): it IS the announcement, so no card on top of it
+    if (a.reveal && (a.reveal.play || document.body.dataset.reveal === '1')) return;
     setTimeout(() => Broadcast.show(c), 900);
   }
 
@@ -1742,6 +1772,10 @@
       // a note the core team typed in Applicants › MessageToApplicant (plain text, line breaks kept)
       $('statusNoteText').textContent = a.message || ''; $('statusNote').hidden = !a.message;
       try { renderWaitlist(ctx); } catch (e) { console.error(e); }
+      // results phase: the case file's finding line and photo (no staring photo on a closed file)
+      const finding = R ? (BRAND.caseFile.finding || {})[a.status] : '';
+      $('cfFinding').hidden = !finding; if (finding) $('cfFinding').querySelector('span').textContent = finding;
+      $('cfPhoto').hidden = !R || a.status === 'REJECTED' || a.status === 'WITHDRAWN';
       const T = BRAND.trackLabels;
       [['trStatus', a.status, a.status], ['trReq', a.requirements, T.requirements[a.requirements]], ['trPay', a.payment, T.payment[a.payment]]].forEach(([id, v, label]) => {
         $(id).textContent = label || v;
@@ -2128,7 +2162,8 @@
     veil.append(frame); document.body.append(veil);
     let ready = false, marked = false, maxTimer = 0;
     const close = () => { window.removeEventListener('message', onMsg); document.removeEventListener('keydown', onKey); clearTimeout(maxTimer);
-      veil.classList.remove('on'); setTimeout(() => veil.remove(), 400); if (window.HubSound) HubSound.film(false); };
+      veil.classList.remove('on'); setTimeout(() => veil.remove(), 400); if (window.HubSound) HubSound.film(false);
+      if (window.Obs && Obs.wake) Obs.wake(); };
     const onKey = e => { if (e.key === 'Escape') close(); };
     const onMsg = e => {
       if (e.origin !== origin || e.source !== frame.contentWindow) return;
