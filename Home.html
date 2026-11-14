@@ -294,6 +294,10 @@
   body.file-closed .path{grid-template-columns:repeat(2,1fr)}
   body.file-closed .path li[data-step="payment"],body.file-closed .path li[data-step="requirements"],body.file-closed .path li[data-step="confirmed"]{display:none}
   .clock.no-units .units{display:none}
+  /* laptops and up: Home uses more of the screen (the shared .wrap stops at 1080px) */
+  @media (min-width:1280px){.wrap{max-width:1240px}}
+  /* results out and nothing to act on (no file, guest, closed file): no hub of locked cards */
+  body.hub-off #hub{display:none}
   /* the core team's ?viewas= preview */
   .preview-bar{position:sticky;top:0;z-index:70;margin:0;padding:6px 12px;background:var(--danger);color:#fff;text-align:center;
     font:700 .72rem/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;overflow-wrap:anywhere}
@@ -912,7 +916,7 @@
 <div class="ticker" aria-hidden="true"><div id="tick"></div></div>
 
 <div class="wrap">
-  <section aria-labelledby="hubTitle">
+  <section aria-labelledby="hubTitle" id="hub">
     <div class="hub-head">
       <p class="eyebrow"><?= BRAND.hub.eyebrow ?></p>
       <h2 id="hubTitle" class="rgb"><?= BRAND.hub.title ?></h2>
@@ -1553,11 +1557,13 @@
     ds.hidden = true;
     if (!ctx.resultsReleased || !a || (a.status !== 'ACCEPTED' && a.status !== 'CONFIRMED')) return;
     let text = '', page = 'pay', tone = '';
-    if (a.payment === 'NONE') text = dls.payment ? D.pay.replace('{date}', whenShort(dls.payment)) : D.payNoDate;
+    // the countdown already shows the payment / PNF-D&U deadline when it has one: the strip only says what it doesn't
+    const ahead = iso => iso && new Date(iso).getTime() > Date.now();
+    if (a.payment === 'NONE') text = ahead(dls.payment) ? '' : D.payNoDate;
     else if (a.payment === 'REJECTED') { text = dls.payment ? D.payRejected.replace('{date}', whenShort(dls.payment)) : D.payNoDate; tone = 'warn'; }
     else if (a.payment === 'SUBMITTED') { text = D.paySent; tone = 'wait'; }
     else if (a.payment === 'VERIFIED' && a.requirements !== 'SUBMITTED' && a.requirements !== 'APPROVED') {
-      page = 'reqs'; text = dls.requirements ? D.reqs.replace('{date}', whenShort(dls.requirements)) : D.reqsNoDate;
+      page = 'reqs'; text = ahead(dls.requirements) ? '' : D.reqsNoDate;
     }
     if (!text) return;
     $('dueText').textContent = text;
@@ -1747,6 +1753,7 @@
     const fileClosed = R && !!a && (a.status === 'REJECTED' || a.status === 'WITHDRAWN');
     document.body.classList.toggle('file-closed', fileClosed);
     if (fileClosed) $('hubNote').textContent = BRAND.hub.closedNote;
+    document.body.classList.toggle('hub-off', R && !ctx.isAdmin && (!a || fileClosed));
     try { renderDueStrip(ctx); } catch (e) { console.error(e); }
     try { renderReferral(R ? null : ctx.referral); } catch (e) { console.error(e); }
     try {   // Pre-LEADS banner: hidden after its date and for confirmed campers (copy + date in BRAND.preleadsBanner)
@@ -1788,7 +1795,7 @@
       const one = matchMedia('(max-width:860px)');
       const place = () => {
         if (!left || !right) return;
-        if (one.matches) left.append($('statusCard'), $('refCard'));
+        if (one.matches || $('refCard').hidden) left.append($('statusCard'), $('refCard'));   // no referral (results out): the status card fills the left column
         else { left.append($('refCard')); $('substatCard').after($('statusCard')); }
       };
       place();
@@ -1923,6 +1930,7 @@
 
     const endPrimary = new Date(primary.deadline);
     $('clockTitle').textContent = primary.title;
+    if (R) primary.badge = primary.dim ? C0.lockedPill : primary.kicker;   // results phase: the step's label (its status is on the cards)
     pill.textContent = primary.badge;
     const okPill = primary.isOpen && !primary.dim;
     pill.className = 'pill ' + (okPill ? 'ok' : 'dim');

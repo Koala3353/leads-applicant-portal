@@ -109,7 +109,7 @@ const BRAND = {
       apply: { title: 'Time left to decide', kicker: '01 · APPLICATION' },
       pay:   { title: 'Proof of payment due', kicker: '02 · PAYMENT' },
       reqs:  { title: 'Requirements due', kicker: '03 · REQUIREMENTS' },
-      camp:  { title: 'Camp starts in', kicker: 'CAMP · KASILE HILLS', label: 'Camp: ', now: 'Camp is in session' },
+      camp:  { title: 'Camp starts in', kicker: 'CAMP', label: 'Camp: ', now: 'Camp is in session' },
       // results phase (Settings › ResultsReleased): each person's next date on their own timeline. Dates: Settings
       // GADate, RoomBookingOpens, WaitlistReplyBy, WaitlistPaymentBy (blank = skipped)
       ga:    { title: '1st General Assembly in', kicker: '04 · 1ST GA', label: '1st GA: ', now: 'The 1st GA is on' },
@@ -141,7 +141,7 @@ const BRAND = {
     applyClosedPill: 'applications closed',
     loading: 'loading',
     endedTitle: 'File closed',
-    endedText: 'Observation concluded. Thank you for applying.',
+    endedText: 'Observation concluded.',
     // I.R.I.S. as a deadline gets close ({step} = the step's title)
     alarms: {
       t72: ['thinking', '{step}: three days left.'],
@@ -350,9 +350,9 @@ const BRAND = {
   },
   // WAITLISTED status card, once results are out: reply by Settings › WaitlistReplyBy (to Settings › ContactEmail)
   waitlist: {
-    reply: 'Reply to the results email by {date} to stay on the waitlist.',
+    reply: 'To keep your place, reply to the results email by {date}.',
     replyClosed: 'The reply window closed on {date}. If a slot opens, the core team emails you.',
-    button: 'Reply to stay on the waitlist',
+    button: 'Reply by email',
     subject: 'Joining the LEADS 2627 waitlist ({id})',
     body: 'Yes, I would like to be included in the waitlist for LEADS 2627.\n\nName: {name}\nApplicant ID: {id}'
   },
@@ -360,9 +360,9 @@ const BRAND = {
   statusCopy: {
     'SUBMITTED':    'We got your application. Someone from the core team will read it soon.',
     'UNDER REVIEW': 'The core team is reading your file. Nothing to do yet. We will tell you when it is your move.',
-    'WAITLISTED':   "You're on the waitlist. Joining it does not guarantee a slot, but slots do open.",
-    'ACCEPTED':     "You're accepted. Next: pay and upload your proof of payment. Requirements open once your payment is verified.",
-    'REJECTED':     "We're sorry. After a full assessment of this cycle's applicants, we cannot offer you a slot for LEADS 2627. Capacity is limited, and we could not accommodate everyone. Thank you for trusting us with your reflection. Observation concluded. File closed.",
+    'WAITLISTED':   "You're on the waitlist. It does not guarantee a slot, but slots do open.",
+    'ACCEPTED':     "You're accepted. We saw something in your file. Now show us what you do with it.",   // the steps are on the cards and the countdown; don't repeat them here
+    'REJECTED':     "We're sorry. After a full assessment of this cycle's applicants, we cannot offer you a slot for LEADS 2627. Capacity is limited, and we could not accommodate everyone. Thank you for trusting us with your reflection.",   // the clock already says File closed / Observation concluded
     'CONFIRMED':    "You're in. See you at camp.",
     'WITHDRAWN':    'You withdrew. Your file is closed. Message the core team if you have questions.'
   },
@@ -533,8 +533,8 @@ const BRAND = {
       'SUBMITTED':    ['happy',    'File received. You are on record now. Please remain seated.'],
       'UNDER REVIEW': ['thinking', "Your file is open on someone's desk. Nothing to do yet. Breathe."],
       'WAITLISTED':   ['thinking', 'Waitlisted. Your file stays open. So does the door.'],
-      'ACCEPTED':     ['excited',  'Subject cleared. Next: payment, then requirements. Your file is ready.'],
-      'REJECTED':     ['sad',      'Not this time. Thank you for letting us look.'],   // no promise to keep the file (the rejection email)
+      'ACCEPTED':     ['excited',  'Subject cleared. Your file is ready.'],
+      'REJECTED':     ['sad',      'Not this time. Take care of yourself out there.'],   // no promise to keep the file (the rejection email)
       'CONFIRMED':    ['love',     'Confirmed. We have been watching. We will see you at camp.'],
       'WITHDRAWN':    ['sad',      'You withdrew. Your file is closed. Message the core team if you have questions.']
     },
