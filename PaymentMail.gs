@@ -180,6 +180,25 @@ function payMail_sendPending_() {
   return sent;
 }
 
+/**
+ * Run from the editor (dark-mode A/B, Nov 14 2026): the "payment verified" email twice, to you only.
+ * A = the core team's HTML exactly as designed. B = the same plus ONE line at the top of <style>: the Google Fonts
+ * @import that Nathan's blast emails have (the only difference found between his emails, which stay readable in Gmail
+ * iPhone dark mode, and ours, whose paper text turned white). Open both in Gmail on an iPhone with dark mode on.
+ */
+function payMail_testDarkAB() {
+  ownerOnly_();
+  const me = String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
+  const a = { ApplicantID: 'APP-0000', Nickname: 'Sample', FullName: 'Applicant, Sample', Email: me };
+  const v = payMail_vars_(a, 'verified'), html = payMail_verifiedHtml_(v);
+  const imp = "@import url('https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;700;800&family=Special+Elite&family=VT323&family=Courier+Prime:wght@400;700&display=swap');\n  ";
+  const b = html.replace('<style>\n', '<style>\n  ' + imp);
+  if (b === html) throw new Error('No <style> block found to add the @import to.');
+  MailApp.sendEmail(me, '[A] as designed · dark mode test', 'Open in Gmail on iPhone, dark mode on.', { name: 'I.R.I.S. // LEADS 2627', htmlBody: html });
+  MailApp.sendEmail(me, '[B] + @import · dark mode test', 'Open in Gmail on iPhone, dark mode on.', { name: 'I.R.I.S. // LEADS 2627', htmlBody: b });
+  return 'A and B sent to ' + me;
+}
+
 /** Run from the editor: sends both emails to you (your own file's data if you applied, else a sample). */
 function payMail_test() {
   ownerOnly_();
