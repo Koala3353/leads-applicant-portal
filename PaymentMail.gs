@@ -19,7 +19,7 @@ const PAYMAIL_DOOR_ = 'https://koala3353.github.io/leads-applicant-portal/go/'; 
 const PAYMAIL_PER_RUN_ = 40;
 // payMail_test / payMail_testDarkAB also send straight to these (a forwarded copy loses its <style> block, so it can't
 // show how Gmail dark mode really renders the email)
-const PAYMAIL_TEST_ALSO_ = ['kristen.mikayla.chua@student.ateneo.edu'];
+const PAYMAIL_TEST_ALSO_ = ['kristen.mikayla.chua@student.ateneo.edu', 'lawrence.ng@student.ateneo.edu'];
 function payMail_testTo_(me) { return [me].concat(PAYMAIL_TEST_ALSO_.filter(x => x && x.toLowerCase() !== me)); }
 // the "payment verified" email's drop-off date when Settings › RequirementsDeadline is blank (the core team's template)
 const PAYMAIL_DUE_DEFAULT_ = { short: 'November 27, 5PM', long: 'November 27, 2026 &middot; 5:00 PM' };   // verified emails per run (MailApp is ~1 s each); the rest go out on the next run, 5 minutes later
