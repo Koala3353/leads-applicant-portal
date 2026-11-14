@@ -54,8 +54,14 @@ const COLS = [
   'EyePhoto',                                                             // Drive link to the eye-scan photo from the Game (GameApi.gs)
   'OnsiteSubmitted',                                                      // requirements the applicant says they dropped off onsite, "PNF; DNU" (StepsApi.gs)
   'FinAidScholar',                                                        // optional self-declared checkbox on Apply: "Yes" or blank
-  'PaymentVerifiedMail'                                                   // when the "payment verified" email went out (PaymentMail.gs); blank = not yet
+  'PaymentVerifiedMail',                                                  // when the "payment verified" email went out (PaymentMail.gs); blank = not yet
+  'LastDayUpperclassmen'                                                  // LeProg's question on the payment page (Nov 14 2026): the upperclassmen they'd spend their last day with
 ];
+
+/** Settings › ContactEmail as a clean list of addresses (it may hold several, comma- or space-separated). */
+function contactEmails_() {
+  return String(getSetting_('ContactEmail') || '').split(/[,;\s]+/).map(x => x.trim()).filter(x => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x));
+}
 
 /** The Applicants header row as it is in the Sheet right now (read once per run). Falls back to COLS on an empty tab. */
 function cols_() {
@@ -253,7 +259,7 @@ const SETTINGS_SCHEMA = [
   { key: 'Deadline', type: 'date', def: null, help: 'Application form closes after this (Manila time)' },
   { key: 'AllowedEmailDomains', type: 'text', def: '', help: 'Comma-separated. Only these accounts can apply. Blank = student.ateneo.edu, ateneo.edu.' },
   { key: 'ApplicantIdStart', type: 'int', def: 2300, help: 'Applicant IDs start above this number (default 2300) and skip ahead randomly, so IDs never show how many applied.' },
-  { key: 'ContactEmail', type: 'text', def: '', help: 'Core team email shown in the footer (leave blank to hide)' },
+  { key: 'ContactEmail', type: 'text', def: '', help: 'Core team email(s) shown in the footer and used as Reply-To; several = comma-separated (leave blank to hide)' },
   { key: 'ResultsReleased', type: 'bool', def: false, help: 'Tick to show decisions to applicants. Unticked = ACCEPTED, WAITLISTED, REJECTED and CONFIRMED all show as UNDER REVIEW in the portal, and payment stays locked.' },
   { key: 'StatusReportEmail', type: 'text', def: 'brigadokeene@gmail.com, lawrence.ng@student.ateneo.edu', help: 'Comma-separated. Gets the 8 AM daily status report (new applications, flagged ones, errors, issue reports) and an alert when the same problem happens 3 times in a day. Blank = brigadokeene@gmail.com.' },
   { key: 'RevealUrl', type: 'text', def: 'https://koala3353.github.io/leads-applicant-portal/reveal/', help: 'The results reveal film (docs/reveal in the GitHub repo). Plays once, full screen, for ACCEPTED applicants after ResultsReleased; the email link is the portal link + ?reveal=1. Blank = the default; off = no reveal.' },

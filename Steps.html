@@ -124,9 +124,16 @@
   .s-field{display:flex;flex-direction:column;gap:6px;margin:0 0 14px;min-width:0;text-align:left}
   .s-field label{font-family:var(--mono);font-size:.76rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
   .s-field label .req{color:var(--danger,#e00000);margin-left:2px}
-  .s-field input[type=text],.s-field input[type=tel]{width:100%;font:inherit;font-size:16px;color:var(--text);background:#060606;border:2px inset #7a7a7a;border-radius:0;padding:.65em .8em;min-height:44px}
+  .s-field input[type=text],.s-field input[type=tel],.s-field textarea{width:100%;font:inherit;font-size:16px;color:var(--text);background:#060606;border:2px inset #7a7a7a;border-radius:0;padding:.65em .8em;min-height:44px}
   .s-field input:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
-  .s-field.has-error input{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger)}
+  .s-field textarea{min-height:110px;resize:vertical;line-height:1.5}
+  .ld-copy{text-align:left;margin:0 0 14px;display:grid;gap:8px}
+  .ld-copy p{margin:0}
+  .ld-copy .ld-q{color:var(--text);font-weight:700}
+  .ld-copy .ld-hint,.ld-copy .ld-tag{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+  .ld-copy .ld-tag{font-style:italic}
+  .s-field textarea:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+  .s-field.has-error input,.s-field.has-error textarea{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger)}
   .s-field .err{color:var(--danger);font-family:var(--mono);font-size:.74rem;display:none;margin-top:2px}
   .s-field.has-error .err{display:block}
   .ec-summary{display:grid;gap:8px;font-family:var(--mono);font-size:.82rem;margin:12px 0 16px;padding:12px 14px;background:rgba(0,0,0,.35);border:1px dashed var(--line);text-align:left}
@@ -243,24 +250,38 @@
           <span class="err" id="err-ecMobile"></span>
         </div>
 
-        <p class="s-sec-title">02 // Proof of Payment</p>
+        <p class="s-sec-title"><?= BRAND.steps.pay.lastDay.title ?></p>
+        <div class="ld-copy">
+          <p><?= BRAND.steps.pay.lastDay.lead ?></p>
+          <p class="ld-q"><?= BRAND.steps.pay.lastDay.question ?></p>
+          <p class="ld-hint"><?= BRAND.steps.pay.lastDay.hint ?></p>
+          <p class="ld-tag"><?= BRAND.steps.pay.lastDay.tag ?></p>
+        </div>
+        <div class="s-field" id="field-lastDay">
+          <label for="lastDay"><?= BRAND.steps.pay.lastDay.label ?> <span class="req">*</span></label>
+          <textarea id="lastDay" rows="3" maxlength="1000" placeholder="<?= BRAND.steps.pay.lastDay.placeholder ?>" required></textarea>
+          <span class="err" id="err-lastDay"></span>
+        </div>
+
+        <p class="s-sec-title">03 // Proof of Payment</p>
         <label class="drop" id="drop">
           <input type="file" id="proof" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" aria-describedby="upHint">
           <span id="dropInner"><b>Choose a file</b><br><small id="upHint"><?= BRAND.steps.pay.upHint ?></small></span>
         </label>
-        <div class="s-actions"><button class="btn" type="submit" id="upBtn" disabled>Send proof & contact</button></div>
+        <div class="s-actions"><button class="btn" type="submit" id="upBtn" disabled>Send proof & details</button></div>
       </form>
 
       <!-- shown when emergency contact is on record or when payment is verified -->
       <div class="card s-card" id="ecCard" hidden>
         <div class="winbar"><span>EMERGENCY_CONTACT.LOG</span><i><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
-        <h2>Emergency Contact</h2>
+        <h2>Your Details</h2>
         <div class="ec-summary">
           <p><span>Contact:</span> <b id="sumEcName">—</b></p>
           <p><span>Relationship:</span> <b id="sumEcRelation">—</b></p>
           <p><span>Mobile:</span> <b id="sumEcMobile">—</b></p>
+          <p><span><?= BRAND.steps.pay.lastDay.summary ?>:</span> <b id="sumLastDay">—</b></p>
         </div>
-        <div class="s-actions"><button class="btn ghost" type="button" id="editEcBtn">Update contact details</button></div>
+        <div class="s-actions"><button class="btn ghost" type="button" id="editEcBtn">Update details</button></div>
       </div>
     </div>
   </div>
@@ -409,6 +430,8 @@
       $('sumEcName').textContent = ec.name || '—';
       $('sumEcRelation').textContent = ec.relation || '—';
       $('sumEcMobile').textContent = ec.mobile || '—';
+      if (!$('lastDay').value) $('lastDay').value = c.lastDay || '';
+      $('sumLastDay').textContent = c.lastDay || '—';
       $('ecCard').hidden = false;
     } else {
       $('ecCard').hidden = true;
@@ -428,13 +451,13 @@
   function updateSubmitBtn() {
     const btn = $('upBtn');
     if (picked) {
-      btn.textContent = 'Send proof & contact';
+      btn.textContent = 'Send proof & details';
       btn.disabled = false;
     } else if (hasExistingProof) {
-      btn.textContent = 'Update contact details';
+      btn.textContent = 'Update details';
       btn.disabled = false;
     } else {
-      btn.textContent = 'Send proof & contact';
+      btn.textContent = 'Send proof & details';
       btn.disabled = true;
     }
   }
@@ -533,6 +556,7 @@
     const name = $('ecName').value.trim();
     const rel = $('ecRelation').value.trim();
     const mob = $('ecMobile').value.trim();
+    const lastDay = $('lastDay').value.trim();
 
     const setErr = (id, msg) => {
       const f = $('field-' + id), e = $('err-' + id);
@@ -543,8 +567,9 @@
     setErr('ecName', (!name || name.length < 2) ? 'Please enter the contact\'s full name (at least 2 letters).' : '');
     setErr('ecRelation', (!rel || rel.length < 2) ? 'Please specify the relationship (e.g. Parent, Guardian, Sibling).' : '');
     setErr('ecMobile', !/^09\d{9}$/.test(mob) ? 'Must be an 11-digit mobile starting with 09 (e.g. 09171234567).' : '');
+    setErr('lastDay', lastDay.length < 3 ? T.pay.lastDay.error : '');
 
-    return ok ? { name: name, relation: rel, mobile: mob } : null;
+    return ok ? { name: name, relation: rel, mobile: mob, lastDay: lastDay } : null;
   }
 
   // Large photos are shrunk in the browser first (phones take 5+ MB pictures): faster upload, well under the limit.
@@ -601,15 +626,15 @@
     e.preventDefault();
     const ec = validateEc();
     if (!ec) {
-      const firstErr = $('upForm').querySelector('.has-error input');
+      const firstErr = $('upForm').querySelector('.has-error input, .has-error textarea');
       if (firstErr) firstErr.focus();
-      return msg('Please complete the emergency contact fields correctly.', 'bad');
+      return msg('Please complete the fields marked in red.', 'bad');
     }
     if (!picked && !hasExistingProof) return msg('Please attach your proof of payment.', 'bad');
 
     const firstProof = !hasExistingProof;   // the receipt film plays only for the first proof
-    $('upBtn').disabled = true; msg(picked ? 'Filing your proof and contact…' : 'Updating emergency contact…');
-    if (window.Loader) Loader.show(picked ? 'Filing your proof & contact…' : 'Saving emergency contact…');
+    $('upBtn').disabled = true; msg(picked ? 'Filing your proof and details…' : 'Updating your details…');
+    if (window.Loader) Loader.show(picked ? 'Filing your proof & details…' : 'Saving your details…');
 
     const sendPayload = (data) => {
       call('steps_uploadProof', {
@@ -621,12 +646,12 @@
         if (window.Loader) Loader.hide();
         if (!r || !r.ok) { $('upBtn').disabled = false; return msg((r && r.error) || 'That did not go through. Try again.', 'bad'); }
         const sent = picked;   // the file that just went in (null: only the contact changed)
-        kuya('happy', sent ? T.pay.sent : 'Emergency contact updated.');
+        kuya('happy', sent ? T.pay.sent : 'Details updated.');
         picked = null; $('proof').value = ''; $('drop').classList.remove('has-file');
         $('dropInner').innerHTML = '<b>Choose a file</b><br><small id="upHint">' + BRAND.steps.pay.upHint + '</small>';
         if (sent) { if (!(firstProof && playReceipt(sent))) showFiled(sent); return; }   // first proof: the receipt film; later ones: the case-file moment. The page refreshes (and says "received") on close
         load();
-        setTimeout(() => msg('Emergency contact updated.', 'good'), 900);
+        setTimeout(() => msg('Details updated.', 'good'), 900);
       }).catch(err => {
         if (window.Loader) Loader.hide();
         $('upBtn').disabled = false;

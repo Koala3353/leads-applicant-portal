@@ -1610,7 +1610,10 @@
     $('statusMsg').append(' ' + (open ? W.reply : W.replyClosed).replace('{date}', whenLong(by)));
     if (!open || !ctx.contact) return;
     const fill = t => t.replace(/\{id\}/g, a.id).replace(/\{name\}/g, a.firstName || '');
-    act.href = 'mailto:' + encodeURIComponent(ctx.contact).replace(/%40/g, '@') + '?subject=' + encodeURIComponent(fill(W.subject)) + '&body=' + encodeURIComponent(fill(W.body));
+    // Settings › ContactEmail may list several addresses: each one encoded on its own, joined with plain commas
+    const to = String(ctx.contact).split(/[,;\s]+/).filter(x => /@/.test(x)).map(x => encodeURIComponent(x).replace(/%40/g, '@')).join(',');
+    if (!to) return;
+    act.href = 'mailto:' + to + '?subject=' + encodeURIComponent(fill(W.subject)) + '&body=' + encodeURIComponent(fill(W.body));
     act.textContent = W.button;
     act.hidden = false;
   }

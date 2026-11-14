@@ -71,7 +71,8 @@ function steps_get_(page) {
       qrs: step.unlocked ? steps_qrCodes_(String(s.PaymentQRCodes || '')) : [],
       proof: String(a.PaymentProof || '') ? true : false,
       fee: fee_(a),   // { now, off, ... }: the page shows the FinAid line only when off > 0
-      emergencyContact: steps_getEmergencyContact_(a.ApplicantID, a.Email)
+      emergencyContact: steps_getEmergencyContact_(a.ApplicantID, a.Email),
+      lastDay: String(a.LastDayUpperclassmen || '')   // LeProg's question (Brand.gs › steps.pay.lastDay)
     };
   } else if (key === 'reqs') {
     const done = steps_onsiteDone_(a);
@@ -261,6 +262,7 @@ function steps_saveEmergencyContact_(contact) {
   const relation = String(contact.relation || '').trim();
   const rawMobile = String(contact.mobile || '').trim();
   const mobile = normalizeMobile_(rawMobile);
+  const lastDay = String(contact.lastDay || '').replace(/\r\n?/g, '\n').trim();
 
   if (!name || name.length < 2 || name.length > 80) {
     return { ok: false, error: 'Please enter a valid emergency contact name (2 to 80 characters).' };
@@ -270,6 +272,10 @@ function steps_saveEmergencyContact_(contact) {
   }
   if (!/^09\d{9}$/.test(mobile)) {
     return { ok: false, error: 'Emergency contact mobile must be 11 digits starting with 09 (e.g. 09171234567).' };
+  }
+
+  if (lastDay.length < 3 || lastDay.length > 1000) {
+    return { ok: false, error: 'Name at least one upperclassman for your last day (first and last name, up to 1000 characters).' };
   }
 
   const clean = { name: name, relation: relation, mobile: mobile };
@@ -303,15 +309,14 @@ function steps_saveEmergencyContact_(contact) {
     if (cHead.indexOf('EmergencyContactMobile') >= 0) extra.EmergencyContactMobile = clean.mobile;
     else if (cHead.indexOf('EmergencyMobile') >= 0) extra.EmergencyMobile = clean.mobile;
 
-    if (Object.keys(extra).length) {
-      updateApplicant_(found.row, extra, a.ApplicantID);
-    }
+    extra.LastDayUpperclassmen = lastDay;   // LeProg's question; updateApplicant_ adds the column if the sheet doesn't have it yet
+    updateApplicant_(found.row, extra, a.ApplicantID);
   });
 
   trackerEmergency_(a, clean);   // the tracker's [02.1] › Emergency Contact for this person (Tracker.gs)
   // the contact's name and number stay out of the Activity log (CHANGE rows are never trimmed; RA 10173)
   logChange_(a.ApplicantID, 'emergency contact', '', 'saved (in EmergencyContacts)', 'applicant');
-  return { ok: true, id: a.ApplicantID, contact: clean };
+  return { ok: true, id: a.ApplicantID, contact: clean, lastDay: lastDay };
 }
 
 /**

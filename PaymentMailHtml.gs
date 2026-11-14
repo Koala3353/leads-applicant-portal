@@ -91,11 +91,21 @@ function payMail_html_(kind, v) {
       button(v.button[1], btnLabel()) +
       spacer(10) + p('Please remain attentive for further instructions.', true);
   } else {
-    tagline = 'EVIDENCE RECEIVED. NEXT: YOUR REQUIREMENTS.';
-    data = meta('ID NO', ID) + meta('STATUS', '<strong class="t-red" style="color:' + C.red + ';">PROOF RECEIVED</strong>') + meta('NEXT', 'PNF + D&amp;U, DROPPED OFF IN PERSON');
+    const ready = !!v.formsReady;   // Settings › PNFLink + DULink both filled (PaymentMail.gs): the full version
+    tagline = ready ? 'EVIDENCE RECEIVED. NEXT: YOUR REQUIREMENTS.' : 'EVIDENCE RECEIVED. FOR VERIFICATION.';
+    data = meta('ID NO', ID) + meta('STATUS', '<strong class="t-red" style="color:' + C.red + ';">' + (ready ? 'PROOF RECEIVED' : 'FOR VERIFICATION') + '</strong>') +
+      meta('NEXT', ready ? 'PNF + D&amp;U, DROPPED OFF IN PERSON' : 'PNF + D&amp;U: DETAILS SOON');
     // no "this is not the confirmation yet" (core team, Nov 14 2026): they move straight on to the requirements,
     // and the core team texts anyone whose payment has a problem
-    memo = p(strong('We saw it, ' + name + '.')) +
+    if (!ready) memo = p(strong('We saw it, ' + name + '.')) +
+      p('Your proof of payment for ' + strong('EYES ON LEADS 2627') + ' is in your file now. The core team will ' + ru('verify it') + '.') +
+      kv(v.receipt) +
+      (v.finAidNote ? p(pm_hl_(pm_esc_(v.finAidNote))) : '') +
+      callout('STAY TUNED') +
+      p('The submission details for your ' + strong('PNF') + ' and ' + strong('D&amp;U') + ' come next. They will be posted on the applicant portal under ' + pm_hl_('FILE 03: REQUIREMENTS') + ', and we will let you know.', false, 4) +
+      button(v.button[1], btnLabel()) +
+      spacer(10) + p('Sent the wrong file? Upload the right one on the payment page; we check the latest one.', true);
+    else memo = p(strong('We saw it, ' + name + '.')) +
       p('Your proof of payment for ' + strong('EYES ON LEADS 2627') + ' is in your file now.') +
       kv(v.receipt) +
       (v.finAidNote ? p(pm_hl_(pm_esc_(v.finAidNote))) : '') +

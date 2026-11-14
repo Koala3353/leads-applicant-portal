@@ -75,14 +75,18 @@ function payMail_vars_(a, kind) {
     });
   }
   const rows = [['File no.', id], ['Received', when], ['Amount', php(fee.now)]];   // no notarization line (core team, Nov 14)
+  // until BOTH Settings › PNFLink and DULink are filled, the email only says: we got it, we'll verify it, stay tuned for
+  // the PNF and D&U details. Once both links are in, it is the full version (the forms, the reminders, FILE 03).
   return Object.assign(v, {
+    formsReady: both,
     subject: 'Proof received: ' + id + ' · Eyes on LEADS',
-    preheader: 'We have your proof of payment. Next: your PNF and D&U.',
+    preheader: both ? 'We have your proof of payment. Next: your PNF and D&U.'
+      : 'We have your proof of payment. The core team will verify it. Stay tuned for the PNF and D&U details.',
     windowName: 'Proof received', headline: 'Evidence received, ' + nick + '.', stamp: 'Proof received',
     receipt: rows, docs: docs, reminders: reminders, due: due,
     dateBox: due ? ['Deadline of submission', Utilities.formatDate(due, 'Asia/Manila', 'MMMM d, yyyy · h:mm a'), 'MEA Room (MVP 320) drop-off box'] : v.dateBox,
-    button: ['Open the applicant portal ↗', PAYMAIL_DOOR_ + '?page=reqs'],
-    closing: 'Finish your file.'
+    button: both ? ['Open the applicant portal ↗', PAYMAIL_DOOR_ + '?page=reqs'] : ['Check your file ↗', PAYMAIL_DOOR_ + '?page=pay'],
+    closing: both ? 'Finish your file.' : 'Your file is moving.'
   });
 }
 
@@ -124,6 +128,10 @@ function payMail_text_(kind, v) {
     const plain = h => String(h).replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&rsquo;/g, '\'');
     lines.push('We saw it. Your proof of payment for EYES ON LEADS 2627 is in your file now.', '');
     if (v.finAidNote) lines.push(v.finAidNote, '');
+    if (!v.formsReady) {
+      lines.push('The core team will verify it.', '', 'STAY TUNED: the PNF and D&U submission details will be posted on the applicant portal under FILE 03: REQUIREMENTS. We will let you know.',
+        '', 'Sent the wrong file? Upload the right one on the payment page. We check the latest one.');
+    } else {
     lines.push('NEXT: YOUR REQUIREMENTS. Prepare these two documents:');
     v.docs.forEach(d => lines.push('  ' + d.n + '  ' + d.name + ' (' + d.abbr + ')' + (d.url ? ': ' + d.url : '')));
     lines.push('', 'Important reminders:');
@@ -131,6 +139,7 @@ function payMail_text_(kind, v) {
     lines.push('', 'After you drop them off, confirm your submission on the applicant portal under FILE 03: REQUIREMENTS.',
       'If anything is off with your payment, the core team will text you.',
       'Sent the wrong file? Upload the right one on the payment page. We check the latest one.');
+    }
   }
   lines.push('');
   v.receipt.forEach(r => lines.push(r[0] + ': ' + r[1]));
@@ -147,9 +156,14 @@ function payMail_send_(a, kind) {
     if (MailApp.getRemainingDailyQuota() < 1) { activity_('payment_mail', 'daily email quota used up: ' + kind + ' email not sent to ' + a.ApplicantID, { level: 'WARN', page: 'pay' }); return false; }
     const v = payMail_vars_(a, kind);
     const opts = { name: 'I.R.I.S. // LEADS 2627', htmlBody: kind === 'verified' ? payMail_verifiedHtml_(v) : payMail_html_(kind, v) };   // PaymentMailHtml.gs: the results blasts' structure (dark-mode safe on iPhone); the sender name inboxes show
-    const reply = String(getSetting_('ContactEmail') || '').trim();
-    if (/@/.test(reply)) opts.replyTo = reply;
-    MailApp.sendEmail(to, v.subject, payMail_text_(kind, v), opts);
+    const reply = contactEmails_();   // Settings › ContactEmail may list several addresses (Utils.gs)
+    if (reply.length) opts.replyTo = reply.join(',');
+    try { MailApp.sendEmail(to, v.subject, payMail_text_(kind, v), opts); }
+    catch (err) {   // a Reply-To the mail service won't take must never stop the email: retry with the first address only
+      if (!opts.replyTo || reply.length < 2) throw err;
+      opts.replyTo = reply[0];
+      MailApp.sendEmail(to, v.subject, payMail_text_(kind, v), opts);
+    }
     activity_('payment_mail', kind + ' email sent to ' + a.ApplicantID, { page: 'pay' });
     return true;
   } catch (e) {
