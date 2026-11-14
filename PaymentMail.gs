@@ -16,7 +16,9 @@
  */
 
 const PAYMAIL_DOOR_ = 'https://koala3353.github.io/leads-applicant-portal/go/';   // the door page: gets people out of Gmail's in-app browser
-const PAYMAIL_PER_RUN_ = 40;   // verified emails per run (MailApp is ~1 s each); the rest go out on the next run, 5 minutes later
+const PAYMAIL_PER_RUN_ = 40;
+// the "payment verified" email's drop-off date when Settings › RequirementsDeadline is blank (the core team's template)
+const PAYMAIL_DUE_DEFAULT_ = { short: 'November 27, 5PM', long: 'November 27, 2026 &middot; 5:00 PM' };   // verified emails per run (MailApp is ~1 s each); the rest go out on the next run, 5 minutes later
 
 /** Everything the email (payMail_html_ in PaymentMailHtml.gs) shows. a = an Applicants row (data object). */
 function payMail_vars_(a, kind) {
@@ -33,7 +35,7 @@ function payMail_vars_(a, kind) {
   const dates = String(s.EventDates || '').trim() || 'January 29 to 31, 2027';
   const venue = String(s.EventVenue || '').trim() || 'Kasile Hills Nature Resort';
   const v = {
-    id: id, nickUpper: nick.toUpperCase(), dates: dates, venue: venue,
+    id: id, nick: nick, nickUpper: nick.toUpperCase(), dates: dates, venue: venue,
     contacts: contactsInline_(portalContacts_()),
     finAidNote: finAidNote,
     dateBox: ['Event dates', dates, venue]
@@ -76,6 +78,27 @@ function payMail_vars_(a, kind) {
   });
 }
 
+/**
+ * The "payment verified" email: the core team's own HTML (PaymentVerifiedMail.html, Nov 14 2026), sent as written.
+ * Only its placeholders are filled: [NAME] = nickname, [PNF_URL] / [DU_URL] = Settings › PNFLink / DULink (blank = the
+ * portal's requirements page, where the PDFs get posted), [PORTAL_URL] = the door page to FILE 03, [DUE_SHORT] /
+ * [DUE_LONG] = Settings › RequirementsDeadline, else the template's own November 27, 5 PM.
+ */
+function payMail_verifiedDue_(v) {
+  if (!v.due) return PAYMAIL_DUE_DEFAULT_;
+  const f = p => Utilities.formatDate(v.due, 'Asia/Manila', p);
+  return { short: f('MMMM d, h:mm a'), long: f('MMMM d, yyyy') + ' &middot; ' + f('h:mm a') };
+}
+function payMail_verifiedHtml_(v) {
+  const reqs = PAYMAIL_DOOR_ + '?page=reqs', due = payMail_verifiedDue_(v);
+  const url = abbr => { const d = (v.docs || []).find(x => x.abbr === abbr); return d && d.url ? d.url : reqs; };
+  const fill = { '[NAME]': pm_esc_(v.nick), '[PNF_URL]': pm_esc_(url('PNF')), '[DU_URL]': pm_esc_(url('D&U')),
+                 '[PORTAL_URL]': pm_esc_(v.button[1]), '[DUE_SHORT]': due.short, '[DUE_LONG]': due.long };
+  let html = HtmlService.createHtmlOutputFromFile('PaymentVerifiedMail').getContent();
+  Object.keys(fill).forEach(k => { html = html.split(k).join(fill[k]); });
+  return html;
+}
+
 /** The same email as plain text, for mail apps that don't show HTML. */
 function payMail_text_(kind, v) {
   const lines = ['EYES ON LEADS // ' + v.windowName.toUpperCase(), '', v.headline, ''];
@@ -87,7 +110,8 @@ function payMail_text_(kind, v) {
     v.docs.forEach(d => lines.push('  ' + d.n + '  ' + d.name + ' (' + d.abbr + ')' + (d.url ? ': ' + d.url : '')));
     lines.push('', 'Important reminders:');
     v.reminders.forEach(r => lines.push('  - ' + plain(r)));
-    lines.push('', 'After physically submitting your documents, return to the applicant portal and confirm your submission under FILE 03: REQUIREMENTS.');
+    lines.push('', 'Deadline of submission: ' + payMail_verifiedDue_(v).long.replace('&middot;', '·'),
+      '', 'After physically submitting your documents, return to the applicant portal and confirm your submission under FILE 03: REQUIREMENTS.');
   } else {
     const plain = h => String(h).replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&rsquo;/g, '\'');
     lines.push('We saw it. Your proof of payment for EYES ON LEADS 2627 is in your file now.', '');
@@ -114,7 +138,7 @@ function payMail_send_(a, kind) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) { activity_('payment_mail', (a && a.ApplicantID) + ': no usable email, ' + kind + ' email not sent', { level: 'WARN', page: 'pay' }); return false; }
     if (MailApp.getRemainingDailyQuota() < 1) { activity_('payment_mail', 'daily email quota used up: ' + kind + ' email not sent to ' + a.ApplicantID, { level: 'WARN', page: 'pay' }); return false; }
     const v = payMail_vars_(a, kind);
-    const opts = { name: 'I.R.I.S. // LEADS 2627', htmlBody: payMail_html_(kind, v) };   // PaymentMailHtml.gs: the results blasts' structure (dark-mode safe on iPhone); the sender name inboxes show
+    const opts = { name: 'I.R.I.S. // LEADS 2627', htmlBody: kind === 'verified' ? payMail_verifiedHtml_(v) : payMail_html_(kind, v) };   // PaymentMailHtml.gs: the results blasts' structure (dark-mode safe on iPhone); the sender name inboxes show
     const reply = String(getSetting_('ContactEmail') || '').trim();
     if (/@/.test(reply)) opts.replyTo = reply;
     MailApp.sendEmail(to, v.subject, payMail_text_(kind, v), opts);
