@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  Eyes on LEADS: "The Site", PART 1 OF 2 (GitHub Pages; clasp ignores docs/). Plays once, full screen, right after an
+  Eyes on LEADS: "Payment Cleared" (was "The Site", renamed Nov 14 2026) (GitHub Pages; clasp ignores docs/). Plays once, full screen, right after an
   accepted applicant's FIRST proof-of-payment upload. Part 2 ("The Room") comes with room booking,
   which opens in January 2027; this one is the teaser.
   Steps.html opens it in a frame and says who it is:
@@ -30,7 +30,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Eyes on LEADS // The Site</title>
+<title>Eyes on LEADS // Payment Cleared</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Special+Elite&family=VT323&family=Reenie+Beanie&display=swap">
@@ -83,15 +83,15 @@
   <div>
     <span class="ring" aria-hidden="true"></span>
     <h1 id="gateT">A transmission for you.</h1>
-    <p id="gateS">Part 1 of 2. It runs twenty seconds. Wear headphones.</p>
+    <p id="gateS">It runs twenty seconds. Wear headphones.</p>
     <button type="button" class="go" id="gateGo">Answer</button>
   </div>
 </section>
 <div class="end" id="end" role="dialog" aria-modal="true" aria-labelledby="endT" aria-describedby="endS" inert>
   <div class="card">
-    <p class="k" id="endK">EYES ON LEADS &nbsp;·&nbsp; PART 1 OF 2</p>
-    <p class="t" id="endT">The Site.</p>
-    <p class="s" id="endS">Your room is being prepared. Part 2 opens in January, when room booking does.</p>
+    <p class="k" id="endK">EYES ON LEADS</p>
+    <p class="t" id="endT">Payment cleared.</p>
+    <p class="s" id="endS">Your room is being prepared. Room booking opens in January. Stay tuned.</p>
     <p class="k" id="endD" style="margin-top:12px" hidden></p>
     <div class="row"><button type="button" class="go" id="open">Back to my file</button><button type="button" id="replay">Replay</button></div>
   </div>
@@ -129,7 +129,7 @@ const tell = (type, extra) => { if (embedded) try { parent.postMessage(Object.as
 const doorName = () => (who.surname || who.nick || 'SUBJECT ' + num()).toUpperCase();
 function paintWho() {
   if (who.nick) $('gateT').textContent = 'A transmission for ' + who.nick + '.';
-  $('endK').textContent = 'EYES ON LEADS  ·  ' + (who.id ? 'SUBJECT ' + num() + '  ·  ' : '') + 'PART 1 OF 2';
+  $('endK').textContent = 'EYES ON LEADS' + (who.id ? '  ·  SUBJECT ' + num() : '');
   if (who.camp) {
     const days = Math.ceil((who.camp - Date.now()) / 864e5);
     if (days > 0) { $('endD').hidden = false; $('endD').textContent = days + (days === 1 ? ' DAY' : ' DAYS') + ' UNTIL KASILE HILLS'; }

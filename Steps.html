@@ -477,8 +477,8 @@
   function playReceipt(file) {
     if (calm()) return false;
     let origin = ''; try { origin = new URL(RECEIPT_URL).origin; } catch (e) { return false; }
-    const veil = document.createElement('div'); veil.className = 'rcpt-veil'; veil.setAttribute('role', 'dialog'); veil.setAttribute('aria-modal', 'true'); veil.setAttribute('aria-label', 'The Site, part 1 of 2');
-    const frame = document.createElement('iframe'); frame.title = 'The Site, part 1 of 2'; frame.allow = 'autoplay; fullscreen';
+    const veil = document.createElement('div'); veil.className = 'rcpt-veil'; veil.setAttribute('role', 'dialog'); veil.setAttribute('aria-modal', 'true'); veil.setAttribute('aria-label', 'Payment cleared');
+    const frame = document.createElement('iframe'); frame.title = 'Payment cleared'; frame.allow = 'autoplay; fullscreen';
     veil.append(frame); document.body.append(veil);
     const time = new Date().toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });
     let ready = false, maxTimer = 0, done = false;

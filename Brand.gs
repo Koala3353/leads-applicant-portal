@@ -334,8 +334,8 @@ const BRAND = {
     // results phase: locked cards say when they open ({date} from Settings)
     ga_tba: 'Date to be announced.',
     ga_date: '{date}. Calendar link soon.',              // Settings › GADate
-    room_jan: 'Opens in January. Part 2 of The Site plays here.',
-    room_date: 'Opens {date}. Part 2 of The Site plays here.',   // Settings › RoomBookingOpens
+    room_jan: 'Opens in January. Stay tuned.',
+    room_date: 'Opens {date}. Stay tuned.',   // Settings › RoomBookingOpens
     waitlist_pay: 'Opens if a slot frees up. You would pay by {date}.',   // Settings › WaitlistPaymentBy
     waitlist: 'Opens if a slot frees up.'
   },
