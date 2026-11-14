@@ -16,7 +16,7 @@
  *   Payment       proof (upload)    NONE → SUBMITTED → VERIFIED             (REJECTED = upload again)
  *   Requirements  the Forms         NONE → PARTIAL → SUBMITTED → APPROVED   (RETURNED = fix and resend)
  * Steps open in order, each only for ACCEPTED applicants and only once its Settings switch is on:
- *   Payment (PaymentOpen) → Requirements (RequirementsOpen, after Payment VERIFIED) → Room booking
+ *   Payment (PaymentOpen) → Requirements (RequirementsOpen, once proof of payment is SUBMITTED or VERIFIED) → Room booking
  *   (RoomBookingOpen, after Requirements APPROVED). The 1st GA opens once Settings > GACalendarLink is filled in.
  * ACCEPTED + APPROVED + VERIFIED = CONFIRMED (automatic).
  */
@@ -273,7 +273,7 @@ const SETTINGS_SCHEMA = [
   { key: 'EyeFolder', type: 'text', def: '', help: 'Drive folder for the Game eye scans (EYE_<ID>). Made automatically on the first upload; private to the script owner.' },
   { key: 'PaymentFolder', type: 'text', def: '', help: 'Drive folder where uploaded proofs are saved. Made automatically on the first upload; share it with the core team.' },
   // 03 requirements
-  { key: 'RequirementsOpen', type: 'bool', def: false, help: 'STEP 03. Tick to open Requirements for accepted applicants whose Payment is VERIFIED. The forms are listed in the Requirements tab.' },
+  { key: 'RequirementsOpen', type: 'bool', def: false, help: 'STEP 03. Tick to open Requirements for accepted applicants who have sent their proof of payment (SUBMITTED or VERIFIED). The forms are listed in the Requirements tab.' },
   { key: 'RequirementsNote', type: 'text', def: '', help: 'Shown above the forms: general instructions for every requirement.' },
   { key: 'RequirementsDeadline', type: 'date', def: null, help: 'Last day to finish requirements (PNF and D&U drop-off), e.g. 2026-12-15 23:59. Shown to applicants; Home counts down to it once their proof of payment is in. Blank = the countdown skips it.' },
   { key: 'PNFLink', type: 'text', def: '', help: "Link to download the Parental Notification Form (PNF): in the 'payment verified' email and on the Requirements page. Blank = the email says the PDFs will be posted on the portal, and the PNF card says the PDF will be posted there." },
@@ -758,7 +758,7 @@ function progress_(a) {
   const reqDone = req === 'APPROVED';
   if (reqDone) out.requirements = { state: 'done', unlocked: true };
   else if (!accepted) out.requirements = lock('accept');
-  else if (!paid) out.requirements = lock('pay');
+  else if (!paid && pay !== 'SUBMITTED') out.requirements = lock('pay');   // opens once proof is in (Nov 14 2026: the core team texts anyone whose payment has a problem)
   else if (!stepOpen_('RequirementsOpen')) out.requirements = lock('closed');
   else out.requirements = { state: req === 'SUBMITTED' ? 'waiting' : 'action', unlocked: true };   // NONE, PARTIAL, RETURNED
   out.requirements.value = req;

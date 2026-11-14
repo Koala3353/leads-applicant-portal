@@ -119,7 +119,7 @@ const BRAND = {
     },
     resultsPill: 'results are out',     // the clock's pill for people without a file, after release
     acceptedPill: 'accepted',           // the camp countdown's pill for ACCEPTED (CONFIRMED keeps "confirmed camper")
-    lockedPill: 'opens after payment',  // requirements deadline shown before their payment is verified
+    lockedPill: 'opens after payment',  // requirements deadline shown before their proof of payment is in
     waitlistTitle: 'On the waitlist',   // waitlisted, after the reply deadline
     waitlistText: 'If a slot opens, the core team emails you. You would pay by {date}.',
     waitlistTextNoDate: 'If a slot opens, the core team emails you.',
@@ -290,7 +290,7 @@ const BRAND = {
             lead: 'Scan a code, pay the fee, then upload your proof. The core team checks it and marks it VERIFIED.',
             how: 'How to pay', qrTitle: 'Scan to pay', upTitle: 'Upload your proof',
             upHint: 'A screenshot or photo of the receipt that shows the amount, the date and the reference number. PNG, JPG or PDF, up to 8 MB.',
-            states: { NONE: 'No proof on file yet.', SUBMITTED: 'Proof received. The core team is checking it. Upload again only if you sent the wrong file.',
+            states: { NONE: 'No proof on file yet.', SUBMITTED: 'Proof received. Your requirements are open now. Upload again only if you sent the wrong file.',
                       VERIFIED: 'Verified. Your payment is on record. Requirements are next.', REJECTED: 'Your proof was not accepted. Check the details and upload a new one.' },
             sent: 'Proof received. It is in your file now.',
             // the amount slip on top of "How to pay" (numbers from fee_ in Utils.gs; {later} = pesos, no ₱)
@@ -299,7 +299,7 @@ const BRAND = {
             // after a proof goes in: the receipt drops into the case folder, RECEIVED is stamped, then what happens next
             filed: { title: 'Evidence filed.', stamp: 'Received', exhibit: 'Exhibit 02 // proof of payment', tab: 'Case file',
                      log: 'Proof logged to {id} at {time}',
-                     next: 'The core team checks it next. Once it clears, this page says VERIFIED and your requirements open.',
+                     next: 'Your requirements are open now: get your PNF and D&U done. If anything is off with your payment, the core team will text you.',
                      button: 'Back to my file' } },
     reqs: { n: '03', file: 'REQUIREMENTS.EXE', title: 'Requirements',
             lead: 'Fill in every form below. Each one says what it needs. The core team marks your file APPROVED once everything is in.',
@@ -326,7 +326,7 @@ const BRAND = {
     apply: 'Applications are closed.',
     accept: "Opens once you're accepted.",
     closed: 'Not open yet. Check back here.',
-    pay: 'Opens once your payment is verified.',
+    pay: 'Opens once you send your proof of payment.',
     req: 'Opens once your requirements are approved.',
     link: 'Date not set yet. Check back here.',
     gaOpen: 'Date is set. Add it to your calendar.',
@@ -344,7 +344,7 @@ const BRAND = {
     pay: 'Payment due {date}',
     payNoDate: 'Payment open. Send your proof.',
     payRejected: 'Proof not accepted. Send a new one by {date}',
-    paySent: 'Proof received, for verification',
+    paySent: 'Proof received. Next: your PNF and D&U',
     reqs: 'PNF and D&U due {date}',
     reqsNoDate: 'Payment verified. PNF and D&U are next.'
   },

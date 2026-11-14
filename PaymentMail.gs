@@ -1,8 +1,9 @@
 /**
  * PaymentMail.gs  (integrator owns this file)
  * The two payment emails, built like the core team's results blasts (HTML in PaymentMailHtml.gs since Nov 14 2026):
- *   received  right after a proof upload (steps_uploadProof_, StepsApi.gs): we have it, the core team is checking it,
- *             another email follows once it's verified. Sent on every upload (a re-upload gets a fresh one).
+ *   received  right after a proof upload (steps_uploadProof_, StepsApi.gs): we have it, and their requirements are
+ *             open now (the PNF and the D&U, the drop-off). No "wait for verification" (core team, Nov 14 2026: if a
+ *             payment has a problem they text the person). Sent on every upload (a re-upload gets a fresh one).
  *   verified  once Payment is VERIFIED: the tracker's [05] "Payment Verified" (copied in by tracker_sync_), or the LEADS
  *             menu when the tracker is off. FILE 03: the PNF and the D&U, the drop-off, confirming on the portal.
  *             Sent once: Applicants › PaymentVerifiedMail is stamped BEFORE sending, so a crash can't send it twice.
@@ -37,22 +38,22 @@ function payMail_vars_(a, kind) {
     finAidNote: finAidNote,
     dateBox: ['Event dates', dates, venue]
   };
+  // the requirements (both emails): the forms (Settings › PNFLink / DULink; blank = no link, and reminder 1 says
+  // they'll be released instead) and the drop-off deadline (Settings › RequirementsDeadline; blank = no date)
+  const link = k => { const u = String(setting_(k) || '').trim(); return /^https:\/\//.test(u) ? u : ''; };
+  const docs = [{ n: '01', name: 'Parental Notification Form', abbr: 'PNF', url: link('PNFLink') },
+    { n: '02', name: 'Declaration and Undertaking', abbr: 'D&U', url: link('DULink') }];
+  const both = docs.every(d => d.url);
+  const due = parseDate_(s.RequirementsDeadline);
+  const hl = t => pm_hl_(t);   // a yellow marker on the paper (PaymentMailHtml.gs)
+  const reminders = [
+    both ? 'The ' + hl('PNF') + ' and ' + hl('D&amp;U') + ' PDFs can be downloaded from the links above, or from the applicant portal under ' + hl('FILE 03: REQUIREMENTS') + '. Kindly ' + hl('download and accomplish both documents') + ' before submission.'
+      : 'The forms will be made available as PDFs on the applicant portal, under ' + hl('FILE 03: REQUIREMENTS') + '. Kindly ' + hl('wait for their release') + ' before accomplishing them.',
+    'Both documents must bear your parent&rsquo;s or guardian&rsquo;s original ' + hl('wet signature') + '.',
+    'Once completed, physically submit both documents to the ' + hl('designated drop-off box at the MEA Room (MVP 320)') +
+      (due ? ' by ' + hl(Utilities.formatDate(due, 'Asia/Manila', 'MMMM d, h:mm a')) : '') + '.'
+  ];
   if (kind === 'verified') {
-    // the forms: Settings › PNFLink / DULink (blank = no link, and reminder 1 says they'll be released instead)
-    const link = k => { const u = String(setting_(k) || '').trim(); return /^https:\/\//.test(u) ? u : ''; };
-    const docs = [{ n: '01', name: 'Parental Notification Form', abbr: 'PNF', url: link('PNFLink') },
-      { n: '02', name: 'Declaration and Undertaking', abbr: 'D&U', url: link('DULink') }];
-    const both = docs.every(d => d.url);
-    // the drop-off deadline: Settings › RequirementsDeadline (blank = no date in the email)
-    const due = parseDate_(s.RequirementsDeadline);
-    const hl = t => pm_hl_(t);   // a yellow marker on the paper (PaymentMailHtml.gs)
-    const reminders = [
-      both ? 'The ' + hl('PNF') + ' and ' + hl('D&amp;U') + ' PDFs can be downloaded from the links above, or from the applicant portal under ' + hl('FILE 03: REQUIREMENTS') + '. Kindly ' + hl('download and accomplish both documents') + ' before submission.'
-        : 'The forms will be made available as PDFs on the applicant portal, under ' + hl('FILE 03: REQUIREMENTS') + '. Kindly ' + hl('wait for their release') + ' before accomplishing them.',
-      'Both documents must bear your parent&rsquo;s or guardian&rsquo;s original ' + hl('wet signature') + '.',
-      'Once completed, physically submit both documents to the ' + hl('designated drop-off box at the MEA Room (MVP 320)') +
-        (due ? ' by ' + hl(Utilities.formatDate(due, 'Asia/Manila', 'MMMM d, h:mm a')) : '') + '.'
-    ];
     return Object.assign(v, {
       subject: 'Your payment is confirmed. What’s next? · ' + id,
       preheader: 'Payment verified. Two documents left before your file is complete: the PNF and the D&U.',
@@ -63,16 +64,15 @@ function payMail_vars_(a, kind) {
       closing: 'Finish your file.'
     });
   }
-  const rows = [['File no.', id], ['Received', when], ['Amount due', php(fee.now)]];
-  if (fee.later) rows.push(['Later', php(fee.later) + ', only if notarization is needed']);
-  rows.push(['Status', 'For verification']);
+  const rows = [['File no.', id], ['Received', when], ['Amount', php(fee.now)]];   // no notarization line (core team, Nov 14)
   return Object.assign(v, {
     subject: 'Proof received: ' + id + ' · Eyes on LEADS',
-    preheader: 'We have your proof of payment. The core team is checking it; another email follows once it is verified.',
+    preheader: 'We have your proof of payment. Next: your PNF and D&U.',
     windowName: 'Proof received', headline: 'Evidence received, ' + nick + '.', stamp: 'Proof received',
-    receipt: rows, reminders: [], docs: [],
-    button: ['Check your file ↗', PAYMAIL_DOOR_ + '?page=pay'],
-    closing: 'Your file is moving.'
+    receipt: rows, docs: docs, reminders: reminders, due: due,
+    dateBox: due ? ['Deadline of submission', Utilities.formatDate(due, 'Asia/Manila', 'MMMM d, yyyy · h:mm a'), 'MEA Room (MVP 320) drop-off box'] : v.dateBox,
+    button: ['Open the applicant portal ↗', PAYMAIL_DOOR_ + '?page=reqs'],
+    closing: 'Finish your file.'
   });
 }
 
@@ -89,10 +89,16 @@ function payMail_text_(kind, v) {
     v.reminders.forEach(r => lines.push('  - ' + plain(r)));
     lines.push('', 'After physically submitting your documents, return to the applicant portal and confirm your submission under FILE 03: REQUIREMENTS.');
   } else {
-    lines.push('We saw it. Your proof of payment for EYES ON LEADS 2627 is in your file now.',
-      'The core team checks every receipt by hand. This is not the confirmation yet: we\'ll email you again once your payment is verified.', '');
+    const plain = h => String(h).replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&rsquo;/g, '\'');
+    lines.push('We saw it. Your proof of payment for EYES ON LEADS 2627 is in your file now.', '');
     if (v.finAidNote) lines.push(v.finAidNote, '');
-    lines.push('Sent the wrong file? Upload the right one on the payment page. We check the latest one.');
+    lines.push('NEXT: YOUR REQUIREMENTS. Prepare these two documents:');
+    v.docs.forEach(d => lines.push('  ' + d.n + '  ' + d.name + ' (' + d.abbr + ')' + (d.url ? ': ' + d.url : '')));
+    lines.push('', 'Important reminders:');
+    v.reminders.forEach(r => lines.push('  - ' + plain(r)));
+    lines.push('', 'After you drop them off, confirm your submission on the applicant portal under FILE 03: REQUIREMENTS.',
+      'If anything is off with your payment, the core team will text you.',
+      'Sent the wrong file? Upload the right one on the payment page. We check the latest one.');
   }
   lines.push('');
   v.receipt.forEach(r => lines.push(r[0] + ': ' + r[1]));

@@ -1561,7 +1561,7 @@
     const ahead = iso => iso && new Date(iso).getTime() > Date.now();
     if (a.payment === 'NONE') text = ahead(dls.payment) ? '' : D.payNoDate;
     else if (a.payment === 'REJECTED') { text = dls.payment ? D.payRejected.replace('{date}', whenShort(dls.payment)) : D.payNoDate; tone = 'warn'; }
-    else if (a.payment === 'SUBMITTED') { text = D.paySent; tone = 'wait'; }
+    else if (a.payment === 'SUBMITTED' && a.requirements !== 'SUBMITTED' && a.requirements !== 'APPROVED') { text = D.paySent; page = 'reqs'; }   // proof in: requirements are open
     else if (a.payment === 'VERIFIED' && a.requirements !== 'SUBMITTED' && a.requirements !== 'APPROVED') {
       page = 'reqs'; text = ahead(dls.requirements) ? '' : D.reqsNoDate;
     }

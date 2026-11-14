@@ -42,12 +42,21 @@ function payMail_html_(kind, v) {
   const p = (html, last, mb) => '<p class="t-paper" style="margin:0 0 ' + (last ? 0 : (mb === undefined ? 16 : mb)) + 'px 0;font-family:' + TYPE + ';font-size:16px;line-height:25px;color:' + C.paperText + ';">' + html + '</p>';
   const callout = t => '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px 0;"><tr><td class="t-rust" style="border-left:4px solid #a32620;padding:2px 0 2px 14px;font-family:' + TYPE + ';font-size:18px;line-height:27px;font-weight:bold;color:#a32620;">' + t + '</td></tr></table>';
   const meta = (label, valueHtml) => '<div style="font-family:' + MONO + ';font-size:11px;line-height:18px;letter-spacing:1px;text-transform:uppercase;"><span class="t-muted" style="color:' + C.muted + ';">' + label + ':</span> <span class="t-text" style="color:' + C.text + ';">' + valueHtml + '</span></div>';
-  // the red rubber-stamp button (the same as the results emails)
-  const button = (href, labelHtml, big) =>
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:' + (big ? 14 : 8) + 'px 0 ' + (big ? 12 : 10) + 'px 0;">' +
-    '<a href="' + pm_esc_(href) + '" target="_blank" class="stamp-link" style="display:block;text-decoration:none;">' +
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="stamp-btn" style="width:100%;background-color:#a32620;border-top:' + (big ? 4 : 3) + 'px solid #cf6a62;border-left:' + (big ? 4 : 3) + 'px solid #bd4a43;border-right:' + (big ? 6 : 4) + 'px solid #6a1612;border-bottom:' + (big ? 9 : 6) + 'px solid #571210;border-radius:' + (big ? '22px 24px 21px 25px' : '14px 16px 14px 17px') + ';box-shadow:0 4px 8px rgba(0,0,0,0.35);"><tr>' +
-    '<td align="center" class="' + (big ? 'stamp-t' : 'stamp-m') + '" style="padding:' + (big ? '13px 12px 12px 12px' : '11px 12px 10px 12px') + ';font-family:' + TYPE + ';font-size:' + (big ? 19 : 15) + 'px;line-height:' + (big ? 25 : 21) + 'px;font-weight:bold;letter-spacing:' + (big ? 1.5 : 1) + 'px;text-transform:uppercase;color:#fff4e0;text-shadow:0 2px 0 #571210;">' + labelHtml + '</td>' +
+  // MAIN BUTTON: a red rubber stamp (the same as the results emails, Nov 14 2026). Solid #a32620 is the one
+  // background-color tested safe in Gmail iOS dark mode; square corners, a dashed cream inner line, label + arrow.
+  const button = (href, labelHtml) =>
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:10px 0 12px 0;">' +
+    '<a href="' + pm_esc_(href) + '" target="_blank" class="btn-link" style="display:block;text-decoration:none;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="btn-fill" style="width:100%;background-color:#a32620;border:2px solid #571210;border-radius:3px;box-shadow:0 4px 0 #571210;"><tr><td style="padding:4px;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:1px dashed #f0c9b6;border-radius:2px;"><tr>' +
+    '<td align="center" class="btn-t" style="padding:13px 14px;font-family:' + MONO + ';font-size:15px;line-height:21px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#fff4e0;"><span class="t-btn" style="color:#fff4e0;">' + labelHtml + '&nbsp;&nbsp;&#8594;</span></td>' +
+    '</tr></table></td></tr></table></a></td></tr></table>';
+  // SECOND BUTTON: an outlined ink stamp on the paper (no fill, so dark mode has nothing to flip)
+  const button2 = (href, labelHtml) =>
+    '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:6px 0 8px 0;">' +
+    '<a href="' + pm_esc_(href) + '" target="_blank" class="btn2-link" style="display:block;text-decoration:none;">' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border:2px solid #a32620;border-radius:3px;"><tr>' +
+    '<td class="t-rust btn2-t" style="padding:9px 16px 8px 16px;font-family:' + MONO + ';font-size:13px;line-height:18px;font-weight:bold;letter-spacing:1.5px;text-transform:uppercase;color:#a32620;">' + labelHtml + '&nbsp;&nbsp;&#8594;</td>' +
     '</tr></table></a></td></tr></table>';
   const folder = (tab, inner) =>
     '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td class="bg-manila t-paper" style="' + sw(C.manila) + 'padding:5px 18px 4px 18px;border-top:2px solid #e7d6a6;border-left:2px solid #e7d6a6;border-right:3px solid ' + C.manilaDk + ';border-radius:7px 7px 0 0;font-family:' + TYPE + ';font-size:12px;line-height:16px;letter-spacing:2px;text-transform:uppercase;color:#2b2415;">' + tab + '</td></tr></table>' +
@@ -59,37 +68,41 @@ function payMail_html_(kind, v) {
   const kv = rows => '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px 0;border-top:1px dashed #a8925a;">' + rows.map(r =>
     '<tr><td class="t-paper" valign="top" style="padding:8px 8px 6px 0;width:38%;font-family:' + MONO + ';font-size:11px;line-height:18px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:' + C.paperText + ';border-bottom:1px dashed #a8925a;">' + pm_esc_(r[0]) + '</td>' +
     '<td class="t-paper" valign="top" style="padding:6px 0;font-family:' + TYPE + ';font-size:16px;line-height:22px;color:' + C.paperText + ';border-bottom:1px dashed #a8925a;">' + pm_esc_(r[1]) + '</td></tr>').join('') + '</table>';
-  const btnLabel = () => '&#128308; ' + pm_esc_(String(v.button[0]).replace(/\s*↗$/, ''));
+  const btnLabel = () => pm_esc_(String(v.button[0]).replace(/\s*↗$/, ''));
+  // the PNF + D&U list and the reminders (both emails: the requirements open once proof is in)
+  const reqsBlock = intro => p(intro, false, 10) +
+    v.docs.map(d => p(strong(pm_esc_(d.n) + '&nbsp; ' + pm_esc_(d.name) + ' (' + pm_esc_(d.abbr) + ')'), false, d.url ? 0 : 12) +
+      (d.url ? button2(d.url, 'Open the ' + pm_esc_(d.abbr) + ' form') + spacer(4) : '')).join('') +
+    spacer(8) + callout('IMPORTANT REMINDERS') +
+    v.reminders.map((r, i) => p(strong((i + 1) + '.') + ' ' + r, false, 12)).join('') +
+    // (the deadline is already in reminder 3, so no separate deadline line)
+    p('After you drop them off, come back to the applicant portal and ' + strong('confirm your submission') + ' under ' + pm_hl_('FILE 03: REQUIREMENTS') + '.', false, 4);
 
   // ---------- the memo ----------
   let memo, tagline, data;
   if (verified) {
     tagline = 'PAYMENT VERIFIED. YOUR FILE IS NOT COMPLETE YET.';
     data = meta('ID NO', ID) + meta('STATUS', '<strong class="t-red" style="color:' + C.red + ';">PAYMENT VERIFIED</strong>') + meta('NEXT', 'PNF + D&amp;U, DROPPED OFF IN PERSON');
-    const docs = v.docs.map(d => p(strong(pm_esc_(d.n) + '&nbsp; ' + pm_esc_(d.name) + ' (' + pm_esc_(d.abbr) + ')'), false, d.url ? 0 : 12) +
-      (d.url ? button(d.url, '&#128196; Open the ' + pm_esc_(d.abbr) + ' form', false) + spacer(6) : '')).join('');
     memo = p(strong('All eyes on you, ' + name + '.')) +
       p('We&rsquo;ve been watching, and it looks like you&rsquo;ve taken another step toward discovering what lies beyond your comfort zone.') +
       p('Your payment for ' + strong('EYES ON LEADS 2627') + ' has been ' + ru('received and verified') + '.') +
       callout('BUT YOUR FILE ISN&rsquo;T COMPLETE JUST YET.') +
-      p('Before you take the leap, there are a few more things we need from you. Prepare these two documents:', false, 10) + docs +
-      spacer(8) + callout('IMPORTANT REMINDERS') +
-      v.reminders.map((r, i) => p(strong((i + 1) + '.') + ' ' + r, false, 12)).join('') +
-      (v.due ? p(strong('Deadline of submission:') + ' ' + pm_hl_(pm_esc_(v.dateBox[1])), false, 12) : '') +
-      p('After you drop them off, come back to the applicant portal and ' + strong('confirm your submission') + ' under ' + pm_hl_('FILE 03: REQUIREMENTS') + '.', false, 4) +
-      button(v.button[1], btnLabel(), true) +
+      reqsBlock('Before you take the leap, there are a few more things we need from you. Prepare these two documents:') +
+      button(v.button[1], btnLabel()) +
       spacer(10) + p('Please remain attentive for further instructions.', true);
   } else {
-    tagline = 'EVIDENCE RECEIVED. FOR VERIFICATION.';
-    data = meta('ID NO', ID) + meta('STATUS', '<strong class="t-red" style="color:' + C.red + ';">FOR VERIFICATION</strong>') + meta('EVENT', pm_esc_(v.dates));
+    tagline = 'EVIDENCE RECEIVED. NEXT: YOUR REQUIREMENTS.';
+    data = meta('ID NO', ID) + meta('STATUS', '<strong class="t-red" style="color:' + C.red + ';">PROOF RECEIVED</strong>') + meta('NEXT', 'PNF + D&amp;U, DROPPED OFF IN PERSON');
+    // no "this is not the confirmation yet" (core team, Nov 14 2026): they move straight on to the requirements,
+    // and the core team texts anyone whose payment has a problem
     memo = p(strong('We saw it, ' + name + '.')) +
       p('Your proof of payment for ' + strong('EYES ON LEADS 2627') + ' is in your file now.') +
       kv(v.receipt) +
-      p('The core team checks every receipt by hand. ' + ru('This is not the confirmation yet') + ': we&rsquo;ll email you again once your payment is verified.') +
       (v.finAidNote ? p(pm_hl_(pm_esc_(v.finAidNote))) : '') +
-      p('Sent the wrong file? Upload the right one on the payment page. We check the latest one.', false, 4) +
-      button(v.button[1], btnLabel(), true) +
-      spacer(10) + p('Nothing else to do for now. Watch your inbox.', true);
+      callout('NEXT: YOUR REQUIREMENTS') +
+      reqsBlock('Your requirements are open now. Prepare these two documents:') +
+      button(v.button[1], btnLabel()) +
+      spacer(10) + p('If anything is off with your payment, the core team will text you. Sent the wrong file? Upload the right one on the payment page; we check the latest one.', true);
   }
 
   return '<!DOCTYPE html>\n<html lang="en" xmlns="http://www.w3.org/1999/xhtml">\n<head>\n' +
@@ -104,25 +117,24 @@ function payMail_html_(kind, v) {
 '    body, table, td, a { -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }\n    table, td { mso-table-lspace:0pt; mso-table-rspace:0pt; }\n' +
 '    table { border-collapse:separate; border-spacing:0; }\n    img { -ms-interpolation-mode:bicubic; border:0; outline:none; text-decoration:none; }\n    a { text-decoration:none; }\n' +
 '    u + .body .gmail-fix { display:none; }\n' +
-'    a.stamp-link:hover { transform:translateY(3px); }\n    a.stamp-link:hover table.stamp-btn { background-color:#b83029 !important; border-bottom-width:6px !important; }\n' +
-'    a.stamp-link:active { transform:translateY(6px); }\n    a.stamp-link:active table.stamp-btn { border-bottom-width:3px !important; }\n' +
+'    a.btn-link:hover table.btn-fill { background-color:#b83029 !important; }\n    a.btn-link:active table.btn-fill { box-shadow:0 1px 0 #571210 !important; }\n' +
+'    a.btn2-link:hover td.btn2-t { color:#7d1b16 !important; }\n' +
 '    @media (prefers-color-scheme: dark) {\n' +
 '      .t-text { color:' + C.text + ' !important; } .t-head { color:' + C.headline + ' !important; } .t-muted { color:' + C.muted + ' !important; }\n' +
-'      .t-red { color:' + C.red + ' !important; } .t-paper { color:' + C.paperText + ' !important; } .t-yellow { color:' + C.yellowText + ' !important; } .t-rust { color:#a32620 !important; }\n' +
+'      .t-red { color:' + C.red + ' !important; } .t-paper { color:' + C.paperText + ' !important; } .t-yellow { color:' + C.yellowText + ' !important; } .t-rust { color:#a32620 !important; } .t-btn { color:#fff4e0 !important; }\n' +
 '    }\n' +
 '    [data-ogsc] .t-text { color:' + C.text + ' !important; } [data-ogsc] .t-head { color:' + C.headline + ' !important; } [data-ogsc] .t-muted { color:' + C.muted + ' !important; }\n' +
-'    [data-ogsc] .t-red { color:' + C.red + ' !important; } [data-ogsc] .t-paper { color:' + C.paperText + ' !important; } [data-ogsc] .t-yellow { color:' + C.yellowText + ' !important; } [data-ogsc] .t-rust { color:#a32620 !important; }\n' +
+'    [data-ogsc] .t-red { color:' + C.red + ' !important; } [data-ogsc] .t-paper { color:' + C.paperText + ' !important; } [data-ogsc] .t-yellow { color:' + C.yellowText + ' !important; } [data-ogsc] .t-rust { color:#a32620 !important; } [data-ogsc] .t-btn { color:#fff4e0 !important; }\n' +
 '    @media only screen and (max-width:480px) {\n' +
 '      .stack { display:block !important; width:100% !important; } .peek-cell { padding:12px 0 0 0 !important; text-align:left !important; } .peek-cell img { margin:0 !important; }\n' +
 '      .container { width:100% !important; } .pad { padding-left:16px !important; padding-right:16px !important; } .top-pad { padding-left:16px !important; padding-right:16px !important; }\n' +
 '      .memo-pad { padding-left:18px !important; padding-right:18px !important; } .h2 { font-size:19px !important; line-height:25px !important; } .tagline { font-size:12px !important; line-height:18px !important; }\n' +
 '      .folder-pad { padding-left:8px !important; padding-right:8px !important; }\n' +
-'      .stamp-t { font-size:13px !important; line-height:19px !important; letter-spacing:0 !important; padding:8px 4px 7px 4px !important; white-space:normal !important; }\n' +
-'      .stamp-m { font-size:12px !important; line-height:18px !important; letter-spacing:0 !important; padding:7px 4px 6px 4px !important; }\n' +
+'      .btn-t { font-size:13px !important; line-height:19px !important; letter-spacing:1px !important; padding-left:8px !important; padding-right:8px !important; }\n' +
+'      .btn2-t { font-size:12px !important; letter-spacing:1px !important; padding-left:12px !important; padding-right:12px !important; }\n' +
 '      .frame-pad { padding-left:6px !important; padding-right:6px !important; } .mobile-hide { display:none !important; }\n' +
 '      .win-title { font-size:13px !important; letter-spacing:0 !important; } .rec-bar { font-size:9px !important; letter-spacing:1px !important; padding-left:14px !important; padding-right:14px !important; }\n' +
 '    }\n' +
-'    @media only screen and (max-width:340px) { .stamp-t { font-size:11px !important; } .stamp-m { font-size:11px !important; } }\n' +
 '  </style>\n</head>\n' +
 '<body class="body bg-outer" style="margin:0;padding:0;' + sw(C.outer) + '">\n' +
 '  <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:' + C.outer + ';">' + pm_esc_(v.preheader) + ' &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>\n' +
