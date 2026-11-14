@@ -78,10 +78,11 @@ These render correctly in Gmail on iPhone (dark and light), Apple Mail and Gmail
   results blast (tracker lists, release ticks, scheduling). Since Nov 14 2026 its `buildHtml_(p, type)` calls Nathan's own
   `buildHtml3_/4_/5_`, copied verbatim into the file. Edit only the words there: this is what goes out.
 
-**Lesson (Nov 14 2026): don't rebuild a working email, copy it.** A from-scratch rebuild of Nathan's layout (same tiles, same
-classes) with new "stamp + ink-stamp" buttons broke in Gmail iPhone dark mode while Nathan's own files kept working. Combined now
-calls Nathan's `buildHtml3_/4_/5_` copied byte for byte (only words and links changed), and both payment emails use his original
-red stamp button again. Change words, not structure; if you must change structure, test on the iPhone before 5 people see it.
+**Lesson (Nov 14 2026): never judge dark mode from a FORWARDED copy.** Forwarding rebuilds the email and drops its
+`<head>`, `<style>` block (the dark-mode colour classes) and the Gmail fix, so a forwarded copy goes unreadable in Gmail
+iPhone dark mode even when the original is fine. We chased "broken" emails for an afternoon this way; the same emails sent
+straight to Kristen were all readable. Every test function now sends directly to the runner AND Kristen
+(results project: `BLAST_CONFIG.TEST_ALSO`; portal: `PAYMAIL_TEST_ALSO_`). Look at a direct copy, never a forward.
 
 Skeleton of each: Win95 title bar → REC bar → yellow case-file label + title image + red tagline → small data block on the dark
 window → manila folder with the cream paper memo (dark typed text, yellow-tile highlights, red stamp buttons) → closing line with
@@ -89,8 +90,8 @@ the peeking eye → footer → `gmail-fix` div.
 
 ## Test before you send to anyone
 
-1. Send it to yourself (every script has a test function that only emails the person running it: `payMail_test`,
-   `sendTestEmails`, `sendTestEmail3/4/5`).
+1. Send it with a test function (`payMail_test`, `sendTestEmails`, `sendTestEmail3/4/5`). Open the copy that arrived
+   DIRECTLY in that inbox; do not forward it to another account to look at it (see the lesson above).
 2. Open it in **the Gmail app on an iPhone with dark mode ON**. That is the client that breaks things; if it looks right there it
    looks right everywhere we have tried. Then check light mode and one other app (Apple Mail or Gmail on a laptop).
 3. Not sure how a colour or technique behaves? The results project has `darkModeLab()` and `contrastLab2()`: they email you
