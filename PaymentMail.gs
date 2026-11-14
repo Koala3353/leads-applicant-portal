@@ -17,6 +17,10 @@
 
 const PAYMAIL_DOOR_ = 'https://koala3353.github.io/leads-applicant-portal/go/';   // the door page: gets people out of Gmail's in-app browser
 const PAYMAIL_PER_RUN_ = 40;
+// Nov 14 2026: ONE payment email only, the proof-received one (sent on upload; it already moves them on to the PNF and
+// D&U). The "payment verified / confirmed" email is OFF: if a payment is wrong, the core team messages the person.
+// true = send it again (payMail_sendPending_, PaymentVerifiedMail.html); nothing else needs changing.
+const PAYMAIL_SEND_VERIFIED_ = false;
 // payMail_test / payMail_testDarkAB also send straight to these (a forwarded copy loses its <style> block, so it can't
 // show how Gmail dark mode really renders the email)
 const PAYMAIL_TEST_ALSO_ = ['kristen.mikayla.chua@student.ateneo.edu', 'lawrence.ng@student.ateneo.edu'];
@@ -159,6 +163,7 @@ function payMail_send_(a, kind) {
  * released, and Applicants › PaymentVerifiedMail still blank. At most PAYMAIL_PER_RUN_ a run. Returns how many went out.
  */
 function payMail_sendPending_() {
+  if (!PAYMAIL_SEND_VERIFIED_) return 0;   // switched off (see PAYMAIL_SEND_VERIFIED_)
   if (!setting_('ResultsReleased')) return 0;
   const sh = sheet_(SHEET.APPLICANTS), last = sh.getLastRow();
   if (last < 2) return 0;
@@ -213,7 +218,7 @@ function payMail_test() {
   const a = found ? Object.assign({}, found.data, { Email: me })
     : { ApplicantID: 'APP-0000', Nickname: 'Sample', FullName: 'Applicant, Sample', Email: me, FinAidScholar: 'Yes' };
   const out = [];
-  payMail_testTo_(me).forEach(to => ['received', 'verified'].forEach(k =>
+  payMail_testTo_(me).forEach(to => (PAYMAIL_SEND_VERIFIED_ ? ['received', 'verified'] : ['received']).forEach(k =>
     out.push(k + ': ' + (payMail_send_(Object.assign({}, a, { Email: to }), k) ? 'sent to ' + to : 'NOT sent to ' + to + ' (see Activity)'))));
   return out.join('\n');
 }
