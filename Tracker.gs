@@ -6,9 +6,15 @@
  *                 list = REJECTED, the second = WAITLISTED. In no list: a decision on the portal goes back to SUBMITTED.
  *                 ACCEPTED + Payment VERIFIED + Requirements APPROVED = CONFIRMED (the same rule as shouldConfirm_).
  *   Payment       [05] Payment Tracker › Verification Status: No Payment = NONE, For Verification = SUBMITTED,
- *                 Payment Verified = VERIFIED. A proof upload writes the Drive link, For Verification, and the Rate if blank.
+ *                 Payment Verified = VERIFIED. A proof upload writes the Drive link, For Verification, and (when blank)
+ *                 the Rate, the Amount Paid (what the portal asked them to pay) and the Date Paid (the upload time).
  *   Requirements  [04] PNF & DNU Tracker: PNF Verified + DNU Verified = APPROVED, both handed in = SUBMITTED, one = PARTIAL.
- *                 The applicant's "I dropped this off onsite" tick writes that person's PNF / DNU checkbox.
+ *                 The applicant's "I dropped this off onsite" tick writes that person's PNF / DNU checkbox and, when
+ *                 blank, its Date Received.
+ *   Blanks        trackerFill_ (after every 5-minute sync) fills only EMPTY cells, one cell at a time, so it never
+ *                 overwrites the core team: [05] Verification Status = No Payment, Rate = Regular / Scholar (FinAid tick
+ *                 on Apply), and for a proof that is in, Amount Paid + Date Paid; [04] a Verified tick also ticks the
+ *                 handed-in box, and a ticked box gets its Date Received (the day the sync first sees it).
  * People are matched by ID Number only (never by row, name or position). Columns are found by their header text, so the
  * core team can move them, but never rename "ID Number", "Verification Status", "Proof of Payment", "Rate", "PNF",
  * "PNF Verified", "DNU", "DNU Verified".
@@ -238,6 +244,8 @@ function trackerProofUploaded_(a, url) {
       cell('verification status').setValue('For Verification');
     }
     if (c['rate'] && !String(hit.values[c['rate'] - 1]).trim()) cell('rate').setValue(String(a.FinAidScholar || '').trim() === 'Yes' ? 'Scholar' : 'Regular');
+    if (c['amount paid'] && !String(hit.values[c['amount paid'] - 1]).trim()) cell('amount paid').setValue(fee_(a).now);   // what the portal asked them to pay
+    if (c['date paid'] && !String(hit.values[c['date paid'] - 1]).trim()) cell('date paid').setValue(new Date());
   } catch (e) {
     activity_('tracker_write', a.ApplicantID + ': could not write the proof to the tracker: ' + (e && e.message), { level: 'WARN', page: 'pay' });
   }
@@ -256,6 +264,12 @@ function trackerOnsite_(a, title, done) {
       return;
     }
     hit.sh.getRange(hit.row, hit.col[key]).setValue(!!done);
+    const dc = hit.col['date received (' + key + ')'], vc = hit.col[key + ' verified'];
+    if (dc) {   // the date: set on a tick when blank; cleared on an untick unless the core team already verified it
+      const had = String(hit.values[dc - 1] === null ? '' : hit.values[dc - 1]).trim();
+      if (done && !had) hit.sh.getRange(hit.row, dc).setValue(new Date());
+      if (!done && had && !(vc && trackerTrue_(hit.values[vc - 1]))) hit.sh.getRange(hit.row, dc).clearContent();
+    }
   } catch (e) {
     activity_('tracker_write', a.ApplicantID + ': could not write ' + title + ' to the tracker: ' + (e && e.message), { level: 'WARN', page: 'reqs' });
   }
@@ -342,8 +356,72 @@ function tracker_syncTrigger() {
   } catch (e) {
     activity_('tracker_sync', 'Sync from the tracker failed: ' + (e && e.message), { level: 'WARN' });
   }
+  try { const n = trackerFill_(); if (n) activity_('tracker_fill', n + ' blank tracker cell(s) filled'); }
+  catch (e) { activity_('tracker_fill', 'Filling tracker blanks failed: ' + (e && e.message), { level: 'WARN' }); }
   // then the "payment verified" emails anyone is now due (PaymentMail.gs); runs even with the tracker off
   try { payMail_sendPending_(); } catch (e) { activity_('payment_mail', 'Verified emails failed: ' + (e && e.message), { level: 'WARN' }); }
+}
+
+/**
+ * Fills the tracker's EMPTY cells that the portal can work out (see the header). One cell at a time and only where the
+ * cell is blank, so a core-team edit made a second ago is never overwritten. At most TRACKER_FILL_MAX writes a run;
+ * the rest go on the next 5-minute run. Returns how many cells were written.
+ */
+const TRACKER_FILL_MAX = 250;
+function trackerFill_() {
+  const ss = tracker_();
+  if (!ss) return 0;
+  let n = 0;
+  const put = (sh, row, col, v) => { if (n >= TRACKER_FILL_MAX) return; sh.getRange(row, col).setValue(v); n++; };
+  const blank = v => String(v === null || v === undefined ? '' : v).trim() === '';
+  const today = new Date();
+
+  // FinAid ticks from Apply, by ID number (Applicants › IDNumber + FinAidScholar)
+  const scholar = {};
+  try {
+    const ap = sheet_(SHEET.APPLICANTS), last = ap.getLastRow(), head = cols_();
+    const ii = head.indexOf('IDNumber'), fi = head.indexOf('FinAidScholar');
+    if (last > 1 && ii >= 0 && fi >= 0) {
+      const w = Math.max(ii, fi) + 1;
+      ap.getRange(2, 1, last - 1, w).getValues().forEach(r => { const k = trackerIdNo_(r[ii]); if (k) scholar[k] = String(r[fi] || '').trim() === 'Yes'; });
+    }
+  } catch (e) { /* no Rate fill this run */ }
+
+  // [05] Payment Tracker
+  const pay = ss.getSheetByName(TRACKER_TABS_.pay);
+  if (pay) {
+    const v = pay.getDataRange().getValues(), h = trackerHead_(v);
+    const c = k => h && h.cols[k] ? h.cols[k][0] : -1;
+    const ic = c('id number'), sc = c('verification status'), rc = c('rate'), ac = c('amount paid'), dc = c('date paid');
+    if (h && ic >= 0 && sc >= 0) for (let r = h.row + 1; r < v.length && n < TRACKER_FILL_MAX; r++) {
+      const id = trackerIdNo_(v[r][ic]);
+      if (!id) continue;
+      if (blank(v[r][sc])) { put(pay, r + 1, sc + 1, 'No Payment'); v[r][sc] = 'No Payment'; }
+      if (rc >= 0 && blank(v[r][rc]) && id in scholar) { v[r][rc] = scholar[id] ? 'Scholar' : 'Regular'; put(pay, r + 1, rc + 1, v[r][rc]); }
+      const proofIn = /^(for verification|payment verified)$/i.test(String(v[r][sc]).trim());
+      if (proofIn && ac >= 0 && blank(v[r][ac]) && !blank(v[r][rc])) put(pay, r + 1, ac + 1, fee_({ FinAidScholar: String(v[r][rc]).trim() === 'Scholar' ? 'Yes' : '' }).now);
+      if (proofIn && dc >= 0 && blank(v[r][dc])) put(pay, r + 1, dc + 1, today);
+    }
+  }
+
+  // [04] PNF & DNU Tracker
+  const req = ss.getSheetByName(TRACKER_TABS_.reqs);
+  if (req) {
+    const v = req.getDataRange().getValues(), h = trackerHead_(v);
+    const c = k => h && h.cols[k] ? h.cols[k][0] : -1;
+    const ic = c('id number');
+    if (h && ic >= 0) for (let r = h.row + 1; r < v.length && n < TRACKER_FILL_MAX; r++) {
+      if (!trackerIdNo_(v[r][ic])) continue;
+      ['pnf', 'dnu'].forEach(k => {
+        const bc = c(k), vc = c(k + ' verified'), dc = c('date received (' + k + ')');
+        if (bc < 0) return;
+        if (vc >= 0 && trackerTrue_(v[r][vc]) && !trackerTrue_(v[r][bc])) { put(req, r + 1, bc + 1, true); v[r][bc] = true; }   // verified = handed in
+        if (dc >= 0 && trackerTrue_(v[r][bc]) && blank(v[r][dc])) put(req, r + 1, dc + 1, today);
+      });
+    }
+  }
+  if (n) trackerForget_();
+  return n;
 }
 
 /** LEADS › Sync from the tracker now. */
@@ -352,8 +430,9 @@ function menu_trackerSync() {
   try { requireAdmin_(); } catch (e) { ui.alert('Only core team members listed in the Admins tab can do this.'); return; }
   if (!trackerOn_()) { ui.alert('Settings › TrackerSheet is off, so there is nothing to sync.'); return; }
   const r = tracker_sync_();
+  let filled = 0; try { filled = r.ok ? trackerFill_() : 0; } catch (e) { /* the 5-minute run tries again */ }
   const mails = r.ok ? payMail_sendPending_() : 0;   // "payment verified" emails now due (PaymentMail.gs)
-  ui.alert(r.ok ? 'Synced. ' + r.changed + ' applicant(s) changed.' + (mails ? ' ' + mails + ' "payment verified" email(s) sent.' : '')
+  ui.alert(r.ok ? 'Synced. ' + r.changed + ' applicant(s) changed.' + (filled ? ' ' + filled + ' blank tracker cell(s) filled.' : '') + (mails ? ' ' + mails + ' "payment verified" email(s) sent.' : '')
     : 'Could not read the tracker. Check Settings › TrackerSheet and that this account can open it.');
 }
 
