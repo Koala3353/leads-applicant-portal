@@ -17,6 +17,10 @@
 
 const PAYMAIL_DOOR_ = 'https://koala3353.github.io/leads-applicant-portal/go/';   // the door page: gets people out of Gmail's in-app browser
 const PAYMAIL_PER_RUN_ = 40;
+// payMail_test / payMail_testDarkAB also send straight to these (a forwarded copy loses its <style> block, so it can't
+// show how Gmail dark mode really renders the email)
+const PAYMAIL_TEST_ALSO_ = ['kristen.mikayla.chua@student.ateneo.edu'];
+function payMail_testTo_(me) { return [me].concat(PAYMAIL_TEST_ALSO_.filter(x => x && x.toLowerCase() !== me)); }
 // the "payment verified" email's drop-off date when Settings › RequirementsDeadline is blank (the core team's template)
 const PAYMAIL_DUE_DEFAULT_ = { short: 'November 27, 5PM', long: 'November 27, 2026 &middot; 5:00 PM' };   // verified emails per run (MailApp is ~1 s each); the rest go out on the next run, 5 minutes later
 
@@ -194,9 +198,10 @@ function payMail_testDarkAB() {
   const imp = "@import url('https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;700;800&family=Special+Elite&family=VT323&family=Courier+Prime:wght@400;700&display=swap');\n  ";
   const b = html.replace('<style>\n', '<style>\n  ' + imp);
   if (b === html) throw new Error('No <style> block found to add the @import to.');
-  MailApp.sendEmail(me, '[A] as designed · dark mode test', 'Open in Gmail on iPhone, dark mode on.', { name: 'I.R.I.S. // LEADS 2627', htmlBody: html });
-  MailApp.sendEmail(me, '[B] + @import · dark mode test', 'Open in Gmail on iPhone, dark mode on.', { name: 'I.R.I.S. // LEADS 2627', htmlBody: b });
-  return 'A and B sent to ' + me;
+  const to = payMail_testTo_(me).join(',');
+  MailApp.sendEmail(to, '[A] as designed · dark mode test', 'Open in Gmail on iPhone, dark mode on.', { name: 'I.R.I.S. // LEADS 2627', htmlBody: html });
+  MailApp.sendEmail(to, '[B] + @import · dark mode test', 'Open in Gmail on iPhone, dark mode on.', { name: 'I.R.I.S. // LEADS 2627', htmlBody: b });
+  return 'A and B sent to ' + to;
 }
 
 /** Run from the editor: sends both emails to you (your own file's data if you applied, else a sample). */
@@ -207,7 +212,10 @@ function payMail_test() {
   try { found = getApplicantByEmail_(me); } catch (e) { Logger.log('Own file not readable (' + e.message + '); using sample data.'); }
   const a = found ? Object.assign({}, found.data, { Email: me })
     : { ApplicantID: 'APP-0000', Nickname: 'Sample', FullName: 'Applicant, Sample', Email: me, FinAidScholar: 'Yes' };
-  return ['received', 'verified'].map(k => k + ': ' + (payMail_send_(a, k) ? 'sent to ' + me : 'NOT sent (see Activity)')).join('\n');
+  const out = [];
+  payMail_testTo_(me).forEach(to => ['received', 'verified'].forEach(k =>
+    out.push(k + ': ' + (payMail_send_(Object.assign({}, a, { Email: to }), k) ? 'sent to ' + to : 'NOT sent to ' + to + ' (see Activity)'))));
+  return out.join('\n');
 }
 
 /**
