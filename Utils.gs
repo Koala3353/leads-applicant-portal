@@ -57,7 +57,8 @@ const COLS = [
   'PaymentVerifiedMail',                                                  // when the "payment verified" email went out (PaymentMail.gs); blank = not yet
   'LastDayUpperclassmen',                                                 // LeProg's question on the payment page (Nov 14 2026): the upperclassmen they'd spend their last day with
   'OHSClearance',                                                         // Drive link to their OHS clearance (payment page, Nov 15 2026); folder = Settings › OHSFolder
-  'OHSClearanceDate'                                                      // the date on that clearance (yyyy-mm-dd, must be within the past 6 months when uploaded)
+  'OHSClearanceDate',                                                     // the date on that clearance (yyyy-mm-dd, after StepsApi.gs › OHS_AFTER_)
+  'OHSAnswer'                                                             // YES / NO: "Do you have an OHS clearance dated 6 months before Offsite?" (asked with the payment)
 ];
 
 /** Settings › ContactEmail as a clean list of addresses (it may hold several, comma- or space-separated). */

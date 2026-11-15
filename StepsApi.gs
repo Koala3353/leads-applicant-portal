@@ -73,7 +73,7 @@ function steps_get_(page) {
       fee: fee_(a),   // { now, off, ... }: the page shows the FinAid line only when off > 0
       emergencyContact: steps_getEmergencyContact_(a.ApplicantID, a.Email),
       lastDay: String(a.LastDayUpperclassmen || ''),   // LeProg's question (Brand.gs › steps.pay.lastDay)
-      ohs: { onFile: !!String(a.OHSClearance || ''), issued: steps_isoDay_(a.OHSClearanceDate), after: OHS_AFTER_ }   // the link itself stays server-side
+      ohs: { answer: String(a.OHSAnswer || ''), onFile: !!String(a.OHSClearance || ''), issued: steps_isoDay_(a.OHSClearanceDate), after: OHS_AFTER_ }   // the link itself stays server-side
     };
   } else if (key === 'reqs') {
     const done = steps_onsiteDone_(a);
@@ -275,6 +275,10 @@ function steps_saveEmergencyContact_(contact) {
     return { ok: false, error: 'Emergency contact mobile must be 11 digits starting with 09 (e.g. 09171234567).' };
   }
 
+  // OHS clearance (Nov 15 2026): asked with every payment; YES needs a file already uploaded (the page sends it first, steps_uploadOhs)
+  const ohsAns = String(contact.ohs || '').trim().toUpperCase();
+  if (ohsAns !== 'YES' && ohsAns !== 'NO') return { ok: false, error: 'Answer the OHS clearance question (Yes or No).' };
+  if (ohsAns === 'YES' && !String(a.OHSClearance || '')) return { ok: false, error: 'Attach your OHS clearance, or choose No.' };
   if (lastDay.length < 3 || lastDay.length > 1000) {
     return { ok: false, error: 'Name at least one upperclassman for your last day (first and last name, up to 1000 characters).' };
   }
@@ -310,7 +314,8 @@ function steps_saveEmergencyContact_(contact) {
     if (cHead.indexOf('EmergencyContactMobile') >= 0) extra.EmergencyContactMobile = clean.mobile;
     else if (cHead.indexOf('EmergencyMobile') >= 0) extra.EmergencyMobile = clean.mobile;
 
-    extra.LastDayUpperclassmen = lastDay;   // LeProg's question; updateApplicant_ adds the column if the sheet doesn't have it yet
+    extra.LastDayUpperclassmen = lastDay;
+    extra.OHSAnswer = ohsAns;   // LeProg's question; updateApplicant_ adds the column if the sheet doesn't have it yet
     updateApplicant_(found.row, extra, a.ApplicantID);
   });
 
@@ -325,9 +330,10 @@ function steps_saveEmergencyContact_(contact) {
  * Saves emergency contact, saves file in PaymentFolder, links it in PaymentProof, and sets Payment to SUBMITTED.
  */
 /* ---------- OHS clearance (Nov 15 2026) ----------
- * file = { name, type, data (base64, no data: prefix), issued: 'yyyy-mm-dd' }. Saved to Settings › OHSFolder;
- * Applicants › OHSClearance gets the Drive link and OHSClearanceDate the date on the clearance. A new upload replaces the link
- * (the older file stays in the folder). Separate from the proof so people who already paid can add it. */
+ * Section 03 of the payment form asks "Do you have an OHS clearance dated 6 months before Offsite?" (Applicants › OHSAnswer).
+ * On YES the page first sends the file here: file = { name, type, data (base64, no data: prefix), issued: 'yyyy-mm-dd' }.
+ * Saved to Settings › OHSFolder; Applicants › OHSClearance gets the Drive link and OHSClearanceDate the date on the clearance.
+ * A new upload replaces the link (the older file stays in the folder). Then the proof / details call saves the answer. */
 function steps_uploadOhs(file) {
   return traced_('steps_uploadOhs', 'pay', () => steps_uploadOhs_(file || {}), r => r.ok ? r.id + ' OHS clearance uploaded' : 'not uploaded: ' + r.error);
 }
@@ -388,7 +394,7 @@ function steps_uploadOhs_(file) {
     withScriptLock_(20000, () => {
       const now = getApplicantById_(a.ApplicantID);
       if (!now) throw new Error('Your file could not be found. Message the core team.');
-      updateApplicant_(now.row, { OHSClearance: saved.getUrl(), OHSClearanceDate: issued }, a.ApplicantID);
+      updateApplicant_(now.row, { OHSClearance: saved.getUrl(), OHSClearanceDate: issued, OHSAnswer: 'YES' }, a.ApplicantID);
     });
   } catch (err) {
     try { saved.setTrashed(true); } catch (e) { /* best effort: no orphaned medical document in Drive */ }
