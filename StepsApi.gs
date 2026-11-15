@@ -73,7 +73,7 @@ function steps_get_(page) {
       fee: fee_(a),   // { now, off, ... }: the page shows the FinAid line only when off > 0
       emergencyContact: steps_getEmergencyContact_(a.ApplicantID, a.Email),
       lastDay: String(a.LastDayUpperclassmen || ''),   // LeProg's question (Brand.gs › steps.pay.lastDay)
-      ohs: { onFile: !!String(a.OHSClearance || ''), issued: steps_isoDay_(a.OHSClearanceDate) }   // the link itself stays server-side
+      ohs: { onFile: !!String(a.OHSClearance || ''), issued: steps_isoDay_(a.OHSClearanceDate), after: OHS_AFTER_ }   // the link itself stays server-side
     };
   } else if (key === 'reqs') {
     const done = steps_onsiteDone_(a);
@@ -339,7 +339,12 @@ function steps_isoDay_(v) {
   return m ? m[0] : '';
 }
 
-/** '' when the date is a real day from 6 months ago up to today (Manila), else the reason it isn't */
+/* The checkup must be AFTER this day: 6 months before LEADS Offsite (Jan 29 to 31, 2027), as the core team worded it on
+ * Nov 15 2026 ("Have you had an OHS Checkup anytime after July 31, 2026?"). The page reads it from steps_get; the copy
+ * in Brand.gs › steps.pay.ohs names the same date. Function-scoped use only (load order). */
+const OHS_AFTER_ = '2026-07-31';
+
+/** '' when the date is a real day after OHS_AFTER_ and not later than today (Manila), else the reason it isn't */
 function steps_ohsDateProblem_(issued, now) {
   const m = String(issued || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return 'Enter the date on your OHS clearance.';
@@ -347,10 +352,8 @@ function steps_ohsDateProblem_(issued, now) {
   if (new Date(day).getUTCDate() !== d) return 'Enter the date on your OHS clearance.';
   const t = Utilities.formatDate(now || new Date(), 'Asia/Manila', 'yyyy-MM-dd').split('-').map(Number);
   const today = Date.UTC(t[0], t[1] - 1, t[2]);
-  let cut = new Date(Date.UTC(t[0], t[1] - 1 - 6, t[2]));
-  if (cut.getUTCDate() !== t[2]) cut = new Date(Date.UTC(t[0], t[1] - 6, 0));   // Aug 31 minus 6 months = Feb 28/29, not Mar 3
   if (day > today) return 'That date is in the future. Enter the date printed on the clearance.';
-  if (day < cut.getTime()) return 'Your OHS clearance must be issued within the past 6 months. Get a new one from OHS, then upload it.';
+  if (String(issued) <= OHS_AFTER_) return BRAND.steps.pay.ohs.tooOld;
   return '';
 }
 

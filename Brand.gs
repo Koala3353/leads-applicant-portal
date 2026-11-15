@@ -291,9 +291,13 @@ const BRAND = {
             how: 'How to pay', qrTitle: 'Scan to pay', upTitle: 'Upload your proof',
             upHint: 'A screenshot or photo of the receipt that shows the amount, the date and the reference number. PNG, JPG or PDF, up to 8 MB.',
             // OHS clearance upload (Nov 15 2026): its own card on the payment page; saved to Settings › OHSFolder, link in Applicants › OHSClearance
+            // the cutoff date itself is OHS_AFTER_ in StepsApi.gs: change both together
             ohs: { title: 'OHS Clearance',
-                   lead: 'Upload a soft copy of your OHS clearance. It must be issued within the past 6 months.',
-                   dateLabel: 'Date on the clearance', hint: 'A clear photo, screenshot or scan of the whole clearance. PNG, JPG or PDF, up to 8 MB.',
+                   question: 'Do you have an existing OHS Clearance dated 6 months before LEADS Offsite?',
+                   lead: 'i.e. Have you had an OHS Checkup anytime after July 31, 2026? Upload a soft copy of that clearance here.',
+                   none2: 'No checkup since then? Get one at OHS first, then come back and upload it here.',
+                   dateLabel: 'Date of your OHS checkup (on the clearance)', hint: 'A clear photo, screenshot or scan of the whole clearance. PNG, JPG or PDF, up to 8 MB.',
+                   tooOld: 'Your OHS checkup must be after July 31, 2026 (6 months before LEADS Offsite). Get a new one at OHS, then upload it.',
                    button: 'Send OHS clearance', replace: 'Replace OHS clearance',
                    none: 'No OHS clearance on file yet.', onFile: 'On file. Issued ',
                    sent: 'OHS clearance received. The core team will check it.' },

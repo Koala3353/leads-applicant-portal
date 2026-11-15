@@ -289,7 +289,11 @@
       <form class="card s-card" id="ohsForm" hidden novalidate>
         <div class="winbar"><span>OHS_CLEARANCE.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
         <h2><?= BRAND.steps.pay.ohs.title ?></h2>
-        <p class="ld-copy"><?= BRAND.steps.pay.ohs.lead ?></p>
+        <div class="ld-copy">
+          <p class="ld-q"><?= BRAND.steps.pay.ohs.question ?> <span class="req" style="color:var(--danger)">*</span></p>
+          <p class="ld-hint"><?= BRAND.steps.pay.ohs.lead ?></p>
+          <p class="ld-hint"><?= BRAND.steps.pay.ohs.none2 ?></p>
+        </div>
         <p class="pill dim" id="ohsStatus"><?= BRAND.steps.pay.ohs.none ?></p>
         <div class="s-field" id="field-ohsDate">
           <label for="ohsDate"><?= BRAND.steps.pay.ohs.dateLabel ?> <span class="req">*</span></label>
@@ -702,14 +706,14 @@
   let ohsPicked = null;
   const ohsMsg = (text, tone) => { $('ohsMsg').textContent = text || ''; $('ohsMsg').className = 's-msg' + (tone ? ' ' + tone : ''); };
   const manilaDay = (d) => new Date(d.getTime() + 8 * 3600e3).toISOString().slice(0, 10);   // yyyy-mm-dd in Manila
-  function ohsWindow() {   // [6 months ago, today], the same rule the server checks
-    const t = manilaDay(new Date()).split('-').map(Number);
-    let cut = new Date(Date.UTC(t[0], t[1] - 1 - 6, t[2]));
-    if (cut.getUTCDate() !== t[2]) cut = new Date(Date.UTC(t[0], t[1] - 6, 0));
-    return [cut.toISOString().slice(0, 10), manilaDay(new Date())];
+  let ohsAfter = '2026-07-31';   // the server sends the real one (StepsApi.gs › OHS_AFTER_)
+  function ohsWindow() {   // [the day after the cutoff, today], the same rule the server checks
+    const a = new Date(ohsAfter + 'T00:00:00Z'); a.setUTCDate(a.getUTCDate() + 1);
+    return [a.toISOString().slice(0, 10), manilaDay(new Date())];
   }
   function renderOhs(o) {
     o = o || {};
+    if (o.after) ohsAfter = o.after;
     const w = ohsWindow();
     $('ohsDate').min = w[0]; $('ohsDate').max = w[1];
     $('ohsForm').hidden = false;
@@ -750,7 +754,7 @@
     const day = $('ohsDate').value, w = ohsWindow(), f = $('field-ohsDate');
     const bad = !day ? 'Enter the date on your OHS clearance.'
       : day > w[1] ? 'That date is in the future. Enter the date printed on the clearance.'
-      : day < w[0] ? 'Your OHS clearance must be issued within the past 6 months. Get a new one from OHS, then upload it.' : '';
+      : day < w[0] ? T.pay.ohs.tooOld : '';
     f.classList.toggle('has-error', !!bad); $('err-ohsDate').textContent = bad;
     if (bad) { $('ohsDate').focus(); return ohsMsg(bad, 'bad'); }
     if (!ohsPicked) return ohsMsg('Attach your OHS clearance.', 'bad');
