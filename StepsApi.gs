@@ -72,7 +72,8 @@ function steps_get_(page) {
       proof: String(a.PaymentProof || '') ? true : false,
       fee: fee_(a),   // { now, off, ... }: the page shows the FinAid line only when off > 0
       emergencyContact: steps_getEmergencyContact_(a.ApplicantID, a.Email),
-      lastDay: String(a.LastDayUpperclassmen || '')   // LeProg's question (Brand.gs › steps.pay.lastDay)
+      lastDay: String(a.LastDayUpperclassmen || ''),   // LeProg's question (Brand.gs › steps.pay.lastDay)
+      ohs: { onFile: !!String(a.OHSClearance || ''), issued: steps_isoDay_(a.OHSClearanceDate) }   // the link itself stays server-side
     };
   } else if (key === 'reqs') {
     const done = steps_onsiteDone_(a);
@@ -323,6 +324,79 @@ function steps_saveEmergencyContact_(contact) {
  * Upload proof of payment. file = { name, type, data (base64, no data: prefix), emergencyContact: { name, relation, mobile } }.
  * Saves emergency contact, saves file in PaymentFolder, links it in PaymentProof, and sets Payment to SUBMITTED.
  */
+/* ---------- OHS clearance (Nov 15 2026) ----------
+ * file = { name, type, data (base64, no data: prefix), issued: 'yyyy-mm-dd' }. Saved to Settings › OHSFolder;
+ * Applicants › OHSClearance gets the Drive link and OHSClearanceDate the date on the clearance. A new upload replaces the link
+ * (the older file stays in the folder). Separate from the proof so people who already paid can add it. */
+function steps_uploadOhs(file) {
+  return traced_('steps_uploadOhs', 'pay', () => steps_uploadOhs_(file || {}), r => r.ok ? r.id + ' OHS clearance uploaded' : 'not uploaded: ' + r.error);
+}
+
+/** A sheet date or 'yyyy-mm-dd' text as 'yyyy-mm-dd' (Manila), or '' */
+function steps_isoDay_(v) {
+  if (v instanceof Date && !isNaN(v)) return Utilities.formatDate(v, 'Asia/Manila', 'yyyy-MM-dd');
+  const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? m[0] : '';
+}
+
+/** '' when the date is a real day from 6 months ago up to today (Manila), else the reason it isn't */
+function steps_ohsDateProblem_(issued, now) {
+  const m = String(issued || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return 'Enter the date on your OHS clearance.';
+  const y = +m[1], mo = +m[2], d = +m[3], day = Date.UTC(y, mo - 1, d);
+  if (new Date(day).getUTCDate() !== d) return 'Enter the date on your OHS clearance.';
+  const t = Utilities.formatDate(now || new Date(), 'Asia/Manila', 'yyyy-MM-dd').split('-').map(Number);
+  const today = Date.UTC(t[0], t[1] - 1, t[2]);
+  let cut = new Date(Date.UTC(t[0], t[1] - 1 - 6, t[2]));
+  if (cut.getUTCDate() !== t[2]) cut = new Date(Date.UTC(t[0], t[1] - 6, 0));   // Aug 31 minus 6 months = Feb 28/29, not Mar 3
+  if (day > today) return 'That date is in the future. Enter the date printed on the clearance.';
+  if (day < cut.getTime()) return 'Your OHS clearance must be issued within the past 6 months. Get a new one from OHS, then upload it.';
+  return '';
+}
+
+function steps_uploadOhs_(file) {
+  const pv = steps_previewBlock_(); if (pv) return pv;
+  const found = requireApplicant_();
+  const a = found.data;
+  const p = progressFor_(a);
+  if (!p.payment.unlocked && p.payment.state !== 'done' && p.payment.state !== 'waiting') {
+    return { ok: false, error: 'The OHS clearance upload is not open for you yet.' };
+  }
+  const issued = String(file.issued || '').trim();
+  const bad = steps_ohsDateProblem_(issued);
+  if (bad) return { ok: false, error: bad };
+
+  const type = String(file.type || '').toLowerCase();
+  if (PROOF_TYPES.indexOf(type) < 0) return { ok: false, error: 'Upload a photo (PNG, JPG, WEBP, HEIC) or a PDF.' };
+  let bytes;
+  try { bytes = Utilities.base64Decode(String(file.data || '')); } catch (e) { return { ok: false, error: 'That file could not be read. Try again.' }; }
+  if (!bytes.length) return { ok: false, error: 'Attach your OHS clearance.' };
+  if (bytes.length > PROOF_MAX_BYTES) return { ok: false, error: 'That file is over 8 MB. Send a smaller photo or a screenshot.' };
+  if (!steps_looksLike_(bytes, type)) return { ok: false, error: 'That file does not look like a photo or a PDF.' };
+  const dayKey = 'ohs:' + String(a.Email || '').toLowerCase() + ':' + Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyyMMdd');
+  if (!bump_(dayKey, PROOF_PER_DAY, 90000)) return { ok: false, error: 'That is enough uploads for today. If the wrong file went in, message the core team.' };
+
+  const ext = PROOF_EXT[type];
+  const stamp = Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyy-MM-dd HHmm');
+  const name = a.ApplicantID + ' ' + String(a.FullName || '').replace(/[^\w .'-]/g, '').slice(0, 60) + ' - OHS clearance (issued ' + issued + ') ' + stamp + '.' + ext;
+  const saved = steps_ohsFolder_().createFile(Utilities.newBlob(bytes, type, name));
+  saved.setDescription('OHS clearance uploaded by ' + a.Email + ' through the LEADS portal.');
+  try {
+    withScriptLock_(20000, () => {
+      const now = getApplicantById_(a.ApplicantID);
+      if (!now) throw new Error('Your file could not be found. Message the core team.');
+      updateApplicant_(now.row, { OHSClearance: saved.getUrl(), OHSClearanceDate: issued }, a.ApplicantID);
+    });
+  } catch (err) {
+    try { saved.setTrashed(true); } catch (e) { /* best effort: no orphaned medical document in Drive */ }
+    throw err;
+  }
+  logChange_(a.ApplicantID, 'OHS clearance', String(a.OHSClearance || '') ? 'replaced' : '', 'uploaded (issued ' + issued + ')', 'applicant');
+  return { ok: true, id: a.ApplicantID, issued: issued };
+}
+
+function steps_ohsFolder_() { return steps_driveFolder_('OHSFolder', 'OHS Clearance'); }
+
 function steps_uploadProof(file) {
   return traced_('steps_uploadProof', 'pay', () => steps_uploadProof_(file || {}), r => r.ok ? r.id + ' proof uploaded' : 'not uploaded: ' + r.error);
 }
@@ -390,16 +464,19 @@ function steps_uploadProof_(file) {
 }
 
 /** The Drive folder for proofs: Settings > PaymentFolder (a folder link), or a new "LEADS Proof of Payment" folder saved there. */
-function steps_proofFolder_() {
-  const link = String(getSetting_('PaymentFolder') || '');
+function steps_proofFolder_() { return steps_driveFolder_('PaymentFolder', 'Proof of Payment'); }
+
+/** Settings › <key> (a folder link), or a new "<EventName> - <label>" folder owned by the script owner, saved there. */
+function steps_driveFolder_(key, label) {
+  const link = String(getSetting_(key) || '');
   const id = (link.match(/folders\/([\w-]{20,})/) || link.match(/^([\w-]{25,})$/) || [])[1];
   if (id) { try { const f = DriveApp.getFolderById(id); if (!f.isTrashed()) return f; } catch (e) { /* gone or no access: make a new one */ } }
   return withScriptLock_(20000, () => {
     clearConfigCache_(); getSettings_.cache = null; cachedTab_.memo = {};   // re-read Settings for real
-    const again = (String(getSetting_('PaymentFolder') || '').match(/folders\/([\w-]{20,})/) || [])[1];
+    const again = (String(getSetting_(key) || '').match(/folders\/([\w-]{20,})/) || [])[1];
     if (again && again !== id) return DriveApp.getFolderById(again);
     // reuse a folder made by an earlier run (e.g. one whose link couldn't be saved) instead of making a second one
-    const name = (getSetting_('EventName') || 'LEADS') + ' - Proof of Payment';
+    const name = (getSetting_('EventName') || 'LEADS') + ' - ' + label;
     const same = DriveApp.getFoldersByName(name);
     let folder = null;
     // only a folder this script's owner owns: a same-named folder someone shared with us must never receive receipts
@@ -409,7 +486,7 @@ function steps_proofFolder_() {
       try { if (!f.isTrashed() && f.getOwner() && f.getOwner().getEmail().toLowerCase() === me) folder = f; } catch (e) { /* skip */ }
     }
     folder = folder || DriveApp.createFolder(name);
-    writeSetting_('PaymentFolder', folder.getUrl());
+    writeSetting_(key, folder.getUrl());
     return folder;
   });
 }
@@ -418,5 +495,5 @@ function steps_proofFolder_() {
 function steps_authorizeDrive() {
   ownerOnly_();
   const folder = steps_proofFolder_();
-  return 'Drive is connected. Proofs of payment go to ' + folder.getUrl();
+  return 'Drive is connected. Proofs of payment go to ' + folder.getUrl() + ' and OHS clearances to ' + steps_ohsFolder_().getUrl();
 }

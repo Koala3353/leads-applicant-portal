@@ -124,7 +124,7 @@
   .s-field{display:flex;flex-direction:column;gap:6px;margin:0 0 14px;min-width:0;text-align:left}
   .s-field label{font-family:var(--mono);font-size:.76rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
   .s-field label .req{color:var(--danger,#e00000);margin-left:2px}
-  .s-field input[type=text],.s-field input[type=tel],.s-field textarea{width:100%;font:inherit;font-size:16px;color:var(--text);background:#060606;border:2px inset #7a7a7a;border-radius:0;padding:.65em .8em;min-height:44px}
+  .s-field input[type=text],.s-field input[type=tel],.s-field input[type=date],.s-field textarea{width:100%;font:inherit;font-size:16px;color:var(--text);background:#060606;border:2px inset #7a7a7a;border-radius:0;padding:.65em .8em;min-height:44px}
   .s-field input:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
   .s-field textarea{min-height:110px;resize:vertical;line-height:1.5}
   .ld-copy{text-align:left;margin:0 0 14px;display:grid;gap:8px}
@@ -283,6 +283,25 @@
         </div>
         <div class="s-actions"><button class="btn ghost" type="button" id="editEcBtn">Update details</button></div>
       </div>
+
+      <!-- OHS clearance: its own upload, so people who already sent their proof can add it (StepsApi.gs › steps_uploadOhs) -->
+      <form class="card s-card" id="ohsForm" hidden novalidate>
+        <div class="winbar"><span>OHS_CLEARANCE.EXE</span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+        <h2><?= BRAND.steps.pay.ohs.title ?></h2>
+        <p class="ld-copy"><?= BRAND.steps.pay.ohs.lead ?></p>
+        <p class="pill dim" id="ohsStatus"><?= BRAND.steps.pay.ohs.none ?></p>
+        <div class="s-field" id="field-ohsDate">
+          <label for="ohsDate"><?= BRAND.steps.pay.ohs.dateLabel ?> <span class="req">*</span></label>
+          <input type="date" id="ohsDate" required>
+          <span class="err" id="err-ohsDate"></span>
+        </div>
+        <label class="drop" id="ohsDrop">
+          <input type="file" id="ohsFile" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" aria-describedby="ohsHint">
+          <span id="ohsInner"><b>Choose a file</b><br><small id="ohsHint"><?= BRAND.steps.pay.ohs.hint ?></small></span>
+        </label>
+        <div class="s-actions"><button class="btn" type="submit" id="ohsBtn" disabled><?= BRAND.steps.pay.ohs.button ?></button></div>
+        <p class="s-msg" id="ohsMsg" role="status" aria-live="polite"></p>
+      </form>
     </div>
   </div>
 
@@ -444,6 +463,7 @@
     }
 
     updateSubmitBtn();
+    renderOhs(c.ohs);
     if (v === 'VERIFIED') kuya('love', T.pay.states.VERIFIED);
     show('pay');
   }
@@ -674,6 +694,82 @@
     } else {
       sendPayload('');
     }
+  });
+
+  /* ---------- OHS clearance ---------- */
+  const OHS_TYPES = /^image\/(png|jpe?g|webp|heic|heif)$|^application\/pdf$/;
+  let ohsPicked = null;
+  const ohsMsg = (text, tone) => { $('ohsMsg').textContent = text || ''; $('ohsMsg').className = 's-msg' + (tone ? ' ' + tone : ''); };
+  const manilaDay = (d) => new Date(d.getTime() + 8 * 3600e3).toISOString().slice(0, 10);   // yyyy-mm-dd in Manila
+  function ohsWindow() {   // [6 months ago, today], the same rule the server checks
+    const t = manilaDay(new Date()).split('-').map(Number);
+    let cut = new Date(Date.UTC(t[0], t[1] - 1 - 6, t[2]));
+    if (cut.getUTCDate() !== t[2]) cut = new Date(Date.UTC(t[0], t[1] - 6, 0));
+    return [cut.toISOString().slice(0, 10), manilaDay(new Date())];
+  }
+  function renderOhs(o) {
+    o = o || {};
+    const w = ohsWindow();
+    $('ohsDate').min = w[0]; $('ohsDate').max = w[1];
+    $('ohsForm').hidden = false;
+    if (o.onFile) {
+      $('ohsStatus').className = 'pill ok';
+      $('ohsStatus').textContent = T.pay.ohs.onFile + (o.issued ? new Date(o.issued + 'T00:00:00+08:00').toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric' }) : '') + '.';
+      $('ohsBtn').textContent = T.pay.ohs.replace;
+    } else {
+      $('ohsStatus').className = 'pill warn';
+      $('ohsStatus').textContent = T.pay.ohs.none;
+      $('ohsBtn').textContent = T.pay.ohs.button;
+    }
+  }
+  function ohsReady() { $('ohsBtn').disabled = !ohsPicked; }
+  function ohsPick(file) {
+    ohsPicked = null; ohsReady(); ohsMsg(''); $('ohsDrop').classList.remove('has-file');
+    $('ohsInner').innerHTML = '<b>Choose a file</b><br><small id="ohsHint"></small>'; $('ohsHint').textContent = T.pay.ohs.hint;
+    if (!file) return;
+    const EXT = { heic: 'image/heic', heif: 'image/heif', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', pdf: 'application/pdf' };
+    const guessed = EXT[(String(file.name).match(/\.([a-z]+)$/i) || [, ''])[1].toLowerCase()];
+    if (!file.type && guessed) file = new File([file], file.name, { type: guessed });
+    if (!OHS_TYPES.test(file.type)) return ohsMsg('Upload a photo (PNG, JPG, WEBP, HEIC) or a PDF.', 'bad');
+    const done = f => {
+      if (f.size > 8 * 1024 * 1024) return ohsMsg('That file is over 8 MB. Send a smaller photo or a screenshot.', 'bad');
+      ohsPicked = f; ohsReady(); $('ohsDrop').classList.add('has-file');
+      const n = document.createElement('span'); n.className = 'fname'; n.textContent = 'Attached // ' + file.name + ' (' + Math.ceil(f.size / 1024) + ' KB)';
+      $('ohsInner').textContent = ''; $('ohsInner').appendChild(n);
+    };
+    if (/^image\/(png|jpe?g|webp)$/.test(file.type) && file.size > 1.5 * 1024 * 1024) shrink(file).then(done).catch(() => done(file));
+    else done(file);
+  }
+  $('ohsFile').addEventListener('change', () => ohsPick($('ohsFile').files[0]));
+  ['dragenter', 'dragover'].forEach(t => $('ohsDrop').addEventListener(t, e => { e.preventDefault(); $('ohsDrop').classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => $('ohsDrop').addEventListener(t, () => $('ohsDrop').classList.remove('over')));
+  $('ohsDrop').addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) ohsPick(e.dataTransfer.files[0]); });
+  $('ohsForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const day = $('ohsDate').value, w = ohsWindow(), f = $('field-ohsDate');
+    const bad = !day ? 'Enter the date on your OHS clearance.'
+      : day > w[1] ? 'That date is in the future. Enter the date printed on the clearance.'
+      : day < w[0] ? 'Your OHS clearance must be issued within the past 6 months. Get a new one from OHS, then upload it.' : '';
+    f.classList.toggle('has-error', !!bad); $('err-ohsDate').textContent = bad;
+    if (bad) { $('ohsDate').focus(); return ohsMsg(bad, 'bad'); }
+    if (!ohsPicked) return ohsMsg('Attach your OHS clearance.', 'bad');
+    $('ohsBtn').disabled = true; ohsMsg('Filing your OHS clearance…');
+    if (window.Loader) Loader.show('Filing your OHS clearance…');
+    const fail = m => { if (window.Loader) Loader.hide(); $('ohsBtn').disabled = false; ohsMsg(m || 'That did not go through. Try again.', 'bad'); };
+    const reader = new FileReader();
+    reader.onerror = () => fail('That file could not be read. Try another one.');
+    reader.onload = () => {
+      const s = String(reader.result);
+      call('steps_uploadOhs', { name: ohsPicked.name, type: ohsPicked.type, data: s.slice(s.indexOf(',') + 1), issued: day }).then(r => {
+        if (!r || !r.ok) return fail(r && r.error);
+        if (window.Loader) Loader.hide();
+        ohsPick(null); $('ohsFile').value = '';
+        renderOhs({ onFile: true, issued: r.issued });
+        ohsMsg(T.pay.ohs.sent, 'good');
+        kuya('happy', T.pay.ohs.sent);
+      }).catch(err => fail(err && err.message));
+    };
+    reader.readAsDataURL(ohsPicked);
   });
 
   /* ---------- 03 requirements ---------- */

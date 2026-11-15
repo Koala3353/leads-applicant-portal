@@ -290,6 +290,13 @@ const BRAND = {
             lead: 'Scan a code, pay the fee, then upload your proof. The core team checks it and marks it VERIFIED.',
             how: 'How to pay', qrTitle: 'Scan to pay', upTitle: 'Upload your proof',
             upHint: 'A screenshot or photo of the receipt that shows the amount, the date and the reference number. PNG, JPG or PDF, up to 8 MB.',
+            // OHS clearance upload (Nov 15 2026): its own card on the payment page; saved to Settings › OHSFolder, link in Applicants › OHSClearance
+            ohs: { title: 'OHS Clearance',
+                   lead: 'Upload a soft copy of your OHS clearance. It must be issued within the past 6 months.',
+                   dateLabel: 'Date on the clearance', hint: 'A clear photo, screenshot or scan of the whole clearance. PNG, JPG or PDF, up to 8 MB.',
+                   button: 'Send OHS clearance', replace: 'Replace OHS clearance',
+                   none: 'No OHS clearance on file yet.', onFile: 'On file. Issued ',
+                   sent: 'OHS clearance received. The core team will check it.' },
             // LeProg's question (Nov 14 2026), asked with the emergency contact; saved to Applicants › LastDayUpperclassmen
             lastDay: { title: '02 // Last Day on Earth',
                        lead: 'I.R.I.S. is taking over, and tomorrow is your last day on Earth.',

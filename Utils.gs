@@ -55,7 +55,9 @@ const COLS = [
   'OnsiteSubmitted',                                                      // requirements the applicant says they dropped off onsite, "PNF; DNU" (StepsApi.gs)
   'FinAidScholar',                                                        // optional self-declared checkbox on Apply: "Yes" or blank
   'PaymentVerifiedMail',                                                  // when the "payment verified" email went out (PaymentMail.gs); blank = not yet
-  'LastDayUpperclassmen'                                                  // LeProg's question on the payment page (Nov 14 2026): the upperclassmen they'd spend their last day with
+  'LastDayUpperclassmen',                                                 // LeProg's question on the payment page (Nov 14 2026): the upperclassmen they'd spend their last day with
+  'OHSClearance',                                                         // Drive link to their OHS clearance (payment page, Nov 15 2026); folder = Settings › OHSFolder
+  'OHSClearanceDate'                                                      // the date on that clearance (yyyy-mm-dd, must be within the past 6 months when uploaded)
 ];
 
 /** Settings › ContactEmail as a clean list of addresses (it may hold several, comma- or space-separated). */
@@ -278,6 +280,7 @@ const SETTINGS_SCHEMA = [
   { key: 'PortalContacts', type: 'text', def: '', help: 'Who to contact about portal problems, one per line: Name | email (Alt+Enter for a new line). Blank = the list in Brand.gs.' },
   { key: 'EyeFolder', type: 'text', def: '', help: 'Drive folder for the Game eye scans (EYE_<ID>). Made automatically on the first upload; private to the script owner.' },
   { key: 'PaymentFolder', type: 'text', def: '', help: 'Drive folder where uploaded proofs are saved. Made automatically on the first upload; share it with the core team.' },
+  { key: 'OHSFolder', type: 'text', def: '', help: 'Drive folder where uploaded OHS clearances are saved (payment page). Made automatically on the first upload; share it with the core team.' },
   // 03 requirements
   { key: 'RequirementsOpen', type: 'bool', def: false, help: 'STEP 03. Tick to open Requirements for accepted applicants who have sent their proof of payment (SUBMITTED or VERIFIED). The forms are listed in the Requirements tab.' },
   { key: 'RequirementsNote', type: 'text', def: '', help: 'Shown above the forms: general instructions for every requirement.' },
