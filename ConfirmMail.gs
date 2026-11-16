@@ -41,7 +41,7 @@ function confirmMail_apply_(a) {
   ];
   const fee = fee_(a), total = fee.total, later = fee.later;   // total is after any FinAid discount (fee_ in Utils.gs)
   const php = n => '₱' + n.toLocaleString('en-PH');
-  // "₱4,000 of the ₱4,200 fee; the last ₱200 comes later, for possible notarization."
+  // "₱4,000 of the ₱4,000 fee." (FeeLater is 0 since Nov 16 2026; the later-part wording stays for if it ever comes back)
   const feeLine = php(total - later) + ' of the ' + php(total) + ' fee' + (later ? '; the last ' + php(later) + ' comes later, for possible notarization.' : '.');
   // FinAid scholars: "FinAid scholar: you pay ₱3,600 instead of ₱4,000 (₱400 off). The core team will verify ..."
   const finAid = fee.off ? BRAND.finAid.line.replace('{now}', fee.now.toLocaleString('en-PH')).replace('{was}', (fee.now + fee.off).toLocaleString('en-PH'))

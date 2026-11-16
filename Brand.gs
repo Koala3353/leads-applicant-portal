@@ -204,7 +204,6 @@ const BRAND = {
       { q: 'I attended LEADS before. Can I still apply as a participant?', a: 'Anyone who has previously participated in LEADS will not be able to join as a participant this year.' },
       { q: 'LEADS Offsite is over the weekend. Will I have time to work on my requirements there?', a: 'While it is possible to work on requirements during designated free times, we encourage participants to finish their requirements beforehand to minimize distractions and maximize immersion.' },
       { q: 'What if I have a late Friday class or Saturday class?', a: "We will be coordinating with your professors in the 2nd semester to make sure that you don't have to worry about cutting class to attend LEADS. For those with late Friday classes, there will be a late car that can accommodate you to bring you to the offsite event." },
-      { q: 'Why is there a notarization fee?', a: 'The Office of Student Activities (OSA) may require the Parental Notification Form (PNF) to be notarized for offsite activities. The ₱200 fee on the participant fee covers this.' },
       { q: 'Can I edit my application after I submit it?', a: "Not from the portal. If something's wrong, message any of the following people: {contacts}." }
     ]
   },
@@ -316,7 +315,7 @@ const BRAND = {
                       VERIFIED: 'Verified. Your payment is on record. Requirements are next.', REJECTED: 'Your proof was not accepted. Check the details and upload a new one.' },
             sent: 'Proof received. It is in your file now.',
             // the amount slip on top of "How to pay" (numbers from fee_ in Utils.gs; {later} = pesos, no ₱)
-            dueK: 'Amount due', dueLater: '+ ₱{later} later, only if notarization is needed',
+            dueK: 'Amount due',
             track: ['Pay the fee', 'Send your proof', 'Verified'],   // the three tags above the cards
             // after a proof goes in: the receipt drops into the case folder, RECEIVED is stamped, then what happens next
             filed: { title: 'Evidence filed.', stamp: 'Received', exhibit: 'Exhibit 02 // proof of payment', tab: 'Case file',

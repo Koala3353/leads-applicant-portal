@@ -438,7 +438,7 @@
       $('dueSlip').hidden = false;
       $('dueAmt').textContent = php(fee.now); payDue = php(fee.now);
       $('dueWas').hidden = !(fee.off > 0); $('dueWas').textContent = '₱' + php(fee.now + fee.off);
-      $('dueSub').hidden = true;   // no "+ ₱200 later, only if notarization is needed" line (core team, Nov 16)
+      $('dueSub').hidden = true;   // no "paid later" line: the ₱200 notarization part was dropped (core team, Nov 16 2026)
     }
     // the three tags: pay, send proof, verified
     const TRACK = { NONE: ['now', '', ''], SUBMITTED: ['done', 'done', 'now'], VERIFIED: ['done', 'done', 'done'], REJECTED: ['done', 'flag', ''] }[v] || ['now', '', ''];
