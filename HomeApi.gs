@@ -45,7 +45,8 @@ function home_getContext_(view) {
     campStart: camp,   // ISO or null
     contact: String(s.ContactEmail || ''),
     isAdmin: admin,
-    preview: view ? { id: view.id } : null,
+    preview: view ? { id: view.id, sample: view.sample || null } : null,
+    cohort: released && a && ['ACCEPTED', 'CONFIRMED'].indexOf(String(a.Status)) >= 0 ? home_cohort_() : null,   // the dossier's batch counts (never names)
     event: {
       name: String(s.EventName || ''),
       dates: String(s.EventDates || ''),
@@ -58,6 +59,8 @@ function home_getContext_(view) {
       requirements: a.Requirements || 'NONE',
       payment: a.Payment || 'NONE',
       message: String(a.MessageToApplicant || '').trim().slice(0, 1000),   // a note from the core team (Applicants › MessageToApplicant)
+      ohs: String(a.OHSAnswer || ''),                                         // YES / NO / '' (payment page, section 03)
+      formDone: !!String(a.LastDayUpperclassmen || '').trim(),                // the payment form's details are in (emergency contact + last day)
       reveal: view ? null : revealFor_(a)   // the results film: { url, play } once the decision is visible, else null
     } : null,
     revealUrl: admin ? revealUrl_() : '',   // the core team can preview it with ?reveal=1
@@ -88,10 +91,51 @@ function home_viewAs(applicantId) {
     getSettings_.cache = Object.assign({}, getSettings_(), { ResultsReleased: true, PaymentOpen: true });   // this call only
     if (id === 'GUEST') return home_getContext_({ email: '', id: id });
     if (id === 'NOFILE') return home_getContext_({ email: 'preview.nofile@student.ateneo.edu', id: id });
+    // ?viewas=ACCEPTED (or WAITLISTED, REJECTED, CONFIRMED), .2 / .3 … for the next person with that result
+    const m = id.match(/^(ACCEPTED|WAITLISTED|REJECTED|CONFIRMED)(?:\.(\d{1,4}))?$/);
+    if (m) {
+      const list = home_roster_().filter(d => String(d.Status) === m[1]);
+      if (!list.length) throw new Error('Nobody is ' + m[1] + ' right now.');
+      const i = (Math.max(1, Number(m[2]) || 1) - 1) % list.length, pick = list[i];
+      return home_getContext_({ email: String(pick.Email).trim(), id: pick.ApplicantID, sample: { status: m[1], n: i + 1, of: list.length } });
+    }
     const found = id.indexOf('@') > 0 ? getApplicantByEmail_(id.toLowerCase()) : getApplicantById_(id);   // an APP ID or their email
     if (!found || !String(found.data.Email || '').trim()) throw new Error('No applicant with the ID or email ' + id + '.');
     return home_getContext_({ email: String(found.data.Email).trim(), id: found.data.ApplicantID });
   }, c => 'preview ' + (c && c.preview ? c.preview.id : '') + (c && c.applicant ? ' ' + c.applicant.status : ''));
+}
+
+/**
+ * Every filed applicant as the portal shows them once results are out (the Participant Application Tracker applied,
+ * Tracker.gs): one read of the Applicants tab. For the core team's samples and the dossier's batch counts.
+ */
+function home_roster_() {
+  const sh = sheet_(SHEET.APPLICANTS), last = sh.getLastRow();
+  if (last < 2) return [];
+  const head = cols_(), t = trackerRead_();
+  return sh.getRange(2, 1, last - 1, head.length).getValues()
+    .map(r => toObject_(r, head))
+    .filter(d => String(d.ApplicantID || '').trim() && String(d.Email || '').trim())
+    .map(d => trackerApply_(d, t));
+}
+
+/** The accepted batch in numbers for the dossier: { accepted, paid, reqs }. Cached 5 minutes; null if it can't be read. */
+function home_cohort_() {
+  const cache = CacheService.getScriptCache();
+  try { const hit = cache.get('home:cohort'); if (hit) return JSON.parse(hit); } catch (e) { /* count it */ }
+  try {
+    const acc = home_roster_().filter(d => d.Status === 'ACCEPTED' || d.Status === 'CONFIRMED');
+    const out = {
+      accepted: acc.length,
+      paid: acc.filter(d => d.Payment === 'SUBMITTED' || d.Payment === 'VERIFIED').length,
+      reqs: acc.filter(d => d.Requirements === 'SUBMITTED' || d.Requirements === 'APPROVED').length
+    };
+    try { cache.put('home:cohort', JSON.stringify(out), 300); } catch (e) { /* fine */ }
+    return out;
+  } catch (e) {
+    activity_('home_cohort', String(e && e.message), { level: 'WARN', page: 'home' });
+    return null;
+  }
 }
 
 /**

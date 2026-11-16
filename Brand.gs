@@ -262,6 +262,10 @@ const BRAND = {
     applyDone: 'Filed. Your application is on record.',
     closedNote: 'This file is closed. There is nothing left to do here.',   // REJECTED / WITHDRAWN, once results are out
     previewBar: 'Core team preview // {id} // after results // read-only',    // ?viewas=… (home_viewAs)
+    previewSample: ' // sample {status} {n} of {of}',                          // ?viewas=ACCEPTED (.2, .3 …): a sample person with that result
+    // the core team's VIEW AS panel on Home (bottom left): look at Home as one person, or as a sample of each result
+    viewAs: { title: 'VIEW AS', placeholder: 'APP-1234 or email', go: 'View', exit: 'Exit preview', prev: 'Prev', next: 'Next',
+              chips: [['ACCEPTED', 'Accepted'], ['WAITLISTED', 'Waitlisted'], ['REJECTED', 'Rejected'], ['NOFILE', 'No file'], ['GUEST', 'Signed out']] },
     wrongAccount: 'Use your Ateneo account.',
     open: 'Open', view: 'View', start: 'Start',
     hi: 'Hi {name}. '
@@ -368,6 +372,23 @@ const BRAND = {
     exhibit: 'Exhibit A // CAM 03'
   },
   // the thin strip above the cards for ACCEPTED applicants, once results are out ({date} = Manila date and time)
+  /* ---------- the accepted dossier on Home (results phase, ACCEPTED / CONFIRMED only; renderDossier in Home.html) ---------- */
+  dossier: {
+    briefTitle: 'OFFSITE_BRIEFING.DOC', briefK: 'Offsite in', days: 'days', today: 'Today.', tomorrow: 'Tomorrow.',
+    when: 'When', where: 'Where', stay: 'Stay', stayV: '3 days, 2 nights', covers: 'Covered', coversV: 'Accommodations, transportation, food and activities',
+    listTitle: 'NEXT_MOVES.TXT', listLead: 'What your file still needs. It updates on its own.',
+    items: {
+      pay:   { t: 'Pay the fee and send your proof', done: 'Verified', wait: 'For verification', todo: 'Due {date}', todoNoDate: 'Open now' },
+      form:  { t: 'Emergency contact and your last-day answer', done: 'On file', todo: 'With your payment' },
+      ohs:   { t: 'OHS clearance question', yes: 'On file', no: 'Details to follow', todo: 'Answer it' },
+      reqs:  { t: 'PNF and D&U', done: 'Received', approved: 'Approved', locked: 'Opens after payment', todo: 'Due {date}', todoNoDate: 'Open now' },
+      ga:    { t: '1st General Assembly', todo: '{date}', noDate: 'Date to follow' },
+      camp:  { t: 'LEADS Offsite', todo: '{date}' }
+    },
+    batchTitle: 'BATCH_2627.LOG', batchK: 'Accepted this year', payK: 'Payments in', reqK: 'PNF and D&U in',
+    batchNote: 'You are one of them. We counted.'
+  },
+
   dueStrip: {
     pay: 'Payment due {date}',
     payNoDate: 'Payment open. Send your proof.',

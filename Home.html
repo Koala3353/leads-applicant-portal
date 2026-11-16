@@ -321,6 +321,57 @@
   .cf-photo figcaption{margin-top:4px;font:400 .58rem/1.2 var(--type);letter-spacing:.08em;text-transform:uppercase;color:#4a4436;text-align:center}
   @media (max-width:480px){ .cf-photo{width:88px;margin-left:10px} body.results #statusCard{padding:18px 16px 16px} }
   /* the core team's ?viewas= preview */
+  /* the accepted dossier: briefing, next moves, batch (results phase, ACCEPTED / CONFIRMED) */
+  .dossier{display:grid;grid-template-columns:1fr;gap:16px;margin:24px 0 0}
+  @media (min-width:760px){.dossier{grid-template-columns:repeat(2,minmax(0,1fr))}.dz-list{grid-row:span 2}}
+  @media (min-width:1000px){.dossier{grid-template-columns:1fr 1.35fr 1fr}.dz-list{grid-row:auto}}
+  .dossier .card{min-width:0}
+  .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  .dz-k{margin:14px 0 0;font:700 .7rem/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .dz-days{margin:2px 0 12px;font-family:var(--display);font-size:clamp(2.6rem,7vw,3.6rem);line-height:.95;color:var(--glow);text-transform:uppercase}
+  .dz-days small{font-size:.4em;color:var(--text);margin-left:.25em;letter-spacing:.06em}
+  .dz-facts{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:0;font-size:.92rem}
+  .dz-facts dt{font:700 .68rem/1.6 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .dz-facts dd{margin:0;overflow-wrap:anywhere}
+  .dz-lead{margin:12px 0 10px;color:var(--muted);font-size:.9rem}
+  .dz-moves{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+  .dz-moves li{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:6px 10px;padding:9px 4px;border-bottom:1px dashed var(--line)}
+  .dz-moves li:last-child{border-bottom:0}
+  .dz-moves .mk{width:18px;height:18px;border:2px solid var(--muted);display:grid;place-items:center;font:700 .75rem/1 var(--mono)}
+  .dz-moves li.is-done .mk{background:var(--glow);border-color:var(--glow);color:#000}
+  .dz-moves li.is-now .mk{border-color:var(--danger);animation:dzBlink 1.2s steps(2) infinite}
+  .dz-moves li.is-later{opacity:.62}
+  @keyframes dzBlink{50%{border-color:transparent}}
+  .dz-moves .t{min-width:0;overflow-wrap:anywhere}
+  .dz-moves a.t{color:var(--text);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line)}
+  .dz-moves a.t:hover,.dz-moves a.t:focus-visible{text-decoration-color:var(--glow)}
+  .dz-moves .tag{font:700 .64rem/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:right}
+  .dz-moves li.is-done .tag{color:var(--text)}
+  .dz-moves li.is-now .tag{color:var(--danger)}
+  .dz-big{margin:14px 0 14px;font-family:var(--display);font-size:clamp(2.4rem,6vw,3.2rem);line-height:.95;color:var(--text)}
+  .dz-bar{margin:0 0 12px}
+  .dz-bar p{display:flex;justify-content:space-between;gap:8px;margin:0 0 5px;font:700 .68rem/1.2 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .dz-bar p b{color:var(--text)}
+  .dz-bar i{display:block;height:10px;background:#060606;border:1.5px solid var(--line)}
+  .dz-bar i span{display:block;height:100%;width:0;background:var(--glow);transition:width .9s ease-out}
+  .dz-note{margin:6px 0 0;font:400 .82rem/1.4 var(--mono);color:var(--muted)}
+  @media (prefers-reduced-motion:reduce){.dz-moves li.is-now .mk{animation:none}.dz-bar i span{transition:none}}
+  /* the core team's VIEW AS panel (Home, bottom left above the sound chip) */
+  .viewas{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:65;
+    width:min(300px,calc(100vw - 24px));background:#0b0b0b;border:2px solid var(--danger);box-shadow:5px 5px 0 #000;font-family:var(--mono)}
+  .viewas summary{list-style:none;cursor:pointer;padding:7px 10px;background:var(--danger);color:#fff;font:700 .72rem/1.2 var(--mono);letter-spacing:.14em}
+  .viewas summary::-webkit-details-marker{display:none}
+  .viewas summary::after{content:" \25B4";float:right}
+  .viewas:not([open]) summary::after{content:" \25BE"}
+  .viewas .va-body{display:grid;gap:8px;padding:10px}
+  .viewas form{display:flex;gap:6px}
+  .viewas input{flex:1;min-width:0;font:inherit;font-size:16px;color:var(--text);background:#000;border:1.5px solid var(--line);padding:6px 8px;border-radius:0}
+  .viewas .va-chips{display:flex;flex-wrap:wrap;gap:6px}
+  .viewas a,.viewas button{display:inline-flex;align-items:center;min-height:32px;padding:4px 9px;font:700 .68rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;
+    color:var(--text);background:#000;border:1.5px solid var(--line);text-decoration:none;cursor:pointer;border-radius:0}
+  .viewas a:hover,.viewas button:hover,.viewas a:focus-visible,.viewas button:focus-visible{border-color:var(--glow);color:var(--glow)}
+  .viewas a.on{background:var(--glow);color:#000;border-color:var(--glow)}
+  .viewas .va-row{display:flex;gap:6px;flex-wrap:wrap}
   .preview-bar{position:sticky;top:0;z-index:70;margin:0;padding:6px 12px;background:var(--danger);color:#fff;text-align:center;
     font:700 .72rem/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;overflow-wrap:anywhere}
   .reveal-veil iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
@@ -971,6 +1022,34 @@
       </li>
       <? }); ?>
     </ul>
+
+    <!-- the accepted dossier (results phase, ACCEPTED / CONFIRMED): renderDossier -->
+    <div class="dossier" id="dossier" hidden>
+      <div class="card dz-brief">
+        <div class="winbar"><span><?= BRAND.dossier.briefTitle ?></span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+        <p class="dz-k"><?= BRAND.dossier.briefK ?></p>
+        <p class="dz-days" id="dzDays">--</p>
+        <dl class="dz-facts">
+          <dt><?= BRAND.dossier.when ?></dt><dd id="dzWhen">—</dd>
+          <dt><?= BRAND.dossier.where ?></dt><dd id="dzWhere">—</dd>
+          <dt><?= BRAND.dossier.stay ?></dt><dd><?= BRAND.dossier.stayV ?></dd>
+          <dt><?= BRAND.dossier.covers ?></dt><dd><?= BRAND.dossier.coversV ?></dd>
+        </dl>
+      </div>
+      <div class="card dz-list">
+        <div class="winbar"><span><?= BRAND.dossier.listTitle ?></span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+        <p class="dz-lead"><?= BRAND.dossier.listLead ?></p>
+        <ol class="dz-moves" id="dzMoves"></ol>
+      </div>
+      <div class="card dz-batch" id="dzBatch">
+        <div class="winbar"><span><?= BRAND.dossier.batchTitle ?></span><i aria-hidden="true"><b>_</b><b>&#9633;</b><b>&#215;</b></i></div>
+        <p class="dz-k"><?= BRAND.dossier.batchK ?></p>
+        <p class="dz-big" id="dzAcc">--</p>
+        <div class="dz-bar"><p><?= BRAND.dossier.payK ?> <b id="dzPayN">--</b></p><i><span id="dzPayBar"></span></i></div>
+        <div class="dz-bar"><p><?= BRAND.dossier.reqK ?> <b id="dzReqN">--</b></p><i><span id="dzReqBar"></span></i></div>
+        <p class="dz-note"><?= BRAND.dossier.batchNote ?></p>
+      </div>
+    </div>
   </section>
 
   <!-- only for people without a file yet: hidden once they've applied -->
@@ -1601,6 +1680,95 @@
     ds.hidden = false;
   }
 
+  /** ACCEPTED / CONFIRMED after results: the briefing (days to Offsite), their next moves (from their own file) and the batch. */
+  function renderDossier(ctx) {
+    const a = ctx.applicant, box = $('dossier'), D = BRAND.dossier, base = document.body.dataset.base, dls = ctx.deadlines || {};
+    box.hidden = true;
+    if (!ctx.resultsReleased || !a || (a.status !== 'ACCEPTED' && a.status !== 'CONFIRMED')) return;
+    // briefing
+    const camp = dls.camp || ctx.campStart;
+    if (camp) {
+      const days = Math.ceil((new Date(camp).getTime() - Date.now()) / 864e5);
+      $('dzDays').textContent = '';
+      if (days > 1) { $('dzDays').append(String(days)); const sm = document.createElement('small'); sm.textContent = D.days; $('dzDays').append(sm); }
+      else $('dzDays').textContent = days === 1 ? D.tomorrow : D.today;
+    }
+    $('dzWhen').textContent = ctx.event.dates || '—';
+    $('dzWhere').textContent = ctx.event.venue || BRAND.faq.venueFallback || '—';
+    // next moves: done / now (theirs to do) / later (not open yet or an event)
+    const I = D.items, p = ctx.progress || {}, short = iso => iso ? whenShort(iso) : '';
+    const paid = a.payment === 'SUBMITTED' || a.payment === 'VERIFIED';
+    const reqIn = a.requirements === 'SUBMITTED' || a.requirements === 'APPROVED';
+    const reqOpen = !!(p.requirements && p.requirements.unlocked);
+    const moves = [
+      { t: I.pay.t, page: 'pay', st: paid ? 'done' : 'now',
+        tag: a.payment === 'VERIFIED' ? I.pay.done : paid ? I.pay.wait : dls.payment ? I.pay.todo.replace('{date}', short(dls.payment)) : I.pay.todoNoDate },
+      { t: I.form.t, page: 'pay', st: a.formDone ? 'done' : 'now', tag: a.formDone ? I.form.done : I.form.todo },
+      { t: I.ohs.t, page: 'pay', st: a.ohs ? 'done' : 'now', tag: a.ohs === 'YES' ? I.ohs.yes : a.ohs === 'NO' ? I.ohs.no : I.ohs.todo },
+      { t: I.reqs.t, page: reqOpen ? 'reqs' : '', st: reqIn ? 'done' : reqOpen ? 'now' : 'later',
+        tag: a.requirements === 'APPROVED' ? I.reqs.approved : reqIn ? I.reqs.done : !reqOpen ? I.reqs.locked : dls.requirements ? I.reqs.todo.replace('{date}', short(dls.requirements)) : I.reqs.todoNoDate },
+      { t: I.ga.t, page: '', st: 'later', tag: dls.ga ? I.ga.todo.replace('{date}', short(dls.ga)) : I.ga.noDate },
+      { t: I.camp.t, page: '', st: 'later', tag: ctx.event.dates || (camp ? short(camp) : '') }
+    ];
+    const ol = $('dzMoves'); ol.textContent = '';
+    moves.forEach(m => {
+      const li = document.createElement('li'); li.className = 'is-' + m.st;
+      const mk = document.createElement('span'); mk.className = 'mk'; mk.setAttribute('aria-hidden', 'true'); mk.textContent = m.st === 'done' ? '\u2713' : '';
+      const t = document.createElement(m.page && !ctx.preview ? 'a' : 'span'); t.className = 't'; t.textContent = m.t;
+      if (t.tagName === 'A') { t.href = base + '?page=' + m.page; t.target = '_top'; }
+      const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = m.tag || '';
+      const sr = document.createElement('span'); sr.className = 'sr-only'; sr.textContent = m.st === 'done' ? ' (done)' : m.st === 'now' ? ' (to do)' : '';
+      t.append(sr);
+      li.append(mk, t, tag); ol.appendChild(li);
+    });
+    // batch (counts only, never names)
+    const c = ctx.cohort;
+    $('dzBatch').hidden = !(c && c.accepted);
+    if (c && c.accepted) {
+      $('dzAcc').textContent = String(c.accepted);
+      $('dzPayN').textContent = c.paid + ' / ' + c.accepted;
+      $('dzReqN').textContent = c.reqs + ' / ' + c.accepted;
+      requestAnimationFrame(() => {
+        $('dzPayBar').style.width = Math.round(100 * c.paid / c.accepted) + '%';
+        $('dzReqBar').style.width = Math.round(100 * c.reqs / c.accepted) + '%';
+      });
+    }
+    box.hidden = false;
+  }
+
+  /** The core team's VIEW AS panel: Home as one person (ID or email) or as a sample of each result. Admins and previews only. */
+  function renderViewAs(ctx) {
+    if (!(ctx.isAdmin || ctx.preview) || $('viewAs')) return;
+    const V = BRAND.hub.viewAs, base = document.body.dataset.base, cur = String(document.body.dataset.viewas || '').toUpperCase();
+    const url = v => base + (v ? '?viewas=' + encodeURIComponent(v) : '');
+    const link = (v, label, on) => { const x = document.createElement('a'); x.href = url(v); x.target = '_top'; x.textContent = label; if (on) x.className = 'on'; return x; };
+    const d = document.createElement('details'); d.className = 'viewas'; d.id = 'viewAs';
+    try { d.open = localStorage.getItem('leads-viewas-open') !== '0'; } catch (e) { d.open = true; }
+    d.addEventListener('toggle', () => { try { localStorage.setItem('leads-viewas-open', d.open ? '1' : '0'); } catch (e) { /* fine */ } });
+    const sum = document.createElement('summary'); sum.textContent = V.title; d.appendChild(sum);
+    const body = document.createElement('div'); body.className = 'va-body';
+    const f = document.createElement('form');
+    const inp = document.createElement('input'); inp.type = 'text'; inp.placeholder = V.placeholder; inp.setAttribute('aria-label', V.placeholder); inp.autocomplete = 'off';
+    const go = document.createElement('button'); go.type = 'submit'; go.textContent = V.go;
+    f.append(inp, go);
+    f.addEventListener('submit', e => { e.preventDefault(); const v = inp.value.trim().replace(/[^A-Za-z0-9.@_-]/g, ''); if (v) window.top.location.href = url(v); });
+    body.appendChild(f);
+    const chips = document.createElement('div'); chips.className = 'va-chips';
+    const curBase = cur.split('.')[0];
+    V.chips.forEach(c => chips.appendChild(link(c[0], c[1], curBase === c[0])));
+    body.appendChild(chips);
+    const row = document.createElement('div'); row.className = 'va-row';
+    const sm = ctx.preview && ctx.preview.sample;
+    if (sm && sm.of > 1) {
+      row.appendChild(link(sm.status + '.' + (sm.n === 1 ? sm.of : sm.n - 1), '\u25C0 ' + V.prev));
+      row.appendChild(link(sm.status + '.' + (sm.n === sm.of ? 1 : sm.n + 1), V.next + ' \u25B6'));
+    }
+    if (ctx.preview) row.appendChild(link('', V.exit));
+    if (row.children.length) body.appendChild(row);
+    d.appendChild(body);
+    document.body.appendChild(d);
+  }
+
   /** WAITLISTED: reply to the results email by Settings › WaitlistReplyBy; a Reply button mails Settings › ContactEmail. */
   function renderWaitlist(ctx) {
     const a = ctx.applicant, act = $('statusAct'), W = BRAND.waitlist, by = (ctx.deadlines || {}).waitlistReply;
@@ -1654,7 +1822,13 @@
     const p = ctx.progress, a = ctx.applicant, R = !!ctx.resultsReleased, HR = BRAND.hero.released || {};
     $('who').textContent = ctx.signedIn ? BRAND.hub.signedIn : BRAND.hub.signedOut;
     if (ctx.signedIn) { const b = document.createElement('b'); b.textContent = ctx.email; $('who').append(b); }
-    if (ctx.preview) { $('previewBar').textContent = BRAND.hub.previewBar.replace('{id}', ctx.preview.id); $('previewBar').hidden = false; }
+    if (ctx.preview) {
+      const sm = ctx.preview.sample;
+      $('previewBar').textContent = BRAND.hub.previewBar.replace('{id}', ctx.preview.id) +
+        (sm ? BRAND.hub.previewSample.replace('{status}', sm.status).replace('{n}', sm.n).replace('{of}', sm.of) : '');
+      $('previewBar').hidden = false;
+    }
+    try { renderViewAs(ctx); } catch (e) { console.error(e); }
     document.body.classList.toggle('results', R);
     if (R) {   // the hero, the poster and the ticker switch to the results phase
       const tg = document.querySelector('.hero .tagline'), ld = document.querySelector('.hero .lede'), ps = document.querySelector('.poster .p-s');
@@ -1792,6 +1966,7 @@
     if (fileClosed) $('hubNote').textContent = BRAND.hub.closedNote;
     document.body.classList.toggle('hub-off', R && !ctx.isAdmin && (!a || fileClosed));
     try { renderDueStrip(ctx); } catch (e) { console.error(e); }
+    try { renderDossier(ctx); } catch (e) { console.error(e); }
     try { renderReferral(R ? null : ctx.referral); } catch (e) { console.error(e); }
     try {   // Pre-LEADS banner: hidden after its date and for confirmed campers (copy + date in BRAND.preleadsBanner)
       const pb = BRAND.preleadsBanner, until = pb && new Date(pb.until);
