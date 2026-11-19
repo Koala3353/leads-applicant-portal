@@ -175,6 +175,19 @@
   .report-btn.ask-btn::before{content:"?";font-weight:800}
   .top .report-btn.ask-btn,footer .report-btn.ask-btn,.top .report-btn.ask-btn:hover{color:#00007a}
   .rpt.ask h2::before{content:"FORM 26-Q // ";color:var(--glow)}
+  /* the "question sent" panel that replaces the form */
+  .ask-done{display:grid;justify-items:center;gap:12px;padding:22px 4px 26px;text-align:center}
+  .ask-done[hidden]{display:none}
+  .ask-done .stamp{display:inline-block;padding:.12em .5em;border:4px solid var(--glow);color:var(--glow);font-family:var(--display);
+    font-size:clamp(2.2rem,8vw,3.2rem);line-height:1;letter-spacing:.06em;text-transform:uppercase;transform:rotate(-6deg);
+    box-shadow:0 0 0 2px #000,0 0 24px rgba(255,255,0,.35);animation:askStamp .45s cubic-bezier(.2,1.6,.4,1) both}
+  @keyframes askStamp{from{transform:rotate(-6deg) scale(2.2);opacity:0}to{transform:rotate(-6deg) scale(1);opacity:1}}
+  .ask-done .tick{width:54px;height:54px;border-radius:50%;background:var(--glow);color:#000;display:grid;place-items:center;font:800 2rem/1 var(--mono);margin-top:6px}
+  .ask-done h3{margin:4px 0 0;font-family:var(--display);font-size:1.6rem;text-transform:uppercase;color:var(--text)}
+  .ask-done p{margin:0;max-width:34em;color:var(--text)}
+  .ask-done .ref{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:var(--muted)}
+  .ask-done .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+  @media (prefers-reduced-motion:reduce){.ask-done .stamp{animation:none}}
   .report-btn:hover,.report-btn:focus-visible{border-color:var(--danger);background:rgba(255,42,42,.08)}
   .rpt{max-width:min(620px,calc(100vw - 32px))}
   .rpt form{display:grid;gap:14px}
@@ -823,7 +836,23 @@
         cancel.addEventListener('click', () => box.close());
         row.append(send, cancel);
         form.append(field('askQ', c.question, c.questionHint, q), field('askContact', c.contact, c.contactHint, contact), err, status, row);
-        body.append(h, el('p', '', c.lead), form);
+        const lead = el('p', '', c.lead);
+        // after sending: the form makes way for a big "received" panel that stays until they close it
+        const done = el('div', 'ask-done'); done.hidden = true; done.setAttribute('role', 'status'); done.tabIndex = -1;
+        const stamp = el('span', 'stamp', c.doneStamp || 'Received');
+        const tick = el('span', 'tick', '\u2713'); tick.setAttribute('aria-hidden', 'true');
+        const dTitle = el('h3', '', c.doneTitle || 'Question sent');
+        const dText = el('p'), dRef = el('p', 'ref');
+        const dRow = el('div', 'row');
+        const again = el('button', 'btn ghost', c.another || 'Ask another'); again.type = 'button';
+        const shut = el('button', 'btn', c.close || 'Close'); shut.type = 'button';
+        dRow.append(shut, again);
+        done.append(tick, stamp, dTitle, dText, dRef, dRow);
+        const showForm = () => { done.hidden = true; form.hidden = false; lead.hidden = false; status.textContent = ''; setTimeout(() => q.focus(), 30); };
+        again.addEventListener('click', showForm);
+        shut.addEventListener('click', () => box.close());
+        box.addEventListener('close', () => { if (!done.hidden) showForm(); });   // next time it opens on a fresh form
+        body.append(h, lead, form, done);
         box.append(sihTape('ASK_THE_CORE_TEAM.EXE'), body);
         box.addEventListener('click', e => { if (e.target === box) box.close(); });
         document.body.append(box);
@@ -835,9 +864,13 @@
           google.script.run.withSuccessHandler(res => {
             send.disabled = false; send.textContent = c.send;
             if (res && res.ok) {
-              status.className = 'status ok'; status.textContent = c.sent.replace('{email}', res.email || contact.value.trim());
-              q.value = ''; if (window.Iris) Iris.say(['happy', 'Question sent. The core team will reply by email.']);
-              setTimeout(() => box.open && box.close(), 4500);
+              q.value = ''; status.textContent = '';
+              dText.textContent = (c.doneText || c.sent).replace('{email}', res.email || contact.value.trim());
+              dRef.textContent = (c.doneRef || 'Ref no. {id}').replace('{id}', res.id || '');
+              form.hidden = true; lead.hidden = true; done.hidden = false;
+              const st = done.querySelector('.stamp'); st.style.animation = 'none'; void st.offsetWidth; st.style.animation = '';   // replay the stamp
+              done.focus();
+              if (window.Iris) Iris.say(['happy', 'Question sent. The core team will reply by email.']);
             } else { status.className = 'status bad'; status.textContent = res && res.reason === 'rate' ? c.tooMany : c.failed; }
           }).withFailureHandler(() => { send.disabled = false; send.textContent = c.send; status.className = 'status bad'; status.textContent = c.failed; })
             .ask_question({ question: q.value, contact: contact.value.trim(), page: pageName() });

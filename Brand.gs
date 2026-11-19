@@ -501,6 +501,12 @@ const BRAND = {
     cancel: 'Cancel',
     sending: 'Sending…',
     sent: 'Sent. The core team has your question. We will reply to {email}.',
+    doneStamp: 'Received',
+    doneTitle: 'Question sent',
+    doneText: 'The core team has it. We will reply to {email}.',
+    doneRef: 'Ref no. {id}',
+    another: 'Ask another',
+    close: 'Close',
     failed: "That didn't send. Try again, or message the core team directly.",
     tooMany: "You've sent a few questions already. Give it a few minutes, or message the core team directly."
   },
