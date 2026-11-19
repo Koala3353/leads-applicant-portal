@@ -120,6 +120,49 @@ function report_issue_(r) {
   return { ok: true, id: id, email: contact };
 }
 
+/* ---------------- "Ask the core team" (Styles.html opens the form on every page) ----------------
+ * Emails the question at once to Settings › ContactEmail (every address in it), with who asked (account, applicant ID,
+ * status) and the page. Reply-to is the asker, so a plain Reply answers them. 5 per 10 minutes per person.
+ */
+function ask_question(q) {
+  return traced_('ask_question', String((q && q.page) || '').slice(0, 30), () => ask_question_(q || {}), x => x.ok ? 'sent ' + x.id : 'not sent: ' + x.reason);
+}
+function ask_question_(q) {
+  const to = contactEmails_();
+  if (!to.length) return { ok: false, reason: 'noinbox' };
+  const email = currentEmail_();
+  const text = String(q.question || '').trim().slice(0, 3000);
+  const contact = String(q.contact || '').trim().slice(0, 120) || email;
+  if (text.length < 5) return { ok: false, reason: 'empty' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)) return { ok: false, reason: 'contact' };
+  const day = Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyyMMdd');
+  if (!bump_(email ? 'ask:' + email : 'ask:anon', email ? 5 : 10, 600)) return { ok: false, reason: 'rate' };
+  if (!bump_('ask:day:' + day, 300, 90000)) return { ok: false, reason: 'rate' };
+
+  const id = 'Q-' + Utilities.formatDate(new Date(), 'Asia/Manila', 'MMdd-HHmm') + '-' + Math.floor(Math.random() * 900 + 100);
+  const found = email ? getApplicantForPortal_(email) : null;
+  const a = found ? found.data : null;
+  const who = a ? (String(a.Nickname || a.FullName || '').trim() || a.ApplicantID) : (contact || 'someone not signed in');
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const row = (k, v) => '<tr><td style="padding:4px 12px 4px 0;color:#666;font:12px/1.5 Menlo,Consolas,monospace;text-transform:uppercase;white-space:nowrap;vertical-align:top">' + esc(k) +
+    '</td><td style="padding:4px 0;color:#111;font:14px/1.5 Arial,sans-serif">' + (v ? esc(v) : '<span style="color:#999">—</span>') + '</td></tr>';
+  const html = '<div style="font:15px/1.6 Arial,sans-serif;color:#111;max-width:620px">' +
+    '<p style="margin:0 0 6px;font:700 12px/1 Menlo,Consolas,monospace;letter-spacing:.14em;color:#b00000">EYES ON LEADS // QUESTION ' + esc(id) + '</p>' +
+    '<div style="margin:10px 0 16px;padding:12px 14px;border-left:4px solid #e0b000;background:#fffbe6;white-space:pre-wrap">' + esc(text) + '</div>' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse">' +
+      row('Reply to', contact + (email && contact.toLowerCase() !== email ? ' (typed in; signed in as ' + email + ')' : '')) +
+      row('Name', a ? (a.FullName || a.Nickname) : '') + row('Applicant ID', a ? a.ApplicantID : 'No file') +
+      row('Status', a ? a.Status + ' / Pay ' + (a.Payment || 'NONE') + ' / Req ' + (a.Requirements || 'NONE') : '') +
+      row('Page', String(q.page || '').slice(0, 40)) +
+      row('Sent', Utilities.formatDate(new Date(), 'Asia/Manila', "EEE, MMM d 'at' h:mm a")) +
+    '</table><p style="margin:16px 0 0;color:#666;font-size:13px">Hit Reply to answer them. Reply-all keeps the other core team members in the loop.</p></div>';
+  const plain = ['Question ' + id + ' from ' + who, '', text, '', 'Reply to: ' + contact, 'Applicant: ' + (a ? a.ApplicantID + ' ' + a.Status : 'no file'), 'Page: ' + String(q.page || '')].join('\n');
+  MailApp.sendEmail({ to: to.join(','), subject: '[Eyes on LEADS] Question from ' + who + ': ' + text.replace(/\s+/g, ' ').slice(0, 60),
+    htmlBody: html, body: plain, name: 'Eyes on LEADS portal', replyTo: contact });
+  activity_('ask_question', id, { page: String(q.page || '').slice(0, 30) });
+  return { ok: true, id: id, email: contact };
+}
+
 /** Run once from the editor (as the owner) so Google asks for the "send email" permission. Sends a test to the report inbox. */
 function report_authorize() {
   ownerOnly_();

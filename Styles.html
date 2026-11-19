@@ -171,6 +171,10 @@
   .report-btn{font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--danger);
     background:none;border:1.5px solid color-mix(in srgb,var(--danger) 60%,transparent);padding:.3em .8em;cursor:pointer;min-height:32px}
   .report-btn::before{content:"\25CF";margin-right:.55em}
+  .report-btn.ask-btn{color:var(--glow);border-color:color-mix(in srgb,var(--glow) 55%,transparent)}
+  .report-btn.ask-btn::before{content:"?";font-weight:800}
+  .top .report-btn.ask-btn,footer .report-btn.ask-btn,.top .report-btn.ask-btn:hover{color:#00007a}
+  .rpt.ask h2::before{content:"FORM 26-Q // ";color:var(--glow)}
   .report-btn:hover,.report-btn:focus-visible{border-color:var(--danger);background:rgba(255,42,42,.08)}
   .rpt{max-width:min(620px,calc(100vw - 32px))}
   .rpt form{display:grid;gap:14px}
@@ -797,6 +801,66 @@
       if (bar && !bar.querySelector('[data-report]')) bar.append(button());
       document.querySelectorAll('footer').forEach(f => { if (!f.querySelector('[data-report]')) f.prepend(button()); });
     });
+    /* "Ask the core team": a short question form next to Report an issue; ask_question (ReportApi.gs) emails the core team at once. */
+    window.AskCore = (function () {
+      let box = null;
+      const A = () => (typeof BRAND !== 'undefined' && BRAND.ask) || null;
+      function buildAsk() {
+        const c = A(); if (!c) return;
+        box = el('dialog', 'sih rpt ask'); box.setAttribute('aria-labelledby', 'askTitle');
+        const body = el('div', 'sih-body');
+        const h = el('h2', '', c.title); h.id = 'askTitle';
+        const form = el('form'); form.noValidate = true;
+        const q = el('textarea'); q.maxLength = 3000; q.required = true; q.style.minHeight = '7em';
+        const contact = el('input'); contact.type = 'email'; contact.maxLength = 120; contact.autocomplete = 'email';
+        const known = (document.getElementById('who') && (document.getElementById('who').querySelector('b') || {}).textContent) || (document.getElementById('userEmailDisplay') || {}).textContent || '';
+        if (known && /@/.test(known)) contact.value = known.trim();
+        const err = el('p', 'err'); err.setAttribute('role', 'alert');
+        const status = el('p', 'status'); status.setAttribute('aria-live', 'polite');
+        const row = el('div', 'sih-link');
+        const send = el('button', 'btn', c.send); send.type = 'submit';
+        const cancel = el('button', 'btn ghost', c.cancel); cancel.type = 'button';
+        cancel.addEventListener('click', () => box.close());
+        row.append(send, cancel);
+        form.append(field('askQ', c.question, c.questionHint, q), field('askContact', c.contact, c.contactHint, contact), err, status, row);
+        body.append(h, el('p', '', c.lead), form);
+        box.append(sihTape('ASK_THE_CORE_TEAM.EXE'), body);
+        box.addEventListener('click', e => { if (e.target === box) box.close(); });
+        document.body.append(box);
+        form.addEventListener('submit', e => {
+          e.preventDefault(); err.textContent = ''; status.textContent = ''; status.className = 'status';
+          if (q.value.trim().length < 5) { err.textContent = 'Type your question first.'; q.focus(); return; }
+          if (!/^\S+@\S+\.\S+$/.test(contact.value.trim())) { err.textContent = 'Add an email we can reply to.'; contact.focus(); return; }
+          send.disabled = true; send.textContent = c.sending;
+          google.script.run.withSuccessHandler(res => {
+            send.disabled = false; send.textContent = c.send;
+            if (res && res.ok) {
+              status.className = 'status ok'; status.textContent = c.sent.replace('{email}', res.email || contact.value.trim());
+              q.value = ''; if (window.Iris) Iris.say(['happy', 'Question sent. The core team will reply by email.']);
+              setTimeout(() => box.open && box.close(), 4500);
+            } else { status.className = 'status bad'; status.textContent = res && res.reason === 'rate' ? c.tooMany : c.failed; }
+          }).withFailureHandler(() => { send.disabled = false; send.textContent = c.send; status.className = 'status bad'; status.textContent = c.failed; })
+            .ask_question({ question: q.value, contact: contact.value.trim(), page: pageName() });
+        });
+      }
+      function openAsk() {
+        if (!A()) return;
+        if (!box) buildAsk();
+        document.querySelectorAll('dialog[open]').forEach(d => d !== box && d.close());
+        if (box.showModal) box.showModal(); else box.setAttribute('open', '');
+        setTimeout(() => { const t = box.querySelector('textarea'); t && t.focus(); }, 40);
+      }
+      function askButton() { const b = el('button', 'report-btn ask-btn', (A() || {}).button || 'Ask the core team'); b.type = 'button'; b.dataset.ask = ''; return b; }
+      document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-ask]')) { e.preventDefault(); openAsk(); } });
+      document.addEventListener('DOMContentLoaded', () => {
+        if (!A()) return;
+        const bar = document.querySelector('.top-links, .top .who');
+        if (bar && !bar.querySelector('[data-ask]')) { const rep = bar.querySelector('[data-report]'); rep ? rep.before(askButton()) : bar.append(askButton()); }
+        document.querySelectorAll('footer').forEach(f => { if (!f.querySelector('[data-ask]')) { const rep = f.querySelector('[data-report]'); rep ? rep.after(askButton()) : f.prepend(askButton()); } });
+      });
+      return { open: openAsk };
+    })();
+
     /* When something breaks (a failed server call or a script error), ask once per page load whether to report it. */
     let asked = false, ask = null;
     function prompt(msg) {

@@ -487,6 +487,24 @@ const BRAND = {
     errorNo: 'Not now'
   },
 
+  // "Ask the core team" (every page: top bar + footer, next to Report an issue). Emails Settings › ContactEmail at once
+  // (ReportApi.gs › ask_question); a reply goes straight back to the person who asked.
+  ask: {
+    button: 'Ask the core team',
+    title: 'Ask the core team',
+    lead: 'Type your question. It goes straight to the core team, and we reply to your email.',
+    question: 'Your question',
+    questionHint: 'One question is fine. More detail helps us answer faster.',
+    contact: 'Where can we reply?',
+    contactHint: 'Your Ateneo email is fine.',
+    send: 'Send question',
+    cancel: 'Cancel',
+    sending: 'Sending…',
+    sent: 'Sent. The core team has your question. We will reply to {email}.',
+    failed: "That didn't send. Try again, or message the core team directly.",
+    tooMany: "You've sent a few questions already. Give it a few minutes, or message the core team directly."
+  },
+
   messages: {
     notSignedIn: "We can't see your Google account. Sign in with your Ateneo email, then reload this page.",
     wrongDomain: "Switch to your Ateneo account to apply. You're signed in as ",
