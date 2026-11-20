@@ -358,6 +358,8 @@ function tracker_syncTrigger() {
   }
   try { const n = trackerFill_(); if (n) activity_('tracker_fill', n + ' blank tracker cell(s) filled'); }
   catch (e) { activity_('tracker_fill', 'Filling tracker blanks failed: ' + (e && e.message), { level: 'WARN' }); }
+  // payment closes by itself once Settings › PaymentDeadline passes (StepsApi.gs); runs even with the tracker off
+  try { steps_autoClosePayment_(); } catch (e) { activity_('payment_autoclose', 'Auto-close failed: ' + (e && e.message), { level: 'WARN' }); }
   // then the "payment verified" emails anyone is now due (PaymentMail.gs); runs even with the tracker off
   try { payMail_sendPending_(); } catch (e) { activity_('payment_mail', 'Verified emails failed: ' + (e && e.message), { level: 'WARN' }); }
 }

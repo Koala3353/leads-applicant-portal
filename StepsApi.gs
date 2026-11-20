@@ -406,6 +406,25 @@ function steps_uploadOhs_(file) {
 
 function steps_ohsFolder_() { return steps_driveFolder_('OHSFolder', 'OHS Clearance'); }
 
+/**
+ * Closes payment once Settings › PaymentDeadline has passed: switches Settings › PaymentOpen to FALSE (Nov 20 2026, so
+ * nobody pays overnight while the core team moves unpaid slots to the waitlist). Runs from the 5-minute tracker trigger
+ * (Tracker.gs › tracker_syncTrigger), so it closes within 5 minutes of the deadline. Once per deadline: if the core team
+ * ticks PaymentOpen again without changing the deadline, it stays open; set a new PaymentDeadline and it closes after that.
+ */
+function steps_autoClosePayment_() {
+  if (!stepOpen_('PaymentOpen')) return false;
+  const dl = parseDate_(getSetting_('PaymentDeadline'));
+  if (!dl || Date.now() < dl.getTime()) return false;
+  const props = PropertiesService.getScriptProperties(), key = 'paymentAutoClosedFor', stamp = dl.toISOString();
+  if (props.getProperty(key) === stamp) return false;   // already closed once for this deadline: a reopen is on purpose
+  writeSetting_('PaymentOpen', false);
+  props.setProperty(key, stamp);
+  activity_('payment_autoclose', 'PaymentOpen switched off: the payment deadline (' +
+    Utilities.formatDate(dl, 'Asia/Manila', 'MMM d, h:mm a') + ') passed. Tick it again in Settings to reopen.');
+  return true;
+}
+
 function steps_uploadProof(file) {
   return traced_('steps_uploadProof', 'pay', () => steps_uploadProof_(file || {}), r => r.ok ? r.id + ' proof uploaded' : 'not uploaded: ' + r.error);
 }
