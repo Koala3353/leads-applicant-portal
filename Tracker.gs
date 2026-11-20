@@ -476,3 +476,157 @@ function setup_trackerTrigger() {
   tracker_syncTrigger();
   return 'Tracker sync runs every 5 minutes.';
 }
+
+/* ---------------- one-off: unpaid out, waitlist dibs in (Nov 21 2026) ----------------
+ * Rejects every ACCEPTED person whose [05] Verification Status is No Payment (or blank) with no proof in the portal,
+ * and accepts the same number from the "Waitlist Dibs" tab, earliest submission first (only people still Waitlist).
+ * The tracker's lists are built by POSITION from [02.0] Deliberations, so changing a decision slides the names while the
+ * typed columns next to them stay put. This saves every typed column BY ID NUMBER first ([05] Rate..Remarks + Payment
+ * Blast Status, [02.1] Emergency contact / Sent? / FB Group? / AI?, [02.2] Sent? / Replied / Accepted, [04] PNF + DNU
+ * boxes, dates, Forfeit?, Notes), changes the decisions, then writes each saved value back next to the same ID.
+ * Run tracker_swapPreview first (logs the plan, changes nothing), then tracker_swapApply. The portal's tracker sync is
+ * paused (Settings › TrackerSheet = off) while it runs and switched back on at the end.
+ */
+function tracker_swapPreview() { return tracker_swap_(true); }
+function tracker_swapApply() { return tracker_swap_(false); }
+
+function tracker_swap_(dry) {
+  ownerOnly_();
+  const ss = tracker_();
+  if (!ss) throw new Error('The tracker is off or cannot be opened.');
+  const tab = n => { const s = ss.getSheetByName(n); if (!s) throw new Error('No tab "' + n + '" in the tracker.'); return s; };
+  const del = tab('[02.0] Deliberations'), pay = tab(TRACKER_TABS_.pay), acc = tab(TRACKER_TABS_.accepted),
+        dec = tab(TRACKER_TABS_.decided), req = tab(TRACKER_TABS_.reqs), dibs = tab('Waitlist Dibs');
+  const idn = v => trackerIdNo_(v);
+  const log = [];
+
+  // decisions (C Applicant ID, D ID Number, E Name, F Decision; rows 13..202)
+  const dv = del.getRange(13, 3, 190, 4).getValues();
+  const decOf = {};
+  dv.forEach((r, i) => { const k = idn(r[1]); if (k) decOf[k] = { row: 13 + i, dec: String(r[3]).trim(), name: String(r[2]) }; });
+
+  // [05] snapshot: B name, C ID, D..I (Rate, Amount, Date, Proof, Status, Remarks), N Payment Blast Status
+  const P0 = 10, PN = 130;
+  const pv = pay.getRange(P0, 2, PN, 13).getValues();
+  const payBy = {};
+  pv.forEach(r => { const k = idn(r[1]); if (k) payBy[k] = { di: r.slice(2, 8), n: r[12] }; });
+
+  // portal proofs by ID number (a late upload counts as paid)
+  const ap = sheet_(SHEET.APPLICANTS), head = cols_();
+  const av = ap.getRange(2, 1, Math.max(ap.getLastRow() - 1, 1), head.length).getValues();
+  const proofBy = {};
+  av.forEach(r => { const k = idn(r[head.indexOf('IDNumber')]); if (k && String(r[head.indexOf('PaymentProof')] || '').trim()) proofBy[k] = true; });
+
+  const unpaid = Object.keys(payBy).filter(k => decOf[k] && decOf[k].dec === 'Accept' &&
+    (!String(payBy[k].di[4] || '').trim() || /^no payment$/i.test(String(payBy[k].di[4]).trim())) && !proofBy[k]);
+
+  // Waitlist Dibs: A Timestamp, C Student ID Number; earliest first, still Waitlist, no repeats
+  const wv = dibs.getRange(2, 1, Math.max(dibs.getLastRow() - 1, 1), 3).getValues()
+    .filter(r => r[0] && idn(r[2]))
+    .sort((a, b) => new Date(a[0]) - new Date(b[0]));
+  const promote = [], seen = {};
+  wv.forEach(r => {
+    const k = idn(r[2]);
+    if (seen[k] || promote.length >= unpaid.length) return;
+    seen[k] = true;
+    if (decOf[k] && decOf[k].dec === 'Waitlist') promote.push(k);
+    else log.push('dibs skipped ' + k + ' (' + (decOf[k] ? decOf[k].dec : 'not in Deliberations') + ')');
+  });
+
+  log.push('REJECT (unpaid, ' + unpaid.length + '): ' + unpaid.map(k => decOf[k].name + ' ' + k).join(' | '));
+  log.push('ACCEPT (waitlist dibs, ' + promote.length + '): ' + promote.map(k => decOf[k].name + ' ' + k).join(' | '));
+  if (promote.length < unpaid.length) log.push('WARNING: only ' + promote.length + ' waitlisted dibs for ' + unpaid.length + ' slots.');
+  if (dry) { log.forEach(x => Logger.log(x)); Logger.log('PREVIEW only: nothing changed. Run tracker_swapApply to do it.'); return log; }
+
+  // snapshots of every typed column, by ID number
+  const AN = 132;
+  const accV = acc.getRange(6, 3, AN, 15).getValues();            // C..Q
+  const accBy = {};
+  accV.forEach(r => { const k = idn(r[0]); if (k) accBy[k] = { H: r[5], I: r[6], K: r[8], L: r[9], Q: r[14] }; });
+  const decV = dec.getRange(6, 3, AN, 16).getValues();            // C..R
+  const rejBy = {}, wlBy = {};
+  decV.forEach(r => {
+    const a = idn(r[0]); if (a) rejBy[a] = { G: r[4] };
+    const b = idn(r[8]); if (b) wlBy[b] = { O: r[12], P: r[13], R: r[15] };
+  });
+  const RN = 239;
+  const reqV = req.getRange(8, 2, RN, 14).getValues();             // B..O
+  const reqBy = {};
+  reqV.forEach(r => { const k = idn(r[0]); if (k) reqBy[k] = { F: r[4], G: r[5], H: r[6], J: r[8], K: r[9], L: r[10], N: r[12], O: r[13] }; });
+
+  const prevSheet = String(getSetting_('TrackerSheet') || '');
+  let report = [];
+  withScriptLock_(60000, () => {
+    writeSetting_('TrackerSheet', 'off');   // pause the 5-minute sync while the lists move
+    try {
+      unpaid.forEach(k => del.getRange(decOf[k].row, 6).setValue('Reject'));
+      promote.forEach(k => del.getRange(decOf[k].row, 6).setValue('Accept'));
+      SpreadsheetApp.flush();
+      Utilities.sleep(1500);
+      SpreadsheetApp.flush();
+
+      // [05]: D..I and N back next to each ID
+      const ids5 = pay.getRange(P0, 3, PN, 1).getValues().map(r => idn(r[0]));
+      const n5 = ids5.filter(Boolean).length;
+      const di = [], nn = [];
+      for (let i = 0; i < n5; i++) {
+        const k = ids5[i], s = payBy[k];
+        di.push(s ? s.di : ['', '', '', '', 'No Payment', '']);
+        nn.push([s ? s.n : '']);
+      }
+      if (n5) { pay.getRange(P0, 4, n5, 6).setValues(di); pay.getRange(P0, 14, n5, 1).setValues(nn); }
+
+      // [02.1]: H, I, K, L, Q
+      const ids1 = acc.getRange(6, 3, AN, 1).getValues().map(r => idn(r[0]));
+      const n1 = ids1.filter(Boolean).length;
+      const hi = [], kl = [], q = [];
+      for (let i = 0; i < n1; i++) {
+        const s = accBy[ids1[i]] || { H: '', I: '', K: '', L: false, Q: '' };
+        hi.push([s.H, s.I]); kl.push([s.K, s.L]); q.push([s.Q]);
+      }
+      if (n1) { acc.getRange(6, 8, n1, 2).setValues(hi); acc.getRange(6, 11, n1, 2).setValues(kl); acc.getRange(6, 17, n1, 1).setValues(q); }
+
+      // [02.2]: rejected G; waitlisted O, P, R
+      const after = dec.getRange(6, 3, AN, 9).getValues();
+      const rejIds = after.map(r => idn(r[0])), wlIds = after.map(r => idn(r[8]));
+      const nr = rejIds.filter(Boolean).length, nw = wlIds.filter(Boolean).length;
+      const g = [], op = [], r = [];
+      for (let i = 0; i < nr; i++) g.push([(rejBy[rejIds[i]] || { G: '' }).G]);
+      for (let i = 0; i < nw; i++) { const s = wlBy[wlIds[i]] || { O: '', P: false, R: false }; op.push([s.O, s.P]); r.push([s.R]); }
+      if (nr) dec.getRange(6, 7, nr, 1).setValues(g);
+      if (nw) { dec.getRange(6, 15, nw, 2).setValues(op); dec.getRange(6, 18, nw, 1).setValues(r); }
+      // the waitlist got shorter: clear Sent? / Replied / Accepted on the rows that emptied at its bottom (Q is a formula: left alone)
+      const wlOld = Object.keys(wlBy).length;
+      if (wlOld > nw) { dec.getRange(6 + nw, 15, wlOld - nw, 2).clearContent(); dec.getRange(6 + nw, 18, wlOld - nw, 1).clearContent(); }
+
+      // [04]: F G H, J K L, N O
+      const ids4 = req.getRange(8, 2, RN, 1).getValues().map(r2 => idn(r2[0]));
+      const n4 = ids4.filter(Boolean).length;
+      const fgh = [], jkl = [], no = [];
+      for (let i = 0; i < n4; i++) {
+        const s = reqBy[ids4[i]] || { F: false, G: false, H: '', J: false, K: false, L: '', N: false, O: '' };
+        fgh.push([s.F, s.G, s.H]); jkl.push([s.J, s.K, s.L]); no.push([s.N, s.O]);
+      }
+      if (n4) { req.getRange(8, 6, n4, 3).setValues(fgh); req.getRange(8, 10, n4, 3).setValues(jkl); req.getRange(8, 14, n4, 2).setValues(no); }
+      SpreadsheetApp.flush();
+
+      // check: every person still in [05] has exactly the values they had before
+      const chk = pay.getRange(P0, 3, n5, 7).getValues();
+      let ok = 0, bad = [];
+      chk.forEach(row => {
+        const k = idn(row[0]), s = payBy[k];
+        if (!s) return;
+        const same = s.di.every((v, j) => String(v instanceof Date ? v.getTime() : v) === String(row[j + 1] instanceof Date ? row[j + 1].getTime() : row[j + 1]));
+        if (same) ok++; else bad.push(k);
+      });
+      report = ['[05] kept for ' + ok + ' people; mismatches: ' + (bad.length ? bad.join(', ') : 'none'),
+        '[05] rows: ' + n5 + ' | [02.1]: ' + n1 + ' | rejected: ' + nr + ' | waitlisted: ' + nw + ' | [04]: ' + n4];
+    } finally {
+      writeSetting_('TrackerSheet', prevSheet);   // the sync back on
+      trackerForget_();
+    }
+  });
+  log.concat(report).forEach(x => Logger.log(x));
+  activity_('tracker_swap', log.concat(report).join(' // ').slice(0, 1500));
+  return log.concat(report);
+}
